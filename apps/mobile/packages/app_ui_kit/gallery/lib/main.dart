@@ -42,15 +42,33 @@ class GalleryHomePage extends StatelessWidget {
             _Section(
               title: 'Typography',
               children: [
-                Text('Display Large', style: Theme.of(context).textTheme.displayLarge),
-                Text('Headline Medium', style: Theme.of(context).textTheme.headlineMedium),
-                Text('Title Large', style: Theme.of(context).textTheme.titleLarge),
-                Text('Body Large', style: Theme.of(context).textTheme.bodyLarge),
-                Text('Label Small', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  'Display Large',
+                  style: Theme.of(context).textTheme.displayLarge,
+                ),
+                Text(
+                  'Headline Medium',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                Text(
+                  'Title Large',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                Text(
+                  'Body Large',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                Text(
+                  'Label Small',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 const SizedBox(height: 10),
                 const Text(
                   'မြန်မာစာ နမူနာ (Noto Sans Myanmar)',
-                  style: TextStyle(fontFamily: 'NotoSansMyanmar', fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontFamily: 'NotoSansMyanmar',
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -74,10 +92,7 @@ class GalleryHomePage extends StatelessWidget {
             _Section(
               title: 'Buttons',
               children: [
-                AppButton(
-                  text: 'Primary Button',
-                  onPressed: () {},
-                ),
+                AppButton(text: 'Primary Button', onPressed: () {}),
                 const SizedBox(height: 12),
                 AppButton(
                   text: 'Secondary Button',
@@ -147,7 +162,10 @@ class GalleryHomePage extends StatelessWidget {
                     AppStatusBadge(variant: AppStatusVariant.shipping),
                     AppStatusBadge(variant: AppStatusVariant.delivered),
                     AppChip(label: 'Silk Longyi'),
-                    AppChip(label: 'Fashion', icon: Icon(Icons.style, size: 14)),
+                    AppChip(
+                      label: 'Fashion',
+                      icon: Icon(Icons.style, size: 14),
+                    ),
                   ],
                 ),
               ],
@@ -280,9 +298,9 @@ class _Section extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.softOrange,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: AppColors.softOrange,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
         ...children,
@@ -312,7 +330,10 @@ class _ColorBox extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(name, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+        Text(
+          name,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
