@@ -283,9 +283,10 @@ class _ExampleHomeScreenState extends State<ExampleHomeScreen> {
                           AppAvatar(
                             size: 42,
                             backgroundColor: AppColors.softOrange,
-                            icon: const Text(
-                              '👗',
-                              style: TextStyle(fontSize: 20),
+                            icon: Icon(
+                              Icons.shop_outlined,
+                              size: 20,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(width: 12),

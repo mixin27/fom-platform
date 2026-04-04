@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../tokens/app_colors.dart';
 
 /// A horizontal scrollable tab bar for filtering categories.
@@ -30,8 +31,10 @@ class AppFilterTabs extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final isSelected = index == selectedIndex;
+          final label = tabs[index];
           return _FilterTab(
-            label: tabs[index],
+            key: ValueKey('tab-$index-$label'),
+            label: label,
             isSelected: isSelected,
             onTap: () => onTabSelected(index),
           );
@@ -46,6 +49,7 @@ class _FilterTab extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    super.key,
   });
 
   final String label;
@@ -54,30 +58,56 @@ class _FilterTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.cream : Colors.transparent,
-          border: Border.all(
-            color: isSelected ? AppColors.border : Colors.transparent,
-            width: 2,
+    return Animate(target: isSelected ? 1 : 0).custom(
+      duration: 250.ms,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, _) {
+        final backgroundColor = Color.lerp(
+          Colors.transparent,
+          AppColors.cream,
+          value,
+        );
+        final borderColor = Color.lerp(
+          Colors.transparent,
+          AppColors.border,
+          value,
+        )!;
+        final textColor = Color.lerp(
+          AppColors.textLight,
+          AppColors.softOrange,
+          value,
+        );
+
+        return Container(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            border: Border.all(color: borderColor, width: 2),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: isSelected ? AppColors.softOrange : AppColors.textLight,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
