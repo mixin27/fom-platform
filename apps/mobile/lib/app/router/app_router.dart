@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:app_logger/app_logger.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/features/auth/feature_auth.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
+import 'package:fom_mobile/features/onboarding/feature_onboarding.dart';
 import 'package:fom_mobile/features/orders/feature_orders.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,7 +16,10 @@ class AppRouter {
       _enableLogDevTools = enableLogDevTools,
       _refreshNotifier = _RouterRefreshNotifier(Stream.value(true));
 
+  static const splashPath = AppRoutePaths.splash;
+  static const onboardingPath = AppRoutePaths.onboarding;
   static const authPath = AppRoutePaths.auth;
+  static const registerPath = AppRoutePaths.register;
   static const authEmailPath = AppRoutePaths.authEmail;
   static const authOtpPath = AppRoutePaths.authOtp;
   static const devtoolsLogsPath = AppRoutePaths.devtoolsLogs;
@@ -25,15 +30,22 @@ class AppRouter {
   final _RouterRefreshNotifier _refreshNotifier;
 
   late final GoRouter _router = GoRouter(
-    initialLocation: ordersPath,
+    initialLocation: splashPath,
     refreshListenable: _refreshNotifier,
     redirect: _redirect,
     routes: [
       GoRoute(
-        path: authPath,
-        builder: (context, state) {
-          return const Scaffold();
-        },
+        path: splashPath,
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: onboardingPath,
+        builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(path: authPath, builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: registerPath,
+        builder: (context, state) => const RegisterPage(),
       ),
       if (_enableLogDevTools)
         GoRoute(
