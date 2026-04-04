@@ -1,0 +1,60 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FOM: Main (auto env)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main.dart"
+    },
+    {
+      "name": "FOM: Development",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main_development.dart",
+      "args": [
+        "--flavor=development",
+        "--dart-define=APP_ENV=development",
+        "--dart-define=ENABLE_VERBOSE_STARTUP_LOGS=true"
+      ]
+    },
+    {
+      "name": "FOM: Staging",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main_staging.dart",
+      "args": [
+        "--flavor=staging",
+        "--dart-define=APP_ENV=staging",
+        "--dart-define=ENABLE_VERBOSE_STARTUP_LOGS=true"
+      ]
+    },
+    {
+      "name": "FOM: Production",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main_production.dart",
+      "args": [
+        "--flavor=production",
+        "--dart-define=APP_ENV=production",
+        "--dart-define=ENABLE_VERBOSE_STARTUP_LOGS=true"
+      ]
+    },
+    {
+      "name": "FOM (release): Production",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main_production.dart",
+      "flutterMode": "release",
+      "args": [
+        "--dart-define=APP_ENV=production",
+        "--dart-define=ENABLE_VERBOSE_STARTUP_LOGS=false"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - internal/**
+    - '**/*.g.dart'
+    - '**/*.freezed.dart'
+    - '**/*.config.dart'
+    - '**/*.gr.dart'
+    - '**/*.chopper.dart'
+
+linter:
+  rules:
+    always_declare_return_types: true
+    avoid_print: true
+    avoid_renaming_method_parameters: true
+    directives_ordering: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_final_locals: true

@@ -1,0 +1,17 @@
+name: app_logger
+description: Reusable application logger built on top of talker.
+version: 0.1.0
+publish_to: none
+
+resolution: workspace
+
+environment:
+    sdk: ^3.11.0
+
+dependencies:
+    talker: ^5.1.15
+
+dev_dependencies:
+    lints: ^6.1.0
+    flutter_test:
+     sdk: flutter

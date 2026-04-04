@@ -1,0 +1,146 @@
+{
+  "@@locale": "en",
+  "appTitleDev": "FOM (Dev)",
+  "appTitleStaging": "FOM (Staging)",
+  "appTitle": "FOM",
+  "navCampaigns": "Campaigns",
+  "navCoupons": "Coupons",
+  "navLoyalty": "Loyalty",
+  "navNotifications": "Notifications",
+  "navMore": "More",
+  "unavailableTitle": "Unavailable",
+  "missingPhoneNumberForOtp": "Missing phone number for OTP verification",
+  "claimRewardUnavailable": "Claim reward unavailable",
+  "campaignDetailUnavailable": "Campaign detail unavailable",
+  "couponDetailUnavailable": "Coupon detail unavailable",
+  "somethingWentWrong": "Something went wrong.",
+  "authSignInTitle": "Sign in",
+  "authSignInSubtitle": "Sign in to claim rewards and access your personal data.",
+  "authContinueWithPhoneOtp": "Continue with phone OTP",
+  "authContinueWithEmailPassword": "Continue with email/password",
+  "authOtherMethodsHint": "Other methods like Google/Apple/Facebook can use MethodLoginRequested in AuthBloc.",
+  "authContinueAsGuest": "Continue as guest",
+  "phoneOtpTitle": "Phone OTP",
+  "phoneNumberLabel": "Phone number",
+  "phoneNumberHint": "+959123456789",
+  "purposeLabel": "Purpose",
+  "purposeLogin": "Login",
+  "purposeRegister": "Register",
+  "requestOtp": "Request OTP",
+  "requesting": "Requesting...",
+  "enterPhoneNumberError": "Please enter your phone number.",
+  "emailSignInTitle": "Email sign in",
+  "emailOrUsernameLabel": "Email or username",
+  "passwordLabel": "Password",
+  "signIn": "Sign in",
+  "signingIn": "Signing in...",
+  "enterEmailPasswordError": "Please enter email/username and password.",
+  "verifyOtpTitle": "Verify OTP",
+  "phoneValue": "Phone: {phone}",
+  "@phoneValue": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "purposeValue": "Purpose: {purpose}",
+  "@purposeValue": {
+    "placeholders": {
+      "purpose": {
+        "type": "String"
+      }
+    }
+  },
+  "otpCodeLabel": "OTP code",
+  "verifying": "Verifying...",
+  "verifyAndSignIn": "Verify and sign in",
+  "enterOtpCodeError": "Please enter the OTP code.",
+  "noCampaignsAvailable": "No campaigns available.",
+  "descriptionLabel": "Description",
+  "campaignPeriodLabel": "Campaign period",
+  "noCouponsAvailable": "No coupons available.",
+  "amountValue": "Amount: {amount} MMK",
+  "@amountValue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityValue": "Quantity: {quantity}",
+  "@quantityValue": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "qtyValue": "Qty: {quantity}",
+  "@qtyValue": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "expiresValue": "Expires: {date}",
+  "@expiresValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "alreadyRedeemed": "Already redeemed",
+  "redeemCoupon": "Redeem coupon",
+  "available": "Available",
+  "redeemed": "Redeemed",
+  "noLoyaltyHistoryFound": "No loyalty history found.",
+  "totalPoints": "Total points",
+  "noNotificationsAvailable": "No notifications available.",
+  "claimRewardTitle": "Claim reward",
+  "couponReward": "Coupon reward",
+  "couponIdValue": "Coupon ID: {couponId}",
+  "@couponIdValue": {
+    "placeholders": {
+      "couponId": {
+        "type": "String"
+      }
+    }
+  },
+  "codeValue": "Code: {code}",
+  "@codeValue": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "rewardClaimSubmittedDemo": "Reward claim submitted (demo).",
+  "alreadyClaimed": "Already claimed",
+  "confirmClaim": "Confirm claim",
+  "moreAuthenticationTitle": "Authentication",
+  "signedIn": "Signed in",
+  "guestMode": "Guest mode",
+  "sessionValue": "Session: {token}",
+  "@sessionValue": {
+    "placeholders": {
+      "token": {
+        "type": "String"
+      }
+    }
+  },
+  "signInRegister": "Sign in / Register",
+  "signOut": "Sign out",
+  "loginRequiredTitle": "Login Required",
+  "loginRequiredMessage": "Please login to access this feature.",
+  "languageTitle": "Language",
+  "languageLabel": "App language",
+  "languageSystemDefault": "Use device language",
+  "languageEnglish": "English",
+  "languageMyanmar": "Myanmar (Burmese)",
+  "developerTitle": "Developer",
+  "openTalkerLogConsole": "Open Talker log console.",
+  "openLogDevTools": "Open Log DevTools"
+}

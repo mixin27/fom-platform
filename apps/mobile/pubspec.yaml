@@ -1,0 +1,64 @@
+name: fom_mobile
+description: "Facebook Order Manager Mobile App"
+publish_to: 'none'
+version: 1.0.0+1
+
+workspace:
+  - packages/app_core
+  - packages/app_logger
+  - packages/app_storage
+  - packages/app_database
+  - packages/app_device
+  - packages/app_ui_kit
+  - packages/app_env
+  - packages/app_localizations
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # internal packages
+  app_core:
+    path: packages/app_core
+  app_database:
+    path: packages/app_database
+  app_device:
+    path: packages/app_device
+  app_env:
+    path: packages/app_env
+  app_localizations:
+    path: packages/app_localizations
+  app_logger:
+    path: packages/app_logger
+  app_storage:
+    path: packages/app_storage
+  app_ui_kit:
+    path: packages/app_ui_kit
+
+  dio: ^5.9.2
+  drift: ^2.32.0
+  drift_flutter: ^0.3.0
+
+  flutter_bloc: ^9.1.1
+  get_it: ^9.2.1
+
+  go_router: ^17.1.0
+
+  equatable: ^2.0.8
+  intl: ^0.20.2
+  shared_preferences: ^2.5.3
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  talker_flutter: ^5.1.15
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

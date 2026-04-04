@@ -1,0 +1,22 @@
+name: app_device
+description: Reusable device and app metadata service for API payloads.
+version: 0.1.0
+publish_to: none
+
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  app_storage:
+    path: ../app_storage
+  device_info_plus: ^11.1.0
+  package_info_plus: ^8.3.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter

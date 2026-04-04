@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - docs/**
+      - "**/*.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - docs/**
+      - "**/*.md"
+  workflow_dispatch:
+
+jobs:
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Secret Scan
+        run: cd apps/mobile && ./scripts/secret_scan.sh
+
+  quality:
+    name: Codegen, Format, Analyze, Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter Version
+        run: flutter --version
+
+      - name: Dependencies
+        run: cd apps/mobile && ./scripts/pub_get_all.sh
+
+      - name: Code Generation
+        run: cd apps/mobile && ./scripts/codegen_all.sh
+
+      - name: Format Check
+        run: cd apps/mobile && ./scripts/format_all.sh --check
+
+      - name: Analyze
+        run: cd apps/mobile && ./scripts/analyze_all.sh
+
+      - name: Test
+        run: cd apps/mobile && ./scripts/test_all.sh

@@ -1,0 +1,25 @@
+name: app_database
+description: "Encrypted offline-first database"
+version: 0.1.0
+publish_to: none
+
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  app_storage:
+    path: ../app_storage
+  drift: ^2.32.0
+  drift_flutter: ^0.3.0
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  build_runner: ^2.11.1
+  drift_dev: ^2.32.0
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
