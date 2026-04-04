@@ -19,8 +19,16 @@ class GalleryApp extends StatelessWidget {
   }
 }
 
-class GalleryHomePage extends StatelessWidget {
+class GalleryHomePage extends StatefulWidget {
   const GalleryHomePage({super.key});
+
+  @override
+  State<GalleryHomePage> createState() => _GalleryHomePageState();
+}
+
+class _GalleryHomePageState extends State<GalleryHomePage> {
+  int _selectedFilterIndex = 0;
+  int _selectedStatusIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +37,15 @@ class GalleryHomePage extends StatelessWidget {
         title: const Text('App UI Kit Gallery'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.palette_outlined),
-            onPressed: () {},
+            icon: const Icon(Icons.home_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ExampleHomeScreen(),
+                ),
+              );
+            },
+            tooltip: 'Example Home Screen',
           ),
         ],
       ),
@@ -72,183 +87,352 @@ class GalleryHomePage extends StatelessWidget {
                 ),
               ],
             ),
-            const _Section(
+            _Section(
               title: 'Colors',
               children: [
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _ColorBox(color: AppColors.softOrange, name: 'Soft Orange'),
-                    _ColorBox(color: AppColors.teal, name: 'Teal'),
-                    _ColorBox(color: AppColors.cream, name: 'Cream'),
-                    _ColorBox(color: AppColors.textDark, name: 'Text Dark'),
-                    _ColorBox(color: AppColors.textMid, name: 'Text Mid'),
-                    _ColorBox(color: AppColors.border, name: 'Border'),
+                    const _ColorBox(
+                      color: AppColors.softOrange,
+                      name: 'Orange',
+                    ),
+                    const _ColorBox(color: AppColors.teal, name: 'Teal'),
+                    const _ColorBox(color: AppColors.green, name: 'Green'),
+                    const _ColorBox(color: AppColors.yellow, name: 'Yellow'),
+                    const _ColorBox(color: AppColors.textDark, name: 'Dark'),
+                    const _ColorBox(color: AppColors.border, name: 'Border'),
                   ],
                 ),
               ],
             ),
             _Section(
-              title: 'Buttons',
+              title: 'Form Blocks',
               children: [
-                AppButton(text: 'Primary Button', onPressed: () {}),
-                const SizedBox(height: 12),
-                AppButton(
-                  text: 'Secondary Button',
-                  variant: AppButtonVariant.secondary,
-                  onPressed: () {},
+                const AppSectionHeader(
+                  icon: Icon(Icons.person_outline),
+                  title: 'Customer Info',
+                  subtitle: 'ဖောက်သည်အချက်အလက်',
                 ),
                 const SizedBox(height: 12),
-                AppButton(
-                  text: 'Tertiary Button',
-                  variant: AppButtonVariant.tertiary,
-                  onPressed: () {},
-                ),
+                AppPasteHelper(onTap: () {}),
                 const SizedBox(height: 12),
-                AppButton(
-                  text: 'Facebook Button',
-                  variant: AppButtonVariant.facebook,
-                  icon: const Icon(Icons.facebook, color: Colors.white),
-                  onPressed: () {},
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    AppIconButton(
-                      icon: const Icon(Icons.notifications_none),
-                      onPressed: () {},
-                      showBadge: true,
-                    ),
-                    const SizedBox(width: 12),
-                    AppIconButton(
-                      icon: const Icon(Icons.more_horiz),
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 12),
-                    AppIconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () {},
-                      isSelected: true,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            _Section(
-              title: 'Form Inputs',
-              children: [
-                const AppTextField(
-                  label: 'Full Name',
-                  hintText: 'Enter your name',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                const SizedBox(height: 16),
-                const AppSearchBar(
-                  hintText: 'Search orders...',
-                  filterLabel: 'Filter',
-                ),
-              ],
-            ),
-            _Section(
-              title: 'Status & Badges',
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: const [
-                    AppStatusBadge(variant: AppStatusVariant.newOrder),
-                    AppStatusBadge(variant: AppStatusVariant.confirmed),
-                    AppStatusBadge(variant: AppStatusVariant.shipping),
-                    AppStatusBadge(variant: AppStatusVariant.delivered),
-                    AppChip(label: 'Silk Longyi'),
-                    AppChip(
-                      label: 'Fashion',
-                      icon: Icon(Icons.style, size: 14),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            _Section(
-              title: 'Dashboard Cards',
-              children: [
                 Row(
                   children: [
                     Expanded(
-                      child: AppSummaryCard(
-                        label: 'Today Orders',
-                        value: '23',
-                        changeText: '↑ 4 yesterday',
+                      child: AppSelectionOption(
+                        icon: const Icon(Icons.new_releases_outlined),
+                        label: 'New',
+                        subtitle: 'အသစ်',
+                        isSelected: _selectedStatusIndex == 0,
+                        onTap: () => setState(() => _selectedStatusIndex = 0),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: AppSummaryCard(
-                        label: 'Revenue',
-                        value: '485K',
-                        changeText: '↑ MMK today',
+                      child: AppSelectionOption(
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: 'Confirmed',
+                        subtitle: 'အတည်ပြု',
+                        isSelected: _selectedStatusIndex == 1,
+                        onTap: () => setState(() => _selectedStatusIndex = 1),
+                        selectedBorderColor: AppColors.teal,
+                        selectedBackgroundColor: AppColors.tealLight,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AppSelectionOption(
+                        icon: const Icon(Icons.local_shipping_outlined),
+                        label: 'Shipping',
+                        subtitle: 'သွားပြီ',
+                        isSelected: _selectedStatusIndex == 2,
+                        onTap: () => setState(() => _selectedStatusIndex = 2),
+                        selectedBorderColor: AppColors.yellow,
+                        selectedBackgroundColor: AppColors.yellowLight,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const AppSummaryCard(
-                  label: 'Pending',
-                  value: '8',
-                  changeText: 'Need action',
-                  isPositiveChange: false,
+              ],
+            ),
+            _Section(
+              title: 'Alerts & Banners',
+              children: const [
+                AppAlertBanner(
+                  title: '8 orders need your attention',
+                  message: 'Confirm or update status now',
                 ),
               ],
             ),
             _Section(
-              title: 'Navigation & Steppers',
+              title: 'Cards & Lists',
               children: [
-                const AppStepper(
-                  totalSteps: 4,
-                  currentStep: 1,
-                  stepLabels: ['Received', 'Confirm', 'Shipping', 'Done'],
-                ),
-                const SizedBox(height: 24),
-                AppTimeline(
-                  items: const [
-                    AppTimelineItem(
-                      time: '10:32 AM',
-                      event: 'Order created',
-                      subtitle: 'Added manually',
-                      color: AppTimelineColor.orange,
-                    ),
-                    AppTimelineItem(
-                      time: '11:05 AM',
-                      event: 'Out for delivery',
-                      color: AppTimelineColor.teal,
-                      isLast: true,
-                    ),
-                  ],
+                AppOrderCard(
+                  customerName: 'Daw Khin Myat',
+                  orderId: '#ORD-0241',
+                  productName: 'Silk Longyi Set × 2',
+                  price: '45,000',
+                  status: AppStatusVariant.newOrder,
+                  phone: '09 7812 3456',
+                  township: 'Sanchaung',
+                  time: '10:32 AM',
+                  onTap: () {},
+                  onPrimaryAction: () {},
+                  primaryActionLabel: 'Confirm',
+                  onSecondaryAction: () {},
+                  secondaryActionLabel: 'Call',
                 ),
               ],
             ),
             _Section(
-              title: 'Others',
+              title: 'Empty States',
               children: [
-                Row(
-                  children: const [
-                    AppAvatar(size: 50),
-                    SizedBox(width: 12),
-                    AppAvatar(
-                      size: 50,
-                      backgroundColor: AppColors.tealLight,
-                      icon: Icon(Icons.store, color: AppColors.teal),
-                    ),
-                    SizedBox(width: 12),
-                    AppProgressBarDots(totalSteps: 3, currentStep: 1),
-                  ],
+                AppEmptyState(
+                  icon: const Icon(Icons.search_off_outlined),
+                  title: 'No orders found',
+                  message: 'Try adjusting your filters or search query',
+                  action: AppButton(
+                    text: 'Clear All Filters',
+                    onPressed: () {},
+                    variant: AppButtonVariant.secondary,
+                  ),
+                ),
+              ],
+            ),
+            _Section(
+              title: 'Navigation',
+              children: [
+                AppFilterTabs(
+                  tabs: const ['All (23)', 'Pending (8)', 'Delivered (11)'],
+                  selectedIndex: _selectedFilterIndex,
+                  onTabSelected: (idx) =>
+                      setState(() => _selectedFilterIndex = idx),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: AppFAB(onPressed: () {}, icon: const Icon(Icons.add)),
                 ),
               ],
             ),
             const SizedBox(height: 40),
           ],
         ),
+      ),
+      bottomNavigationBar: AppNavBar(
+        items: [
+          AppNavBarItem(
+            icon: const Icon(Icons.list_alt),
+            label: 'Orders',
+            isSelected: true,
+            onTap: () {},
+          ),
+          AppNavBarItem(
+            icon: const Icon(Icons.people_outline),
+            label: 'Customers',
+            isSelected: false,
+            onTap: () {},
+          ),
+          AppNavBarItem(
+            icon: const Icon(Icons.bar_chart),
+            label: 'Reports',
+            isSelected: false,
+            onTap: () {},
+          ),
+          AppNavBarItem(
+            icon: const Icon(Icons.settings_outlined),
+            label: 'Settings',
+            isSelected: false,
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ExampleHomeScreen extends StatefulWidget {
+  const ExampleHomeScreen({super.key});
+
+  @override
+  State<ExampleHomeScreen> createState() => _ExampleHomeScreenState();
+}
+
+class _ExampleHomeScreenState extends State<ExampleHomeScreen> {
+  int _tabIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              color: AppColors.warmWhite,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          AppAvatar(
+                            size: 42,
+                            backgroundColor: AppColors.softOrange,
+                            icon: const Text(
+                              '👗',
+                              style: TextStyle(fontSize: 20),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ma Aye Shop',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                              Text(
+                                'Yangon Fashion · 23 orders today',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: AppColors.textLight,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          AppIconButton(
+                            icon: const Icon(Icons.notifications_none),
+                            onPressed: () {},
+                            showBadge: true,
+                          ),
+                          const SizedBox(width: 8),
+                          AppIconButton(
+                            icon: const Icon(Icons.more_horiz),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: AppSummaryCard(
+                          label: 'Today Orders',
+                          value: '23',
+                          changeText: '↑ 4 yesterday',
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: AppSummaryCard(
+                          label: 'Revenue',
+                          value: '485K',
+                          changeText: '↑ MMK today',
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: AppSummaryCard(
+                          label: 'Pending',
+                          value: '8',
+                          changeText: 'Need action',
+                          isPositiveChange: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  AppFilterTabs(
+                    tabs: const [
+                      'All (23)',
+                      'Today (12)',
+                      'Pending (8)',
+                      'Delivered (11)',
+                    ],
+                    selectedIndex: _tabIndex,
+                    onTabSelected: (idx) => setState(() => _tabIndex = idx),
+                  ),
+                ],
+              ),
+            ),
+            // Body
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AppSearchBar(hintText: 'Search orders, customers...'),
+                    const SizedBox(height: 16),
+                    if (_tabIndex == 2) ...[
+                      const AppAlertBanner(
+                        title: '8 orders need your attention',
+                        message: 'Confirm or update status now',
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    const Text(
+                      'TODAY — APRIL 2',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textLight,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    AppOrderCard(
+                      customerName: 'Daw Khin Myat',
+                      orderId: '#ORD-0241',
+                      productName: 'Silk Longyi Set × 2',
+                      price: '45,000',
+                      status: AppStatusVariant.newOrder,
+                      time: '10:32 AM',
+                      onTap: () {},
+                      onPrimaryAction: () {},
+                      primaryActionLabel: 'Confirm',
+                      onSecondaryAction: () {},
+                      secondaryActionLabel: 'Call',
+                    ),
+                    const SizedBox(height: 10),
+                    AppOrderCard(
+                      customerName: 'Ko Zaw Lin',
+                      orderId: '#ORD-0240',
+                      productName: 'Men Shirt (L) × 1',
+                      price: '18,500',
+                      status: AppStatusVariant.shipping,
+                      time: '9:14 AM',
+                      productIcon: '👔',
+                      onTap: () {},
+                      onPrimaryAction: () {},
+                      primaryActionLabel: 'Mark Delivered',
+                      onSecondaryAction: () {},
+                      secondaryActionLabel: 'Track',
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: AppFAB(
+        onPressed: () {},
+        icon: const Icon(Icons.add),
       ),
       bottomNavigationBar: AppNavBar(
         items: [

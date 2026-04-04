@@ -32,6 +32,12 @@ class AppColors {
     0x1FFF6B35,
   ); // design uses rgba(255,107,53,0.12) approx 0x1F
 
+  /// Status colors.
+  static const Color green = Color(0xFF22C55E);
+  static const Color greenLight = Color(0xFFDCFCE7);
+  static const Color yellow = Color(0xFFF59E0B);
+  static const Color yellowLight = Color(0xFFFEF3C7);
+
   /// Third party colors.
   static const Color facebookBlue = Color(0xFF1877F2);
 
