@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrderManager — Admin Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: #F0EDF8;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+:root {
+  --orange:        #FF6B35;
+  --orange-dark:   #E8521C;
+  --orange-10:     rgba(255,107,53,0.10);
+  --orange-15:     rgba(255,107,53,0.15);
+  --orange-20:     rgba(255,107,53,0.20);
+  --teal:          #2AA8A0;
+  --teal-10:       rgba(42,168,160,0.10);
+  --green:         #22C55E;
+  --red:           #EF4444;
+  --amber:         #F59E0B;
+  --violet:        #8B5CF6;
+  /* sidebar */
+  --sb-bg:         #0C0C18;
+  --sb-border:     rgba(255,255,255,0.055);
+  --sb-hover:      rgba(255,255,255,0.038);
+  --sb-active:     rgba(255,107,53,0.13);
+  --sb-text:       rgba(255,255,255,0.38);
+  --sb-text-hi:    rgba(255,255,255,0.85);
+  /* content */
+  --bg:            #F7F8FC;
+  --surface:       #FFFFFF;
+  --border:        #E8EAF0;
+  --border-2:      #D4D7E3;
+  --text-1:        #0E0F1A;
+  --text-2:        #4A4D6A;
+  --text-3:        #8A8DA8;
+  --radius:        12px;
+  --radius-lg:     18px;
+  --shadow-sm:     0 1px 3px rgba(14,15,26,0.06), 0 1px 2px rgba(14,15,26,0.04);
+  --shadow:        0 4px 16px rgba(14,15,26,0.08), 0 1px 4px rgba(14,15,26,0.05);
+}
+
+/* ─── SHELL ─────────────────────────────────────────────────── */
+.shell {
+  width: 100%;
+  max-width: 1340px;
+  height: calc(100vh - 48px);
+  max-height: 860px;
+  display: flex;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(14,15,26,0.22), 0 0 0 1px rgba(14,15,26,0.10);
+}
+
+/* ─── SIDEBAR ───────────────────────────────────────────────── */
+.sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  background: var(--sb-bg);
+  border-right: 1px solid var(--sb-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.sb-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px;
+  height: 60px;
+  border-bottom: 1px solid var(--sb-border);
+  flex-shrink: 0;
+}
+.sb-logo-icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--orange), #FF9060);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(255,107,53,0.35);
+}
+.sb-logo-icon svg { width: 16px; height: 16px; }
+.sb-logo-text { line-height: 1; }
+.sb-logo-name { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+.sb-logo-sub  { font-size: 10px; color: var(--sb-text); font-weight: 500; margin-top: 2px; }
+
+.sb-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+.sb-nav::-webkit-scrollbar { display: none; }
+.sb-section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  color: rgba(255,255,255,0.2); padding: 8px 10px 4px;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 9px;
+  cursor: pointer; position: relative;
+  color: var(--sb-text); font-size: 13px; font-weight: 600;
+  transition: all 0.15s; margin-bottom: 1px;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.sb-item:hover { background: var(--sb-hover); color: var(--sb-text-hi); }
+.sb-item.active { background: var(--sb-active); color: #FF9F7A; }
+.sb-item.active::before {
+  content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 20px; background: var(--orange); border-radius: 0 3px 3px 0;
+}
+.sb-item-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
+.sb-item.active .sb-item-icon { opacity: 1; }
+.sb-item-label { flex: 1; }
+.sb-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35);
+}
+.sb-item.active .sb-badge { background: rgba(255,107,53,0.25); color: #FF9F7A; }
+.sb-badge.alert { background: rgba(239,68,68,0.2); color: #F87171; }
+
+.sb-footer {
+  padding: 8px 10px 12px;
+  border-top: 1px solid var(--sb-border);
+  flex-shrink: 0;
+}
+.sb-user {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 9px;
+  cursor: pointer; transition: background 0.15s;
+}
+.sb-user:hover { background: var(--sb-hover); }
+.sb-user-avatar {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), #4DD9D2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: white; flex-shrink: 0;
+}
+.sb-user-name { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.65); }
+.sb-user-role { font-size: 10px; color: var(--sb-text); }
+.sb-user-arrow { margin-left: auto; color: var(--sb-text); }
+
+/* ─── MAIN ──────────────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+
+/* ─── TOPBAR ─────────────────────────────────────────────────── */
+.topbar {
+  height: 60px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px; flex-shrink: 0;
+}
+.topbar-title { font-size: 15px; font-weight: 800; color: var(--text-1); }
+.topbar-sub   { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.topbar-spacer { flex: 1; }
+.topbar-search {
+  position: relative;
+}
+.topbar-search input {
+  height: 34px; width: 220px; padding: 0 12px 0 34px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  background: var(--bg); font-size: 13px; font-family: inherit;
+  color: var(--text-1); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.topbar-search input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,0.10); }
+.topbar-search input::placeholder { color: var(--text-3); }
+.topbar-search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--text-3);
+}
+.topbar-icon-btn {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-2); position: relative;
+  transition: background 0.15s;
+}
+.topbar-icon-btn:hover { background: var(--bg); }
+.notif-dot {
+  position: absolute; top: 7px; right: 7px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--orange); border: 1.5px solid white;
+}
+.topbar-divider { width: 1px; height: 22px; background: var(--border); }
+.topbar-avatar {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--orange), #FF9060);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 13px; font-weight: 800; cursor: pointer;
+}
+
+/* ─── PAGES ─────────────────────────────────────────────────── */
+.page { display: none; flex: 1; overflow-y: auto; }
+.page.active { display: flex; flex-direction: column; }
+.page-content { padding: 24px; display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
+.page::-webkit-scrollbar { width: 5px; }
+.page::-webkit-scrollbar-thumb { background: #D4D7E3; border-radius: 99px; }
+
+/* ─── CARDS / SURFACES ──────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.card-title { font-size: 14px; font-weight: 700; color: var(--text-1); }
+.card-sub   { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* ─── KPI CARDS ─────────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.kpi {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column;
+}
+.kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.kpi-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.kpi-badge {
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; gap: 3px;
+}
+.kpi-badge.up   { color: #16A34A; }
+.kpi-badge.down { color: #DC2626; }
+.kpi-badge.warn { color: var(--amber); }
+.kpi-value { font-size: 26px; font-weight: 800; color: var(--text-1); letter-spacing: -0.03em; line-height: 1; }
+.kpi-unit  { font-size: 13px; font-weight: 600; color: var(--text-3); margin-left: 3px; }
+.kpi-label { font-size: 12px; color: var(--text-3); font-weight: 500; margin-top: 3px; }
+.kpi-sub   { font-size: 10px; color: var(--text-3); opacity: 0.6; margin-top: 2px; }
+
+/* ─── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  border-radius: 9px; cursor: pointer; border: none;
+  transition: all 0.15s; white-space: nowrap;
+}
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-md { padding: 8px 16px; }
+.btn-lg { padding: 11px 22px; font-size: 14px; }
+.btn-primary { background: var(--orange); color: #fff; box-shadow: 0 2px 8px rgba(255,107,53,0.30); }
+.btn-primary:hover { background: var(--orange-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255,107,53,0.38); }
+.btn-outline { background: var(--surface); color: var(--text-2); border: 1.5px solid var(--border); }
+.btn-outline:hover { background: var(--bg); border-color: var(--border-2); }
+.btn-ghost  { background: transparent; color: var(--text-2); }
+.btn-ghost:hover  { background: var(--bg); }
+.btn-danger { background: #FEF2F2; color: var(--red); border: 1.5px solid #FECACA; }
+.btn-danger:hover { background: #FEE2E2; }
+.btn-teal   { background: rgba(42,168,160,0.12); color: var(--teal); }
+.btn-teal:hover { background: rgba(42,168,160,0.20); }
+
+/* ─── BADGES ─────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
+}
+.badge-green  { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+.badge-orange { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.badge-teal   { background: #F0FDFA; color: #0F766E; border: 1px solid #99F6E4; }
+.badge-amber  { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+.badge-red    { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+.badge-blue   { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.badge-violet { background: #F5F3FF; color: #6D28D9; border: 1px solid #DDD6FE; }
+.badge-gray   { background: #F8F8FA; color: #52525B; border: 1px solid #E4E4E7; }
+.badge-dot    { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─── TABLES ─────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left; font-size: 11px; font-weight: 700;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 10px 20px; background: #FAFBFD;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; cursor: pointer; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #FAFBFD; }
+tbody tr.selected { background: rgba(255,107,53,0.04); }
+tbody td { padding: 12px 20px; font-size: 13px; color: var(--text-2); vertical-align: middle; }
+tbody td.td-name { color: var(--text-1); font-weight: 700; }
+.td-mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--text-3); }
+
+/* ─── BARS ───────────────────────────────────────────────────── */
+.bar-track { height: 6px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+/* ─── CHART BARS ─────────────────────────────────────────────── */
+.chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 100%; }
+.chart-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.chart-bar {
+  width: 100%; border-radius: 5px 5px 0 0;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.chart-bar:hover { opacity: 0.8; }
+.chart-label { font-size: 10px; color: var(--text-3); font-weight: 600; }
+
+/* ─── TABS ───────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; padding: 3px; background: var(--bg); border-radius: 10px; width: fit-content; }
+.tab {
+  padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; color: var(--text-3); border: none; background: none;
+  transition: all 0.15s; font-family: inherit;
+}
+.tab.active { background: var(--surface); color: var(--text-1); box-shadow: var(--shadow-sm); }
+.tab:hover:not(.active) { color: var(--text-2); }
+
+/* ─── PILLS ROW ─────────────────────────────────────────────── */
+.pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pill {
+  padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700;
+  cursor: pointer; border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text-3);
+  transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+}
+.pill:hover { border-color: var(--border-2); color: var(--text-2); }
+.pill.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+.pill-count {
+  font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 99px;
+  background: rgba(255,255,255,0.25);
+}
+.pill.active .pill-count { background: rgba(255,255,255,0.25); }
+.pill:not(.active) .pill-count { background: var(--bg); color: var(--text-3); }
+
+/* ─── INPUTS ─────────────────────────────────────────────────── */
+.input-wrap { position: relative; }
+.input-wrap .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+.input {
+  height: 36px; padding: 0 12px; border: 1.5px solid var(--border);
+  border-radius: 9px; background: var(--surface); font-family: inherit;
+  font-size: 13px; color: var(--text-1); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,0.10); }
+.input::placeholder { color: var(--text-3); }
+.input.with-icon { padding-left: 34px; }
+.input-full { width: 100%; }
+textarea.input { height: auto; padding: 10px 12px; resize: none; }
+select.input { appearance: none; padding-right: 28px; cursor: pointer; }
+
+/* ─── FORM GROUP ─────────────────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ─── STAT DOT ───────────────────────────────────────────────── */
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-green  { background: var(--green); box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
+.dot-blue   { background: #3B82F6; box-shadow: 0 0 0 2px rgba(59,130,246,0.25); }
+.dot-amber  { background: var(--amber); box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
+.dot-red    { background: var(--red); box-shadow: 0 0 0 2px rgba(239,68,68,0.25); }
+.dot-gray   { background: #9CA3AF; }
+
+/* ─── SIDE PANEL ─────────────────────────────────────────────── */
+.side-panel {
+  width: 300px; flex-shrink: 0;
+  border-left: 1.5px solid var(--border);
+  background: var(--surface); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.25s;
+}
+.side-panel.closed { width: 0; overflow: hidden; border: none; }
+.side-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.side-panel-body { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.side-panel-body::-webkit-scrollbar { width: 4px; }
+.side-panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ─── DETAIL SECTION ─────────────────────────────────────────── */
+.detail-section-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--text-3); margin-bottom: 8px;
+}
+.detail-grid {
+  border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.detail-row {
+  display: flex; align-items: center;
+  padding: 9px 12px; border-bottom: 1px solid var(--border); gap: 10px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-key { font-size: 11px; color: var(--text-3); font-weight: 600; min-width: 80px; flex-shrink: 0; }
+.detail-val { font-size: 12px; font-weight: 700; color: var(--text-1); }
+
+/* ─── MODAL ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(14,15,26,0.45);
+  backdrop-filter: blur(6px); z-index: 100;
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 18px;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 32px 80px rgba(14,15,26,0.25);
+  width: 100%; max-width: 480px; overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 15px; font-weight: 800; color: var(--text-1); }
+.modal-sub   { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.modal-body  { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.modal-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 14px 22px; border-top: 1px solid var(--border);
+}
+.modal-close {
+  border: none; background: none; cursor: pointer;
+  color: var(--text-3); padding: 4px; border-radius: 6px;
+  display: flex; transition: color 0.15s;
+}
+.modal-close:hover { color: var(--text-1); }
+
+/* step progress */
+.step-bar { display: flex; gap: 4px; margin-top: 4px; }
+.step-bar-item { flex: 1; height: 3px; border-radius: 99px; background: var(--border); transition: background 0.3s; }
+.step-bar-item.done { background: var(--orange); }
+
+/* ─── ICON HELPERS ───────────────────────────────────────────── */
+svg { display: block; }
+.icon-orange  { background: rgba(255,107,53,0.10); color: var(--orange); }
+.icon-green   { background: rgba(34,197,94,0.10);  color: var(--green); }
+.icon-teal    { background: rgba(42,168,160,0.10); color: var(--teal); }
+.icon-amber   { background: rgba(245,158,11,0.10); color: var(--amber); }
+.icon-red     { background: rgba(239,68,68,0.10);  color: var(--red); }
+.icon-blue    { background: rgba(59,130,246,0.10); color: #3B82F6; }
+.icon-violet  { background: rgba(139,92,246,0.10); color: var(--violet); }
+
+/* ─── MISC ───────────────────────────────────────────────────── */
+.flex-row  { display: flex; align-items: center; }
+.flex-col  { display: flex; flex-direction: column; }
+.gap-2     { gap: 8px; }
+.gap-3     { gap: 12px; }
+.gap-4     { gap: 16px; }
+.gap-5     { gap: 20px; }
+.ml-auto   { margin-left: auto; }
+.text-1    { color: var(--text-1); }
+.text-2    { color: var(--text-2); }
+.text-3    { color: var(--text-3); }
+.fw-7      { font-weight: 700; }
+.fw-8      { font-weight: 800; }
+.fs-11     { font-size: 11px; }
+.fs-12     { font-size: 12px; }
+.fs-13     { font-size: 13px; }
+.fs-14     { font-size: 14px; }
+.w-full    { width: 100%; }
+.grid-2    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3    { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.health-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+.health-row:last-child { border-bottom: none; }
+
+/* broadcast card */
+.bc-card {
+  border: 1.5px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); padding: 18px 20px;
+  display: flex; gap: 14px; transition: box-shadow 0.15s;
+}
+.bc-card:hover { box-shadow: var(--shadow); }
+.bc-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.bc-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.bc-body { font-size: 12px; color: var(--text-3); line-height: 1.6; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bc-stats { display: flex; align-items: center; gap: 16px; }
+.bc-stat { font-size: 12px; color: var(--text-3); }
+.bc-stat strong { color: var(--text-1); font-weight: 700; }
+.open-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.open-bar { width: 72px; height: 5px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+.open-bar-fill { height: 100%; border-radius: 99px; background: var(--orange); }
+
+/* automation rule row */
+.rule-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 20px; border-bottom: 1px solid var(--border);
+}
+.rule-row:last-child { border-bottom: none; }
+
+/* pagination */
+.pagination { display: flex; align-items: center; gap: 4px; }
+.pg-btn {
+  width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--surface); font-size: 12px; font-weight: 700;
+  color: var(--text-2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.pg-btn:hover { background: var(--bg); }
+.pg-btn.active { background: var(--orange); border-color: var(--orange); color: white; }
+.pg-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+/* radio card */
+.radio-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border);
+  cursor: pointer; transition: all 0.15s;
+}
+.radio-card:hover { border-color: var(--border-2); }
+.radio-card.selected { border-color: var(--orange); background: rgba(255,107,53,0.04); }
+.radio-card input { accent-color: var(--orange); }
+
+/* ─── REVENUE CHART (SVG-free visual bar) ────────────────────── */
+.rev-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+.rev-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.rev-bar {
+  width: 100%; border-radius: 6px 6px 0 0;
+  transition: opacity 0.15s; cursor: pointer;
+}
+.rev-bar:hover { opacity: 0.75; }
+.rev-bar.today { background: var(--orange); }
+.rev-bar.past  { background: rgba(255,107,53,0.18); }
+.rev-bar.teal  { background: rgba(42,168,160,0.25); }
+.rev-day { font-size: 9px; font-weight: 700; color: var(--text-3); }
+.rev-day.today { color: var(--orange); }
+
+/* notice banner */
+.notice {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 10px;
+  font-size: 12px; font-weight: 600;
+}
+.notice-amber { background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; }
+.notice-red   { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+.notice-green { background: #F0FDF4; border: 1px solid #BBF7D0; color: #14532D; }
+
+/* top-performers */
+.perf-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.perf-row:last-child { border-bottom: none; padding-bottom: 0; }
+.perf-rank { width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+.rank-1 { background: #FEF9C3; color: #854D0E; }
+.rank-2 { background: #F1F5F9; color: #475569; }
+.rank-3 { background: #FFF7ED; color: #9A3412; }
+.rank-n { background: var(--bg); color: var(--text-3); }
+
+/* geo row */
+.geo-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.geo-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      </div>
+      <div class="sb-logo-text">
+        <div class="sb-logo-name">OrderManager</div>
+        <div class="sb-logo-sub">Admin Portal</div>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section-label">Overview</div>
+      <button class="sb-item active" onclick="switchPage('dashboard',this)">
+        <svg class="sb-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span class="sb-item-label">Dashboard</span>
+      </button>
+
+      <div class="sb-section-label" style="margin-top:10px;">Clients</div>
+      <button class="sb-item" onclick="switchPage('clients',this)">
+        <svg class="sb-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="sb-item-label">All Clients</span>
+        <span class="sb-badge">89</span>
+      </button>
+
+      <div class="sb-section-label" style="margin-top:10px;">Finance</div>
+      <button class="sb-item" onclick="switchPage('billing',this)">
+        <svg class="sb-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <span class="sb-item-label">Billing</span>
+        <span class="sb-badge alert">1</span>
+      </button>
+      <button class="sb-item" onclick="switchPage('analytics',this)">
+        <svg class="sb-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="sb-item-label">Analytics</span>
+      </button>
+
+      <div class="sb-section-label" style="margin-top:10px;">Comms</div>
+      <button class="sb-item" onclick="switchPage('broadcasts',this)">
+        <svg class="sb-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 000-6h.09A8 8 0 0122 12.9V17z"/><path d="M13 21.9V22a1 1 0 01-2 0v-.09"/></svg>
+        <span class="sb-item-label">Broadcasts</span>
+        <span class="sb-badge">2</span>
+      </button>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-user-avatar">A</div>
+        <div>
+          <div class="sb-user-name">Admin</div>
+          <div class="sb-user-role">owner@ordermgr.mm</div>
+        </div>
+        <div class="sb-user-arrow">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ════════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-sub" id="topbar-sub">Platform overview & key metrics</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-search">
+        <svg class="topbar-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Search clients, orders…">
+      </div>
+      <div class="topbar-icon-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
+      <div class="topbar-divider"></div>
+      <div class="topbar-avatar">A</div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE: DASHBOARD                                        -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-content">
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon icon-orange" style="border-radius:10px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+              </div>
+              <span class="kpi-badge up">↑ +7 shops</span>
+            </div>
+            <div><span class="kpi-value">89</span></div>
+            <div class="kpi-label">Total Registered Shops</div>
+            <div class="kpi-sub">vs 82 last month</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon icon-green" style="border-radius:10px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+              </div>
+              <span class="kpi-badge up">↑ +18%</span>
+            </div>
+            <div><span class="kpi-value">260K</span><span class="kpi-unit">MMK</span></div>
+            <div class="kpi-label">Monthly Recurring Revenue</div>
+            <div class="kpi-sub">52 Pro subscribers</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon icon-blue" style="border-radius:10px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              </div>
+              <span class="kpi-badge up">↑ +12%</span>
+            </div>
+            <div><span class="kpi-value">61</span></div>
+            <div class="kpi-label">Active Today</div>
+            <div class="kpi-sub">of 89 total shops</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-top">
+              <div class="kpi-icon icon-violet" style="border-radius:10px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              <span class="kpi-badge up">↓ −0.4%</span>
+            </div>
+            <div><span class="kpi-value">2.3</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-label">Churn Rate</div>
+            <div class="kpi-sub">Best month so far</div>
+          </div>
+        </div>
+
+        <!-- Middle row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+
+          <!-- Revenue chart -->
+          <div class="card" style="grid-column:span 2;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Revenue Overview</div>
+                <div class="card-sub">MMK collected by day this week</div>
+              </div>
+              <div class="flex-row gap-2">
+                <button class="btn btn-sm btn-primary">7D</button>
+                <button class="btn btn-sm btn-ghost text-3">30D</button>
+                <button class="btn btn-sm btn-ghost text-3">90D</button>
+              </div>
+            </div>
+            <div style="padding:20px;">
+              <div class="rev-chart">
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:52%"></div><div class="rev-day">Mon</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:68%"></div><div class="rev-day">Tue</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:58%"></div><div class="rev-day">Wed</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:84%"></div><div class="rev-day">Thu</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:78%"></div><div class="rev-day">Fri</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:60%"></div><div class="rev-day">Sat</div></div>
+                <div class="rev-bar-col"><div class="rev-bar today" style="height:100%"></div><div class="rev-day today">Today</div></div>
+              </div>
+              <div class="flex-row gap-4" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+                <div><div class="fs-11 text-3 fw-7">This week</div><div style="font-size:22px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;">260,000 <span style="font-size:14px;font-weight:600;color:var(--text-3)">MMK</span></div></div>
+                <div class="ml-auto flex-row gap-2" style="color:#16A34A;font-size:13px;font-weight:700;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+                  +18% vs last week
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right column cards -->
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="card" style="flex:1;">
+              <div style="padding:16px 18px;border-bottom:1px solid var(--border);"><div class="card-title">Plan Breakdown</div></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;">
+                <div>
+                  <div class="flex-row" style="margin-bottom:5px;"><span class="fs-12 fw-7 text-1">Pro Monthly</span><span class="ml-auto fs-11 text-3">52 shops · 58%</span></div>
+                  <div class="bar-track"><div class="bar-fill" style="width:58%;background:var(--orange);"></div></div>
+                </div>
+                <div>
+                  <div class="flex-row" style="margin-bottom:5px;"><span class="fs-12 fw-7 text-1">Lifetime</span><span class="ml-auto fs-11 text-3">21 shops · 24%</span></div>
+                  <div class="bar-track"><div class="bar-fill" style="width:24%;background:var(--teal);"></div></div>
+                </div>
+                <div>
+                  <div class="flex-row" style="margin-bottom:5px;"><span class="fs-12 fw-7 text-1">Free Trial</span><span class="ml-auto fs-11 text-3">16 shops · 18%</span></div>
+                  <div class="bar-track"><div class="bar-fill" style="width:18%;background:var(--amber);"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div style="padding:14px 18px;border-bottom:1px solid var(--border);"><div class="card-title">Platform Health</div></div>
+              <div style="padding:10px 18px;">
+                <div class="health-row"><span class="text-3 fs-12">Active shops</span><span class="fw-7 fs-12 text-1">61 / 89</span></div>
+                <div class="health-row"><span class="text-3 fs-12">Trials expiring</span><span class="fw-7 fs-12" style="color:var(--amber)">3 this week</span></div>
+                <div class="health-row"><span class="text-3 fs-12">Overdue payments</span><span class="fw-7 fs-12" style="color:var(--red)">1 shop ⚠</span></div>
+                <div class="health-row"><span class="text-3 fs-12">Avg orders / shop</span><span class="fw-7 fs-12 text-1">34 / day</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent clients table -->
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Recent Clients</div><div class="card-sub">Latest sign-ups and activity</div></div>
+            <button class="btn btn-sm btn-outline" onclick="switchPage('clients',document.querySelector('[onclick*=clients]'))">View all →</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>Shop</th><th>Plan</th><th>Status</th><th>Orders</th><th>MRR</th><th>Joined</th><th>Last Active</th><th></th>
+              </tr></thead>
+              <tbody>
+                <tr onclick="switchPage('clients',document.querySelector('[onclick*=clients]'))">
+                  <td><div class="flex-row gap-2"><div style="width:30px;height:30px;border-radius:9px;background:#FFF7ED;border:1px solid #FED7AA;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">👗</div><div><div class="td-name">Ma Aye Shop</div><div class="td-mono">C001 · Sanchaung</div></div></div></td>
+                  <td><span class="badge badge-orange">Pro</span></td>
+                  <td><div class="flex-row gap-2"><div class="status-dot dot-green"></div><span class="fs-12 fw-7">Active</span></div></td>
+                  <td class="td-name">847</td>
+                  <td class="td-name">5,000 MMK</td>
+                  <td class="text-3 fs-12">Jan 5, 2025</td>
+                  <td class="text-3 fs-12">2 min ago</td>
+                  <td><button class="btn btn-ghost btn-sm text-3">⋯</button></td>
+                </tr>
+                <tr onclick="switchPage('clients',document.querySelector('[onclick*=clients]'))">
+                  <td><div class="flex-row gap-2"><div style="width:30px;height:30px;border-radius:9px;background:#F0FDFA;border:1px solid #99F6E4;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💄</div><div><div class="td-name">Aung Beauty Store</div><div class="td-mono">C002 · Mandalay</div></div></div></td>
+                  <td><span class="badge badge-teal">Lifetime</span></td>
+                  <td><div class="flex-row gap-2"><div class="status-dot dot-green"></div><span class="fs-12 fw-7">Active</span></div></td>
+                  <td class="td-name">1,243</td>
+                  <td class="text-3 fs-12">—</td>
+                  <td class="text-3 fs-12">Dec 20, 2024</td>
+                  <td class="text-3 fs-12">1 hr ago</td>
+                  <td><button class="btn btn-ghost btn-sm text-3">⋯</button></td>
+                </tr>
+                <tr onclick="switchPage('clients',document.querySelector('[onclick*=clients]'))">
+                  <td><div class="flex-row gap-2"><div style="width:30px;height:30px;border-radius:9px;background:#F8F8FA;border:1px solid #E4E4E7;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📱</div><div><div class="td-name">Ko Zaw Electronics</div><div class="td-mono">C003 · Bago</div></div></div></td>
+                  <td><span class="badge badge-gray">Trial</span></td>
+                  <td><div class="flex-row gap-2"><div class="status-dot dot-blue"></div><span class="fs-12 fw-7">Trial</span></div></td>
+                  <td class="td-name">34</td>
+                  <td class="text-3 fs-12">—</td>
+                  <td class="text-3 fs-12">Mar 26, 2025</td>
+                  <td class="text-3 fs-12">Yesterday</td>
+                  <td><button class="btn btn-ghost btn-sm text-3">⋯</button></td>
+                </tr>
+                <tr onclick="switchPage('clients',document.querySelector('[onclick*=clients]'))">
+                  <td><div class="flex-row gap-2"><div style="width:30px;height:30px;border-radius:9px;background:#FEF2F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💄</div><div><div class="td-name">Phyo Cosmetics</div><div class="td-mono">C008 · Dagon</div></div></div></td>
+                  <td><span class="badge badge-orange">Pro</span></td>
+                  <td><div class="flex-row gap-2"><div class="status-dot dot-red"></div><span class="fs-12 fw-7" style="color:var(--red)">Overdue ⚠</span></div></td>
+                  <td class="td-name">290</td>
+                  <td style="color:var(--red);font-weight:700;font-size:13px;">5,000 MMK</td>
+                  <td class="text-3 fs-12">Feb 10, 2025</td>
+                  <td class="text-3 fs-12">2 days ago</td>
+                  <td><button class="btn btn-ghost btn-sm text-3">⋯</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE: CLIENTS                                          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-clients" style="flex-direction:row;">
+      <!-- Table area -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+        <!-- Toolbar -->
+        <div style="padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <div class="input-wrap">
+            <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input with-icon" style="width:220px;" placeholder="Search shops, ID, township…" oninput="filterClients(this.value)">
+          </div>
+          <select class="input" style="width:130px;" onchange="filterByPlan(this.value)">
+            <option value="">All Plans</option>
+            <option>Pro</option><option>Lifetime</option><option>Trial</option>
+          </select>
+          <div class="ml-auto flex-row gap-2">
+            <button class="btn btn-sm btn-outline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export
+            </button>
+            <button class="btn btn-sm btn-primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Client
+            </button>
+          </div>
+        </div>
+
+        <!-- Status pills -->
+        <div style="padding:10px 22px;border-bottom:1px solid var(--border);background:var(--surface);">
+          <div class="pills" id="status-pills">
+            <button class="pill active" onclick="filterByStatus('all',this)">All <span class="pill-count">89</span></button>
+            <button class="pill" onclick="filterByStatus('active',this)">Active <span class="pill-count">61</span></button>
+            <button class="pill" onclick="filterByStatus('trial',this)">Trial <span class="pill-count">16</span></button>
+            <button class="pill" onclick="filterByStatus('expiring',this)" style="border-color:#FDE68A;color:#B45309;background:#FFFBEB;">Expiring <span class="pill-count" style="background:#FDE68A;color:#B45309;">3</span></button>
+            <button class="pill" onclick="filterByStatus('overdue',this)" style="border-color:#FECACA;color:#B91C1C;background:#FEF2F2;">Overdue <span class="pill-count" style="background:#FECACA;color:#B91C1C;">1</span></button>
+            <span class="ml-auto fs-11 text-3" id="client-count-label">Showing 8 of 89</span>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="tbl-wrap" style="flex:1;overflow-y:auto;">
+          <table id="clients-table">
+            <thead><tr>
+              <th style="width:36px;"><input type="checkbox" style="accent-color:var(--orange);" onchange="toggleAll(this)"></th>
+              <th>Shop</th><th>Category</th><th>Plan</th><th>Status</th>
+              <th>Orders</th><th>MRR</th><th>Last Active</th><th></th>
+            </tr></thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div style="padding:12px 22px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+          <span class="fs-12 text-3">Showing 8 of 89 clients</span>
+          <div class="pagination">
+            <button class="pg-btn" disabled>‹</button>
+            <button class="pg-btn active">1</button>
+            <button class="pg-btn">2</button>
+            <button class="pg-btn">3</button>
+            <button class="pg-btn">›</button>
+          </div>
+          <div class="flex-row gap-2 fs-12 text-3">Rows per page
+            <select class="input" style="width:60px;height:28px;font-size:12px;padding:0 6px;">
+              <option>10</option><option>20</option><option>50</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side Panel -->
+      <div class="side-panel" id="client-detail-panel">
+        <div class="side-panel-header">
+          <div><div class="fs-14 fw-7 text-1">Client Details</div></div>
+          <button class="modal-close" onclick="closeClientPanel()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="side-panel-body">
+          <div class="flex-row gap-3">
+            <div id="cp-emoji" style="width:46px;height:46px;border-radius:14px;background:#FFF7ED;border:1.5px solid #FED7AA;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;"></div>
+            <div>
+              <div class="fs-14 fw-8 text-1" id="cp-name">—</div>
+              <div class="flex-row gap-2" style="margin-top:4px;" id="cp-badges"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-section-title">Contact Info</div>
+            <div class="detail-grid">
+              <div class="detail-row"><div class="detail-key">ID</div><div class="detail-val td-mono" id="cp-id">—</div></div>
+              <div class="detail-row"><div class="detail-key">Category</div><div class="detail-val" id="cp-cat">—</div></div>
+              <div class="detail-row"><div class="detail-key">Township</div><div class="detail-val" id="cp-township">—</div></div>
+              <div class="detail-row"><div class="detail-key">Phone</div><div class="detail-val" id="cp-phone">—</div></div>
+              <div class="detail-row"><div class="detail-key">Joined</div><div class="detail-val" id="cp-joined">—</div></div>
+              <div class="detail-row"><div class="detail-key">Last Active</div><div class="detail-val" id="cp-last">—</div></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-section-title">Platform Stats</div>
+            <div class="grid-2">
+              <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;">
+                <div class="fs-11 text-3" style="margin-bottom:3px;">Total Orders</div>
+                <div class="fw-8 text-1" style="font-size:18px;" id="cp-orders">—</div>
+              </div>
+              <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;">
+                <div class="fs-11 text-3" style="margin-bottom:3px;">MRR</div>
+                <div class="fw-8 text-1" style="font-size:18px;" id="cp-mrr">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-section-title">Actions</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn btn-outline btn-sm w-full" style="justify-content:flex-start;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                View Shop Dashboard
+              </button>
+              <button class="btn btn-outline btn-sm w-full" style="justify-content:flex-start;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Send Email
+              </button>
+              <button class="btn btn-outline btn-sm w-full" style="justify-content:flex-start;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Manage Subscription
+              </button>
+              <button class="btn btn-danger btn-sm w-full" style="justify-content:flex-start;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                Suspend Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE: BILLING                                          -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-billing">
+      <div class="page-content">
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-orange" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><span class="kpi-badge up">+5 shops</span></div><div><span class="kpi-value">260K</span><span class="kpi-unit">MMK</span></div><div class="kpi-label">MRR — 52 Pro subscribers</div></div>
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-green" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><span class="kpi-badge up">+18%</span></div><div><span class="kpi-value">3.12M</span><span class="kpi-unit">MMK</span></div><div class="kpi-label">ARR (projected)</div></div>
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-teal" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><span class="kpi-badge up">21 deals</span></div><div><span class="kpi-value">525K</span><span class="kpi-unit">MMK</span></div><div class="kpi-label">Lifetime Revenue</div></div>
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-red" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><span class="kpi-badge down">Action needed</span></div><div><span class="kpi-value">1</span></div><div class="kpi-label">Overdue Payments</div></div>
+        </div>
+
+        <!-- Overdue notice -->
+        <div class="notice notice-amber">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div style="flex:1;"><strong>Phyo Cosmetics</strong> has an overdue payment of 5,000 MMK since Mar 1, 2025.</div>
+          <button class="btn btn-sm" style="background:#F59E0B;color:white;">Send Reminder</button>
+        </div>
+
+        <!-- Tabs + content -->
+        <div>
+          <div class="tabs" style="margin-bottom:16px;" id="billing-tabs">
+            <button class="tab active" onclick="switchBillingTab('invoices',this)">Invoice History</button>
+            <button class="tab" onclick="switchBillingTab('upcoming',this)">Upcoming Renewals</button>
+            <button class="tab" onclick="switchBillingTab('plans',this)">Plan Config</button>
+          </div>
+
+          <!-- Invoices -->
+          <div id="billing-invoices" class="card">
+            <div class="card-header">
+              <div><div class="card-title">Invoice History</div><div class="card-sub">All payment records</div></div>
+              <button class="btn btn-sm btn-outline">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+              </button>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Invoice</th><th>Shop</th><th>Plan</th><th>Amount</th><th>Method</th><th>Date</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="td-mono">INV-0089</td><td class="td-name">Ma Aye Shop</td><td><span class="badge badge-orange">Pro</span></td><td class="td-name">5,000 MMK</td><td class="text-3 fs-12">KBZ Pay</td><td class="text-3 fs-12">Apr 1, 2025</td><td><span class="badge badge-green">✓ Paid</span></td><td><button class="btn btn-ghost btn-sm text-3">⋯</button></td></tr>
+                  <tr><td class="td-mono">INV-0088</td><td class="td-name">Thida Food Express</td><td><span class="badge badge-orange">Pro</span></td><td class="td-name">5,000 MMK</td><td class="text-3 fs-12">Wave Money</td><td class="text-3 fs-12">Apr 1, 2025</td><td><span class="badge badge-green">✓ Paid</span></td><td><button class="btn btn-ghost btn-sm text-3">⋯</button></td></tr>
+                  <tr><td class="td-mono">INV-0087</td><td class="td-name">Shwe Maw Shop</td><td><span class="badge badge-orange">Pro</span></td><td class="td-name">5,000 MMK</td><td class="text-3 fs-12">AYA Pay</td><td class="text-3 fs-12">Apr 1, 2025</td><td><span class="badge badge-green">✓ Paid</span></td><td><button class="btn btn-ghost btn-sm text-3">⋯</button></td></tr>
+                  <tr style="background:#FEF2F2;"><td class="td-mono">INV-0086</td><td class="td-name">Phyo Cosmetics</td><td><span class="badge badge-orange">Pro</span></td><td style="color:var(--red);font-weight:700;">5,000 MMK</td><td class="text-3 fs-12">—</td><td class="text-3 fs-12">Mar 1, 2025</td><td><span class="badge badge-red">⚠ Overdue</span></td><td><button class="btn btn-ghost btn-sm text-3">⋯</button></td></tr>
+                  <tr><td class="td-mono">INV-0084</td><td class="td-name">Aung Beauty Store</td><td><span class="badge badge-teal">Lifetime</span></td><td class="td-name">25,000 MMK</td><td class="text-3 fs-12">KBZ Pay</td><td class="text-3 fs-12">Dec 20, 2024</td><td><span class="badge badge-green">✓ Paid</span></td><td><button class="btn btn-ghost btn-sm text-3">⋯</button></td></tr>
+                  <tr><td class="td-mono">INV-0083</td><td class="td-name">Min Min Grocery</td><td><span class="badge badge-teal">Lifetime</span></td><td class="td-name">25,000 MMK</td><td class="text-3 fs-12">Wave Money</td><td class="text-3 fs-12">Nov 14, 2024</td><td><span class="badge badge-green">✓ Paid</span></td><td><button class="btn btn-ghost btn-sm text-3">⋯</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Upcoming (hidden) -->
+          <div id="billing-upcoming" style="display:none;display:flex;flex-direction:column;gap:10px;">
+            <div class="card" style="padding:16px 20px;display:flex;align-items:center;gap:14px;">
+              <div class="kpi-icon icon-orange" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+              <div style="flex:1;"><div class="fw-7 text-1 fs-13">Ma Aye Shop</div><div class="fs-12 text-3">Pro Monthly · Due May 1, 2025</div></div>
+              <div style="text-align:right;"><div class="fw-8 text-1 fs-14">5,000 MMK</div><div class="fs-11 text-3">29 days left</div></div>
+            </div>
+            <div class="card" style="padding:16px 20px;display:flex;align-items:center;gap:14px;">
+              <div class="kpi-icon icon-orange" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+              <div style="flex:1;"><div class="fw-7 text-1 fs-13">Thida Food Express</div><div class="fs-12 text-3">Pro Monthly · Due May 1, 2025</div></div>
+              <div style="text-align:right;"><div class="fw-8 text-1 fs-14">5,000 MMK</div><div class="fs-11 text-3">29 days left</div></div>
+            </div>
+            <div class="card" style="background:#FFFBEB;border-color:#FDE68A;padding:16px 20px;display:flex;align-items:center;gap:14px;">
+              <div style="width:40px;height:40px;border-radius:12px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--amber);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+              <div style="flex:1;"><div class="fw-7 text-1 fs-13">Ko Zaw Electronics</div><div class="fs-12" style="color:var(--amber);">Trial expiring — convert to Pro?</div></div>
+              <div style="text-align:right;"><div class="fw-8" style="color:var(--amber);font-size:14px;">5,000 MMK</div><div class="fs-11" style="color:var(--red)">1 day left!</div></div>
+              <button class="btn btn-sm" style="background:var(--amber);color:white;flex-shrink:0;">Send Offer</button>
+            </div>
+          </div>
+
+          <!-- Plans (hidden) -->
+          <div id="billing-plans" style="display:none;" class="grid-3">
+            <div class="card" style="padding:22px;">
+              <div class="flex-row" style="margin-bottom:12px;"><div class="fs-11 fw-7 text-3" style="text-transform:uppercase;letter-spacing:0.08em;">Free Trial</div><span class="badge badge-gray ml-auto">16 shops</span></div>
+              <div style="font-size:28px;font-weight:800;color:var(--text-1);letter-spacing:-0.04em;margin-bottom:2px;">0 <span style="font-size:14px;font-weight:600;color:var(--text-3);">MMK · 7 days</span></div>
+              <div class="fs-12 text-3" style="margin-bottom:16px;">Auto-enrolled on signup. No card required.</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Up to 50 orders</div>
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Basic management</div>
+                <div class="fs-12 text-3 flex-row gap-2"><span style="color:var(--border-2)">✗</span> Reports & export</div>
+              </div>
+              <button class="btn btn-outline btn-sm w-full">Edit Plan</button>
+            </div>
+            <div class="card" style="padding:22px;border-color:#FED7AA;background:linear-gradient(145deg,#FFFBF8,#fff);">
+              <div class="flex-row" style="margin-bottom:12px;"><div class="fs-11 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;color:var(--orange);">Pro Monthly</div><span class="badge badge-orange ml-auto">52 shops</span></div>
+              <div style="font-size:28px;font-weight:800;color:var(--orange);letter-spacing:-0.04em;margin-bottom:2px;">5,000 <span style="font-size:14px;font-weight:600;color:var(--text-3);">MMK / mo</span></div>
+              <div class="fs-12 text-3" style="margin-bottom:16px;">≈ 166 MMK per day. KBZ, Wave, AYA.</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Unlimited orders</div>
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Full reporting</div>
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Export + priority support</div>
+              </div>
+              <button class="btn btn-primary btn-sm w-full">Edit Plan</button>
+            </div>
+            <div class="card" style="padding:22px;border-color:#99F6E4;background:linear-gradient(145deg,#F0FDFA,#fff);">
+              <div class="flex-row" style="margin-bottom:12px;"><div class="fs-11 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;color:var(--teal);">Lifetime</div><span class="badge badge-teal ml-auto">21 shops</span></div>
+              <div style="font-size:28px;font-weight:800;color:var(--teal);letter-spacing:-0.04em;margin-bottom:2px;">25,000 <span style="font-size:14px;font-weight:600;color:var(--text-3);">MMK · once</span></div>
+              <div class="fs-12 text-3" style="margin-bottom:16px;">Early bird. Limited to 50 shops.</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Everything in Pro</div>
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> All future features</div>
+                <div class="fs-12 text-2 flex-row gap-2"><span style="color:var(--green)">✓</span> Founder support</div>
+              </div>
+              <button class="btn btn-teal btn-sm w-full">Edit Plan</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE: ANALYTICS                                        -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-analytics">
+      <div class="page-content">
+
+        <!-- Period tabs -->
+        <div class="flex-row gap-3">
+          <div class="tabs">
+            <button class="tab" onclick="setPeriod(this)">7D</button>
+            <button class="tab" onclick="setPeriod(this)">30D</button>
+            <button class="tab active" onclick="setPeriod(this)">7M</button>
+            <button class="tab" onclick="setPeriod(this)">1Y</button>
+          </div>
+          <div class="ml-auto"><button class="btn btn-sm btn-outline">Export Report</button></div>
+        </div>
+
+        <!-- KPI sparklines row -->
+        <div class="kpi-grid">
+          <div class="kpi" style="gap:8px;">
+            <div class="kpi-top"><div class="kpi-icon icon-orange" style="border-radius:10px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div><span class="kpi-badge up">+305%</span></div>
+            <div><span class="kpi-value">89</span></div>
+            <div class="kpi-label">Total Shops</div>
+            <div style="display:flex;align-items:flex-end;gap:3px;height:28px;margin-top:6px;">
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(255,107,53,0.2);" class="rev-bar" data-h="25"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(255,107,53,0.2);" class="rev-bar" data-h="33"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(255,107,53,0.2);" class="rev-bar" data-h="38"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(255,107,53,0.2);" class="rev-bar" data-h="49"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(255,107,53,0.2);" class="rev-bar" data-h="67"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(255,107,53,0.2);" class="rev-bar" data-h="88"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:var(--orange);" class="rev-bar" data-h="100"></div>
+            </div>
+          </div>
+          <div class="kpi" style="gap:8px;">
+            <div class="kpi-top"><div class="kpi-icon icon-teal" style="border-radius:10px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><span class="kpi-badge up">+232%</span></div>
+            <div><span class="kpi-value">41.2K</span></div>
+            <div class="kpi-label">Total Orders</div>
+            <div style="display:flex;align-items:flex-end;gap:3px;height:28px;margin-top:6px;">
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(42,168,160,0.2);" data-h="30"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(42,168,160,0.2);" data-h="38"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(42,168,160,0.2);" data-h="42"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(42,168,160,0.2);" data-h="55"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(42,168,160,0.2);" data-h="70"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(42,168,160,0.2);" data-h="86"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:var(--teal);" data-h="100"></div>
+            </div>
+          </div>
+          <div class="kpi" style="gap:8px;">
+            <div class="kpi-top"><div class="kpi-icon icon-violet" style="border-radius:10px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div><span class="kpi-badge up">+89 vs prev</span></div>
+            <div><span class="kpi-value">463</span></div>
+            <div class="kpi-label">Avg Orders / Shop</div>
+            <div style="display:flex;align-items:flex-end;gap:3px;height:28px;margin-top:6px;">
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(139,92,246,0.2);" data-h="43"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(139,92,246,0.2);" data-h="52"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(139,92,246,0.2);" data-h="58"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(139,92,246,0.2);" data-h="69"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(139,92,246,0.2);" data-h="78"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(139,92,246,0.2);" data-h="86"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:var(--violet);" data-h="100"></div>
+            </div>
+          </div>
+          <div class="kpi" style="gap:8px;">
+            <div class="kpi-top"><div class="kpi-icon icon-green" style="border-radius:10px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div><span class="kpi-badge up">↓ −1.8pp</span></div>
+            <div><span class="kpi-value">2.3</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-label">Churn Rate</div>
+            <div style="display:flex;align-items:flex-end;gap:3px;height:28px;margin-top:6px;">
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(34,197,94,0.15);" data-h="100"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(34,197,94,0.15);" data-h="92"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(34,197,94,0.15);" data-h="78"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(34,197,94,0.15);" data-h="73"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(34,197,94,0.15);" data-h="68"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:rgba(34,197,94,0.15);" data-h="61"></div>
+              <div style="flex:1;border-radius:2px 2px 0 0;background:var(--green);" data-h="56"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+
+          <!-- Shop growth -->
+          <div class="card" style="grid-column:span 2;">
+            <div class="card-header">
+              <div><div class="card-title">Shop Growth</div><div class="card-sub">Registered shops over 7 months</div></div>
+              <span class="kpi-badge up" style="font-size:12px;">↑ +305% in 7 months</span>
+            </div>
+            <div style="padding:20px;">
+              <div class="rev-chart">
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:25%"></div><div class="rev-day">Oct</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:33%"></div><div class="rev-day">Nov</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:38%"></div><div class="rev-day">Dec</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:49%"></div><div class="rev-day">Jan</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:67%"></div><div class="rev-day">Feb</div></div>
+                <div class="rev-bar-col"><div class="rev-bar past" style="height:88%"></div><div class="rev-day">Mar</div></div>
+                <div class="rev-bar-col"><div class="rev-bar today" style="height:100%"></div><div class="rev-day today">Apr</div></div>
+              </div>
+              <div class="flex-row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+                <div style="display:flex;gap:20px;">
+                  <div class="text-center" style=""><div class="fw-8 text-1">22</div><div class="fs-10 text-3">Oct</div></div>
+                  <div class="text-center"><div class="fw-8 text-1">29</div><div class="fs-10 text-3">Nov</div></div>
+                  <div class="text-center"><div class="fw-8 text-1">34</div><div class="fs-10 text-3">Dec</div></div>
+                  <div class="text-center"><div class="fw-8 text-1">44</div><div class="fs-10 text-3">Jan</div></div>
+                  <div class="text-center"><div class="fw-8 text-1">60</div><div class="fs-10 text-3">Feb</div></div>
+                  <div class="text-center"><div class="fw-8 text-1">78</div><div class="fs-10 text-3">Mar</div></div>
+                  <div class="text-center"><div class="fw-8" style="color:var(--orange)">89</div><div class="fs-10" style="color:var(--orange)">Apr</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Retention -->
+          <div class="card">
+            <div style="padding:16px 18px;border-bottom:1px solid var(--border);"><div class="card-title">Trial Conversion</div><div class="card-sub">What happens after 7-day trial</div></div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:12px;">
+              <div><div class="flex-row" style="margin-bottom:5px;"><span class="fs-12 fw-7 text-1">→ Pro Monthly</span><span class="ml-auto fs-11" style="color:var(--orange);font-weight:700;">62%</span></div><div class="bar-track"><div class="bar-fill" style="width:62%;background:var(--orange);"></div></div></div>
+              <div><div class="flex-row" style="margin-bottom:5px;"><span class="fs-12 fw-7 text-1">→ Lifetime</span><span class="ml-auto fs-11" style="color:var(--teal);font-weight:700;">24%</span></div><div class="bar-track"><div class="bar-fill" style="width:24%;background:var(--teal);"></div></div></div>
+              <div><div class="flex-row" style="margin-bottom:5px;"><span class="fs-12 fw-7 text-1">→ Churned</span><span class="ml-auto fs-11 text-3 fw-7">14%</span></div><div class="bar-track"><div class="bar-fill" style="width:14%;background:#D1D5DB;"></div></div></div>
+              <div style="padding-top:12px;border-top:1px solid var(--border);">
+                <div class="fs-11 text-3">Overall trial → paid</div>
+                <div style="font-size:32px;font-weight:800;color:var(--text-1);letter-spacing:-0.04em;">86%</div>
+                <div class="fs-11" style="color:var(--green);font-weight:700;">↑ +4% vs last month</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+          <!-- Top shops -->
+          <div class="card">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);"><div class="card-title">Top Performing Shops</div><div class="card-sub">By total orders this month</div></div>
+            <div style="padding:14px 20px;">
+              <div class="perf-row"><div class="perf-rank rank-1">1</div><div style="width:26px;height:26px;border-radius:8px;background:#FFF7ED;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🛒</div><span class="fs-12 fw-7 text-1" style="flex:1;">Min Min Grocery</span><span class="fs-12 fw-8 text-1">2,104</span><span class="fs-10 fw-7" style="color:var(--green);width:36px;text-align:right;">+12%</span></div>
+              <div class="perf-row"><div class="perf-rank rank-2">2</div><div style="width:26px;height:26px;border-radius:8px;background:#FFF0F5;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">💄</div><span class="fs-12 fw-7 text-1" style="flex:1;">Aung Beauty Store</span><span class="fs-12 fw-8 text-1">1,243</span><span class="fs-10 fw-7" style="color:var(--green);width:36px;text-align:right;">+8%</span></div>
+              <div class="perf-row"><div class="perf-rank rank-3">3</div><div style="width:26px;height:26px;border-radius:8px;background:#FFF7ED;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">👗</div><span class="fs-12 fw-7 text-1" style="flex:1;">Ma Aye Shop</span><span class="fs-12 fw-8 text-1">847</span><span class="fs-10 fw-7" style="color:var(--green);width:36px;text-align:right;">+22%</span></div>
+              <div class="perf-row"><div class="perf-rank rank-n">4</div><div style="width:26px;height:26px;border-radius:8px;background:#F0FDFA;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">💍</div><span class="fs-12 fw-7 text-1" style="flex:1;">Shwe Maw Shop</span><span class="fs-12 fw-8 text-1">612</span><span class="fs-10 fw-7" style="color:var(--green);width:36px;text-align:right;">+5%</span></div>
+              <div class="perf-row" style="border-bottom:none;"><div class="perf-rank rank-n">5</div><div style="width:26px;height:26px;border-radius:8px;background:#FFF7ED;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🍔</div><span class="fs-12 fw-7 text-1" style="flex:1;">Thida Food Express</span><span class="fs-12 fw-8 text-1">389</span><span class="fs-10 fw-7" style="color:var(--red);width:36px;text-align:right;">−3%</span></div>
+            </div>
+          </div>
+
+          <!-- Geographic -->
+          <div class="card">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);"><div class="card-title">Geographic Distribution</div><div class="card-sub">Shops by region</div></div>
+            <div style="padding:14px 20px;display:flex;flex-direction:column;gap:0;">
+              <div class="geo-row"><span style="font-size:18px;width:24px;text-align:center;">🏙️</span><span class="fs-12 fw-7 text-1" style="flex:1;">Yangon</span><div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:57%;background:var(--orange);"></div></div><span class="fs-12 fw-7 text-1" style="width:28px;text-align:right;">51</span><span class="fs-10 text-3" style="width:32px;text-align:right;">57%</span></div>
+              <div class="geo-row"><span style="font-size:18px;width:24px;text-align:center;">🏯</span><span class="fs-12 fw-7 text-1" style="flex:1;">Mandalay</span><div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:20%;background:var(--orange);"></div></div><span class="fs-12 fw-7 text-1" style="width:28px;text-align:right;">18</span><span class="fs-10 text-3" style="width:32px;text-align:right;">20%</span></div>
+              <div class="geo-row"><span style="font-size:18px;width:24px;text-align:center;">🏛️</span><span class="fs-12 fw-7 text-1" style="flex:1;">Naypyidaw</span><div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:9%;background:var(--orange);"></div></div><span class="fs-12 fw-7 text-1" style="width:28px;text-align:right;">8</span><span class="fs-10 text-3" style="width:32px;text-align:right;">9%</span></div>
+              <div class="geo-row"><span style="font-size:18px;width:24px;text-align:center;">🌿</span><span class="fs-12 fw-7 text-1" style="flex:1;">Bago</span><div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:8%;background:var(--orange);"></div></div><span class="fs-12 fw-7 text-1" style="width:28px;text-align:right;">7</span><span class="fs-10 text-3" style="width:32px;text-align:right;">8%</span></div>
+              <div class="geo-row" style="border-bottom:none;"><span style="font-size:18px;width:24px;text-align:center;">📍</span><span class="fs-12 fw-7 text-1" style="flex:1;">Other</span><div class="bar-track" style="width:100px;"><div class="bar-fill" style="width:6%;background:var(--orange);"></div></div><span class="fs-12 fw-7 text-1" style="width:28px;text-align:right;">5</span><span class="fs-10 text-3" style="width:32px;text-align:right;">6%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- PAGE: BROADCASTS                                       -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-broadcasts">
+      <div class="page-content">
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-orange" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 000-6h.09A8 8 0 0122 12.9V17z"/></svg></div></div><div><span class="kpi-value">5</span></div><div class="kpi-label">Total Broadcasts</div></div>
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-blue" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div></div><div><span class="kpi-value">166</span></div><div class="kpi-label">Total Delivered</div></div>
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-green" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><span class="kpi-badge up">+4%</span></div><div><span class="kpi-value">81</span><span class="kpi-unit">%</span></div><div class="kpi-label">Open Rate</div></div>
+          <div class="kpi"><div class="kpi-top"><div class="kpi-icon icon-violet" style="border-radius:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div></div><div><span class="kpi-value">2</span></div><div class="kpi-label">Automation Rules</div></div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="flex-row gap-3">
+          <div class="tabs" id="bc-tabs">
+            <button class="tab active" onclick="switchBcTab('all',this)">All</button>
+            <button class="tab" onclick="switchBcTab('sent',this)">Sent</button>
+            <button class="tab" onclick="switchBcTab('draft',this)">Draft</button>
+            <button class="tab" onclick="switchBcTab('automated',this)">Automated</button>
+          </div>
+          <div class="ml-auto flex-row gap-2">
+            <button class="btn btn-sm btn-outline">⚡ Automation Rules</button>
+            <button class="btn btn-sm btn-primary" onclick="openModal()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Broadcast
+            </button>
+          </div>
+        </div>
+
+        <!-- Broadcasts list -->
+        <div style="display:flex;flex-direction:column;gap:10px;" id="bc-list">
+
+          <div class="bc-card" data-bc-type="automated" data-bc-status="sent">
+            <div class="bc-icon icon-violet"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div style="flex:1;min-width:0;">
+              <div class="bc-meta"><span class="fs-13 fw-7 text-1">Trial Expiry Reminder</span><span class="badge badge-green">✓ Sent</span><span class="badge badge-violet">Automated</span></div>
+              <div class="bc-body">Your 7-day free trial expires in 2 days! Upgrade to Pro for 5,000 MMK/month to keep all your data and unlock reports.</div>
+              <div class="bc-stats">
+                <span class="bc-stat">→ <strong>Trial Expiring (3)</strong></span>
+                <span class="bc-stat"><strong>67%</strong> open rate</span>
+                <div class="open-bar-wrap"><div class="open-bar"><div class="open-bar-fill" style="width:67%"></div></div></div>
+                <span class="bc-stat text-3">🕐 Apr 2, 10:00 AM</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bc-card" data-bc-type="broadcast" data-bc-status="sent">
+            <div class="bc-icon icon-orange"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 000-6h.09A8 8 0 0122 12.9V17z"/></svg></div>
+            <div style="flex:1;min-width:0;">
+              <div class="bc-meta"><span class="fs-13 fw-7 text-1">April Feature Update</span><span class="badge badge-green">✓ Sent</span><span class="badge badge-orange">Broadcast</span></div>
+              <div class="bc-body">New in April: Export orders as Excel, share daily summary to Facebook Story, and faster search. Update your app now!</div>
+              <div class="bc-stats">
+                <span class="bc-stat">→ <strong>All Active Shops (73)</strong></span>
+                <span class="bc-stat"><strong>84%</strong> open rate</span>
+                <div class="open-bar-wrap"><div class="open-bar"><div class="open-bar-fill" style="width:84%"></div></div></div>
+                <span class="bc-stat text-3">🕐 Apr 1, 9:00 AM</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bc-card" data-bc-type="broadcast" data-bc-status="draft">
+            <div class="bc-icon icon-orange"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 000-6h.09A8 8 0 0122 12.9V17z"/></svg></div>
+            <div style="flex:1;min-width:0;">
+              <div class="bc-meta"><span class="fs-13 fw-7 text-1">Lifetime Deal — Last 10 Spots</span><span class="badge badge-gray">Draft</span><span class="badge badge-orange">Broadcast</span></div>
+              <div class="bc-body">Only 10 spots left for our Lifetime plan at 25,000 MMK (one-time). After this, it's monthly only. Don't miss out!</div>
+              <div class="bc-stats">
+                <span class="bc-stat">→ <strong>Trial Users (16)</strong></span>
+                <span class="bc-stat text-3 italic">Not sent yet</span>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="openModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send
+            </button>
+          </div>
+
+          <div class="bc-card" data-bc-type="automated" data-bc-status="sent">
+            <div class="bc-icon icon-violet"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div style="flex:1;min-width:0;">
+              <div class="bc-meta"><span class="fs-13 fw-7 text-1">Welcome — New Shop Registered</span><span class="badge badge-blue">● Live</span><span class="badge badge-violet">Automated</span></div>
+              <div class="bc-body">Welcome to Order Manager! 🎉 Get started by adding your first order from Messenger. It takes under 10 seconds.</div>
+              <div class="bc-stats">
+                <span class="bc-stat">→ <strong>All New Signups</strong></span>
+                <span class="bc-stat"><strong>80%</strong> open rate</span>
+                <div class="open-bar-wrap"><div class="open-bar"><div class="open-bar-fill" style="width:80%"></div></div></div>
+                <span class="bc-stat text-3">🕐 Ongoing</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automation rules -->
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Automation Rules</div><div class="card-sub">Triggered automatically on client events</div></div>
+            <button class="btn btn-sm btn-outline">+ Add Rule</button>
+          </div>
+          <div>
+            <div class="rule-row"><div class="status-dot dot-green"></div><div style="flex:1;"><div class="fs-12 fw-7 text-1">When: <span class="fw-5 text-2">Trial expires in 2 days</span> → Send upgrade push notification</div></div><span class="fs-11 text-3">12 triggered</span><span class="badge badge-green">Active</span></div>
+            <div class="rule-row"><div class="status-dot dot-green"></div><div style="flex:1;"><div class="fs-12 fw-7 text-1">When: <span class="fw-5 text-2">New shop registers</span> → Send welcome push + email</div></div><span class="fs-11 text-3">89 triggered</span><span class="badge badge-green">Active</span></div>
+            <div class="rule-row"><div class="status-dot dot-red"></div><div style="flex:1;"><div class="fs-12 fw-7 text-1">When: <span class="fw-5 text-2">Payment fails</span> → Send payment reminder push</div></div><span class="fs-11 text-3">3 triggered</span><span class="badge badge-green">Active</span></div>
+            <div class="rule-row" style="border-bottom:none;opacity:0.5;"><div class="status-dot dot-gray"></div><div style="flex:1;"><div class="fs-12 fw-7 text-1">When: <span class="fw-5 text-2">Shop inactive for 7 days</span> → Send re-engagement push</div></div><span class="fs-11 text-3">0 triggered</span><span class="badge badge-gray">Paused</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- COMPOSE MODAL                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="compose-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">New Broadcast</div>
+        <div class="modal-sub" id="modal-step-label">Step 1 of 3 — Message Content</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:16px 22px 0;">
+      <div class="step-bar">
+        <div class="step-bar-item done" id="step-1"></div>
+        <div class="step-bar-item" id="step-2"></div>
+        <div class="step-bar-item" id="step-3"></div>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- Step 1 -->
+      <div class="form-group">
+        <label class="form-label">Title <span style="color:var(--red)">*</span></label>
+        <input class="input input-full" placeholder="e.g. April Feature Update">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message Body <span style="color:var(--red)">*</span></label>
+        <textarea class="input input-full" rows="4" placeholder="Write your message… supports Burmese (Myanmar) text"></textarea>
+        <span class="fs-11 text-3">Max 300 characters</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="nextStep()">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────
+const CLIENTS = [
+  {id:"C001",name:"Ma Aye Shop",emoji:"👗",emojiColor:"#FFF7ED",emojiBorder:"#FED7AA",cat:"Fashion",plan:"Pro",planBadge:"badge-orange",status:"Active",statusDot:"dot-green",orders:"847",mrr:"5,000 MMK",township:"Sanchaung, Yangon",phone:"09 7812 3456",joined:"Jan 5, 2025",last:"2 min ago"},
+  {id:"C002",name:"Aung Beauty Store",emoji:"💄",emojiColor:"#F0FDFA",emojiBorder:"#99F6E4",cat:"Beauty",plan:"Lifetime",planBadge:"badge-teal",status:"Active",statusDot:"dot-green",orders:"1,243",mrr:"—",township:"Mandalay",phone:"09 4556 7890",joined:"Dec 20, 2024",last:"1 hr ago"},
+  {id:"C003",name:"Ko Zaw Electronics",emoji:"📱",emojiColor:"#F8F8FA",emojiBorder:"#E4E4E7",cat:"Electronics",plan:"Trial",planBadge:"badge-gray",status:"Trial",statusDot:"dot-blue",orders:"34",mrr:"—",township:"Bago",phone:"09 2234 5678",joined:"Mar 26, 2025",last:"Yesterday"},
+  {id:"C004",name:"Thida Food Express",emoji:"🍔",emojiColor:"#FFF7ED",emojiBorder:"#FED7AA",cat:"Food",plan:"Pro",planBadge:"badge-orange",status:"Active",statusDot:"dot-green",orders:"612",mrr:"5,000 MMK",township:"Hlaing, Yangon",phone:"09 9871 2345",joined:"Feb 3, 2025",last:"30 min ago"},
+  {id:"C005",name:"Hla Hla Fashion",emoji:"👗",emojiColor:"#FFF7ED",emojiBorder:"#FED7AA",cat:"Fashion",plan:"Trial",planBadge:"badge-gray",status:"Expiring",statusDot:"dot-amber",orders:"21",mrr:"—",township:"Naypyidaw",phone:"09 5678 9012",joined:"Mar 26, 2025",last:"3 hr ago"},
+  {id:"C006",name:"Shwe Maw Shop",emoji:"💍",emojiColor:"#FAFAF0",emojiBorder:"#E9E9C4",cat:"Jewellery",plan:"Pro",planBadge:"badge-orange",status:"Active",statusDot:"dot-green",orders:"389",mrr:"5,000 MMK",township:"Tarmwe, Yangon",phone:"09 3344 5566",joined:"Feb 28, 2025",last:"Today"},
+  {id:"C007",name:"Min Min Grocery",emoji:"🛒",emojiColor:"#F0FDFA",emojiBorder:"#99F6E4",cat:"Grocery",plan:"Lifetime",planBadge:"badge-teal",status:"Active",statusDot:"dot-green",orders:"2,104",mrr:"—",township:"Insein, Yangon",phone:"09 9988 7766",joined:"Nov 14, 2024",last:"5 min ago"},
+  {id:"C008",name:"Phyo Cosmetics",emoji:"💄",emojiColor:"#FEF2F2",emojiBorder:"#FECACA",cat:"Beauty",plan:"Pro",planBadge:"badge-orange",status:"Overdue",statusDot:"dot-red",orders:"290",mrr:"5,000 MMK",township:"Dagon, Yangon",phone:"09 1122 3344",joined:"Feb 10, 2025",last:"2 days ago"},
+];
+
+let activeClient = CLIENTS[0];
+
+// ─── RENDER CLIENTS TABLE ─────────────────────────────────────
+function renderClients(data) {
+  const tbody = document.getElementById('clients-tbody');
+  tbody.innerHTML = data.map(c => `
+    <tr onclick="selectClient('${c.id}')" class="${activeClient && activeClient.id===c.id?'selected':''}">
+      <td><input type="checkbox" style="accent-color:var(--orange);"></td>
+      <td>
+        <div class="flex-row gap-2">
+          <div style="width:32px;height:32px;border-radius:9px;background:${c.emojiColor};border:1.5px solid ${c.emojiBorder};display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">${c.emoji}</div>
+          <div><div class="td-name">${c.name}</div><div class="td-mono">${c.id}</div></div>
+        </div>
+      </td>
+      <td class="fs-12 text-3">${c.cat}</td>
+      <td><span class="badge ${c.planBadge}">${c.plan}</span></td>
+      <td>
+        <div class="flex-row gap-2">
+          <div class="status-dot ${c.statusDot}"></div>
+          <span class="fs-12 fw-7" style="${c.status==='Overdue'?'color:var(--red)':c.status==='Expiring'?'color:var(--amber)':''}">${c.status}</span>
+        </div>
+      </td>
+      <td class="td-name">${c.orders}</td>
+      <td class="${c.mrr==='—'?'text-3 fs-12':'td-name'}">${c.mrr}</td>
+      <td class="fs-12 text-3">${c.last}</td>
+      <td><button class="btn btn-ghost btn-sm text-3" onclick="event.stopPropagation()">⋯</button></td>
+    </tr>
+  `).join('');
+}
+
+function selectClient(id) {
+  activeClient = CLIENTS.find(c => c.id === id);
+  renderClients(currentFilteredClients());
+  updateClientPanel();
+  document.getElementById('client-detail-panel').classList.remove('closed');
+}
+
+function updateClientPanel() {
+  if(!activeClient) return;
+  document.getElementById('cp-emoji').textContent = activeClient.emoji;
+  document.getElementById('cp-emoji').style.background = activeClient.emojiColor;
+  document.getElementById('cp-emoji').style.borderColor = activeClient.emojiBorder;
+  document.getElementById('cp-name').textContent = activeClient.name;
+  document.getElementById('cp-badges').innerHTML = `<span class="badge ${activeClient.planBadge}">${activeClient.plan}</span>&nbsp;<span class="badge ${activeClient.statusDot==='dot-green'?'badge-green':activeClient.statusDot==='dot-red'?'badge-red':activeClient.statusDot==='dot-amber'?'badge-amber':'badge-blue'}">${activeClient.status}</span>`;
+  document.getElementById('cp-id').textContent = activeClient.id;
+  document.getElementById('cp-cat').textContent = activeClient.cat;
+  document.getElementById('cp-township').textContent = activeClient.township;
+  document.getElementById('cp-phone').textContent = activeClient.phone;
+  document.getElementById('cp-joined').textContent = activeClient.joined;
+  document.getElementById('cp-last').textContent = activeClient.last;
+  document.getElementById('cp-orders').textContent = activeClient.orders;
+  document.getElementById('cp-mrr').textContent = activeClient.mrr;
+}
+
+function closeClientPanel() {
+  document.getElementById('client-detail-panel').classList.add('closed');
+}
+
+let _searchVal = '';
+let _planVal = '';
+let _statusFilter = 'all';
+
+function currentFilteredClients() {
+  return CLIENTS.filter(c => {
+    const matchSearch = !_searchVal || c.name.toLowerCase().includes(_searchVal.toLowerCase()) || c.id.toLowerCase().includes(_searchVal.toLowerCase()) || c.township.toLowerCase().includes(_searchVal.toLowerCase());
+    const matchPlan = !_planVal || c.plan === _planVal;
+    const matchStatus = _statusFilter === 'all' || c.status.toLowerCase() === _statusFilter;
+    return matchSearch && matchPlan && matchStatus;
+  });
+}
+
+function filterClients(val) { _searchVal = val; renderClients(currentFilteredClients()); }
+function filterByPlan(val)   { _planVal = val;   renderClients(currentFilteredClients()); }
+function filterByStatus(status, btn) {
+  _statusFilter = status;
+  document.querySelectorAll('#status-pills .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderClients(currentFilteredClients());
+}
+function toggleAll(cb) { document.querySelectorAll('#clients-tbody input[type=checkbox]').forEach(c => c.checked = cb.checked); }
+
+// ─── PAGE SWITCHER ────────────────────────────────────────────
+const PAGE_META = {
+  dashboard:  {title:'Dashboard',         sub:'Platform overview & key metrics'},
+  clients:    {title:'Client Management', sub:'All registered shops & sellers'},
+  billing:    {title:'Subscription & Billing', sub:'Plans, payments & renewals'},
+  analytics:  {title:'Analytics & Revenue',    sub:'Growth trends & performance'},
+  broadcasts: {title:'Notifications & Broadcasts', sub:'Send messages to clients'},
+};
+
+function switchPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const m = PAGE_META[id] || {};
+  document.getElementById('topbar-title').textContent = m.title || id;
+  document.getElementById('topbar-sub').textContent = m.sub || '';
+}
+
+// ─── BILLING TABS ─────────────────────────────────────────────
+function switchBillingTab(tab, btn) {
+  ['invoices','upcoming','plans'].forEach(t => {
+    const el = document.getElementById('billing-'+t);
+    if(el) el.style.display = 'none';
+  });
+  const target = document.getElementById('billing-'+tab);
+  if(target) target.style.display = tab === 'invoices' ? 'block' : tab === 'plans' ? 'grid' : 'flex';
+  document.querySelectorAll('#billing-tabs .tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+// ─── ANALYTICS PERIOD ─────────────────────────────────────────
+function setPeriod(btn) {
+  document.querySelectorAll('#page-analytics .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── BROADCASTS FILTER ────────────────────────────────────────
+function switchBcTab(filter, btn) {
+  document.querySelectorAll('#bc-tabs .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#bc-list .bc-card').forEach(card => {
+    if(filter === 'all') { card.style.display = 'flex'; return; }
+    if(filter === 'automated') { card.style.display = card.dataset.bcType === 'automated' ? 'flex' : 'none'; return; }
+    card.style.display = card.dataset.bcStatus === filter ? 'flex' : 'none';
+  });
+}
+
+// ─── COMPOSE MODAL ────────────────────────────────────────────
+let modalStep = 1;
+const stepContents = [
+  // Step 1
+  `<div class="form-group">
+    <label class="form-label">Title <span style="color:var(--red)">*</span></label>
+    <input class="input input-full" placeholder="e.g. April Feature Update">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Message Body <span style="color:var(--red)">*</span></label>
+    <textarea class="input input-full" rows="4" placeholder="Write your message… supports Burmese (Myanmar) text"></textarea>
+    <span class="fs-11 text-3">Max 300 characters</span>
+  </div>`,
+  // Step 2
+  `<div class="form-group">
+    <label class="form-label">Send to</label>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <label class="radio-card selected"><input type="radio" name="target" checked style="accent-color:var(--orange);"> <div><div class="fs-13 fw-7 text-1">All Shops</div><div class="fs-11 text-3">89 shops</div></div></label>
+      <label class="radio-card"><input type="radio" name="target" style="accent-color:var(--orange);"> <div><div class="fs-13 fw-7 text-1">Pro Subscribers Only</div><div class="fs-11 text-3">52 shops</div></div></label>
+      <label class="radio-card"><input type="radio" name="target" style="accent-color:var(--orange);"> <div><div class="fs-13 fw-7 text-1">Trial Users</div><div class="fs-11 text-3">16 shops</div></div></label>
+      <label class="radio-card"><input type="radio" name="target" style="accent-color:var(--orange);"> <div><div class="fs-13 fw-7 text-1">Trial Expiring Soon</div><div class="fs-11 text-3">3 shops ⏰</div></div></label>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Channel</label>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" style="flex:1;">📱 Push Notification</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;">✉ Email</button>
+    </div>
+  </div>`,
+  // Step 3
+  `<div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;">
+    <div class="flex-row"><span class="fs-12 text-3 fw-7" style="width:80px;">Title</span><span class="fs-12 fw-7 text-1">April Feature Update</span></div>
+    <div class="flex-row"><span class="fs-12 text-3 fw-7" style="width:80px;">Target</span><span class="fs-12 fw-7 text-1">All Shops (89)</span></div>
+    <div class="flex-row"><span class="fs-12 text-3 fw-7" style="width:80px;">Channel</span><span class="fs-12 fw-7 text-1">Push Notification</span></div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Schedule</label>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" style="flex:1;">Send Now</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;">📅 Schedule</button>
+    </div>
+  </div>
+  <div class="notice notice-green" style="font-size:12px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Ready to send to 89 shops via push notification.
+  </div>`,
+];
+
+const stepLabels = ['Step 1 of 3 — Message Content','Step 2 of 3 — Audience & Channel','Step 3 of 3 — Review & Send'];
+
+function openModal()  { modalStep = 1; updateModal(); document.getElementById('compose-modal').classList.add('open'); }
+function closeModal() { document.getElementById('compose-modal').classList.remove('open'); }
+
+function nextStep() {
+  if(modalStep < 3) { modalStep++; updateModal(); }
+  else { closeModal(); }
+}
+
+function updateModal() {
+  document.getElementById('modal-step-label').textContent = stepLabels[modalStep-1];
+  document.getElementById('modal-body').innerHTML = stepContents[modalStep-1];
+  ['step-1','step-2','step-3'].forEach((id,i) => {
+    document.getElementById(id).classList.toggle('done', i < modalStep);
+  });
+  const btn = document.querySelector('#compose-modal .modal-footer .btn-primary');
+  btn.textContent = modalStep < 3 ? 'Continue →' : 'Send Broadcast';
+  const backBtn = document.querySelector('#compose-modal .modal-footer .btn-ghost');
+  backBtn.textContent = modalStep > 1 ? '← Back' : 'Cancel';
+  backBtn.onclick = modalStep > 1 ? () => { modalStep--; updateModal(); } : closeModal;
+
+  // radio card interaction
+  document.querySelectorAll('.radio-card').forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    };
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+renderClients(CLIENTS);
+updateClientPanel();
+// Set billing tabs default
+['upcoming','plans'].forEach(t => {
+  const el = document.getElementById('billing-'+t);
+  if(el) el.style.display = 'none';
+});
+</script>
+</body>
+</html>
