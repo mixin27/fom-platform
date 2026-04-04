@@ -55,6 +55,13 @@
         "--dart-define=APP_ENV=production",
         "--dart-define=ENABLE_VERBOSE_STARTUP_LOGS=false"
       ]
-    }
+    },
+    {
+      "name": "Gallery",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile/packages/app_ui_kit/gallery",
+      "program": "lib/main.dart"
+    },
   ]
 }

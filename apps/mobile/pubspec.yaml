@@ -10,6 +10,7 @@ workspace:
   - packages/app_database
   - packages/app_device
   - packages/app_ui_kit
+  - packages/app_ui_kit/gallery
   - packages/app_env
   - packages/app_localizations
 
