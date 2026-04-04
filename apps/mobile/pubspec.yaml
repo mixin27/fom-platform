@@ -1,6 +1,6 @@
 name: fom_mobile
 description: "Facebook Order Manager Mobile App"
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 workspace:
@@ -13,6 +13,7 @@ workspace:
   - packages/app_ui_kit/gallery
   - packages/app_env
   - packages/app_localizations
+  - packages/app_network
 
 environment:
   sdk: ^3.11.4
@@ -39,6 +40,8 @@ dependencies:
     path: packages/app_storage
   app_ui_kit:
     path: packages/app_ui_kit
+  app_network:
+    path: packages/app_network
 
   dio: ^5.9.2
   drift: ^2.32.0
