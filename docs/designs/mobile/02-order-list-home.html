@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Order List</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FDF9F4;
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --green: #22C55E;
+    --green-light: #DCFCE7;
+    --yellow: #F59E0B;
+    --yellow-light: #FEF3C7;
+    --red: #EF4444;
+    --red-light: #FEE2E2;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --shadow: rgba(255,107,53,0.12);
+    --bg: #F5F0EA;
+  }
+
+  body {
+    background: #E8E2DA;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    padding: 32px;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .status-bar {
+    background: var(--warm-white);
+    padding: 12px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+
+  /* ====== HEADER ====== */
+  .home-header {
+    background: var(--warm-white);
+    padding: 16px 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .shop-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .shop-avatar {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .shop-name-text {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1.2;
+  }
+  .shop-sub {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    position: relative;
+  }
+  .notif-dot {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    background: var(--soft-orange);
+    border-radius: 50%;
+    border: 1.5px solid white;
+  }
+
+  /* Summary cards */
+  .summary-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-card {
+    flex: 1;
+    background: white;
+    border-radius: 14px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+  }
+  .summary-card .s-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .summary-card .s-value {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .summary-card .s-change {
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .s-change.up { color: var(--green); }
+  .s-change.pending { color: var(--yellow); }
+
+  /* Filter tabs */
+  .filter-tabs {
+    display: flex;
+    gap: 6px;
+    padding-bottom: 0;
+    overflow-x: auto;
+  }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 8px 14px;
+    border-radius: 20px 20px 0 0;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--text-light);
+    border: 2px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--bg);
+    color: var(--soft-orange);
+    border-color: var(--border);
+    border-bottom-color: var(--bg);
+    position: relative;
+    bottom: -1px;
+  }
+
+  /* ====== BODY ====== */
+  .home-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .home-body::-webkit-scrollbar { display: none; }
+
+  /* Search bar */
+  .search-bar {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .search-bar span { font-size: 16px; opacity: 0.5; }
+  .search-bar input {
+    flex: 1;
+    border: none; outline: none;
+    font-size: 13px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    color: var(--text-dark);
+    background: transparent;
+  }
+  .search-bar input::placeholder { color: var(--text-light); }
+  .filter-chip-small {
+    background: var(--soft-orange-light);
+    color: var(--soft-orange);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* Date section label */
+  .date-section {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+
+  /* Order Card */
+  .order-card {
+    background: white;
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .order-card:active { transform: scale(0.98); }
+  .order-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+  }
+  .order-card.new::before { background: var(--soft-orange); }
+  .order-card.confirmed::before { background: var(--teal); }
+  .order-card.out::before { background: var(--yellow); }
+  .order-card.delivered::before { background: var(--green); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .customer-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .customer-avatar {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    background: var(--soft-orange-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .customer-name {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .customer-phone {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+  }
+
+  .status-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+  .badge-new { background: var(--soft-orange-light); color: var(--soft-orange); }
+  .badge-confirmed { background: var(--teal-light); color: var(--teal); }
+  .badge-out { background: var(--yellow-light); color: var(--yellow); }
+  .badge-delivered { background: var(--green-light); color: var(--green); }
+
+  .card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .product-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-mid);
+    font-weight: 700;
+  }
+  .product-tag span { font-size: 14px; }
+
+  .price-tag {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--text-dark);
+  }
+  .price-tag small {
+    font-size: 10px;
+    color: var(--text-light);
+    font-weight: 700;
+    margin-left: 2px;
+  }
+
+  .card-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 10px 0;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .order-id {
+    font-size: 10px;
+    color: var(--text-light);
+    font-weight: 700;
+    font-family: monospace;
+  }
+  .order-time {
+    font-size: 10px;
+    color: var(--text-light);
+    font-weight: 600;
+  }
+
+  .quick-action-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .quick-btn {
+    flex: 1;
+    padding: 8px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 800;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    background: white;
+    color: var(--text-mid);
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .quick-btn.primary-action {
+    background: var(--soft-orange);
+    color: white;
+    border-color: var(--soft-orange);
+  }
+  .quick-btn.teal-action {
+    background: var(--teal-light);
+    color: var(--teal);
+    border-color: var(--teal-light);
+  }
+
+  /* ====== FAB ====== */
+  .fab {
+    position: absolute;
+    bottom: 88px; right: 20px;
+    width: 58px; height: 58px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(255,107,53,0.4);
+    cursor: pointer;
+    font-size: 26px;
+    color: white;
+    z-index: 10;
+    transition: transform 0.2s;
+  }
+  .fab:active { transform: scale(0.95); }
+
+  /* ====== BOTTOM NAV ====== */
+  .bottom-nav {
+    background: white;
+    border-top: 1.5px solid var(--border);
+    display: flex;
+    padding: 10px 0 18px;
+    position: relative;
+    z-index: 5;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .nav-icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+  .nav-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text-light);
+    letter-spacing: 0.02em;
+  }
+  .nav-item.active .nav-label { color: var(--soft-orange); }
+  .nav-item.active .nav-icon { filter: none; }
+  .nav-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--soft-orange);
+    margin: 0 auto;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 32px 20px;
+    opacity: 0.6;
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; font-weight: 700; color: var(--text-mid); }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: ORDER LIST - ALL ORDERS (with orders) -->
+<div>
+  <div class="label">Screen 1 — Home / All Orders</div>
+  <div class="phone">
+    <div class="status-bar" style="background: white;">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="home-header">
+      <div class="header-top">
+        <div class="shop-info">
+          <div class="shop-avatar">👗</div>
+          <div>
+            <div class="shop-name-text">Ma Aye Shop</div>
+            <div class="shop-sub">Yangon Fashion · 23 orders today</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="icon-btn">🔔<div class="notif-dot"></div></div>
+          <div class="icon-btn">⋯</div>
+        </div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="s-label">Today Orders</div>
+          <div class="s-value">23</div>
+          <div class="s-change up">↑ 4 from yesterday</div>
+        </div>
+        <div class="summary-card">
+          <div class="s-label">Revenue</div>
+          <div class="s-value" style="font-size:15px;">485K</div>
+          <div class="s-change up">↑ MMK today</div>
+        </div>
+        <div class="summary-card">
+          <div class="s-label">Pending</div>
+          <div class="s-value" style="color: #F59E0B;">8</div>
+          <div class="s-change pending">Need action</div>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <div class="tab active">All (23)</div>
+        <div class="tab">Today (12)</div>
+        <div class="tab">Pending (8)</div>
+        <div class="tab">Delivered (11)</div>
+      </div>
+    </div>
+
+    <div class="home-body">
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="Search orders, customers..." />
+        <div class="filter-chip-small">Filter</div>
+      </div>
+
+      <div class="date-section">Today — April 2</div>
+
+      <!-- Order Card: New -->
+      <div class="order-card new">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👩</div>
+            <div>
+              <div class="customer-name">Daw Khin Myat</div>
+              <div class="customer-phone">📞 09 7812 3456</div>
+            </div>
+          </div>
+          <div class="status-badge badge-new">NEW</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👗</span> Silk Longyi Set × 2</div>
+          <div class="price-tag">45,000<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0241</div>
+          <div class="order-time">10:32 AM</div>
+        </div>
+        <div class="quick-action-row">
+          <div class="quick-btn">📞 Call</div>
+          <div class="quick-btn primary-action">✓ Confirm</div>
+        </div>
+      </div>
+
+      <!-- Order Card: Out for delivery -->
+      <div class="order-card out">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👨</div>
+            <div>
+              <div class="customer-name">Ko Zaw Lin</div>
+              <div class="customer-phone">📞 09 4556 7890</div>
+            </div>
+          </div>
+          <div class="status-badge badge-out">ON THE WAY</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👔</span> Men Shirt (L) × 1</div>
+          <div class="price-tag">18,500<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0240</div>
+          <div class="order-time">9:14 AM</div>
+        </div>
+        <div class="quick-action-row">
+          <div class="quick-btn">📍 Track</div>
+          <div class="quick-btn teal-action">✓ Mark Delivered</div>
+        </div>
+      </div>
+
+      <!-- Order Card: Confirmed -->
+      <div class="order-card confirmed">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👩</div>
+            <div>
+              <div class="customer-name">Ma Thin Zar</div>
+              <div class="customer-phone">📞 09 2234 5678</div>
+            </div>
+          </div>
+          <div class="status-badge badge-confirmed">CONFIRMED</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👜</span> Handbag (Black) × 1</div>
+          <div class="price-tag">32,000<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0239</div>
+          <div class="order-time">8:50 AM</div>
+        </div>
+        <div class="quick-action-row">
+          <div class="quick-btn">✉ Message</div>
+          <div class="quick-btn teal-action">🚚 Send Out</div>
+        </div>
+      </div>
+
+      <div class="date-section" style="margin-top:4px;">Yesterday — April 1</div>
+
+      <!-- Order Card: Delivered -->
+      <div class="order-card delivered">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👩</div>
+            <div>
+              <div class="customer-name">Daw Aye Aye</div>
+              <div class="customer-phone">📞 09 9871 2345</div>
+            </div>
+          </div>
+          <div class="status-badge badge-delivered">DELIVERED ✓</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👗</span> Summer Dress × 3</div>
+          <div class="price-tag">54,000<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0238</div>
+          <div class="order-time">Apr 1, 4:22 PM</div>
+        </div>
+      </div>
+
+      <!-- spacer for FAB -->
+      <div style="height: 20px;"></div>
+    </div>
+
+    <div class="fab">+</div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label" style="color: var(--soft-orange);">Orders</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label">Customers</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📊</div>
+        <div class="nav-label">Reports</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-label">Settings</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: PENDING FILTER VIEW -->
+<div>
+  <div class="label">Screen 2 — Pending Orders (filtered)</div>
+  <div class="phone">
+    <div class="status-bar" style="background: white;">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="home-header">
+      <div class="header-top">
+        <div class="shop-info">
+          <div class="shop-avatar">👗</div>
+          <div>
+            <div class="shop-name-text">Ma Aye Shop</div>
+            <div class="shop-sub">8 orders need action</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="icon-btn">🔔<div class="notif-dot"></div></div>
+          <div class="icon-btn">⋯</div>
+        </div>
+      </div>
+
+      <!-- Pending alert banner -->
+      <div style="background: #FEF3C7; border-radius: 12px; padding: 10px 14px; display:flex; align-items:center; gap:8px; margin-bottom:14px; border: 1.5px solid #FDE68A;">
+        <span style="font-size:18px;">⚠️</span>
+        <div>
+          <div style="font-size:12px; font-weight:800; color:#92400E;">8 orders need your attention</div>
+          <div style="font-size:11px; color:#B45309; font-weight:600;">Confirm or update status now</div>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <div class="tab">All (23)</div>
+        <div class="tab">Today (12)</div>
+        <div class="tab active">Pending (8)</div>
+        <div class="tab">Delivered (11)</div>
+      </div>
+    </div>
+
+    <div class="home-body">
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="Search pending orders..." />
+        <div class="filter-chip-small">8 results</div>
+      </div>
+
+      <div class="date-section">Needs Confirmation</div>
+
+      <div class="order-card new">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👩</div>
+            <div>
+              <div class="customer-name">Daw Khin Myat</div>
+              <div class="customer-phone">📞 09 7812 3456 · Sanchaung</div>
+            </div>
+          </div>
+          <div class="status-badge badge-new">NEW</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👗</span> Silk Longyi Set × 2</div>
+          <div class="price-tag">45,000<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0241</div>
+          <div class="order-time">10:32 AM — 2h ago</div>
+        </div>
+        <div class="quick-action-row">
+          <div class="quick-btn">✗ Cancel</div>
+          <div class="quick-btn primary-action">✓ Confirm Order</div>
+        </div>
+      </div>
+
+      <div class="order-card new">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👨</div>
+            <div>
+              <div class="customer-name">U Kyaw Zin</div>
+              <div class="customer-phone">📞 09 5678 9012 · Tarmwe</div>
+            </div>
+          </div>
+          <div class="status-badge badge-new">NEW</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👔</span> Formal Shirt × 3</div>
+          <div class="price-tag">54,000<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0243</div>
+          <div class="order-time">11:10 AM — 1h ago</div>
+        </div>
+        <div class="quick-action-row">
+          <div class="quick-btn">✗ Cancel</div>
+          <div class="quick-btn primary-action">✓ Confirm Order</div>
+        </div>
+      </div>
+
+      <div class="date-section" style="margin-top:4px;">Ready to Ship</div>
+
+      <div class="order-card confirmed">
+        <div class="card-top">
+          <div class="customer-info">
+            <div class="customer-avatar">👩</div>
+            <div>
+              <div class="customer-name">Ma Thin Zar</div>
+              <div class="customer-phone">📞 09 2234 5678 · Hlaing</div>
+            </div>
+          </div>
+          <div class="status-badge badge-confirmed">CONFIRMED</div>
+        </div>
+        <div class="card-bottom">
+          <div class="product-tag"><span>👜</span> Handbag (Black) × 1</div>
+          <div class="price-tag">32,000<small>MMK</small></div>
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div class="order-id">#ORD-0239</div>
+          <div class="order-time">8:50 AM · Confirmed 2h ago</div>
+        </div>
+        <div class="quick-action-row">
+          <div class="quick-btn">📞 Call</div>
+          <div class="quick-btn teal-action">🚚 Send Out</div>
+        </div>
+      </div>
+
+      <div style="height: 20px;"></div>
+    </div>
+
+    <div class="fab">+</div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label" style="color: var(--soft-orange);">Orders</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label">Customers</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📊</div>
+        <div class="nav-label">Reports</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-label">Settings</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: EMPTY STATE -->
+<div>
+  <div class="label">Screen 3 — Empty State (new user)</div>
+  <div class="phone">
+    <div class="status-bar" style="background: white;">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="home-header">
+      <div class="header-top">
+        <div class="shop-info">
+          <div class="shop-avatar">👗</div>
+          <div>
+            <div class="shop-name-text">Ma Aye Shop</div>
+            <div class="shop-sub">Let's start adding orders!</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="icon-btn">🔔</div>
+        </div>
+      </div>
+      <div class="filter-tabs">
+        <div class="tab active">All (0)</div>
+        <div class="tab">Today</div>
+        <div class="tab">Pending</div>
+        <div class="tab">Delivered</div>
+      </div>
+    </div>
+
+    <div class="home-body" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div style="text-align:center; padding: 0 32px;">
+        <div style="font-size:72px; margin-bottom:20px; opacity:0.8;">📦</div>
+        <div style="font-size:18px; font-weight:900; color: var(--text-dark); margin-bottom:8px;">No orders yet</div>
+        <div style="font-size:13px; color: var(--text-mid); font-weight:600; line-height:1.6; margin-bottom:6px;">Got an order in Messenger? Add it here in seconds.</div>
+        <div style="font-size:13px; color: var(--teal); font-weight:700; font-family: 'Noto Sans Myanmar', sans-serif; margin-bottom:28px;">မက်ဆင်ဂျာမှ အော်ဒါ ဒီမှာ ထည့်ပါ</div>
+        <button style="background: linear-gradient(135deg, #FF6B35, #FF8C5A); color:white; border:none; border-radius:16px; padding:16px 32px; font-size:15px; font-weight:800; font-family:'Nunito',sans-serif; cursor:pointer; box-shadow: 0 8px 24px rgba(255,107,53,0.3);">+ Add First Order</button>
+      </div>
+    </div>
+
+    <div class="fab">+</div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label" style="color: var(--soft-orange);">Orders</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label">Customers</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📊</div>
+        <div class="nav-label">Reports</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-label">Settings</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

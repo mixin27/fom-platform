@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Add Order Form</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FDF9F4;
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --green: #22C55E;
+    --green-light: #DCFCE7;
+    --yellow: #F59E0B;
+    --yellow-light: #FEF3C7;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --shadow: rgba(255,107,53,0.12);
+    --bg: #F5F0EA;
+  }
+
+  body {
+    background: #E8E2DA;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    padding: 32px;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .status-bar {
+    background: var(--warm-white);
+    padding: 12px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dark);
+    flex-shrink: 0;
+  }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+
+  /* ======= PAGE HEADER ======= */
+  .page-header {
+    background: var(--warm-white);
+    padding: 14px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1.5px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .back-btn {
+    width: 38px; height: 38px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .page-title-wrap { flex: 1; }
+  .page-title {
+    font-size: 17px;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1.2;
+  }
+  .page-sub {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+    font-family: 'Noto Sans Myanmar', sans-serif;
+  }
+
+  .header-action {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--soft-orange);
+    cursor: pointer;
+    padding: 8px 12px;
+    background: var(--soft-orange-light);
+    border-radius: 10px;
+  }
+
+  /* ======= FORM BODY ======= */
+  .form-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 80px;
+  }
+  .form-body::-webkit-scrollbar { display: none; }
+
+  /* Paste helper */
+  .paste-helper {
+    background: linear-gradient(135deg, #FFF8F4, #FFF0EB);
+    border: 2px dashed var(--soft-orange-mid);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .paste-icon {
+    width: 40px; height: 40px;
+    background: var(--soft-orange);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .paste-text .pt-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--soft-orange);
+    margin-bottom: 2px;
+  }
+  .paste-text .pt-sub {
+    font-size: 11px;
+    color: var(--text-mid);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  /* Section headers */
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    margin-top: 4px;
+  }
+  .section-head .s-icon {
+    width: 28px; height: 28px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .icon-orange { background: var(--soft-orange-light); }
+  .icon-teal { background: var(--teal-light); }
+  .icon-green { background: var(--green-light); }
+
+  .section-head .s-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: 0.04em;
+  }
+  .section-head .s-title-mm {
+    font-size: 11px;
+    color: var(--text-light);
+    font-family: 'Noto Sans Myanmar', sans-serif;
+  }
+
+  /* Form fields */
+  .form-group { margin-bottom: 12px; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .form-row .form-group { flex: 1; margin-bottom: 0; }
+
+  .form-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .required-dot { color: var(--soft-orange); }
+
+  .input-wrap { position: relative; }
+  .input-icon {
+    position: absolute;
+    left: 13px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 13px 13px 13px 40px;
+    border: 2px solid var(--border);
+    border-radius: 13px;
+    font-size: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    color: var(--text-dark);
+    background: white;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-input.no-icon { padding-left: 13px; }
+  .form-input:focus, .form-input.active {
+    border-color: var(--soft-orange);
+    box-shadow: 0 0 0 3px var(--shadow);
+  }
+  .form-input.filled {
+    border-color: var(--border);
+    background: #FFFCF8;
+  }
+  .form-input::placeholder { color: var(--text-light); font-weight: 600; }
+
+  textarea.form-input {
+    resize: none;
+    padding-top: 12px;
+    padding-left: 40px;
+    line-height: 1.5;
+    height: 74px;
+  }
+
+  /* Product quantity row */
+  .qty-input {
+    padding-left: 13px !important;
+    text-align: center;
+    font-weight: 800 !important;
+    font-size: 16px !important;
+  }
+
+  /* Price field with MMK */
+  .price-wrap { position: relative; }
+  .price-suffix {
+    position: absolute;
+    right: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-light);
+    pointer-events: none;
+  }
+  .price-input { padding-right: 52px !important; }
+
+  /* Status selector */
+  .status-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .status-opt {
+    flex: 1;
+    padding: 10px 8px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    background: white;
+    transition: all 0.2s;
+  }
+  .status-opt .so-icon { font-size: 16px; margin-bottom: 4px; }
+  .status-opt .so-label { font-size: 10px; font-weight: 800; color: var(--text-light); }
+  .status-opt .so-mm { font-size: 9px; color: var(--text-light); font-family: 'Noto Sans Myanmar', sans-serif; display: block; }
+
+  .status-opt.selected-new {
+    border-color: var(--soft-orange);
+    background: var(--soft-orange-light);
+  }
+  .status-opt.selected-new .so-label { color: var(--soft-orange); }
+
+  .status-opt.selected-confirmed {
+    border-color: var(--teal);
+    background: var(--teal-light);
+  }
+  .status-opt.selected-confirmed .so-label { color: var(--teal); }
+
+  .status-opt.selected-delivered {
+    border-color: var(--green);
+    background: var(--green-light);
+  }
+  .status-opt.selected-delivered .so-label { color: var(--green); }
+
+  /* Order summary preview */
+  .order-preview {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .preview-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-light);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .preview-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .preview-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .preview-key { color: var(--text-light); font-weight: 700; }
+  .preview-val { color: var(--text-dark); font-weight: 800; }
+  .preview-val.price { color: var(--soft-orange); font-size: 15px; }
+
+  /* Bottom submit bar */
+  .submit-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1.5px solid var(--border);
+    padding: 12px 16px 24px;
+    display: flex;
+    gap: 10px;
+  }
+  .btn-ghost {
+    padding: 14px 20px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-mid);
+    background: white;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+  }
+  .btn-submit {
+    flex: 1;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    color: white;
+    font-size: 15px;
+    font-weight: 800;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 6px 20px rgba(255,107,53,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* divider */
+  .form-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* suggest chips */
+  .suggest-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .suggest-chip {
+    background: var(--soft-orange-light);
+    color: var(--soft-orange);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 5px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1.5px solid var(--soft-orange-mid);
+  }
+
+  /* Success screen */
+  .success-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    background: var(--warm-white);
+  }
+  .success-ring {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: var(--green-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    margin-bottom: 24px;
+    animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes pop {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .success-title {
+    font-size: 24px; font-weight: 900;
+    color: var(--text-dark); margin-bottom: 6px;
+  }
+  .success-sub {
+    font-size: 14px; color: var(--text-mid);
+    font-weight: 600; line-height: 1.6;
+    margin-bottom: 6px;
+  }
+  .success-mm {
+    font-size: 13px; color: var(--teal);
+    font-family: 'Noto Sans Myanmar', sans-serif;
+    margin-bottom: 28px;
+  }
+  .success-card {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    width: 100%;
+    margin-bottom: 24px;
+    text-align: left;
+  }
+  .sc-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .sc-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .sc-key { color: var(--text-light); font-weight: 700; }
+  .sc-val { color: var(--text-dark); font-weight: 800; }
+  .order-id-badge {
+    background: var(--soft-orange-light);
+    color: var(--soft-orange);
+    font-size: 13px;
+    font-weight: 900;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .success-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+  .btn-outline {
+    flex: 1;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-mid);
+    background: white;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    text-align: center;
+  }
+  .btn-green {
+    flex: 1;
+    padding: 14px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: BLANK ADD ORDER FORM -->
+<div>
+  <div class="label">Screen 1 — Add Order (empty form)</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="page-header">
+      <div class="back-btn">←</div>
+      <div class="page-title-wrap">
+        <div class="page-title">New Order</div>
+        <div class="page-sub">အော်ဒါသစ် ထည့်မည်</div>
+      </div>
+      <div class="header-action">Clear</div>
+    </div>
+
+    <div class="form-body">
+
+      <!-- Paste from Messenger helper -->
+      <div class="paste-helper">
+        <div class="paste-icon">📋</div>
+        <div class="paste-text">
+          <div class="pt-title">Paste from Messenger</div>
+          <div class="pt-sub">Copy customer message → tap here to auto-fill fields</div>
+        </div>
+        <span style="font-size:18px; color: var(--soft-orange);">→</span>
+      </div>
+
+      <!-- Customer Section -->
+      <div class="section-head">
+        <div class="s-icon icon-orange">👤</div>
+        <div>
+          <div class="s-title">Customer Info</div>
+          <div class="s-title-mm">ဖောက်သည်အချက်အလက်</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Customer Name <span class="required-dot">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input class="form-input active" type="text" placeholder="e.g. Daw Khin Myat" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Phone <span class="required-dot">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">📞</span>
+            <input class="form-input" type="tel" placeholder="09xxxxxxxx" />
+          </div>
+        </div>
+        <div class="form-group" style="flex: 0.7">
+          <label class="form-label">Township</label>
+          <div class="input-wrap">
+            <span class="input-icon">📍</span>
+            <input class="form-input" type="text" placeholder="Area" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Delivery Address</label>
+        <div class="input-wrap">
+          <span class="input-icon">🏠</span>
+          <textarea class="form-input" placeholder="No. 45, Bo Gyoke St, Sanchaung..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <!-- Product Section -->
+      <div class="section-head">
+        <div class="s-icon icon-teal">📦</div>
+        <div>
+          <div class="s-title">Product & Price</div>
+          <div class="s-title-mm">ပစ္စည်းနှင့် ဈေးနှုန်း</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Product Name <span class="required-dot">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🛍️</span>
+          <input class="form-input" type="text" placeholder="e.g. Silk Longyi Set (Green)" />
+        </div>
+        <div class="suggest-row">
+          <div class="suggest-chip">👗 Longyi Set</div>
+          <div class="suggest-chip">👔 Shirt</div>
+          <div class="suggest-chip">👜 Handbag</div>
+          <div class="suggest-chip">+ more</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 0.6">
+          <label class="form-label">Qty <span class="required-dot">*</span></label>
+          <input class="form-input no-icon qty-input" type="number" value="1" min="1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Price (MMK) <span class="required-dot">*</span></label>
+          <div class="price-wrap input-wrap">
+            <span class="input-icon">💰</span>
+            <input class="form-input price-input" type="number" placeholder="25,000" />
+            <span class="price-suffix">MMK</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Delivery Fee</label>
+        <div class="price-wrap input-wrap">
+          <span class="input-icon">🚚</span>
+          <input class="form-input price-input" type="number" placeholder="3,000" />
+          <span class="price-suffix">MMK</span>
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <!-- Status Section -->
+      <div class="section-head">
+        <div class="s-icon icon-green">📌</div>
+        <div>
+          <div class="s-title">Order Status</div>
+          <div class="s-title-mm">အော်ဒါအခြေအနေ</div>
+        </div>
+      </div>
+
+      <div class="status-selector">
+        <div class="status-opt selected-new">
+          <div class="so-icon">🆕</div>
+          <div class="so-label">New</div>
+          <span class="so-mm">အသစ်</span>
+        </div>
+        <div class="status-opt">
+          <div class="so-icon">✅</div>
+          <div class="so-label">Confirmed</div>
+          <span class="so-mm">အတည်ပြု</span>
+        </div>
+        <div class="status-opt">
+          <div class="so-icon">🚚</div>
+          <div class="so-label">Shipping</div>
+          <span class="so-mm">သွားပြီ</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <div class="input-wrap">
+          <span class="input-icon">📝</span>
+          <textarea class="form-input" placeholder="Special requests, colour, size..." style="height: 60px;"></textarea>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="submit-bar">
+      <button class="btn-ghost">Draft</button>
+      <button class="btn-submit">Save Order — သိမ်းမည် ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: FILLED FORM (pre-submit) -->
+<div>
+  <div class="label">Screen 2 — Add Order (filled in)</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="page-header">
+      <div class="back-btn">←</div>
+      <div class="page-title-wrap">
+        <div class="page-title">New Order</div>
+        <div class="page-sub">အော်ဒါသစ် ထည့်မည်</div>
+      </div>
+      <div class="header-action">Clear</div>
+    </div>
+
+    <div class="form-body">
+      <!-- Filled paste helper (used state) -->
+      <div class="paste-helper" style="background: var(--teal-light); border-color: var(--teal); border-style:solid;">
+        <div class="paste-icon" style="background: var(--teal);">✓</div>
+        <div class="paste-text">
+          <div class="pt-title" style="color: var(--teal);">Fields auto-filled from chat</div>
+          <div class="pt-sub">Name, phone and address detected. Check & save.</div>
+        </div>
+      </div>
+
+      <!-- Customer Section -->
+      <div class="section-head">
+        <div class="s-icon icon-orange">👤</div>
+        <div>
+          <div class="s-title">Customer Info</div>
+          <div class="s-title-mm">ဖောက်သည်အချက်အလက်</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Customer Name <span class="required-dot">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input class="form-input filled" type="text" value="Daw Khin Myat" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Phone <span class="required-dot">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">📞</span>
+            <input class="form-input filled" type="tel" value="09 7812 3456" />
+          </div>
+        </div>
+        <div class="form-group" style="flex: 0.7">
+          <label class="form-label">Township</label>
+          <div class="input-wrap">
+            <span class="input-icon">📍</span>
+            <input class="form-input filled" type="text" value="Sanchaung" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Delivery Address</label>
+        <div class="input-wrap">
+          <span class="input-icon">🏠</span>
+          <textarea class="form-input filled">No. 45, Bo Gyoke St, Sanchaung Tsp, Yangon</textarea>
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <!-- Product Section -->
+      <div class="section-head">
+        <div class="s-icon icon-teal">📦</div>
+        <div>
+          <div class="s-title">Product & Price</div>
+          <div class="s-title-mm">ပစ္စည်းနှင့် ဈေးနှုန်း</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Product Name <span class="required-dot">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🛍️</span>
+          <input class="form-input filled" type="text" value="Silk Longyi Set (Green, Size M)" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 0.6">
+          <label class="form-label">Qty <span class="required-dot">*</span></label>
+          <input class="form-input no-icon qty-input filled" type="number" value="2" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Price (MMK) <span class="required-dot">*</span></label>
+          <div class="price-wrap input-wrap">
+            <span class="input-icon">💰</span>
+            <input class="form-input price-input filled" type="number" value="18,000" />
+            <span class="price-suffix">MMK</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total preview -->
+      <div class="order-preview">
+        <div class="preview-title">Order Summary — အော်ဒါ အကျဉ်း</div>
+        <div class="preview-row">
+          <span class="preview-key">Silk Longyi Set × 2</span>
+          <span class="preview-val">36,000 MMK</span>
+        </div>
+        <div class="preview-row">
+          <span class="preview-key">Delivery Fee</span>
+          <span class="preview-val">3,000 MMK</span>
+        </div>
+        <div class="preview-row" style="margin-top: 4px;">
+          <span class="preview-key" style="font-size:13px; font-weight:900; color: var(--text-dark);">Total</span>
+          <span class="preview-val price">39,000 MMK</span>
+        </div>
+      </div>
+
+      <!-- Status Section -->
+      <div class="section-head">
+        <div class="s-icon icon-green">📌</div>
+        <div>
+          <div class="s-title">Order Status</div>
+        </div>
+      </div>
+
+      <div class="status-selector">
+        <div class="status-opt selected-new">
+          <div class="so-icon">🆕</div>
+          <div class="so-label">New</div>
+          <span class="so-mm">အသစ်</span>
+        </div>
+        <div class="status-opt">
+          <div class="so-icon">✅</div>
+          <div class="so-label">Confirmed</div>
+          <span class="so-mm">အတည်ပြု</span>
+        </div>
+        <div class="status-opt">
+          <div class="so-icon">🚚</div>
+          <div class="so-label">Shipping</div>
+          <span class="so-mm">သွားပြီ</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="submit-bar">
+      <button class="btn-ghost">Draft</button>
+      <button class="btn-submit">Save Order — သိမ်းမည် ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: SUCCESS CONFIRMATION -->
+<div>
+  <div class="label">Screen 3 — Order Saved (success)</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="success-screen">
+      <div class="success-ring">✅</div>
+      <div class="order-id-badge">#ORD-0244</div>
+      <div class="success-title" style="margin-top:10px;">Order Saved!</div>
+      <div class="success-sub">Order added to your list.<br>Update status as you go.</div>
+      <div class="success-mm">အော်ဒါ သိမ်းဆည်းပြီးပါပြီ</div>
+
+      <div class="success-card">
+        <div class="sc-row">
+          <span class="sc-key">Customer</span>
+          <span class="sc-val">Daw Khin Myat</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-key">Phone</span>
+          <span class="sc-val">09 7812 3456</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-key">Product</span>
+          <span class="sc-val">Silk Longyi × 2</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-key">Total</span>
+          <span class="sc-val" style="color: var(--soft-orange); font-size: 15px;">39,000 MMK</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-key">Status</span>
+          <span class="sc-val" style="background: var(--soft-orange-light); color: var(--soft-orange); padding: 3px 10px; border-radius: 20px; font-size: 11px;">NEW</span>
+        </div>
+      </div>
+
+      <div class="success-actions">
+        <button class="btn-outline">+ Add Another</button>
+        <button class="btn-green">✓ View Orders</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

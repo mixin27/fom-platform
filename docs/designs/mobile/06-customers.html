@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Customers</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --green: #22C55E;
+    --green-light: #DCFCE7;
+    --yellow: #F59E0B;
+    --yellow-light: #FEF3C7;
+    --purple: #8B5CF6;
+    --purple-light: #EDE9FE;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --bg: #F5F0EA;
+  }
+  body {
+    background: #DDD5C8;
+    font-family: 'Nunito', sans-serif;
+    display: flex; flex-wrap: wrap;
+    gap: 32px; padding: 32px;
+    justify-content: center; align-items: flex-start; min-height: 100vh;
+  }
+  .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    color: #888; text-transform: uppercase; margin-bottom: 8px; text-align: center;
+  }
+  .phone {
+    width: 375px; height: 812px; background: var(--bg);
+    border-radius: 40px; overflow: hidden;
+    box-shadow: 0 28px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+    position: relative; display: flex; flex-direction: column;
+  }
+  .status-bar {
+    background: var(--warm-white); padding: 12px 24px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: var(--text-dark); flex-shrink: 0;
+  }
+
+  /* ── HEADER ── */
+  .page-header {
+    background: var(--warm-white);
+    padding: 14px 20px 0;
+    border-bottom: 1.5px solid var(--border); flex-shrink: 0;
+  }
+  .header-top {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 14px;
+  }
+  .page-title { font-size: 18px; font-weight: 900; color: var(--text-dark); }
+  .page-title-mm { font-size: 11px; color: var(--text-light); font-weight: 600; font-family: 'Noto Sans Myanmar', sans-serif; }
+  .icon-btn {
+    width: 38px; height: 38px; border: 2px solid var(--border);
+    border-radius: 12px; background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; cursor: pointer;
+  }
+
+  /* search */
+  .search-bar {
+    background: var(--bg); border: 2px solid var(--border);
+    border-radius: 14px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 0;
+  }
+  .search-bar span { font-size: 16px; opacity: 0.45; }
+  .search-bar input {
+    flex: 1; border: none; outline: none;
+    font-size: 13px; font-family: 'Nunito', sans-serif;
+    font-weight: 600; color: var(--text-dark); background: transparent;
+  }
+  .search-bar input::placeholder { color: var(--text-light); }
+
+  /* sort tabs */
+  .sort-tabs {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 12px 0 0;
+  }
+  .sort-tabs::-webkit-scrollbar { display: none; }
+  .sort-tab {
+    padding: 7px 14px; border-radius: 20px 20px 0 0;
+    font-size: 11px; font-weight: 800; white-space: nowrap; cursor: pointer;
+    color: var(--text-light); border: 2px solid transparent; border-bottom: none;
+  }
+  .sort-tab.active {
+    background: var(--bg); color: var(--soft-orange);
+    border-color: var(--border); border-bottom-color: var(--bg);
+    position: relative; bottom: -1px;
+  }
+
+  /* ── BODY ── */
+  .list-body { flex: 1; overflow-y: auto; padding: 14px 16px 90px; }
+  .list-body::-webkit-scrollbar { display: none; }
+
+  /* stats row */
+  .stats-row {
+    display: flex; gap: 10px; margin-bottom: 14px;
+  }
+  .stat-pill {
+    flex: 1; background: white; border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 10px 12px;
+  }
+  .sp-val { font-size: 20px; font-weight: 900; color: var(--text-dark); line-height: 1; }
+  .sp-label { font-size: 10px; font-weight: 800; color: var(--text-light); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* section label */
+  .sec-label {
+    font-size: 10px; font-weight: 800; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 8px; padding: 0 2px;
+  }
+
+  /* customer card */
+  .customer-card {
+    background: white; border-radius: 18px;
+    border: 1.5px solid var(--border); padding: 14px 16px;
+    margin-bottom: 10px; cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    transition: transform 0.15s;
+  }
+  .customer-card:active { transform: scale(0.98); }
+
+  .cust-avatar {
+    width: 46px; height: 46px; border-radius: 15px;
+    background: var(--soft-orange-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; position: relative;
+  }
+  .cust-avatar .badge {
+    position: absolute; bottom: -3px; right: -3px;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px;
+  }
+  .badge-vip { background: #FCD34D; }
+  .badge-new-cust { background: var(--teal); color: white; font-weight: 900; }
+
+  .cust-info { flex: 1; min-width: 0; }
+  .cust-name {
+    font-size: 14px; font-weight: 900; color: var(--text-dark);
+    margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cust-meta {
+    font-size: 11px; color: var(--text-light); font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cust-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border); }
+
+  .cust-right { text-align: right; flex-shrink: 0; }
+  .cust-spent { font-size: 13px; font-weight: 900; color: var(--text-dark); }
+  .cust-orders { font-size: 10px; color: var(--text-light); font-weight: 700; margin-top: 2px; }
+  .cust-last { font-size: 10px; color: var(--teal); font-weight: 700; margin-top: 2px; }
+
+  /* VIP chip */
+  .vip-chip {
+    background: #FEF3C7; color: #D97706;
+    font-size: 9px; font-weight: 800; padding: 2px 7px;
+    border-radius: 20px; display: inline-block; margin-left: 4px;
+  }
+  .new-chip {
+    background: var(--teal-light); color: var(--teal);
+    font-size: 9px; font-weight: 800; padding: 2px 7px;
+    border-radius: 20px; display: inline-block; margin-left: 4px;
+  }
+
+  /* alphabet index */
+  .alpha-index {
+    position: absolute; right: 8px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 2px; z-index: 5;
+  }
+  .alpha-letter {
+    font-size: 9px; font-weight: 800; color: var(--text-light);
+    width: 14px; text-align: center; cursor: pointer;
+  }
+  .alpha-letter:hover { color: var(--soft-orange); }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 88px; right: 20px;
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    border-radius: 18px; display: flex; align-items: center;
+    justify-content: center; font-size: 24px; color: white;
+    box-shadow: 0 8px 24px rgba(255,107,53,0.35); cursor: pointer; z-index: 10;
+  }
+
+  /* bottom nav */
+  .bottom-nav {
+    background: white; border-top: 1.5px solid var(--border);
+    display: flex; padding: 10px 0 18px; flex-shrink: 0;
+  }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+  .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-label { font-size: 10px; font-weight: 800; color: var(--text-light); }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--soft-orange); margin: 0 auto; }
+
+  /* ── PROFILE PAGE ── */
+  .profile-header {
+    background: linear-gradient(160deg, #1A1A2E 0%, #2A2A4E 100%);
+    padding: 16px 20px 24px; position: relative; overflow: hidden; flex-shrink: 0;
+  }
+  .ph-glow {
+    position: absolute; width: 160px; height: 160px; border-radius: 50%;
+    background: rgba(255,107,53,0.18); filter: blur(40px);
+    top: -40px; right: -40px;
+  }
+  .ph-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; position: relative; z-index: 1;
+  }
+  .ph-back {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: white; cursor: pointer;
+  }
+  .ph-menu {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: white; cursor: pointer;
+  }
+  .ph-profile {
+    display: flex; align-items: center; gap: 14px;
+    position: relative; z-index: 1;
+  }
+  .ph-avatar {
+    width: 60px; height: 60px; border-radius: 20px;
+    background: var(--soft-orange-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; border: 3px solid rgba(255,255,255,0.2); flex-shrink: 0;
+  }
+  .ph-name { font-size: 18px; font-weight: 900; color: white; margin-bottom: 3px; }
+  .ph-phone { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 600; }
+  .ph-chips { display: flex; gap: 6px; margin-top: 6px; }
+  .ph-chip {
+    font-size: 10px; font-weight: 800; padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .chip-vip { background: #FCD34D; color: #92400E; }
+  .chip-loyal { background: rgba(42,168,160,0.3); color: #7DF0EB; }
+
+  .ph-stats {
+    display: flex; gap: 0;
+    background: rgba(255,255,255,0.08); border-radius: 16px;
+    padding: 14px 0; margin-top: 18px; position: relative; z-index: 1;
+  }
+  .ph-stat { flex: 1; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); }
+  .ph-stat:last-child { border-right: none; }
+  .ph-stat-val { font-size: 18px; font-weight: 900; color: white; line-height: 1; }
+  .ph-stat-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 700; margin-top: 3px; }
+
+  .profile-body { flex: 1; overflow-y: auto; padding: 14px 16px 90px; }
+  .profile-body::-webkit-scrollbar { display: none; }
+
+  /* profile action chips */
+  .action-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .action-chip {
+    flex: 1; background: white; border: 2px solid var(--border);
+    border-radius: 14px; padding: 12px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .action-chip .ac-icon { font-size: 20px; }
+  .action-chip .ac-label { font-size: 10px; font-weight: 800; color: var(--text-mid); }
+
+  /* info card */
+  .info-card { background: white; border-radius: 18px; border: 1.5px solid var(--border); padding: 16px; margin-bottom: 12px; }
+  .ic-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .ic-icon { width: 28px; height: 28px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .bg-orange { background: var(--soft-orange-light); }
+  .bg-teal { background: var(--teal-light); }
+  .bg-purple { background: var(--purple-light); }
+  .ic-title { font-size: 13px; font-weight: 900; color: var(--text-dark); }
+
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .ir-key { font-size: 11px; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ir-val { font-size: 13px; font-weight: 800; color: var(--text-dark); }
+  .ir-val.orange { color: var(--soft-orange); font-size: 15px; }
+  .ir-val.teal { color: var(--teal); }
+
+  /* mini order history */
+  .order-mini {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .order-mini:last-child { border-bottom: none; padding-bottom: 0; }
+  .om-id { font-size: 10px; font-weight: 700; font-family: monospace; color: var(--text-light); }
+  .om-product { font-size: 12px; font-weight: 800; color: var(--text-dark); }
+  .om-date { font-size: 10px; color: var(--text-light); font-weight: 600; }
+  .om-price { font-size: 12px; font-weight: 900; color: var(--text-dark); margin-left: auto; flex-shrink: 0; }
+  .om-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 20px; margin-top: 2px; display: block; text-align: center; }
+  .mb-del { background: var(--green-light); color: var(--green); }
+  .mb-new { background: var(--soft-orange-light); color: var(--soft-orange); }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: CUSTOMER LIST -->
+<div>
+  <div class="label">Screen 1 — Customer List</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+    <div class="page-header">
+      <div class="header-top">
+        <div>
+          <div class="page-title">Customers</div>
+          <div class="page-title-mm">ဖောက်သည်များ</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="icon-btn">↕</div>
+          <div class="icon-btn">+</div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="Search name, phone, township…" />
+      </div>
+      <div class="sort-tabs">
+        <div class="sort-tab active">All (89)</div>
+        <div class="sort-tab">VIP ⭐</div>
+        <div class="sort-tab">Top Spenders</div>
+        <div class="sort-tab">New This Week</div>
+      </div>
+    </div>
+
+    <div class="list-body" style="position:relative;">
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-pill">
+          <div class="sp-val">89</div>
+          <div class="sp-label">Customers</div>
+        </div>
+        <div class="stat-pill">
+          <div class="sp-val" style="color:var(--soft-orange);">12</div>
+          <div class="sp-label">VIP</div>
+        </div>
+        <div class="stat-pill">
+          <div class="sp-val" style="color:var(--teal);">7</div>
+          <div class="sp-label">New this wk</div>
+        </div>
+      </div>
+
+      <div class="sec-label">A</div>
+      <div class="customer-card">
+        <div class="cust-avatar">👩<div class="badge badge-vip">⭐</div></div>
+        <div class="cust-info">
+          <div class="cust-name">Daw Aye Aye <span class="vip-chip">VIP</span></div>
+          <div class="cust-meta">📞 09 9871 2345 <span class="cust-meta-dot"></span> Hlaing</div>
+        </div>
+        <div class="cust-right">
+          <div class="cust-spent">312K MMK</div>
+          <div class="cust-orders">18 orders</div>
+          <div class="cust-last">2 days ago</div>
+        </div>
+      </div>
+
+      <div class="sec-label">D</div>
+      <div class="customer-card">
+        <div class="cust-avatar">👩<div class="badge badge-vip">⭐</div></div>
+        <div class="cust-info">
+          <div class="cust-name">Daw Khin Myat <span class="vip-chip">VIP</span></div>
+          <div class="cust-meta">📞 09 7812 3456 <span class="cust-meta-dot"></span> Sanchaung</div>
+        </div>
+        <div class="cust-right">
+          <div class="cust-spent">245K MMK</div>
+          <div class="cust-orders">14 orders</div>
+          <div class="cust-last">Today</div>
+        </div>
+      </div>
+
+      <div class="sec-label">K</div>
+      <div class="customer-card">
+        <div class="cust-avatar" style="background:var(--teal-light);">👨<div class="badge badge-new-cust" style="background:var(--teal);color:white;font-size:7px;">N</div></div>
+        <div class="cust-info">
+          <div class="cust-name">Ko Zaw Lin <span class="new-chip">NEW</span></div>
+          <div class="cust-meta">📞 09 4556 7890 <span class="cust-meta-dot"></span> Tarmwe</div>
+        </div>
+        <div class="cust-right">
+          <div class="cust-spent">21K MMK</div>
+          <div class="cust-orders">1 order</div>
+          <div class="cust-last">Today</div>
+        </div>
+      </div>
+
+      <div class="customer-card">
+        <div class="cust-avatar" style="background:var(--purple-light);">👩</div>
+        <div class="cust-info">
+          <div class="cust-name">Khin Su Wai</div>
+          <div class="cust-meta">📞 09 6644 1234 <span class="cust-meta-dot"></span> Bahan</div>
+        </div>
+        <div class="cust-right">
+          <div class="cust-spent">88K MMK</div>
+          <div class="cust-orders">5 orders</div>
+          <div class="cust-last">3 days ago</div>
+        </div>
+      </div>
+
+      <div class="sec-label">M</div>
+      <div class="customer-card">
+        <div class="cust-avatar" style="background:var(--green-light);">👩</div>
+        <div class="cust-info">
+          <div class="cust-name">Ma Thin Zar</div>
+          <div class="cust-meta">📞 09 2234 5678 <span class="cust-meta-dot"></span> Hlaing</div>
+        </div>
+        <div class="cust-right">
+          <div class="cust-spent">185K MMK</div>
+          <div class="cust-orders">9 orders</div>
+          <div class="cust-last">Yesterday</div>
+        </div>
+      </div>
+
+      <div class="sec-label">U</div>
+      <div class="customer-card">
+        <div class="cust-avatar" style="background:var(--yellow-light);">👨</div>
+        <div class="cust-info">
+          <div class="cust-name">U Kyaw Zin</div>
+          <div class="cust-meta">📞 09 5678 9012 <span class="cust-meta-dot"></span> Tarmwe</div>
+        </div>
+        <div class="cust-right">
+          <div class="cust-spent">54K MMK</div>
+          <div class="cust-orders">3 orders</div>
+          <div class="cust-last">Today</div>
+        </div>
+      </div>
+
+      <!-- alpha index -->
+      <div class="alpha-index">
+        <div class="alpha-letter">A</div><div class="alpha-letter">D</div>
+        <div class="alpha-letter">K</div><div class="alpha-letter">M</div>
+        <div class="alpha-letter">S</div><div class="alpha-letter">T</div>
+        <div class="alpha-letter">U</div><div class="alpha-letter">Y</div>
+      </div>
+    </div>
+
+    <div class="fab">+</div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📋</div><div class="nav-label">Orders</div></div>
+      <div class="nav-item active">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label" style="color:var(--soft-orange);">Customers</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item"><div class="nav-icon">📊</div><div class="nav-label">Reports</div></div>
+      <div class="nav-item"><div class="nav-icon">⚙️</div><div class="nav-label">Settings</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: CUSTOMER PROFILE -->
+<div>
+  <div class="label">Screen 2 — Customer Profile</div>
+  <div class="phone">
+    <div class="status-bar" style="background:transparent;position:absolute;top:0;left:0;right:0;z-index:10;padding:12px 24px 0;">
+      <span style="color:white;">9:41</span>
+      <div style="display:flex;gap:6px;font-size:12px;font-weight:700;color:white;">●●● 🔋</div>
+    </div>
+
+    <div class="profile-header">
+      <div class="ph-glow"></div>
+      <div class="ph-nav" style="padding-top:12px;">
+        <div class="ph-back">←</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:800;">Customer Profile</div>
+        <div class="ph-menu">⋯</div>
+      </div>
+      <div class="ph-profile">
+        <div class="ph-avatar">👩</div>
+        <div>
+          <div class="ph-name">Daw Aye Aye</div>
+          <div class="ph-phone">📞 09 9871 2345 · Hlaing</div>
+          <div class="ph-chips">
+            <div class="ph-chip chip-vip">⭐ VIP</div>
+            <div class="ph-chip chip-loyal">🔁 Loyal</div>
+          </div>
+        </div>
+      </div>
+      <div class="ph-stats">
+        <div class="ph-stat">
+          <div class="ph-stat-val">18</div>
+          <div class="ph-stat-label">Orders</div>
+        </div>
+        <div class="ph-stat">
+          <div class="ph-stat-val" style="color:#FF9F7A;">312K</div>
+          <div class="ph-stat-label">MMK Spent</div>
+        </div>
+        <div class="ph-stat">
+          <div class="ph-stat-val">17K</div>
+          <div class="ph-stat-label">Avg Order</div>
+        </div>
+        <div class="ph-stat">
+          <div class="ph-stat-val" style="color:#4ADE80;">94%</div>
+          <div class="ph-stat-label">Delivered</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-body">
+      <!-- Quick actions -->
+      <div class="action-row">
+        <div class="action-chip">
+          <div class="ac-icon">📞</div>
+          <div class="ac-label">Call</div>
+        </div>
+        <div class="action-chip">
+          <div class="ac-icon">💬</div>
+          <div class="ac-label">Message</div>
+        </div>
+        <div class="action-chip" style="border-color:var(--soft-orange);background:var(--soft-orange-light);">
+          <div class="ac-icon">📦</div>
+          <div class="ac-label" style="color:var(--soft-orange);">New Order</div>
+        </div>
+        <div class="action-chip">
+          <div class="ac-icon">🗺</div>
+          <div class="ac-label">Map</div>
+        </div>
+      </div>
+
+      <!-- Contact info -->
+      <div class="info-card">
+        <div class="ic-header">
+          <div class="ic-icon bg-orange">👤</div>
+          <div class="ic-title">Contact Info</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Phone</div>
+          <div class="ir-val teal">09 9871 2345</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Township</div>
+          <div class="ir-val">Hlaing, Yangon</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Address</div>
+          <div class="ir-val" style="font-size:11px;color:var(--text-mid);font-weight:600;text-align:right;max-width:200px;">No. 12, Shwe Taung Gyar St, Hlaing</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Customer Since</div>
+          <div class="ir-val">Jan 5, 2024</div>
+        </div>
+      </div>
+
+      <!-- Spending summary -->
+      <div class="info-card">
+        <div class="ic-header">
+          <div class="ic-icon bg-teal">💰</div>
+          <div class="ic-title">Spending Summary</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Total Spent</div>
+          <div class="ir-val orange">312,000 MMK</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Largest Order</div>
+          <div class="ir-val">72,000 MMK</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Favourite Item</div>
+          <div class="ir-val">👗 Silk Longyi</div>
+        </div>
+        <div class="info-row">
+          <div class="ir-key">Last Order</div>
+          <div class="ir-val">Apr 1, 2025</div>
+        </div>
+      </div>
+
+      <!-- Order history -->
+      <div class="info-card">
+        <div class="ic-header" style="justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="ic-icon bg-purple">📋</div>
+            <div class="ic-title">Order History</div>
+          </div>
+          <div style="font-size:11px;font-weight:800;color:var(--soft-orange);cursor:pointer;">See all (18)</div>
+        </div>
+        <div class="order-mini">
+          <div style="flex:1;">
+            <div class="om-id">#ORD-0238</div>
+            <div class="om-product">Summer Dress × 3</div>
+            <div class="om-date">Apr 1, 4:22 PM</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="om-price">54,000</div>
+            <div class="om-badge mb-del">DELIVERED</div>
+          </div>
+        </div>
+        <div class="order-mini">
+          <div style="flex:1;">
+            <div class="om-id">#ORD-0221</div>
+            <div class="om-product">Silk Longyi Set × 2</div>
+            <div class="om-date">Mar 28, 10:05 AM</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="om-price">36,000</div>
+            <div class="om-badge mb-del">DELIVERED</div>
+          </div>
+        </div>
+        <div class="order-mini">
+          <div style="flex:1;">
+            <div class="om-id">#ORD-0198</div>
+            <div class="om-product">Handbag (Red) × 1</div>
+            <div class="om-date">Mar 20, 2:14 PM</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="om-price">32,000</div>
+            <div class="om-badge mb-del">DELIVERED</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📋</div><div class="nav-label">Orders</div></div>
+      <div class="nav-item active">
+        <div class="nav-icon">👥</div>
+        <div class="nav-label" style="color:var(--soft-orange);">Customers</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item"><div class="nav-icon">📊</div><div class="nav-label">Reports</div></div>
+      <div class="nav-item"><div class="nav-icon">⚙️</div><div class="nav-label">Settings</div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

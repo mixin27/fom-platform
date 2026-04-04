@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Order Detail & Status Update</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --green: #22C55E;
+    --green-light: #DCFCE7;
+    --yellow: #F59E0B;
+    --yellow-light: #FEF3C7;
+    --red: #EF4444;
+    --red-light: #FEE2E2;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --bg: #F5F0EA;
+    --shadow-orange: rgba(255,107,53,0.15);
+  }
+
+  body {
+    background: #E2DBD1;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    padding: 32px;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; color: #888;
+    text-transform: uppercase;
+    margin-bottom: 8px; text-align: center;
+  }
+
+  .phone {
+    width: 375px; height: 812px;
+    background: var(--bg);
+    border-radius: 40px; overflow: hidden;
+    box-shadow: 0 28px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+    position: relative; display: flex; flex-direction: column;
+  }
+
+  .status-bar {
+    background: var(--warm-white);
+    padding: 12px 24px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: var(--text-dark);
+    flex-shrink: 0;
+  }
+
+  /* ===== PAGE HEADER ===== */
+  .page-header {
+    background: var(--warm-white);
+    padding: 14px 20px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .back-btn {
+    width: 38px; height: 38px;
+    border: 2px solid var(--border); border-radius: 12px;
+    background: white; display: flex; align-items: center;
+    justify-content: center; font-size: 17px; cursor: pointer; flex-shrink: 0;
+  }
+  .page-title-wrap { flex: 1; }
+  .page-title { font-size: 16px; font-weight: 900; color: var(--text-dark); line-height: 1.2; }
+  .page-order-id { font-size: 11px; color: var(--text-light); font-weight: 700; font-family: monospace; }
+
+  .header-menu {
+    width: 38px; height: 38px;
+    border: 2px solid var(--border); border-radius: 12px;
+    background: white; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; cursor: pointer;
+  }
+
+  /* ===== SCROLL BODY ===== */
+  .detail-body {
+    flex: 1; overflow-y: auto; padding: 16px 16px 100px;
+  }
+  .detail-body::-webkit-scrollbar { display: none; }
+
+  /* ===== STATUS TIMELINE ===== */
+  .status-hero {
+    background: white; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    padding: 18px 18px 16px;
+    margin-bottom: 14px;
+    position: relative; overflow: hidden;
+  }
+  .status-hero::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--soft-orange), #FF8C5A);
+    border-radius: 4px 4px 0 0;
+  }
+
+  .status-hero-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .current-status-label {
+    font-size: 10px; font-weight: 800; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .current-status-val {
+    font-size: 20px; font-weight: 900; color: var(--text-dark);
+  }
+  .status-badge-large {
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 800;
+  }
+  .badge-new { background: var(--soft-orange-light); color: var(--soft-orange); }
+  .badge-confirmed { background: var(--teal-light); color: var(--teal); }
+  .badge-out { background: var(--yellow-light); color: var(--yellow); }
+  .badge-delivered { background: var(--green-light); color: var(--green); }
+
+  /* Progress stepper */
+  .stepper {
+    display: flex; align-items: center;
+    margin-bottom: 8px;
+  }
+  .step-node {
+    display: flex; flex-direction: column; align-items: center;
+    position: relative; z-index: 1;
+  }
+  .step-circle {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900;
+    border: 2px solid var(--border);
+    background: white;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .step-circle.done {
+    background: var(--soft-orange); border-color: var(--soft-orange); color: white;
+  }
+  .step-circle.active {
+    background: white; border-color: var(--soft-orange); color: var(--soft-orange);
+    box-shadow: 0 0 0 4px var(--soft-orange-light);
+  }
+  .step-circle.pending { color: var(--text-light); }
+
+  .step-line {
+    flex: 1; height: 2px;
+    background: var(--border);
+    position: relative;
+  }
+  .step-line.done { background: var(--soft-orange); }
+
+  .step-labels {
+    display: flex; justify-content: space-between;
+    padding: 0 6px; margin-top: 6px;
+  }
+  .step-label-item {
+    flex: 1; text-align: center;
+    font-size: 9px; font-weight: 800; color: var(--text-light);
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .step-label-item.active { color: var(--soft-orange); }
+  .step-label-item.done { color: var(--text-mid); }
+
+  /* ===== UPDATE STATUS BUTTONS ===== */
+  .update-section {
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 800; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px; padding: 0 2px;
+  }
+
+  .status-update-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .status-update-btn {
+    padding: 14px 12px; border-radius: 16px;
+    border: 2px solid var(--border);
+    background: white; cursor: pointer;
+    text-align: left; transition: all 0.2s;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .status-update-btn .sub-icon { font-size: 22px; margin-bottom: 2px; }
+  .status-update-btn .sub-label {
+    font-size: 12px; font-weight: 900; color: var(--text-dark);
+    font-family: 'Nunito', sans-serif;
+  }
+  .status-update-btn .sub-mm {
+    font-size: 10px; color: var(--text-light); font-weight: 600;
+    font-family: 'Noto Sans Myanmar', sans-serif;
+  }
+  .status-update-btn:hover, .status-update-btn.highlight-teal {
+    border-color: var(--teal); background: var(--teal-light);
+  }
+  .status-update-btn.highlight-yellow {
+    border-color: var(--yellow); background: var(--yellow-light);
+  }
+  .status-update-btn.highlight-green {
+    border-color: var(--green); background: var(--green-light);
+  }
+  .status-update-btn.highlight-red {
+    border-color: var(--red); background: var(--red-light);
+  }
+
+  /* ===== CUSTOMER CARD ===== */
+  .info-card {
+    background: white; border-radius: 18px;
+    border: 1.5px solid var(--border);
+    padding: 16px; margin-bottom: 12px;
+  }
+  .info-card-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .info-icon-wrap {
+    width: 34px; height: 34px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .icon-orange-bg { background: var(--soft-orange-light); }
+  .icon-teal-bg { background: var(--teal-light); }
+  .icon-yellow-bg { background: var(--yellow-light); }
+
+  .info-card-title {
+    font-size: 13px; font-weight: 900; color: var(--text-dark);
+  }
+  .info-card-sub {
+    font-size: 10px; color: var(--text-light); font-weight: 600;
+    font-family: 'Noto Sans Myanmar', sans-serif;
+  }
+
+  .info-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-key {
+    font-size: 11px; font-weight: 800; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .info-key span { font-size: 13px; }
+  .info-val {
+    font-size: 13px; font-weight: 800; color: var(--text-dark);
+    text-align: right; max-width: 200px;
+  }
+  .info-val.price { color: var(--soft-orange); font-size: 16px; }
+  .info-val.addr { font-size: 11px; color: var(--text-mid); font-weight: 600; line-height: 1.4; }
+
+  /* Action chips */
+  .action-chips {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .chip {
+    flex: 1; padding: 10px 8px;
+    border: 2px solid var(--border); border-radius: 12px;
+    background: white; font-size: 12px; font-weight: 800;
+    color: var(--text-mid); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-family: 'Nunito', sans-serif;
+  }
+  .chip.primary { background: var(--soft-orange); color: white; border-color: var(--soft-orange); }
+  .chip.teal { background: var(--teal-light); color: var(--teal); border-color: var(--teal-light); }
+
+  /* Timeline log */
+  .timeline {
+    position: relative; padding-left: 24px;
+  }
+  .timeline::before {
+    content: ''; position: absolute;
+    left: 7px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--border);
+    border-radius: 2px;
+  }
+  .tl-item {
+    position: relative; margin-bottom: 14px;
+  }
+  .tl-item:last-child { margin-bottom: 0; }
+  .tl-dot {
+    position: absolute; left: -24px; top: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--border);
+  }
+  .tl-dot.orange { background: var(--soft-orange); box-shadow: 0 0 0 2px var(--soft-orange-mid); }
+  .tl-dot.teal { background: var(--teal); box-shadow: 0 0 0 2px #A8DDD9; }
+  .tl-dot.gray { background: var(--border); }
+
+  .tl-time { font-size: 10px; color: var(--text-light); font-weight: 700; margin-bottom: 2px; }
+  .tl-event { font-size: 12px; color: var(--text-dark); font-weight: 800; }
+  .tl-sub { font-size: 11px; color: var(--text-mid); font-weight: 600; }
+
+  /* ===== BOTTOM ACTION BAR ===== */
+  .bottom-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1.5px solid var(--border);
+    padding: 12px 16px 28px;
+    display: flex; gap: 10px;
+  }
+  .btn-del {
+    padding: 14px 16px; border-radius: 14px;
+    border: 2px solid var(--red-light); background: var(--red-light);
+    color: var(--red); font-size: 14px; font-weight: 800;
+    cursor: pointer; font-family: 'Nunito', sans-serif;
+  }
+  .btn-main {
+    flex: 1; padding: 14px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    color: white; font-size: 15px; font-weight: 800;
+    border: none; border-radius: 14px; cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 6px 20px rgba(255,107,53,0.3);
+  }
+
+  /* ===== STATUS UPDATE SHEET (bottom sheet style) ===== */
+  .sheet-overlay {
+    position: absolute; inset: 0;
+    background: rgba(26,26,46,0.5);
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    z-index: 20;
+  }
+  .bottom-sheet {
+    background: var(--warm-white);
+    border-radius: 28px 28px 0 0;
+    padding: 8px 20px 36px;
+  }
+  .sheet-handle {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: var(--border); margin: 12px auto 18px;
+  }
+  .sheet-title {
+    font-size: 17px; font-weight: 900; color: var(--text-dark);
+    margin-bottom: 4px;
+  }
+  .sheet-sub {
+    font-size: 12px; color: var(--text-light); font-weight: 600;
+    margin-bottom: 18px;
+    font-family: 'Noto Sans Myanmar', sans-serif;
+  }
+
+  .sheet-option {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-radius: 16px;
+    border: 2px solid var(--border); background: white;
+    margin-bottom: 10px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sheet-option.active-opt {
+    border-color: var(--soft-orange); background: var(--soft-orange-light);
+  }
+  .sheet-opt-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .opt-orange { background: var(--soft-orange-light); }
+  .opt-teal { background: var(--teal-light); }
+  .opt-yellow { background: var(--yellow-light); }
+  .opt-green { background: var(--green-light); }
+
+  .sheet-opt-text { flex: 1; }
+  .sot-title { font-size: 14px; font-weight: 900; color: var(--text-dark); margin-bottom: 2px; }
+  .sot-mm { font-size: 11px; color: var(--text-mid); font-weight: 600; font-family: 'Noto Sans Myanmar', sans-serif; }
+  .sheet-check { font-size: 16px; color: var(--soft-orange); font-weight: 900; }
+
+  .sheet-apply {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    color: white; border: none; border-radius: 16px;
+    font-size: 15px; font-weight: 800; margin-top: 4px;
+    font-family: 'Nunito', sans-serif; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255,107,53,0.3);
+  }
+
+  /* note field in sheet */
+  .sheet-note {
+    display: flex; align-items: center; gap: 8px;
+    background: white; border: 2px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 12px;
+  }
+  .sheet-note span { font-size: 16px; opacity: 0.5; }
+  .sheet-note input {
+    border: none; outline: none; flex: 1;
+    font-size: 13px; font-family: 'Nunito', sans-serif;
+    font-weight: 600; color: var(--text-dark); background: transparent;
+  }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: ORDER DETAIL (New Order) -->
+<div>
+  <div class="label">Screen 1 — Order Detail (New)</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div>
+    </div>
+    <div class="page-header">
+      <div class="back-btn">←</div>
+      <div class="page-title-wrap">
+        <div class="page-title">Order Detail</div>
+        <div class="page-order-id">#ORD-0244 · Apr 2, 10:32 AM</div>
+      </div>
+      <div class="header-menu">⋯</div>
+    </div>
+
+    <div class="detail-body">
+
+      <!-- Status Hero with Stepper -->
+      <div class="status-hero">
+        <div class="status-hero-top">
+          <div>
+            <div class="current-status-label">Current Status</div>
+            <div class="current-status-val">🆕 New Order</div>
+          </div>
+          <div class="status-badge-large badge-new">NEW</div>
+        </div>
+
+        <div class="stepper">
+          <div class="step-node">
+            <div class="step-circle done">✓</div>
+          </div>
+          <div class="step-line done"></div>
+          <div class="step-node">
+            <div class="step-circle active">2</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step-node">
+            <div class="step-circle pending">3</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step-node">
+            <div class="step-circle pending">4</div>
+          </div>
+        </div>
+        <div class="step-labels">
+          <div class="step-label-item done">Received</div>
+          <div class="step-label-item active">Confirm</div>
+          <div class="step-label-item">Shipping</div>
+          <div class="step-label-item">Done</div>
+        </div>
+      </div>
+
+      <!-- Quick Status Update -->
+      <div class="update-section">
+        <div class="section-title">Update Status — အခြေအနေ ပြောင်းမည်</div>
+        <div class="status-update-grid">
+          <div class="status-update-btn highlight-teal">
+            <div class="sub-icon">✅</div>
+            <div class="sub-label">Confirm Order</div>
+            <div class="sub-mm">အတည်ပြုမည်</div>
+          </div>
+          <div class="status-update-btn highlight-yellow">
+            <div class="sub-icon">🚚</div>
+            <div class="sub-label">Out for Delivery</div>
+            <div class="sub-mm">ပို့ဆောင်နေသည်</div>
+          </div>
+          <div class="status-update-btn highlight-green">
+            <div class="sub-icon">🎉</div>
+            <div class="sub-label">Mark Delivered</div>
+            <div class="sub-mm">ရောက်ပြီ</div>
+          </div>
+          <div class="status-update-btn highlight-red">
+            <div class="sub-icon">✗</div>
+            <div class="sub-label">Cancel Order</div>
+            <div class="sub-mm">ပယ်ဖျက်မည်</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-icon-wrap icon-orange-bg">👤</div>
+          <div>
+            <div class="info-card-title">Customer Info</div>
+            <div class="info-card-sub">ဖောက်သည်အချက်အလက်</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>👤</span> Name</div>
+          <div class="info-val">Daw Khin Myat</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>📞</span> Phone</div>
+          <div class="info-val" style="color: var(--teal);">09 7812 3456</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>🏠</span> Address</div>
+          <div class="info-val addr">No. 45, Bo Gyoke St, Sanchaung, Yangon</div>
+        </div>
+        <div class="action-chips">
+          <div class="chip">📞 Call</div>
+          <div class="chip teal">💬 Message</div>
+          <div class="chip">🗺 Map</div>
+        </div>
+      </div>
+
+      <!-- Product Info -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-icon-wrap icon-teal-bg">📦</div>
+          <div>
+            <div class="info-card-title">Product & Payment</div>
+            <div class="info-card-sub">ပစ္စည်းနှင့် ငွေပေးချေမှု</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>🛍️</span> Product</div>
+          <div class="info-val">Silk Longyi Set (Green, M)</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>🔢</span> Quantity</div>
+          <div class="info-val">× 2 pcs</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>💰</span> Unit Price</div>
+          <div class="info-val">18,000 MMK</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>🚚</span> Delivery</div>
+          <div class="info-val">3,000 MMK</div>
+        </div>
+        <div class="info-row" style="margin-top:4px;">
+          <div class="info-key" style="font-size:12px; font-weight:900; color:var(--text-dark);">TOTAL</div>
+          <div class="info-val price">39,000 MMK</div>
+        </div>
+      </div>
+
+      <!-- Activity Timeline -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-icon-wrap icon-yellow-bg">📋</div>
+          <div>
+            <div class="info-card-title">Activity Log</div>
+            <div class="info-card-sub">လှုပ်ရှားမှု မှတ်တမ်း</div>
+          </div>
+        </div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot orange"></div>
+            <div class="tl-time">10:32 AM today</div>
+            <div class="tl-event">Order created</div>
+            <div class="tl-sub">Added manually from Messenger chat</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot gray"></div>
+            <div class="tl-time">Waiting</div>
+            <div class="tl-event" style="color: var(--text-light);">Confirmation pending</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn-del">🗑 Delete</button>
+      <button class="btn-main">✓ Confirm Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: ORDER DETAIL (Out for Delivery) -->
+<div>
+  <div class="label">Screen 2 — Order Detail (Shipping)</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div>
+    </div>
+    <div class="page-header">
+      <div class="back-btn">←</div>
+      <div class="page-title-wrap">
+        <div class="page-title">Order Detail</div>
+        <div class="page-order-id">#ORD-0240 · Apr 2, 9:14 AM</div>
+      </div>
+      <div class="header-menu">⋯</div>
+    </div>
+
+    <div class="detail-body">
+
+      <!-- Status Hero - Out for delivery -->
+      <div class="status-hero" style="--hero-color: var(--yellow);">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#F59E0B,#FCD34D);border-radius:4px 4px 0 0;"></div>
+        <div class="status-hero-top">
+          <div>
+            <div class="current-status-label">Current Status</div>
+            <div class="current-status-val">🚚 Out for Delivery</div>
+          </div>
+          <div class="status-badge-large badge-out">ON THE WAY</div>
+        </div>
+        <div class="stepper">
+          <div class="step-node"><div class="step-circle done">✓</div></div>
+          <div class="step-line done"></div>
+          <div class="step-node"><div class="step-circle done">✓</div></div>
+          <div class="step-line done"></div>
+          <div class="step-node"><div class="step-circle" style="border-color:#F59E0B;color:#F59E0B;box-shadow:0 0 0 4px #FEF3C7;">3</div></div>
+          <div class="step-line"></div>
+          <div class="step-node"><div class="step-circle pending">4</div></div>
+        </div>
+        <div class="step-labels">
+          <div class="step-label-item done">Received</div>
+          <div class="step-label-item done">Confirmed</div>
+          <div class="step-label-item" style="color:#F59E0B;">Shipping</div>
+          <div class="step-label-item">Done</div>
+        </div>
+      </div>
+
+      <!-- Big CTA to mark delivered -->
+      <div style="background: linear-gradient(135deg,#DCFCE7,#BBF7D0); border-radius:16px; padding:16px; margin-bottom:14px; border:2px solid #86EFAC; display:flex;align-items:center;gap:12px;">
+        <span style="font-size:32px;">🎉</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:900;color:#15803D;margin-bottom:2px;">Package delivered?</div>
+          <div style="font-size:11px;color:#16A34A;font-weight:600;">Tap to mark as complete</div>
+        </div>
+        <button style="background:#22C55E;color:white;border:none;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;">Done ✓</button>
+      </div>
+
+      <!-- Customer Info -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-icon-wrap icon-orange-bg">👤</div>
+          <div>
+            <div class="info-card-title">Ko Zaw Lin</div>
+            <div class="info-card-sub">📞 09 4556 7890 · Tarmwe</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>🏠</span> Address</div>
+          <div class="info-val addr">12/B, Thitsar Rd, Tarmwe Tsp, Yangon</div>
+        </div>
+        <div class="action-chips">
+          <div class="chip">📞 Call</div>
+          <div class="chip teal">💬 Message</div>
+          <div class="chip">🗺 Map</div>
+        </div>
+      </div>
+
+      <!-- Product Info -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-icon-wrap icon-teal-bg">📦</div>
+          <div>
+            <div class="info-card-title">Men Shirt (L) × 1</div>
+            <div class="info-card-sub">Total: 21,500 MMK</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>💰</span> Product</div>
+          <div class="info-val">18,500 MMK</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key"><span>🚚</span> Delivery</div>
+          <div class="info-val">3,000 MMK</div>
+        </div>
+        <div class="info-row">
+          <div class="info-key" style="font-size:12px;font-weight:900;color:var(--text-dark);">TOTAL</div>
+          <div class="info-val price">21,500 MMK</div>
+        </div>
+      </div>
+
+      <!-- Activity Timeline - richer -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <div class="info-icon-wrap icon-yellow-bg">📋</div>
+          <div><div class="info-card-title">Activity Log</div></div>
+        </div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot orange"></div>
+            <div class="tl-time">9:14 AM today</div>
+            <div class="tl-event">Order created</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot teal"></div>
+            <div class="tl-time">9:28 AM today</div>
+            <div class="tl-event">Order confirmed</div>
+            <div class="tl-sub">Confirmed by Ma Aye</div>
+          </div>
+          <div class="tl-item" style="margin-bottom:0">
+            <div class="tl-dot orange"></div>
+            <div class="tl-time">11:05 AM today</div>
+            <div class="tl-event">Out for delivery 🚚</div>
+            <div class="tl-sub">En route to Tarmwe</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn-del">✎ Edit</button>
+      <button class="btn-main" style="background: linear-gradient(135deg,#22C55E,#16A34A);box-shadow:0 6px 20px rgba(34,197,94,0.3);">✓ Mark Delivered</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: STATUS UPDATE BOTTOM SHEET -->
+<div>
+  <div class="label">Screen 3 — Status Update Sheet</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div>
+    </div>
+    <div class="page-header">
+      <div class="back-btn">←</div>
+      <div class="page-title-wrap">
+        <div class="page-title">Order Detail</div>
+        <div class="page-order-id">#ORD-0244 · Apr 2, 10:32 AM</div>
+      </div>
+      <div class="header-menu">⋯</div>
+    </div>
+
+    <!-- Blurred background detail content -->
+    <div class="detail-body" style="filter:blur(1.5px);opacity:0.4;pointer-events:none;">
+      <div class="status-hero">
+        <div class="status-hero-top">
+          <div>
+            <div class="current-status-label">Current Status</div>
+            <div class="current-status-val">🆕 New Order</div>
+          </div>
+          <div class="status-badge-large badge-new">NEW</div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-row"><div class="info-key">Name</div><div class="info-val">Daw Khin Myat</div></div>
+        <div class="info-row"><div class="info-key">Phone</div><div class="info-val">09 7812 3456</div></div>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet Overlay -->
+    <div class="sheet-overlay">
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Update Order Status</div>
+        <div class="sheet-sub">အော်ဒါ အခြေအနေ ပြောင်းမည်</div>
+
+        <div class="sheet-option active-opt">
+          <div class="sheet-opt-icon opt-orange">🆕</div>
+          <div class="sheet-opt-text">
+            <div class="sot-title">New (Current)</div>
+            <div class="sot-mm">အသစ် — လက်ရှိ</div>
+          </div>
+          <div class="sheet-check">●</div>
+        </div>
+
+        <div class="sheet-option">
+          <div class="sheet-opt-icon opt-teal">✅</div>
+          <div class="sheet-opt-text">
+            <div class="sot-title">Confirmed</div>
+            <div class="sot-mm">အတည်ပြုပြီး</div>
+          </div>
+        </div>
+
+        <div class="sheet-option">
+          <div class="sheet-opt-icon opt-yellow">🚚</div>
+          <div class="sheet-opt-text">
+            <div class="sot-title">Out for Delivery</div>
+            <div class="sot-mm">ပို့ဆောင်နေသည်</div>
+          </div>
+        </div>
+
+        <div class="sheet-option">
+          <div class="sheet-opt-icon opt-green">🎉</div>
+          <div class="sheet-opt-text">
+            <div class="sot-title">Delivered</div>
+            <div class="sot-mm">ပေးပို့ပြီးစီး</div>
+          </div>
+        </div>
+
+        <div class="sheet-note" style="margin-top:12px;">
+          <span>📝</span>
+          <input type="text" placeholder="Add a note (optional)" />
+        </div>
+
+        <button class="sheet-apply">Apply Status — အတည်ပြုမည်</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

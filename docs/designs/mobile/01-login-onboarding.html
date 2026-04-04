@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Login & Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FDF9F4;
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --shadow: rgba(255,107,53,0.12);
+  }
+
+  body {
+    background: #F0EBE3;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    padding: 32px;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  /* Phone Frame */
+  .phone {
+    width: 375px;
+    min-height: 780px;
+    background: var(--warm-white);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Status bar */
+  .status-bar {
+    padding: 12px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons span { font-size: 13px; }
+
+  /* ========= SCREEN 1: SPLASH / BRAND ========= */
+  .splash {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .splash-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, #FFF8F4 0%, #FFFCF8 50%, #F0F9F8 100%);
+  }
+
+  .splash-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.4;
+  }
+  .blob1 { width: 220px; height: 220px; background: #FFCDB8; top: -60px; right: -60px; }
+  .blob2 { width: 180px; height: 180px; background: #C8EDEA; bottom: 80px; left: -60px; }
+
+  .splash-content { position: relative; z-index: 1; text-align: center; width: 100%; }
+
+  .logo-wrap {
+    width: 88px; height: 88px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    border-radius: 26px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    box-shadow: 0 12px 32px rgba(255,107,53,0.3);
+    animation: float 3s ease-in-out infinite;
+  }
+  .logo-wrap svg { width: 46px; height: 46px; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .app-name {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .app-name span { color: var(--soft-orange); }
+
+  .app-tagline {
+    font-size: 13px;
+    color: var(--text-mid);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .app-tagline-mm {
+    font-size: 13px;
+    color: var(--teal);
+    font-weight: 600;
+    font-family: 'Noto Sans Myanmar', sans-serif;
+  }
+
+  .features-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin: 32px 0;
+  }
+  .feat-chip {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-mid);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .feat-chip .icon { font-size: 14px; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 17px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    color: white;
+    font-size: 16px;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255,107,53,0.3);
+    letter-spacing: 0.01em;
+    transition: transform 0.2s;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    color: var(--text-mid);
+    font-size: 14px;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--soft-orange); color: var(--soft-orange); }
+
+  /* ========= SCREEN 2: ONBOARDING STEPS ========= */
+  .onboard {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .dot {
+    height: 6px; border-radius: 3px;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+  .dot.active { width: 24px; background: var(--soft-orange); }
+  .dot:not(.active) { width: 6px; }
+
+  .onboard-illustration {
+    width: 240px; height: 200px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+
+  /* Illustration for onboarding */
+  .illus-card {
+    background: white;
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    position: absolute;
+  }
+  .illus-main {
+    width: 200px; left: 20px; top: 20px;
+  }
+  .illus-mini {
+    width: 130px;
+    right: -10px; top: 5px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+  }
+
+  .illus-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .illus-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--soft-orange-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .illus-text-block {
+    flex: 1;
+  }
+  .illus-line {
+    height: 6px; border-radius: 3px;
+    background: var(--border);
+    margin-bottom: 4px;
+  }
+  .illus-line.dark { background: var(--text-dark); width: 70%; }
+  .illus-line.mid { width: 50%; }
+  .illus-line.short { width: 35%; }
+
+  .illus-badge {
+    background: var(--soft-orange);
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+
+  .onboard-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--text-dark);
+    text-align: center;
+    line-height: 1.25;
+    margin-bottom: 10px;
+  }
+  .onboard-title span { color: var(--soft-orange); }
+
+  .onboard-sub {
+    font-size: 14px;
+    color: var(--text-mid);
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .onboard-sub-mm {
+    font-size: 13px;
+    color: var(--teal);
+    text-align: center;
+    font-family: 'Noto Sans Myanmar', sans-serif;
+    margin-bottom: 32px;
+  }
+
+  .onboard-actions { margin-top: auto; }
+
+  .skip-link {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-light);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ========= SCREEN 3: LOGIN ========= */
+  .login-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 28px 32px;
+  }
+
+  .back-btn {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text-dark);
+    margin-bottom: 28px;
+    background: white;
+  }
+
+  .login-header {
+    margin-bottom: 32px;
+  }
+  .login-greeting {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--soft-orange);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .login-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1.2;
+  }
+
+  .form-group { margin-bottom: 18px; }
+
+  .form-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .input-wrap {
+    position: relative;
+  }
+  .input-icon {
+    position: absolute;
+    left: 16px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    opacity: 0.5;
+  }
+  .form-input {
+    width: 100%;
+    padding: 15px 16px 15px 46px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    font-size: 15px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    color: var(--text-dark);
+    background: white;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-input:focus {
+    border-color: var(--soft-orange);
+    box-shadow: 0 0 0 4px var(--shadow);
+  }
+  .form-input.active {
+    border-color: var(--soft-orange);
+    box-shadow: 0 0 0 4px var(--shadow);
+  }
+
+  .forgot-link {
+    text-align: right;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--soft-orange);
+    cursor: pointer;
+    margin-top: 6px;
+  }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 22px 0;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-text { font-size: 12px; color: var(--text-light); font-weight: 700; }
+
+  .btn-facebook {
+    width: 100%;
+    padding: 15px;
+    background: #1877F2;
+    color: white;
+    font-size: 15px;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .signup-row {
+    text-align: center;
+    margin-top: 22px;
+    font-size: 13px;
+    color: var(--text-mid);
+    font-weight: 600;
+  }
+  .signup-row a { color: var(--soft-orange); font-weight: 800; cursor: pointer; }
+
+  .trial-badge {
+    background: var(--teal-light);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .trial-icon { font-size: 22px; }
+  .trial-text { font-size: 12px; color: var(--teal); font-weight: 700; line-height: 1.4; }
+  .trial-text strong { display: block; font-size: 13px; }
+
+  /* ========= SCREEN 4: REGISTER ========= */
+  .register-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 28px 32px;
+    overflow-y: auto;
+  }
+
+  .step-indicator {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 28px;
+  }
+  .step-bar {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--border);
+  }
+  .step-bar.done { background: var(--soft-orange); }
+  .step-bar.active { background: var(--soft-orange-mid); }
+
+  .section-title {
+    font-size: 12px; font-weight: 800;
+    color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 16px; margin-top: 8px;
+  }
+
+  .shop-type-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 20px;
+  }
+  .shop-type-card {
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+  }
+  .shop-type-card.selected {
+    border-color: var(--soft-orange);
+    background: var(--soft-orange-light);
+  }
+  .shop-type-card .shop-emoji { font-size: 24px; margin-bottom: 6px; }
+  .shop-type-card .shop-name { font-size: 12px; font-weight: 800; color: var(--text-dark); }
+  .shop-type-card .shop-mm { font-size: 10px; color: var(--text-mid); font-family: 'Noto Sans Myanmar', sans-serif; }
+
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: SPLASH -->
+<div>
+  <div class="label">Screen 1 — Splash / Brand</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <span>●●●</span><span>WiFi</span><span>🔋</span>
+      </div>
+    </div>
+    <div class="splash">
+      <div class="splash-bg"></div>
+      <div class="splash-blob blob1"></div>
+      <div class="splash-blob blob2"></div>
+      <div class="splash-content">
+        <div class="logo-wrap">
+          <svg viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="10" width="38" height="28" rx="5" fill="white" fill-opacity="0.3"/>
+            <rect x="4" y="10" width="38" height="8" rx="5" fill="white" fill-opacity="0.5"/>
+            <circle cx="12" cy="14" r="2" fill="white"/>
+            <circle cx="19" cy="14" r="2" fill="white"/>
+            <rect x="10" y="23" width="12" height="2" rx="1" fill="white"/>
+            <rect x="10" y="28" width="18" height="2" rx="1" fill="white"/>
+            <rect x="10" y="33" width="8" height="2" rx="1" fill="white"/>
+            <circle cx="34" cy="30" r="8" fill="white"/>
+            <path d="M31 30l2 2 4-4" stroke="#FF6B35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="app-name">Order <span>Manager</span></div>
+        <div class="app-tagline">For Facebook Sellers</div>
+        <div class="app-tagline-mm">ဖေ့ဘုတ်ရောင်းသူများအတွက်</div>
+
+        <div class="features-row">
+          <div class="feat-chip"><span class="icon">📦</span> Orders</div>
+          <div class="feat-chip"><span class="icon">🚚</span> Delivery</div>
+          <div class="feat-chip"><span class="icon">📊</span> Reports</div>
+        </div>
+
+        <button class="btn-primary">စတင်မည် — Get Started</button>
+        <button class="btn-secondary">Login to Existing Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: ONBOARDING STEP 1 -->
+<div>
+  <div class="label">Screen 2 — Onboarding (Step 1/3)</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="onboard">
+      <div class="progress-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <div class="onboard-illustration">
+        <!-- Illustrated mock of order cards -->
+        <div class="illus-card illus-main">
+          <div class="illus-row">
+            <div class="illus-avatar">👤</div>
+            <div class="illus-text-block">
+              <div class="illus-line dark"></div>
+              <div class="illus-line mid"></div>
+            </div>
+            <div class="illus-badge">New</div>
+          </div>
+          <div class="illus-row" style="margin-top:10px">
+            <div class="illus-avatar">📦</div>
+            <div class="illus-text-block">
+              <div class="illus-line dark" style="width:80%"></div>
+              <div class="illus-line short"></div>
+            </div>
+          </div>
+        </div>
+        <div class="illus-card illus-mini" style="top:120px; right:-20px">
+          <div style="font-size:9px;font-weight:800;color:#FF6B35;margin-bottom:6px;">TODAY</div>
+          <div class="illus-line dark" style="width:100%; margin-bottom:6px;"></div>
+          <div class="illus-line" style="width:80%; margin-bottom:4px;"></div>
+          <div class="illus-line" style="width:60%;"></div>
+        </div>
+      </div>
+
+      <div class="onboard-title">Track Every <span>Order</span> Instantly</div>
+      <div class="onboard-sub">No more messy notes or forgotten orders. Add orders in seconds, right from Messenger.</div>
+      <div class="onboard-sub-mm">မက်ဆင်ဂျာမှ အော်ဒါများကို လျင်မြန်စွာ ထည့်သွင်းပါ</div>
+
+      <div class="onboard-actions">
+        <button class="btn-primary">Next →</button>
+        <div class="skip-link">Skip intro</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: LOGIN -->
+<div>
+  <div class="label">Screen 3 — Login</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="login-screen">
+      <div class="back-btn">←</div>
+      <div class="login-header">
+        <div class="login-greeting">👋 Welcome back</div>
+        <div class="login-title">Sign in to<br>your shop</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Phone / Email</label>
+        <div class="input-wrap">
+          <span class="input-icon">📱</span>
+          <input class="form-input active" type="text" placeholder="09xxxxxxxxx or email" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input class="form-input" type="password" placeholder="Enter password" />
+        </div>
+        <div class="forgot-link">Forgot password?</div>
+      </div>
+
+      <button class="btn-primary" style="margin-top:8px">Sign In — ဝင်ရောက်မည်</button>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-text">OR</div>
+        <div class="divider-line"></div>
+      </div>
+
+      <button class="btn-facebook">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Continue with Facebook
+      </button>
+
+      <div class="trial-badge">
+        <div class="trial-icon">🎉</div>
+        <div class="trial-text">
+          <strong>7-Day Free Trial</strong>
+          No credit card needed — just sign up and start
+        </div>
+      </div>
+
+      <div class="signup-row">Don't have an account? <a>Sign up free</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: REGISTER -->
+<div>
+  <div class="label">Screen 4 — Register / Shop Setup</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons"><span>●●●</span><span>🔋</span></div>
+    </div>
+    <div class="register-screen">
+      <div class="step-indicator">
+        <div class="step-bar done"></div>
+        <div class="step-bar active"></div>
+        <div class="step-bar"></div>
+      </div>
+
+      <div class="login-header">
+        <div class="login-greeting">STEP 2 of 3</div>
+        <div class="login-title">Set up your<br>Shop</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Shop Name</label>
+        <div class="input-wrap">
+          <span class="input-icon">🏪</span>
+          <input class="form-input active" type="text" placeholder="e.g. Ma Aye Fashion Shop" />
+        </div>
+      </div>
+
+      <div class="section-title">Shop Category — ကဏ္ဍ</div>
+      <div class="shop-type-grid">
+        <div class="shop-type-card selected">
+          <div class="shop-emoji">👗</div>
+          <div class="shop-name">Fashion</div>
+          <div class="shop-mm">အဝတ်အစားများ</div>
+        </div>
+        <div class="shop-type-card">
+          <div class="shop-emoji">💄</div>
+          <div class="shop-name">Beauty</div>
+          <div class="shop-mm">အလှကုန်များ</div>
+        </div>
+        <div class="shop-type-card">
+          <div class="shop-emoji">🍔</div>
+          <div class="shop-name">Food</div>
+          <div class="shop-mm">စားစရာများ</div>
+        </div>
+        <div class="shop-type-card">
+          <div class="shop-emoji">📱</div>
+          <div class="shop-name">Electronics</div>
+          <div class="shop-mm">အီလက်ထရောနစ်</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Facebook Page Link (Optional)</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔗</span>
+          <input class="form-input" type="text" placeholder="facebook.com/yourshop" />
+        </div>
+      </div>
+
+      <button class="btn-primary" style="margin-top: 8px">Continue — ဆက်လက်မည်</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

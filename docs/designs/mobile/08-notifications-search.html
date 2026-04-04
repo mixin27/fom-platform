@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Notifications & Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --green: #22C55E;
+    --green-light: #DCFCE7;
+    --yellow: #F59E0B;
+    --yellow-light: #FEF3C7;
+    --red: #EF4444;
+    --red-light: #FEE2E2;
+    --purple: #8B5CF6;
+    --purple-light: #EDE9FE;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --bg: #F5F0EA;
+  }
+  body {
+    background: #D5CEC5;
+    font-family: 'Nunito', sans-serif;
+    display: flex; flex-wrap: wrap;
+    gap: 32px; padding: 32px;
+    justify-content: center; align-items: flex-start; min-height: 100vh;
+  }
+  .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    color: #888; text-transform: uppercase; margin-bottom: 8px; text-align: center;
+  }
+  .phone {
+    width: 375px; height: 812px; background: var(--bg);
+    border-radius: 40px; overflow: hidden;
+    box-shadow: 0 28px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+    position: relative; display: flex; flex-direction: column;
+  }
+  .status-bar {
+    background: var(--warm-white); padding: 12px 24px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: var(--text-dark); flex-shrink: 0;
+  }
+
+  /* ── SHARED HEADER ── */
+  .page-header {
+    background: var(--warm-white); padding: 14px 20px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1.5px solid var(--border); flex-shrink: 0;
+  }
+  .back-btn {
+    width: 38px; height: 38px; border: 2px solid var(--border);
+    border-radius: 12px; background: white; display: flex;
+    align-items: center; justify-content: center; font-size: 17px; cursor: pointer;
+  }
+  .page-title { font-size: 17px; font-weight: 900; color: var(--text-dark); }
+  .page-sub { font-size: 11px; color: var(--text-light); font-weight: 600; font-family: 'Noto Sans Myanmar', sans-serif; }
+  .header-action {
+    margin-left: auto; font-size: 12px; font-weight: 800;
+    color: var(--soft-orange); cursor: pointer;
+    background: var(--soft-orange-light); padding: 7px 12px; border-radius: 10px;
+  }
+
+  /* ── NOTIFICATIONS ── */
+  .notif-body { flex: 1; overflow-y: auto; padding: 14px 16px 30px; }
+  .notif-body::-webkit-scrollbar { display: none; }
+
+  .sec-label {
+    font-size: 10px; font-weight: 800; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 8px; padding: 0 2px;
+  }
+
+  .notif-card {
+    background: white; border-radius: 18px;
+    border: 1.5px solid var(--border); padding: 14px 16px;
+    margin-bottom: 10px; display: flex; gap: 12px;
+    cursor: pointer; transition: transform 0.15s; position: relative;
+  }
+  .notif-card.unread { border-left: 4px solid var(--soft-orange); padding-left: 13px; }
+  .notif-card.unread-teal { border-left: 4px solid var(--teal); padding-left: 13px; }
+  .notif-card.unread-yellow { border-left: 4px solid var(--yellow); padding-left: 13px; }
+  .notif-card.unread-green { border-left: 4px solid var(--green); padding-left: 13px; }
+
+  .notif-icon-wrap {
+    width: 42px; height: 42px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .ni-orange { background: var(--soft-orange-light); }
+  .ni-teal { background: var(--teal-light); }
+  .ni-green { background: var(--green-light); }
+  .ni-yellow { background: var(--yellow-light); }
+  .ni-purple { background: var(--purple-light); }
+  .ni-red { background: var(--red-light); }
+
+  .notif-content { flex: 1; min-width: 0; }
+  .notif-title { font-size: 13px; font-weight: 900; color: var(--text-dark); margin-bottom: 3px; line-height: 1.3; }
+  .notif-body-text { font-size: 11px; color: var(--text-mid); font-weight: 600; line-height: 1.5; }
+  .notif-time { font-size: 10px; color: var(--text-light); font-weight: 700; margin-top: 5px; }
+
+  .unread-dot {
+    position: absolute; top: 14px; right: 14px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--soft-orange);
+  }
+
+  /* ── SEARCH HEADER ── */
+  .search-header {
+    background: var(--warm-white); padding: 14px 16px 0;
+    border-bottom: 1.5px solid var(--border); flex-shrink: 0;
+  }
+  .search-input-row {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
+  }
+  .search-back { font-size: 18px; color: var(--text-dark); cursor: pointer; padding: 4px; }
+  .search-box {
+    flex: 1; background: var(--bg); border: 2px solid var(--soft-orange);
+    border-radius: 14px; padding: 11px 14px;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+  }
+  .search-box span { font-size: 16px; opacity: 0.5; }
+  .search-box input {
+    flex: 1; border: none; outline: none; font-size: 14px;
+    font-family: 'Nunito', sans-serif; font-weight: 700;
+    color: var(--text-dark); background: transparent;
+  }
+  .search-clear { font-size: 16px; color: var(--text-light); cursor: pointer; }
+  .search-cancel { font-size: 13px; font-weight: 800; color: var(--soft-orange); cursor: pointer; white-space: nowrap; }
+
+  /* filter pills row */
+  .filter-pills {
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px;
+  }
+  .filter-pills::-webkit-scrollbar { display: none; }
+  .pill {
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 11px; font-weight: 800; white-space: nowrap; cursor: pointer;
+    border: 2px solid var(--border); background: white; color: var(--text-light);
+    transition: all 0.15s;
+  }
+  .pill.active { background: var(--soft-orange); color: white; border-color: var(--soft-orange); }
+  .pill.teal { background: var(--teal-light); color: var(--teal); border-color: var(--teal-light); }
+
+  /* ── SEARCH BODY ── */
+  .search-body { flex: 1; overflow-y: auto; padding: 14px 16px 30px; }
+  .search-body::-webkit-scrollbar { display: none; }
+
+  /* results count */
+  .results-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .results-count { font-size: 12px; font-weight: 800; color: var(--text-mid); }
+  .sort-btn {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 800; color: var(--text-mid); cursor: pointer;
+    background: white; border: 1.5px solid var(--border); padding: 5px 10px; border-radius: 10px;
+  }
+
+  /* result order card (compact) */
+  .result-card {
+    background: white; border-radius: 16px;
+    border: 1.5px solid var(--border); padding: 12px 14px;
+    margin-bottom: 8px; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .result-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: 4px 0 0 4px;
+  }
+  .rc-new::before { background: var(--soft-orange); }
+  .rc-confirmed::before { background: var(--teal); }
+  .rc-out::before { background: var(--yellow); }
+  .rc-delivered::before { background: var(--green); }
+
+  .rc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .rc-left { display: flex; align-items: center; gap: 8px; }
+  .rc-avatar { width: 32px; height: 32px; border-radius: 10px; background: var(--soft-orange-light); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .rc-name { font-size: 13px; font-weight: 900; color: var(--text-dark); }
+  .rc-id { font-size: 10px; color: var(--text-light); font-weight: 700; font-family: monospace; }
+  .rc-badge { font-size: 9px; font-weight: 800; padding: 3px 9px; border-radius: 20px; }
+  .badge-new { background: var(--soft-orange-light); color: var(--soft-orange); }
+  .badge-confirmed { background: var(--teal-light); color: var(--teal); }
+  .badge-out { background: var(--yellow-light); color: var(--yellow); }
+  .badge-delivered { background: var(--green-light); color: var(--green); }
+
+  .rc-bottom { display: flex; align-items: center; justify-content: space-between; }
+  .rc-product { font-size: 11px; color: var(--text-mid); font-weight: 700; }
+  .rc-price { font-size: 13px; font-weight: 900; color: var(--text-dark); }
+
+  /* highlight match */
+  .hl { background: #FFECB0; border-radius: 3px; padding: 0 2px; color: var(--text-dark); }
+
+  /* ── ADVANCED FILTER SHEET ── */
+  .filter-sheet-overlay {
+    position: absolute; inset: 0;
+    background: rgba(26,26,46,0.5);
+    display: flex; flex-direction: column;
+    justify-content: flex-end; z-index: 20;
+  }
+  .filter-sheet {
+    background: var(--warm-white); border-radius: 28px 28px 0 0;
+    padding: 8px 20px 36px; max-height: 88%;
+    overflow-y: auto;
+  }
+  .filter-sheet::-webkit-scrollbar { display: none; }
+  .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 12px auto 16px; }
+  .sheet-title { font-size: 17px; font-weight: 900; color: var(--text-dark); margin-bottom: 4px; }
+  .sheet-sub { font-size: 11px; color: var(--text-light); font-weight: 600; margin-bottom: 18px; font-family: 'Noto Sans Myanmar', sans-serif; }
+
+  .filter-sec { margin-bottom: 18px; }
+  .filter-sec-title {
+    font-size: 11px; font-weight: 800; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px;
+  }
+
+  /* status chips */
+  .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .f-chip {
+    padding: 8px 14px; border-radius: 20px; cursor: pointer;
+    font-size: 12px; font-weight: 800;
+    border: 2px solid var(--border); background: white; color: var(--text-mid);
+    transition: all 0.15s;
+  }
+  .f-chip.sel-orange { background: var(--soft-orange-light); color: var(--soft-orange); border-color: var(--soft-orange-mid); }
+  .f-chip.sel-teal { background: var(--teal-light); color: var(--teal); border-color: var(--teal); }
+  .f-chip.sel-green { background: var(--green-light); color: var(--green); border-color: var(--green); }
+
+  /* date range */
+  .date-range-row { display: flex; gap: 8px; }
+  .date-input-wrap { flex: 1; }
+  .date-input-label { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .date-input {
+    width: 100%; padding: 10px 12px; border: 2px solid var(--border);
+    border-radius: 12px; font-size: 13px; font-family: 'Nunito', sans-serif;
+    font-weight: 700; color: var(--text-dark); background: white; outline: none;
+  }
+  .date-input.has-val { border-color: var(--soft-orange); }
+
+  /* price range slider visual */
+  .price-range-wrap { padding: 4px 0; }
+  .price-labels { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--text-mid); margin-bottom: 8px; }
+  .range-track { height: 6px; background: var(--border); border-radius: 3px; position: relative; }
+  .range-fill { position: absolute; left: 10%; right: 30%; height: 100%; background: var(--soft-orange); border-radius: 3px; }
+  .range-knob-l { position: absolute; left: 10%; top: 50%; transform: translate(-50%, -50%); width: 18px; height: 18px; border-radius: 50%; background: white; border: 2.5px solid var(--soft-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .range-knob-r { position: absolute; left: 70%; top: 50%; transform: translate(-50%, -50%); width: 18px; height: 18px; border-radius: 50%; background: white; border: 2.5px solid var(--soft-orange); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+  /* sort options */
+  .sort-opts { display: flex; flex-direction: column; gap: 6px; }
+  .sort-opt {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 14px; border: 2px solid var(--border);
+    background: white; cursor: pointer; font-size: 13px; font-weight: 800; color: var(--text-mid);
+  }
+  .sort-opt.selected { border-color: var(--soft-orange); background: var(--soft-orange-light); color: var(--soft-orange); }
+  .sort-opt-radio {
+    width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sort-opt.selected .sort-opt-radio { border-color: var(--soft-orange); background: var(--soft-orange); }
+  .sort-opt.selected .sort-opt-radio::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: white; }
+
+  /* apply row */
+  .sheet-apply-row { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-ghost {
+    padding: 14px 20px; border-radius: 14px; border: 2px solid var(--border);
+    background: white; font-size: 13px; font-weight: 800; color: var(--text-mid);
+    cursor: pointer; font-family: 'Nunito', sans-serif;
+  }
+  .btn-apply {
+    flex: 1; padding: 14px; background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    color: white; font-size: 14px; font-weight: 800; border: none;
+    border-radius: 14px; cursor: pointer; font-family: 'Nunito', sans-serif;
+    box-shadow: 0 6px 20px rgba(255,107,53,0.3);
+  }
+
+  /* empty search state */
+  .empty-search {
+    text-align: center; padding: 40px 24px;
+  }
+  .empty-icon { font-size: 52px; margin-bottom: 14px; opacity: 0.7; }
+  .empty-title { font-size: 16px; font-weight: 900; color: var(--text-dark); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; color: var(--text-mid); font-weight: 600; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: NOTIFICATIONS -->
+<div>
+  <div class="label">Screen 1 — Notifications</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+    <div class="page-header">
+      <div class="back-btn">←</div>
+      <div>
+        <div class="page-title">Notifications</div>
+        <div class="page-sub">အသိပေးချက်များ</div>
+      </div>
+      <div class="header-action">Mark all read</div>
+    </div>
+
+    <div class="notif-body">
+      <div class="sec-label">Just Now</div>
+
+      <div class="notif-card unread">
+        <div class="notif-icon-wrap ni-orange">🆕</div>
+        <div class="notif-content">
+          <div class="notif-title">New Order — Daw Khin Myat</div>
+          <div class="notif-body-text">Silk Longyi Set × 2 · 45,000 MMK · Sanchaung</div>
+          <div class="notif-time">Just now · #ORD-0244</div>
+        </div>
+        <div class="unread-dot"></div>
+      </div>
+
+      <div class="notif-card unread">
+        <div class="notif-icon-wrap ni-orange">🆕</div>
+        <div class="notif-content">
+          <div class="notif-title">New Order — U Kyaw Zin</div>
+          <div class="notif-body-text">Formal Shirt × 3 · 54,000 MMK · Tarmwe</div>
+          <div class="notif-time">5 min ago · #ORD-0243</div>
+        </div>
+        <div class="unread-dot"></div>
+      </div>
+
+      <div class="sec-label" style="margin-top:8px;">Today</div>
+
+      <div class="notif-card unread-green">
+        <div class="notif-icon-wrap ni-green">🎉</div>
+        <div class="notif-content">
+          <div class="notif-title">Order Delivered — Ko Zaw Lin</div>
+          <div class="notif-body-text">Men Shirt confirmed received · 21,500 MMK</div>
+          <div class="notif-time">1 hr ago · #ORD-0240</div>
+        </div>
+      </div>
+
+      <div class="notif-card unread-yellow">
+        <div class="notif-icon-wrap ni-yellow">⏰</div>
+        <div class="notif-content">
+          <div class="notif-title">Reminder: 3 orders need action</div>
+          <div class="notif-body-text">Orders #0238, #0237, #0235 are still "New" — confirm or update status.</div>
+          <div class="notif-time">2 hr ago</div>
+        </div>
+      </div>
+
+      <div class="notif-card unread-teal">
+        <div class="notif-icon-wrap ni-teal">📊</div>
+        <div class="notif-content">
+          <div class="notif-title">Morning Summary — Yesterday</div>
+          <div class="notif-body-text">22 orders · 413,000 MMK revenue · 18 delivered</div>
+          <div class="notif-time">8:00 AM</div>
+        </div>
+      </div>
+
+      <div class="sec-label" style="margin-top:8px;">Yesterday</div>
+
+      <div class="notif-card">
+        <div class="notif-icon-wrap ni-purple">🎁</div>
+        <div class="notif-content">
+          <div class="notif-title">VIP Customer Milestone</div>
+          <div class="notif-body-text">Daw Aye Aye just reached 300K MMK total spend! She's your top customer.</div>
+          <div class="notif-time">Apr 1, 6:32 PM</div>
+        </div>
+      </div>
+
+      <div class="notif-card">
+        <div class="notif-icon-wrap ni-orange" style="background:var(--red-light);">❌</div>
+        <div class="notif-content">
+          <div class="notif-title">Order Cancelled — Ma Thida</div>
+          <div class="notif-body-text">Handbag × 1 order was cancelled by customer request.</div>
+          <div class="notif-time">Apr 1, 2:15 PM · #ORD-0230</div>
+        </div>
+      </div>
+
+      <div class="notif-card">
+        <div class="notif-icon-wrap ni-teal">📊</div>
+        <div class="notif-content">
+          <div class="notif-title">Daily Report Ready</div>
+          <div class="notif-body-text">April 1 summary: 22 orders · 413,000 MMK · Best day this week!</div>
+          <div class="notif-time">Apr 1, 8:00 PM</div>
+        </div>
+      </div>
+
+      <div class="sec-label" style="margin-top:8px;">Earlier</div>
+
+      <div class="notif-card">
+        <div class="notif-icon-wrap" style="background:var(--soft-orange-light);width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⭐</div>
+        <div class="notif-content">
+          <div class="notif-title">Trial: 5 days remaining</div>
+          <div class="notif-body-text">Upgrade now for 5,000 MMK/month to keep your data and unlock all features.</div>
+          <div class="notif-time">Mar 31</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: SEARCH (active with results) -->
+<div>
+  <div class="label">Screen 2 — Search (with results)</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+
+    <div class="search-header">
+      <div class="search-input-row">
+        <div class="search-back">←</div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" value="khin" />
+          <div class="search-clear">✕</div>
+        </div>
+        <div class="search-cancel">Cancel</div>
+      </div>
+      <div class="filter-pills">
+        <div class="pill active">All</div>
+        <div class="pill">Orders</div>
+        <div class="pill">Customers</div>
+        <div class="pill teal">🆕 New</div>
+        <div class="pill">Delivered</div>
+        <div class="pill">Today</div>
+      </div>
+    </div>
+
+    <div class="search-body">
+      <div class="results-bar">
+        <div class="results-count">4 results for "<strong>khin</strong>"</div>
+        <div class="sort-btn">↕ Latest</div>
+      </div>
+
+      <!-- Customer result -->
+      <div style="background: var(--teal-light); border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: 0.06em; text-transform: uppercase;">👥 Customers</div>
+
+      <div class="result-card" style="border-left: 4px solid var(--teal); padding-left: 13px;">
+        <div class="rc-top">
+          <div class="rc-left">
+            <div class="rc-avatar">👩</div>
+            <div>
+              <div class="rc-name"><span class="hl">Khin</span> Myat (Daw)</div>
+              <div class="rc-id">📞 09 7812 3456 · Sanchaung</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:800;color:var(--teal);">14 orders</div>
+        </div>
+      </div>
+
+      <div class="result-card" style="border-left: 4px solid var(--teal); padding-left: 13px;">
+        <div class="rc-top">
+          <div class="rc-left">
+            <div class="rc-avatar" style="background:var(--purple-light);">👩</div>
+            <div>
+              <div class="rc-name"><span class="hl">Khin</span> Su Wai</div>
+              <div class="rc-id">📞 09 6644 1234 · Bahan</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:800;color:var(--teal);">5 orders</div>
+        </div>
+      </div>
+
+      <!-- Order results -->
+      <div style="background: var(--soft-orange-light); border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; margin-top: 4px; font-size: 10px; font-weight: 800; color: var(--soft-orange); letter-spacing: 0.06em; text-transform: uppercase;">📦 Orders</div>
+
+      <div class="result-card rc-new">
+        <div class="rc-top">
+          <div class="rc-left">
+            <div class="rc-avatar">👩</div>
+            <div>
+              <div class="rc-name">Daw <span class="hl">Khin</span> Myat</div>
+              <div class="rc-id">#ORD-0244 · Today 10:32 AM</div>
+            </div>
+          </div>
+          <div class="rc-badge badge-new">NEW</div>
+        </div>
+        <div class="rc-bottom">
+          <div class="rc-product">👗 Silk Longyi Set × 2</div>
+          <div class="rc-price">45,000 MMK</div>
+        </div>
+      </div>
+
+      <div class="result-card rc-delivered">
+        <div class="rc-top">
+          <div class="rc-left">
+            <div class="rc-avatar" style="background:var(--purple-light);">👩</div>
+            <div>
+              <div class="rc-name"><span class="hl">Khin</span> Su Wai</div>
+              <div class="rc-id">#ORD-0201 · Mar 22</div>
+            </div>
+          </div>
+          <div class="rc-badge badge-delivered">DELIVERED</div>
+        </div>
+        <div class="rc-bottom">
+          <div class="rc-product">💄 Lipstick Set × 3</div>
+          <div class="rc-price">24,000 MMK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: ADVANCED FILTER SHEET -->
+<div>
+  <div class="label">Screen 3 — Advanced Filter Sheet</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+
+    <div class="search-header">
+      <div class="search-input-row">
+        <div class="search-back">←</div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" placeholder="Search orders or customers…" />
+        </div>
+        <div class="search-cancel">Cancel</div>
+      </div>
+      <div class="filter-pills">
+        <div class="pill active">All</div>
+        <div class="pill">Orders</div>
+        <div class="pill teal">🎛 Filters (2)</div>
+      </div>
+    </div>
+
+    <!-- blurred bg content -->
+    <div style="flex:1;filter:blur(2px);opacity:0.3;padding:14px 16px;">
+      <div style="height:40px;background:white;border-radius:12px;margin-bottom:10px;"></div>
+      <div style="height:80px;background:white;border-radius:16px;margin-bottom:8px;"></div>
+      <div style="height:80px;background:white;border-radius:16px;margin-bottom:8px;"></div>
+    </div>
+
+    <!-- Filter sheet overlay -->
+    <div class="filter-sheet-overlay">
+      <div class="filter-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">Filter & Sort</div>
+        <div class="sheet-sub">စစ်ထုတ်မည် — ကြည့်ရှုမည်</div>
+
+        <!-- Status -->
+        <div class="filter-sec">
+          <div class="filter-sec-title">Order Status</div>
+          <div class="chip-grid">
+            <div class="f-chip sel-orange">🆕 New</div>
+            <div class="f-chip sel-teal">✅ Confirmed</div>
+            <div class="f-chip">🚚 Shipping</div>
+            <div class="f-chip sel-green">🎉 Delivered</div>
+            <div class="f-chip">✗ Cancelled</div>
+          </div>
+        </div>
+
+        <!-- Date range -->
+        <div class="filter-sec">
+          <div class="filter-sec-title">Date Range</div>
+          <div class="date-range-row">
+            <div class="date-input-wrap">
+              <div class="date-input-label">From</div>
+              <input class="date-input has-val" type="text" value="Apr 1, 2025" />
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:10px;color:var(--text-light);font-weight:800;font-size:14px;">→</div>
+            <div class="date-input-wrap">
+              <div class="date-input-label">To</div>
+              <input class="date-input has-val" type="text" value="Apr 2, 2025" />
+            </div>
+          </div>
+          <!-- Quick range chips -->
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <div class="f-chip" style="font-size:11px;padding:6px 12px;">Today</div>
+            <div class="f-chip sel-orange" style="font-size:11px;padding:6px 12px;">This Week</div>
+            <div class="f-chip" style="font-size:11px;padding:6px 12px;">This Month</div>
+            <div class="f-chip" style="font-size:11px;padding:6px 12px;">Custom</div>
+          </div>
+        </div>
+
+        <!-- Price range -->
+        <div class="filter-sec">
+          <div class="filter-sec-title">Price Range (MMK)</div>
+          <div class="price-range-wrap">
+            <div class="price-labels">
+              <span>10,000</span>
+              <span style="color:var(--soft-orange);">10K – 70K selected</span>
+              <span>100,000+</span>
+            </div>
+            <div class="range-track">
+              <div class="range-fill"></div>
+              <div class="range-knob-l"></div>
+              <div class="range-knob-r"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sort by -->
+        <div class="filter-sec">
+          <div class="filter-sec-title">Sort By</div>
+          <div class="sort-opts">
+            <div class="sort-opt selected">
+              <div class="sort-opt-radio"></div>
+              Newest first
+            </div>
+            <div class="sort-opt">
+              <div class="sort-opt-radio"></div>
+              Highest price first
+            </div>
+            <div class="sort-opt">
+              <div class="sort-opt-radio"></div>
+              Oldest first
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-apply-row">
+          <button class="btn-ghost">Reset</button>
+          <button class="btn-apply">Show 12 Results →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: SEARCH EMPTY STATE -->
+<div>
+  <div class="label">Screen 4 — Search (no results)</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+
+    <div class="search-header">
+      <div class="search-input-row">
+        <div class="search-back">←</div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" value="zawgyi" />
+          <div class="search-clear">✕</div>
+        </div>
+        <div class="search-cancel">Cancel</div>
+      </div>
+      <div class="filter-pills">
+        <div class="pill active">All</div>
+        <div class="pill">Orders</div>
+        <div class="pill">Customers</div>
+        <div class="pill">Today</div>
+      </div>
+    </div>
+
+    <div class="search-body" style="display:flex;align-items:center;justify-content:center;">
+      <div class="empty-search">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">No results found</div>
+        <div class="empty-sub">
+          No orders or customers match <strong>"zawgyi"</strong><br><br>
+          Try a different name, phone number, or order ID like #ORD-0244
+        </div>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
+          <div style="background:var(--soft-orange-light);border-radius:12px;padding:10px 14px;font-size:12px;font-weight:800;color:var(--soft-orange);text-align:left;">
+            💡 Tip: Search by phone number like "09 781…" for fastest results
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Order Manager – Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --warm-white: #FFFCF8;
+    --soft-orange: #FF6B35;
+    --soft-orange-light: #FFF0EB;
+    --soft-orange-mid: #FFD4C2;
+    --teal: #2AA8A0;
+    --teal-light: #E8F7F6;
+    --green: #22C55E;
+    --green-light: #DCFCE7;
+    --yellow: #F59E0B;
+    --yellow-light: #FEF3C7;
+    --red: #EF4444;
+    --red-light: #FEE2E2;
+    --purple: #8B5CF6;
+    --purple-light: #EDE9FE;
+    --text-dark: #1A1A2E;
+    --text-mid: #5A5A7A;
+    --text-light: #9999BB;
+    --border: #EDE8E0;
+    --bg: #F5F0EA;
+  }
+  body {
+    background: #D8D0C4;
+    font-family: 'Nunito', sans-serif;
+    display: flex; flex-wrap: wrap;
+    gap: 32px; padding: 32px;
+    justify-content: center; align-items: flex-start; min-height: 100vh;
+  }
+  .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    color: #888; text-transform: uppercase; margin-bottom: 8px; text-align: center;
+  }
+  .phone {
+    width: 375px; height: 812px; background: var(--bg);
+    border-radius: 40px; overflow: hidden;
+    box-shadow: 0 28px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
+    position: relative; display: flex; flex-direction: column;
+  }
+  .status-bar {
+    background: var(--warm-white); padding: 12px 24px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: var(--text-dark); flex-shrink: 0;
+  }
+
+  /* ── SETTINGS HEADER (shop card) ── */
+  .settings-shop-card {
+    background: linear-gradient(150deg, #1A1A2E 0%, #2C2C50 100%);
+    padding: 20px 20px 22px; flex-shrink: 0; position: relative; overflow: hidden;
+  }
+  .ssc-glow {
+    position: absolute; width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,107,53,0.15); filter: blur(50px); top: -60px; right: -60px;
+  }
+  .ssc-row {
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; z-index: 1;
+  }
+  .ssc-info { display: flex; align-items: center; gap: 12px; }
+  .ssc-avatar {
+    width: 52px; height: 52px; border-radius: 18px;
+    background: var(--soft-orange); display: flex; align-items: center;
+    justify-content: center; font-size: 26px;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  .ssc-name { font-size: 16px; font-weight: 900; color: white; }
+  .ssc-meta { font-size: 11px; color: rgba(255,255,255,0.55); font-weight: 600; margin-top: 2px; }
+  .ssc-edit {
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 12px; padding: 8px 12px;
+    font-size: 11px; font-weight: 800; color: white; cursor: pointer;
+  }
+
+  .trial-strip {
+    margin-top: 14px; background: rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    position: relative; z-index: 1;
+  }
+  .trial-icon { font-size: 18px; }
+  .trial-info { flex: 1; }
+  .trial-title { font-size: 12px; font-weight: 900; color: white; }
+  .trial-sub { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; }
+  .trial-days {
+    background: var(--soft-orange); color: white;
+    font-size: 11px; font-weight: 900; padding: 4px 10px; border-radius: 20px;
+  }
+
+  /* ── BODY ── */
+  .settings-body { flex: 1; overflow-y: auto; padding: 16px 16px 90px; }
+  .settings-body::-webkit-scrollbar { display: none; }
+
+  /* section label */
+  .sec-label {
+    font-size: 10px; font-weight: 800; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 8px; margin-top: 4px; padding: 0 2px;
+  }
+
+  /* settings group card */
+  .settings-group {
+    background: white; border-radius: 18px;
+    border: 1.5px solid var(--border); margin-bottom: 14px; overflow: hidden;
+  }
+  .settings-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row:active { background: var(--bg); }
+
+  .sr-icon-wrap {
+    width: 36px; height: 36px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .ico-orange { background: var(--soft-orange-light); }
+  .ico-teal { background: var(--teal-light); }
+  .ico-green { background: var(--green-light); }
+  .ico-yellow { background: var(--yellow-light); }
+  .ico-purple { background: var(--purple-light); }
+  .ico-red { background: var(--red-light); }
+  .ico-dark { background: #E8E8F0; }
+
+  .sr-text { flex: 1; }
+  .sr-title { font-size: 14px; font-weight: 800; color: var(--text-dark); }
+  .sr-sub { font-size: 11px; color: var(--text-light); font-weight: 600; margin-top: 1px; }
+
+  .sr-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .sr-arrow { font-size: 16px; color: var(--text-light); }
+  .sr-value { font-size: 12px; font-weight: 800; color: var(--text-mid); }
+
+  /* toggle switch */
+  .toggle {
+    width: 44px; height: 26px; border-radius: 13px;
+    position: relative; cursor: pointer; flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--soft-orange); }
+  .toggle.off { background: var(--border); }
+  .toggle-knob {
+    width: 20px; height: 20px; border-radius: 50%; background: white;
+    position: absolute; top: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: left 0.2s;
+  }
+  .toggle.on .toggle-knob { left: 21px; }
+  .toggle.off .toggle-knob { left: 3px; }
+
+  /* bottom nav */
+  .bottom-nav {
+    background: white; border-top: 1.5px solid var(--border);
+    display: flex; padding: 10px 0 18px; flex-shrink: 0;
+  }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+  .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-label { font-size: 10px; font-weight: 800; color: var(--text-light); }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--soft-orange); margin: 0 auto; }
+
+  /* ── EDIT SHOP PROFILE ── */
+  .page-header-plain {
+    background: var(--warm-white); padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1.5px solid var(--border); flex-shrink: 0;
+  }
+  .back-btn {
+    width: 38px; height: 38px; border: 2px solid var(--border);
+    border-radius: 12px; background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; cursor: pointer; flex-shrink: 0;
+  }
+  .page-title-wrap { flex: 1; }
+  .page-title { font-size: 16px; font-weight: 900; color: var(--text-dark); }
+  .page-sub { font-size: 11px; color: var(--text-light); font-weight: 600; font-family: 'Noto Sans Myanmar', sans-serif; }
+  .save-btn {
+    background: var(--soft-orange); color: white;
+    padding: 8px 16px; border-radius: 12px;
+    font-size: 12px; font-weight: 800; cursor: pointer;
+    border: none; font-family: 'Nunito', sans-serif;
+  }
+
+  .edit-body { flex: 1; overflow-y: auto; padding: 20px 16px 90px; }
+  .edit-body::-webkit-scrollbar { display: none; }
+
+  /* avatar upload */
+  .avatar-upload {
+    display: flex; flex-direction: column; align-items: center;
+    margin-bottom: 24px; gap: 10px;
+  }
+  .avatar-big {
+    width: 80px; height: 80px; border-radius: 24px;
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px; position: relative; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255,107,53,0.25);
+  }
+  .avatar-edit-badge {
+    position: absolute; bottom: -4px; right: -4px;
+    width: 24px; height: 24px; border-radius: 8px;
+    background: var(--text-dark); border: 2px solid white;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .avatar-hint { font-size: 11px; color: var(--text-light); font-weight: 600; }
+
+  /* form group */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    font-size: 11px; font-weight: 800; color: var(--text-dark);
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; display: block;
+  }
+  .form-input {
+    width: 100%; padding: 13px 14px;
+    border: 2px solid var(--border); border-radius: 13px;
+    font-size: 14px; font-family: 'Nunito', sans-serif; font-weight: 600;
+    color: var(--text-dark); background: white; outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-input.active { border-color: var(--soft-orange); }
+  .form-input::placeholder { color: var(--text-light); }
+
+  .input-with-icon { position: relative; }
+  .input-icon-left { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: 0.45; pointer-events: none; }
+  .form-input.has-icon { padding-left: 42px; }
+
+  /* category picker */
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cat-card {
+    border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px 10px; text-align: center; cursor: pointer;
+    background: white; transition: all 0.15s;
+  }
+  .cat-card.selected { border-color: var(--soft-orange); background: var(--soft-orange-light); }
+  .cat-emoji { font-size: 22px; margin-bottom: 4px; }
+  .cat-name { font-size: 11px; font-weight: 800; color: var(--text-dark); }
+  .cat-name-mm { font-size: 10px; color: var(--text-light); font-family: 'Noto Sans Myanmar', sans-serif; }
+
+  /* language toggle */
+  .lang-row { display: flex; gap: 8px; }
+  .lang-opt {
+    flex: 1; padding: 12px; border-radius: 12px;
+    border: 2px solid var(--border); background: white;
+    text-align: center; cursor: pointer; font-size: 13px; font-weight: 800; color: var(--text-mid);
+  }
+  .lang-opt.selected { border-color: var(--teal); background: var(--teal-light); color: var(--teal); }
+
+  /* danger zone */
+  .danger-zone {
+    background: var(--red-light); border: 1.5px solid #FECACA;
+    border-radius: 16px; padding: 14px 16px; margin-top: 8px;
+  }
+  .dz-title { font-size: 12px; font-weight: 900; color: var(--red); margin-bottom: 4px; }
+  .dz-sub { font-size: 11px; color: #B91C1C; font-weight: 600; margin-bottom: 12px; }
+  .dz-btn {
+    width: 100%; padding: 12px; border-radius: 12px;
+    border: 2px solid #FECACA; background: white;
+    color: var(--red); font-size: 13px; font-weight: 800;
+    cursor: pointer; font-family: 'Nunito', sans-serif;
+  }
+
+  /* plan card */
+  .plan-card {
+    background: linear-gradient(135deg, var(--soft-orange), #FF8C5A);
+    border-radius: 18px; padding: 18px; margin-bottom: 14px;
+    position: relative; overflow: hidden;
+  }
+  .plan-glow { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.15); filter: blur(30px); top: -30px; right: -20px; }
+  .plan-label { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .plan-name { font-size: 22px; font-weight: 900; color: white; margin-bottom: 4px; }
+  .plan-sub { font-size: 12px; color: rgba(255,255,255,0.7); font-weight: 600; margin-bottom: 14px; }
+  .plan-upgrade {
+    display: inline-block; background: white; color: var(--soft-orange);
+    font-size: 12px; font-weight: 900; padding: 8px 16px; border-radius: 20px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: SETTINGS MAIN -->
+<div>
+  <div class="label">Screen 1 — Settings Main</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+
+    <!-- Shop card -->
+    <div class="settings-shop-card">
+      <div class="ssc-glow"></div>
+      <div class="ssc-row">
+        <div class="ssc-info">
+          <div class="ssc-avatar">👗</div>
+          <div>
+            <div class="ssc-name">Ma Aye Shop</div>
+            <div class="ssc-meta">Fashion · Yangon · 23 orders today</div>
+          </div>
+        </div>
+        <div class="ssc-edit">✎ Edit</div>
+      </div>
+      <div class="trial-strip">
+        <div class="trial-icon">⏳</div>
+        <div class="trial-info">
+          <div class="trial-title">Free Trial Active</div>
+          <div class="trial-sub">Upgrade to keep all your data</div>
+        </div>
+        <div class="trial-days">5 days left</div>
+      </div>
+    </div>
+
+    <div class="settings-body">
+
+      <!-- Plan -->
+      <div class="plan-card">
+        <div class="plan-glow"></div>
+        <div class="plan-label">Current Plan</div>
+        <div class="plan-name">Free Trial 🎉</div>
+        <div class="plan-sub">5 days remaining · Unlimited orders</div>
+        <div class="plan-upgrade">Upgrade — 5,000 MMK/mo →</div>
+      </div>
+
+      <!-- Shop section -->
+      <div class="sec-label">Shop Settings</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-orange">🏪</div>
+          <div class="sr-text">
+            <div class="sr-title">Shop Profile</div>
+            <div class="sr-sub">Name, category, address</div>
+          </div>
+          <div class="sr-right"><div class="sr-arrow">›</div></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-teal">🌐</div>
+          <div class="sr-text">
+            <div class="sr-title">Language</div>
+            <div class="sr-sub">ဘာသာစကား</div>
+          </div>
+          <div class="sr-right">
+            <div class="sr-value">မြန်မာ + EN</div>
+            <div class="sr-arrow">›</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-yellow">💰</div>
+          <div class="sr-text">
+            <div class="sr-title">Default Delivery Fee</div>
+            <div class="sr-sub">Auto-fill when adding orders</div>
+          </div>
+          <div class="sr-right">
+            <div class="sr-value">3,000 MMK</div>
+            <div class="sr-arrow">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="sec-label">Notifications — အသိပေးချက်</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-orange">🔔</div>
+          <div class="sr-text">
+            <div class="sr-title">Order Reminders</div>
+            <div class="sr-sub">New & pending order alerts</div>
+          </div>
+          <div class="toggle on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-purple">📊</div>
+          <div class="sr-text">
+            <div class="sr-title">Daily Summary</div>
+            <div class="sr-sub">End-of-day report at 8 PM</div>
+          </div>
+          <div class="toggle on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-teal">💬</div>
+          <div class="sr-text">
+            <div class="sr-title">Promotional Tips</div>
+            <div class="sr-sub">Selling tips & app updates</div>
+          </div>
+          <div class="toggle off"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div class="sec-label">Data & Privacy</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-green">📤</div>
+          <div class="sr-text">
+            <div class="sr-title">Export All Data</div>
+            <div class="sr-sub">Download orders as Excel</div>
+          </div>
+          <div class="sr-right"><div class="sr-arrow">›</div></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-dark">🔒</div>
+          <div class="sr-text">
+            <div class="sr-title">Change Password</div>
+            <div class="sr-sub">Update your login credentials</div>
+          </div>
+          <div class="sr-right"><div class="sr-arrow">›</div></div>
+        </div>
+      </div>
+
+      <!-- Support -->
+      <div class="sec-label">Support</div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-teal">💬</div>
+          <div class="sr-text">
+            <div class="sr-title">Contact Support</div>
+            <div class="sr-sub">Message us on Facebook</div>
+          </div>
+          <div class="sr-right"><div class="sr-arrow">›</div></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-icon-wrap ico-yellow">⭐</div>
+          <div class="sr-text">
+            <div class="sr-title">Rate the App</div>
+            <div class="sr-sub">Help us grow</div>
+          </div>
+          <div class="sr-right"><div class="sr-arrow">›</div></div>
+        </div>
+      </div>
+
+      <!-- Log out -->
+      <div class="settings-group" style="margin-bottom:0;">
+        <div class="settings-row" style="justify-content:center;">
+          <div style="font-size:14px;font-weight:800;color:var(--red);">🚪 Log Out</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📋</div><div class="nav-label">Orders</div></div>
+      <div class="nav-item"><div class="nav-icon">👥</div><div class="nav-label">Customers</div></div>
+      <div class="nav-item"><div class="nav-icon">📊</div><div class="nav-label">Reports</div></div>
+      <div class="nav-item active">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-label" style="color:var(--soft-orange);">Settings</div>
+        <div class="nav-dot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: EDIT SHOP PROFILE -->
+<div>
+  <div class="label">Screen 2 — Edit Shop Profile</div>
+  <div class="phone">
+    <div class="status-bar"><span>9:41</span><div style="display:flex;gap:6px;font-size:12px;font-weight:700;">●●● 🔋</div></div>
+    <div class="page-header-plain">
+      <div class="back-btn">←</div>
+      <div class="page-title-wrap">
+        <div class="page-title">Edit Shop Profile</div>
+        <div class="page-sub">ဆိုင်အချက်အလက် ပြင်မည်</div>
+      </div>
+      <button class="save-btn">Save</button>
+    </div>
+
+    <div class="edit-body">
+      <!-- Avatar -->
+      <div class="avatar-upload">
+        <div class="avatar-big">
+          👗
+          <div class="avatar-edit-badge">✎</div>
+        </div>
+        <div class="avatar-hint">Tap to change shop icon</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Shop Name <span style="color:var(--soft-orange);">*</span></label>
+        <div class="input-with-icon">
+          <span class="input-icon-left">🏪</span>
+          <input class="form-input has-icon active" type="text" value="Ma Aye Shop" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <div class="input-with-icon">
+          <span class="input-icon-left">📞</span>
+          <input class="form-input has-icon" type="tel" value="09 7812 3456" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Facebook Page</label>
+        <div class="input-with-icon">
+          <span class="input-icon-left">🔗</span>
+          <input class="form-input has-icon" type="text" placeholder="facebook.com/yourshop" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Shop Category — ကဏ္ဍ</label>
+        <div class="cat-grid">
+          <div class="cat-card selected">
+            <div class="cat-emoji">👗</div>
+            <div class="cat-name">Fashion</div>
+            <div class="cat-name-mm">အဝတ်အစားများ</div>
+          </div>
+          <div class="cat-card">
+            <div class="cat-emoji">💄</div>
+            <div class="cat-name">Beauty</div>
+            <div class="cat-name-mm">အလှကုန်များ</div>
+          </div>
+          <div class="cat-card">
+            <div class="cat-emoji">🍔</div>
+            <div class="cat-name">Food</div>
+            <div class="cat-name-mm">စားစရာများ</div>
+          </div>
+          <div class="cat-card">
+            <div class="cat-emoji">📦</div>
+            <div class="cat-name">Other</div>
+            <div class="cat-name-mm">အခြား</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">App Language — ဘာသာစကား</label>
+        <div class="lang-row">
+          <div class="lang-opt">English</div>
+          <div class="lang-opt selected">မြန်မာ</div>
+          <div class="lang-opt">Both</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Default Delivery Fee</label>
+        <div class="input-with-icon">
+          <span class="input-icon-left">🚚</span>
+          <input class="form-input has-icon" type="number" value="3000" />
+        </div>
+      </div>
+
+      <div class="danger-zone">
+        <div class="dz-title">⚠️ Danger Zone</div>
+        <div class="dz-sub">Deleting your account will permanently remove all orders and customer data.</div>
+        <button class="dz-btn">🗑 Delete Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
