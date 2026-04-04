@@ -37,6 +37,8 @@ class AppColors {
   static const Color greenLight = Color(0xFFDCFCE7);
   static const Color yellow = Color(0xFFF59E0B);
   static const Color yellowLight = Color(0xFFFEF3C7);
+  static const Color purple = Color(0xFF8B5CF6);
+  static const Color purpleLight = Color(0xFFEDE9FE);
 
   /// Third party colors.
   static const Color facebookBlue = Color(0xFF1877F2);

@@ -58,7 +58,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           top: 20,
                           child: Container(
                             width: 200,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
@@ -78,25 +81,50 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                     const CircleAvatar(
                                       radius: 14,
                                       backgroundColor: AppColors.softOrangeMid,
-                                      child: Text('👤', style: TextStyle(fontSize: 12)),
+                                      child: Text(
+                                        '👤',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Container(height: 6, width: 90, color: AppColors.textDark, margin: const EdgeInsets.only(bottom: 4)),
-                                          Container(height: 6, width: 60, color: AppColors.border),
+                                          Container(
+                                            height: 6,
+                                            width: 90,
+                                            color: AppColors.textDark,
+                                            margin: const EdgeInsets.only(
+                                              bottom: 4,
+                                            ),
+                                          ),
+                                          Container(
+                                            height: 6,
+                                            width: 60,
+                                            color: AppColors.border,
+                                          ),
                                         ],
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.softOrange,
                                         borderRadius: BorderRadius.circular(20),
                                       ),
-                                      child: const Text('New', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                                      child: const Text(
+                                        'New',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -106,15 +134,30 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                     const CircleAvatar(
                                       radius: 14,
                                       backgroundColor: AppColors.softOrangeMid,
-                                      child: Text('📦', style: TextStyle(fontSize: 12)),
+                                      child: Text(
+                                        '📦',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Container(height: 6, width: 100, color: AppColors.textDark, margin: const EdgeInsets.only(bottom: 4)),
-                                          Container(height: 6, width: 45, color: AppColors.border),
+                                          Container(
+                                            height: 6,
+                                            width: 100,
+                                            color: AppColors.textDark,
+                                            margin: const EdgeInsets.only(
+                                              bottom: 4,
+                                            ),
+                                          ),
+                                          Container(
+                                            height: 6,
+                                            width: 45,
+                                            color: AppColors.border,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -130,7 +173,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           top: 120,
                           child: Container(
                             width: 130,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
@@ -146,11 +192,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text('TODAY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.softOrange)),
+                                const Text(
+                                  'TODAY',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.softOrange,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
-                                Container(height: 6, width: double.infinity, color: AppColors.textDark, margin: const EdgeInsets.only(bottom: 6)),
-                                Container(height: 6, width: 80, color: AppColors.border, margin: const EdgeInsets.only(bottom: 4)),
-                                Container(height: 6, width: 60, color: AppColors.border),
+                                Container(
+                                  height: 6,
+                                  width: double.infinity,
+                                  color: AppColors.textDark,
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                ),
+                                Container(
+                                  height: 6,
+                                  width: 80,
+                                  color: AppColors.border,
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                ),
+                                Container(
+                                  height: 6,
+                                  width: 60,
+                                  color: AppColors.border,
+                                ),
                               ],
                             ),
                           ),
@@ -168,15 +235,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 TextSpan(
                   children: const [
                     TextSpan(text: 'Track Every '),
-                    TextSpan(text: 'Order', style: TextStyle(color: AppColors.softOrange)),
+                    TextSpan(
+                      text: 'Order',
+                      style: TextStyle(color: AppColors.softOrange),
+                    ),
                     TextSpan(text: ' Instantly'),
                   ],
                   style: TextTheme.of(context).headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textDark,
-                        fontSize: 24,
-                        height: 1.25,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textDark,
+                    fontSize: 24,
+                    height: 1.25,
+                  ),
                 ),
                 textAlign: TextAlign.center,
                 textScaler: TextScaler.noScaling,
@@ -186,23 +256,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 'No more messy notes or forgotten orders. Add orders in seconds, right from Messenger.',
                 textAlign: TextAlign.center,
                 style: TextTheme.of(context).bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMid,
-                      height: 1.6,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMid,
+                  height: 1.6,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'မက်ဆင်ဂျာမှ အော်ဒါများကို လျင်မြန်စွာ ထည့်သွင်းပါ',
                 textAlign: TextAlign.center,
                 style: TextTheme.of(context).bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.teal,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.teal,
+                ),
               ),
 
               const SizedBox(height: AppSpacing.xxl),
-              
+
               // Actions
               ElevatedButton(
                 onPressed: () {
@@ -225,9 +295,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   'Skip intro',
                   textAlign: TextAlign.center,
                   style: TextTheme.of(context).labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textLight,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textLight,
+                  ),
                 ),
               ),
             ],

@@ -83,7 +83,11 @@ class SplashPage extends StatelessWidget {
                         ],
                       ),
                       child: const Center(
-                        child: Icon(Icons.inventory_2_rounded, size: 46, color: Colors.white),
+                        child: Icon(
+                          Icons.inventory_2_rounded,
+                          size: 46,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -93,13 +97,16 @@ class SplashPage extends StatelessWidget {
                     TextSpan(
                       children: const [
                         TextSpan(text: 'Order '),
-                        TextSpan(text: 'Manager', style: TextStyle(color: AppColors.softOrange)),
+                        TextSpan(
+                          text: 'Manager',
+                          style: TextStyle(color: AppColors.softOrange),
+                        ),
                       ],
                       style: TextTheme.of(context).headlineLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textDark,
-                            fontSize: 26,
-                          ),
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textDark,
+                        fontSize: 26,
+                      ),
                     ),
                     textAlign: TextAlign.center,
                     textScaler: TextScaler.noScaling,
@@ -111,17 +118,17 @@ class SplashPage extends StatelessWidget {
                     'For Facebook Sellers',
                     textAlign: TextAlign.center,
                     style: TextTheme.of(context).bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMid,
-                        ),
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMid,
+                    ),
                   ),
                   Text(
                     'ဖေ့ဘုတ်ရောင်းသူများအတွက်',
                     textAlign: TextAlign.center,
                     style: TextTheme.of(context).bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.teal,
-                        ),
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.teal,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xxl),
                   // Feature Chips
@@ -191,10 +198,10 @@ class _FeatureChip extends StatelessWidget {
           Text(
             label,
             style: TextTheme.of(context).labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMid,
-                  fontSize: 11,
-                ),
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMid,
+              fontSize: 11,
+            ),
           ),
         ],
       ),

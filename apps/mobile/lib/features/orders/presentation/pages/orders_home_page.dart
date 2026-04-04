@@ -75,12 +75,14 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
   @override
   Widget build(BuildContext context) {
     List<OrderEntryData> displayingOrders = _mockOrders;
-    
+
     if (_selectedTab == 2) {
       displayingOrders = _mockOrders
-          .where((o) =>
-              o.status == OrderStatusType.newOrder ||
-              o.status == OrderStatusType.confirmed)
+          .where(
+            (o) =>
+                o.status == OrderStatusType.newOrder ||
+                o.status == OrderStatusType.confirmed,
+          )
           .toList();
     }
 
@@ -108,7 +110,10 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
                 delegate: SliverChildListDelegate([
                   // Search Bar
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 2,
+                    ),
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -121,7 +126,9 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
                         prefixIcon: const Icon(Icons.search, size: 20),
-                        prefixIconConstraints: const BoxConstraints(minWidth: 32),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 32,
+                        ),
                         hintText: _selectedTab == 2
                             ? 'Search pending orders...'
                             : 'Search orders, customers...',
@@ -129,14 +136,18 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.softOrangeLight,
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
                                 _selectedTab == 2 ? '8 results' : 'Filter',
-                                style: TextTheme.of(context).labelSmall?.copyWith(
+                                style: TextTheme.of(context).labelSmall
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.softOrange,
                                       fontSize: 11,
@@ -185,14 +196,12 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
       child: Text(
         title.toUpperCase(),
         style: TextTheme.of(context).labelSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.textLight,
-              fontSize: 11,
-              letterSpacing: 1.1,
-            ),
+          fontWeight: FontWeight.w800,
+          color: AppColors.textLight,
+          fontSize: 11,
+          letterSpacing: 1.1,
+        ),
       ),
     );
   }
 }
-
-

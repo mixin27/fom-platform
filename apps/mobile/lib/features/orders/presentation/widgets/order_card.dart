@@ -98,7 +98,7 @@ class OrderCard extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Content
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -121,8 +121,10 @@ class OrderCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             alignment: Alignment.center,
-                            child: Text(data.customerAvatar,
-                                style: const TextStyle(fontSize: 16)),
+                            child: Text(
+                              data.customerAvatar,
+                              style: const TextStyle(fontSize: 16),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -131,7 +133,8 @@ class OrderCard extends StatelessWidget {
                               children: [
                                 Text(
                                   data.customerName,
-                                  style: TextTheme.of(context).bodyLarge?.copyWith(
+                                  style: TextTheme.of(context).bodyLarge
+                                      ?.copyWith(
                                         fontWeight: FontWeight.w900,
                                         color: AppColors.textDark,
                                         fontSize: 14,
@@ -141,7 +144,8 @@ class OrderCard extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   '📞 ${data.customerPhone}',
-                                  style: TextTheme.of(context).labelSmall?.copyWith(
+                                  style: TextTheme.of(context).labelSmall
+                                      ?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: AppColors.textLight,
                                         fontSize: 11,
@@ -154,7 +158,10 @@ class OrderCard extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _statusBgColor,
                         borderRadius: BorderRadius.circular(20),
@@ -162,11 +169,11 @@ class OrderCard extends StatelessWidget {
                       child: Text(
                         _statusLabel,
                         style: TextTheme.of(context).labelSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: _statusColor,
-                              fontSize: 10,
-                              letterSpacing: 0.4, // 0.04em
-                            ),
+                          fontWeight: FontWeight.w800,
+                          color: _statusColor,
+                          fontSize: 10,
+                          letterSpacing: 0.4, // 0.04em
+                        ),
                       ),
                     ),
                   ],
@@ -180,16 +187,19 @@ class OrderCard extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          Text(data.productIcon, style: const TextStyle(fontSize: 14)),
+                          Text(
+                            data.productIcon,
+                            style: const TextStyle(fontSize: 14),
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               data.productSummary,
                               style: TextTheme.of(context).bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textMid,
-                                    fontSize: 12,
-                                  ),
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMid,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
@@ -199,18 +209,18 @@ class OrderCard extends StatelessWidget {
                       TextSpan(
                         text: _formatInt(data.priceMmk),
                         style: TextTheme.of(context).titleMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.textDark,
-                              fontSize: 15,
-                            ),
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textDark,
+                          fontSize: 15,
+                        ),
                         children: [
                           TextSpan(
                             text: ' MMK',
                             style: TextTheme.of(context).labelSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textLight,
-                                  fontSize: 10,
-                                ),
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textLight,
+                              fontSize: 10,
+                            ),
                           ),
                         ],
                       ),
@@ -220,7 +230,11 @@ class OrderCard extends StatelessWidget {
 
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Divider(color: AppColors.border, height: 1, thickness: 1),
+                  child: Divider(
+                    color: AppColors.border,
+                    height: 1,
+                    thickness: 1,
+                  ),
                 ),
 
                 // Footer: ID & Time
@@ -239,10 +253,10 @@ class OrderCard extends StatelessWidget {
                     Text(
                       data.timeLabel,
                       style: TextTheme.of(context).labelSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textLight,
-                            fontSize: 10,
-                          ),
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textLight,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ),
@@ -250,9 +264,7 @@ class OrderCard extends StatelessWidget {
                 // Quick Actions (if not delivered)
                 if (data.status != OrderStatusType.delivered) ...[
                   const SizedBox(height: 10),
-                  Row(
-                    children: _buildQuickActions(context),
-                  ),
+                  Row(children: _buildQuickActions(context)),
                 ],
               ],
             ),
@@ -329,9 +341,9 @@ class OrderCard extends StatelessWidget {
 
   String _formatInt(int num) {
     return num.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
   }
 }
 
@@ -352,8 +364,12 @@ class _QuickActionBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isPrimary ? (activeBgColor ?? activeColor ?? AppColors.softOrange) : Colors.white;
-    final fgColor = isPrimary ? (activeBgColor != null ? activeColor : Colors.white) : AppColors.textMid;
+    final bgColor = isPrimary
+        ? (activeBgColor ?? activeColor ?? AppColors.softOrange)
+        : Colors.white;
+    final fgColor = isPrimary
+        ? (activeBgColor != null ? activeColor : Colors.white)
+        : AppColors.textMid;
     final borderColor = isPrimary ? bgColor : AppColors.border;
 
     return InkWell(
@@ -370,10 +386,10 @@ class _QuickActionBtn extends StatelessWidget {
         child: Text(
           label,
           style: TextTheme.of(context).labelSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: fgColor,
-                fontSize: 11,
-              ),
+            fontWeight: FontWeight.w800,
+            color: fgColor,
+            fontSize: 11,
+          ),
         ),
       ),
     );

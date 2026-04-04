@@ -4,6 +4,7 @@ import 'package:app_logger/app_logger.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
+import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
 import 'package:fom_mobile/features/onboarding/feature_onboarding.dart';
 import 'package:fom_mobile/features/orders/feature_orders.dart';
@@ -29,8 +30,11 @@ class AppRouter {
   final AppLogger _appLogger;
   final bool _enableLogDevTools;
   final _RouterRefreshNotifier _refreshNotifier;
+  static final GlobalKey<NavigatorState> _rootNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   late final GoRouter _router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: splashPath,
     refreshListenable: _refreshNotifier,
     redirect: _redirect,
@@ -55,6 +59,14 @@ class AppRouter {
             return LogsDevtoolsPage(logger: _appLogger);
           },
         ),
+      GoRoute(
+        path: AppRoutePaths.customerProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return CustomerProfilePage(customerId: id);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -71,9 +83,8 @@ class AppRouter {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/two',
-                builder: (context, state) =>
-                    const _DetailUnavailablePage(title: 'Two'),
+                path: AppRoutePaths.customers,
+                builder: (context, state) => const CustomersHomePage(),
               ),
             ],
           ),

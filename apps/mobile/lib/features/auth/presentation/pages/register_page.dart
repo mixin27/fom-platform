@@ -73,21 +73,21 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(
                 'STEP 2 of 3',
                 style: TextTheme.of(context).labelMedium?.copyWith(
-                      color: AppColors.softOrange,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.84, // 0.06em approx
-                      fontSize: 13,
-                    ),
+                  color: AppColors.softOrange,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.84, // 0.06em approx
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Set up your\nShop',
                 style: TextTheme.of(context).headlineMedium?.copyWith(
-                      color: AppColors.textDark,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                      fontSize: 28,
-                    ),
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w900,
+                  height: 1.2,
+                  fontSize: 28,
+                ),
               ),
               const SizedBox(height: 32),
 
@@ -95,11 +95,11 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(
                 'Shop Name',
                 style: TextTheme.of(context).labelSmall?.copyWith(
-                      color: AppColors.textDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      letterSpacing: 0.72,
-                    ),
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.72,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -107,8 +107,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: const Icon(Icons.storefront, size: 18),
                   hintText: 'e.g. Ma Aye Fashion Shop',
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
-                    borderSide: const BorderSide(color: AppColors.softOrange, width: 2),
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.borderRadiusMd,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.softOrange,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -117,11 +122,11 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(
                 'SHOP CATEGORY — ကဏ္ဍ',
                 style: TextTheme.of(context).labelSmall?.copyWith(
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      letterSpacing: 1.2,
-                    ),
+                  color: AppColors.textLight,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -159,7 +164,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     name: 'Electronics',
                     nameMm: 'အီလက်ထရောနစ်',
                     isSelected: _selectedCategory == 'Electronics',
-                    onTap: () => setState(() => _selectedCategory = 'Electronics'),
+                    onTap: () =>
+                        setState(() => _selectedCategory = 'Electronics'),
                   ),
                 ],
               ),
@@ -168,11 +174,11 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(
                 'Facebook Page Link (Optional)',
                 style: TextTheme.of(context).labelSmall?.copyWith(
-                      color: AppColors.textDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      letterSpacing: 0.72,
-                    ),
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.72,
+                ),
               ),
               const SizedBox(height: 8),
               const TextField(
@@ -233,17 +239,16 @@ class _CategoryCard extends StatelessWidget {
             Text(
               name,
               style: TextTheme.of(context).labelSmall?.copyWith(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
+                color: AppColors.textDark,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
             ),
             Text(
               nameMm,
-              style: TextTheme.of(context).bodySmall?.copyWith(
-                    color: AppColors.textMid,
-                    fontSize: 10,
-                  ),
+              style: TextTheme.of(
+                context,
+              ).bodySmall?.copyWith(color: AppColors.textMid, fontSize: 10),
             ),
           ],
         ),
