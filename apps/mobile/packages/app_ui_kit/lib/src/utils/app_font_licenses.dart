@@ -19,14 +19,14 @@ class AppFontLicenses {
 
     LicenseRegistry.addLicense(() async* {
       final license = await rootBundle.loadString(
-        'packages/app_ui_kit/assets/fonts/Poppins/OFL.txt',
+        'packages/app_ui_kit/assets/fonts/Nunito/OFL.txt',
       );
       yield LicenseEntryWithLineBreaks(<String>['Poppins'], license);
     });
 
     LicenseRegistry.addLicense(() async* {
       final license = await rootBundle.loadString(
-        'packages/app_ui_kit/assets/fonts/OpenSans/OFL.txt',
+        'packages/app_ui_kit/assets/fonts/NotoSansMyanmar/OFL.txt',
       );
       yield LicenseEntryWithLineBreaks(<String>['OpenSans'], license);
     });
