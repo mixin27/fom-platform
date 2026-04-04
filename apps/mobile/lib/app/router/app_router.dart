@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app_logger/app_logger.dart';
+import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
@@ -145,20 +146,24 @@ class AppShell extends StatelessWidget {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.campaign_outlined),
-            label: 'One',
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long, color: AppColors.softOrange),
+            label: 'Orders',
           ),
           NavigationDestination(
-            icon: Icon(Icons.confirmation_num_outlined),
-            label: 'Two',
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people, color: AppColors.softOrange),
+            label: 'Customers',
           ),
           NavigationDestination(
-            icon: Icon(Icons.loyalty_outlined),
-            label: 'Three',
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart, color: AppColors.softOrange),
+            label: 'Reports',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            label: 'Four',
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings, color: AppColors.softOrange),
+            label: 'Settings',
           ),
         ],
       ),

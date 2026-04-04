@@ -1,5 +1,6 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/app/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginPage extends StatelessWidget {
@@ -112,7 +113,9 @@ class LoginPage extends StatelessWidget {
               const SizedBox(height: 18),
 
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  context.go(AppRouter.ordersPath);
+                },
                 child: const Text('Sign In — ဝင်ရောက်မည်'),
               ),
 
