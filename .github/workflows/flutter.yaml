@@ -1,4 +1,4 @@
-name: CI
+name: CI (Flutter)
 
 on:
   push:
@@ -16,18 +16,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  secret-scan:
-    name: Secret Scan (gitleaks)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Secret Scan
-        run: cd apps/mobile && ./scripts/secret_scan.sh
-
   quality:
     name: Codegen, Format, Analyze, Test
     runs-on: ubuntu-latest

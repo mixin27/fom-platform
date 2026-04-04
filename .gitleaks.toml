@@ -3,9 +3,10 @@ title = "Nexxus Gitleaks Configuration"
 [allowlist]
 description = "Allow committed env templates and ignored generated envied output path"
 paths = [
-  '''^\.env\.example$''',
-  '''^\.env\.development\.example$''',
-  '''^\.env\.staging\.example$''',
-  '''^\.env\.production\.example$''',
-  '''^lib/app/config/app_envied\.g\.dart$''',
+  '''\.env\.example$''',
+  '''\.env\..*\.example$''',
+  '''\.env\.development\.example$''',
+  '''\.env\.staging\.example$''',
+  '''\.env\.production\.example$''',
+  '''app_envied\.g\.dart$''',
 ]
