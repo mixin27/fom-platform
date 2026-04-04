@@ -16,4 +16,13 @@ class AppSpacing {
 
   /// Extra-large spacing (32dp).
   static const double xl = 32;
+
+  /// Extra-extra-large spacing (40dp).
+  static const double xxl = 40;
+
+  /// Standard border radius for cards and buttons.
+  static const double borderRadiusSm = 12;
+  static const double borderRadiusMd = 14;
+  static const double borderRadiusLg = 16;
+  static const double borderRadiusXl = 20;
 }
