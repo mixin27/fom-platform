@@ -138,6 +138,9 @@ Summary query notes:
 
 - `GET /shops/{shopId}/summaries/daily` accepts `date=YYYY-MM-DD` in the shop timezone.
 - When `date` is omitted, the API uses the latest order date for that shop.
+- `GET /shops/{shopId}/reports/weekly` accepts an anchor `date=YYYY-MM-DD` and returns the Monday-start week containing that date.
+- `GET /shops/{shopId}/reports/monthly` accepts `month=YYYY-MM` and returns the full month report.
+- When report query parameters are omitted, the API uses the latest shop order period.
 
 ## Example: Create Order Request
 

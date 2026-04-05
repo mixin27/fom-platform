@@ -45,12 +45,12 @@ export class AppService {
           'order items',
           'order status updates',
           'daily summaries',
+          'weekly reports',
+          'monthly reports',
         ],
         deferred: [
           'deliveries',
           'message templates',
-          'weekly reports',
-          'monthly reports',
         ],
       },
       rbac: {

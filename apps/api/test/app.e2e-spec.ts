@@ -434,6 +434,76 @@ describe('Facebook Order Manager API (e2e)', () => {
     );
   });
 
+  dbIt('returns a weekly report for an anchor date', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/shops/shop_ma_aye/reports/weekly?date=2026-04-02',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.objectContaining({
+        shop_id: 'shop_ma_aye',
+        report_type: 'weekly',
+        period_start_date: expect.any(String),
+        period_end_date: expect.any(String),
+        daily_breakdown: expect.any(Array),
+        top_products: expect.any(Array),
+      }),
+    );
+  });
+
+  dbIt('returns a monthly report for a month key', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/shops/shop_ma_aye/reports/monthly?month=2026-04',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.objectContaining({
+        shop_id: 'shop_ma_aye',
+        report_type: 'monthly',
+        period_key: '2026-04',
+        period_label: expect.any(String),
+        total_revenue: expect.any(Number),
+        recent_orders: expect.any(Array),
+      }),
+    );
+  });
+
   dbIt('enforces RBAC for member management', async () => {
     const loginResponse = await app.inject({
       method: 'POST',

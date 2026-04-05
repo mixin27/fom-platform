@@ -19,6 +19,7 @@ import { OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
 import { PrismaService } from './common/prisma/prisma.service';
 import { ShopsController } from './shops/shops.controller';
+import { ReportsController } from './summaries/reports.controller';
 import { ShopsService } from './shops/shops.service';
 import { SummariesController } from './summaries/summaries.controller';
 import { SummariesService } from './summaries/summaries.service';
@@ -38,6 +39,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     CustomersController,
     OrdersController,
     SummariesController,
+    ReportsController,
   ],
   providers: [
     AppService,
