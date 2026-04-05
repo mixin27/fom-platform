@@ -192,6 +192,44 @@ describe('Facebook Order Manager API (e2e)', () => {
     });
   });
 
+  dbIt('lists customers with typed query filters', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/shops/shop_ma_aye/customers?segment=vip&sort=top_spenders&limit=5',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'cus_daw_aye_aye',
+          is_vip: true,
+          total_spent: expect.any(Number),
+        }),
+      ]),
+    );
+    expect(body.meta.pagination).toMatchObject({
+      limit: 5,
+      total: expect.any(Number),
+    });
+  });
+
   dbIt('supports phone OTP auth as an optional sign-in method', async () => {
     const challengeResponse = await app.inject({
       method: 'POST',

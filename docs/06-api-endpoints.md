@@ -62,6 +62,18 @@
 | GET    | /shops/{shopId}/customers/{customerId} | Get customer    | 200 Single Customer |
 | PATCH  | /shops/{shopId}/customers/{customerId} | Update customer | 200 Single Customer |
 
+Customer list filters:
+
+- `search`: case-insensitive match against `name`, `phone`, `township`, and `address`
+- `segment`: `all`, `vip`, `new_this_week`, `top_spenders`
+- `sort`: `recent`, `top_spenders`, `name`
+- `limit` and `cursor`: standard cursor pagination fields
+
+Customer write notes:
+
+- `POST /shops/{shopId}/customers` uses `phone` as the per-shop uniqueness key and merges into the existing customer when the phone already exists.
+- `PATCH /shops/{shopId}/customers/{customerId}` requires at least one field and accepts `null` for `township`, `address`, and `notes` to clear those values.
+
 ## Orders
 
 | Method | Path                                    | Description              | Response         |

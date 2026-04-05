@@ -2,15 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { paged } from '../common/http/api-result';
 import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
-import { notFoundError } from '../common/http/app-http.exception';
-import { paginate } from '../common/utils/pagination';
 import {
-  assertValid,
-  optionalString,
-  requiredString,
-} from '../common/utils/validation';
+  conflictError,
+  notFoundError,
+  validationError,
+} from '../common/http/app-http.exception';
+import { paginate } from '../common/utils/pagination';
 import { ShopsService } from '../shops/shops.service';
-import { generateId } from '../common/utils/id';
+import { CreateCustomerDto } from './dto/create-customer.dto';
+import { ListCustomersQueryDto } from './dto/list-customers-query.dto';
+import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 @Injectable()
 export class CustomersService {
@@ -22,13 +23,12 @@ export class CustomersService {
   async listCustomers(
     currentUser: AuthenticatedUser,
     shopId: string,
-    query: Record<string, unknown>,
+    query: ListCustomersQueryDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
-    const search =
-      typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
-    const segment = typeof query.segment === 'string' ? query.segment : 'all';
-    const sort = typeof query.sort === 'string' ? query.sort : undefined;
+    const search = query.search?.trim().toLowerCase() ?? '';
+    const segment = query.segment ?? 'all';
+    const sort = query.sort;
 
     let customers = (
       await this.prisma.customer.findMany({
@@ -77,32 +77,17 @@ export class CustomersService {
       );
     }
 
-    const page = paginate(
-      customers,
-      query.limit as string | undefined,
-      query.cursor as string | undefined,
-    );
+    const page = paginate(customers, query.limit, query.cursor);
     return paged(page.items, page.pagination);
   }
 
   async createCustomer(
     currentUser: AuthenticatedUser,
     shopId: string,
-    body: Record<string, unknown>,
+    body: CreateCustomerDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const name = requiredString(body.name, 'name', errors, 'customer name');
-    const phone = requiredString(body.phone, 'phone', errors, 'phone number');
-    const township = optionalString(
-      body.township,
-      'township',
-      errors,
-      'township',
-    );
-    const address = optionalString(body.address, 'address', errors, 'address');
-    const notes = optionalString(body.notes, 'notes', errors, 'notes');
-    assertValid(errors);
+    const phone = this.normalizePhone(body.phone);
 
     const existing = await this.prisma.customer.findUnique({
       where: {
@@ -117,10 +102,10 @@ export class CustomersService {
       ? await this.prisma.customer.update({
           where: { id: existing.id },
           data: {
-            name,
-            township: township ?? existing.township,
-            address: address ?? existing.address,
-            notes: notes ?? existing.notes,
+            name: body.name,
+            township: body.township ?? existing.township,
+            address: body.address ?? existing.address,
+            notes: body.notes ?? existing.notes,
           },
           include: {
             orders: {
@@ -132,13 +117,12 @@ export class CustomersService {
         })
       : await this.prisma.customer.create({
           data: {
-            id: generateId('cus'),
             shopId,
-            name,
+            name: body.name,
             phone,
-            township: township ?? null,
-            address: address ?? null,
-            notes: notes ?? null,
+            township: body.township ?? null,
+            address: body.address ?? null,
+            notes: body.notes ?? null,
           },
           include: {
             orders: {
@@ -179,7 +163,7 @@ export class CustomersService {
     currentUser: AuthenticatedUser,
     shopId: string,
     customerId: string,
-    body: Record<string, unknown>,
+    body: UpdateCustomerDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
     const customer = await this.prisma.customer.findUnique({
@@ -189,27 +173,49 @@ export class CustomersService {
       throw notFoundError('Customer not found');
     }
 
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const name = optionalString(body.name, 'name', errors, 'customer name');
-    const phone = optionalString(body.phone, 'phone', errors, 'phone number');
-    const township = optionalString(
-      body.township,
-      'township',
-      errors,
-      'township',
-    );
-    const address = optionalString(body.address, 'address', errors, 'address');
-    const notes = optionalString(body.notes, 'notes', errors, 'notes');
-    assertValid(errors);
+    if (
+      !body.name &&
+      !body.phone &&
+      body.township === undefined &&
+      body.address === undefined &&
+      body.notes === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    const phone = body.phone ? this.normalizePhone(body.phone) : undefined;
+
+    if (phone && phone !== customer.phone) {
+      const existingCustomer = await this.prisma.customer.findUnique({
+        where: {
+          shopId_phone: {
+            shopId,
+            phone,
+          },
+        },
+      });
+      if (existingCustomer && existingCustomer.id !== customer.id) {
+        throw conflictError('Another customer with this phone already exists');
+      }
+    }
 
     const updated = await this.prisma.customer.update({
       where: { id: customer.id },
       data: {
-        ...(name ? { name } : {}),
+        ...(body.name ? { name: body.name } : {}),
         ...(phone ? { phone } : {}),
-        ...(township !== undefined ? { township: township ?? null } : {}),
-        ...(address !== undefined ? { address: address ?? null } : {}),
-        ...(notes !== undefined ? { notes: notes ?? null } : {}),
+        ...(body.township !== undefined
+          ? { township: body.township ?? null }
+          : {}),
+        ...(body.address !== undefined
+          ? { address: body.address ?? null }
+          : {}),
+        ...(body.notes !== undefined ? { notes: body.notes ?? null } : {}),
       },
       include: {
         orders: {
@@ -239,7 +245,10 @@ export class CustomersService {
     ).length;
     const latestOrder = orders[0];
 
-    const productFrequency = new Map<string, { qty: number; revenue: number }>();
+    const productFrequency = new Map<
+      string,
+      { qty: number; revenue: number }
+    >();
     for (const order of orders) {
       for (const item of order.items) {
         const current = productFrequency.get(item.productName) ?? {
@@ -297,5 +306,9 @@ export class CustomersService {
           }
         : {}),
     };
+  }
+
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\s+/g, ' ').trim();
   }
 }
