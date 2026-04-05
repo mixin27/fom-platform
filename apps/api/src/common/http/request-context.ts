@@ -1,0 +1,33 @@
+import { randomUUID } from 'node:crypto';
+import { Injectable, type NestMiddleware } from '@nestjs/common';
+
+export interface AuthenticatedUser {
+  id: string;
+  name: string;
+  phone: string;
+  locale: string;
+}
+
+export interface RequestWithContext {
+  headers?: Record<string, string | string[] | undefined>;
+  requestId?: string;
+  user?: AuthenticatedUser;
+}
+
+@Injectable()
+export class RequestContextMiddleware implements NestMiddleware {
+  use(
+    request: RequestWithContext,
+    response: { setHeader?: (name: string, value: string) => void },
+    next: () => void,
+  ): void {
+    const headerValue = request.headers?.['x-request-id'];
+    const requestId =
+      (typeof headerValue === 'string' && headerValue.trim()) ||
+      `req_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+
+    request.requestId = requestId;
+    response.setHeader?.('X-Request-Id', requestId);
+    next();
+  }
+}

@@ -15,8 +15,11 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return the API overview', () => {
+      expect(appController.overview()).toMatchObject({
+        name: 'facebook-order-manager-api',
+        base_url: '/api/v1',
+      });
     });
   });
 });
