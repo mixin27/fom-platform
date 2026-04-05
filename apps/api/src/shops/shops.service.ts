@@ -13,33 +13,56 @@ import {
   optionalString,
   requiredString,
 } from '../common/utils/validation';
-import { InMemoryStoreService } from '../store/in-memory-store.service';
+import { PrismaService } from '../common/prisma/prisma.service';
 import { permissionsForRole } from '../common/http/rbac.constants';
+import { generateId } from '../common/utils/id';
+
+type ShopWithCount = any & {
+  _count: {
+    members: number;
+  };
+};
+
+type MemberWithUser = any;
 
 @Injectable()
 export class ShopsService {
-  constructor(private readonly store: InMemoryStoreService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  listUserShops(userId: string) {
-    return this.store.shopMembers
-      .filter(
-        (member) => member.userId === userId && member.status === 'active',
-      )
-      .map((member) => {
-        const shop = this.requireShop(member.shopId);
-        return {
-          ...this.serializeShop(shop.id),
-          membership: {
-            id: member.id,
-            role: member.role,
-            status: member.status,
-            permissions: [...permissionsForRole(member.role)],
+  async listUserShops(userId: string) {
+    const memberships = await this.prisma.shopMember.findMany({
+      where: {
+        userId,
+        status: 'active',
+      },
+      include: {
+        shop: {
+          include: {
+            _count: {
+              select: {
+                members: true,
+              },
+            },
           },
-        };
-      });
+        },
+      },
+    });
+
+    return memberships.map((member) => ({
+      ...this.serializeShopRecord(member.shop),
+      membership: {
+        id: member.id,
+        role: member.role,
+        status: member.status,
+        permissions: [...permissionsForRole(member.role)],
+      },
+    }));
   }
 
-  createShop(currentUser: AuthenticatedUser, body: Record<string, unknown>) {
+  async createShop(
+    currentUser: AuthenticatedUser,
+    body: Record<string, unknown>,
+  ) {
     const errors: Array<{ field: string; errors: string[] }> = [];
     const name = requiredString(body.name, 'name', errors, 'shop name');
     const timezone =
@@ -47,31 +70,41 @@ export class ShopsService {
       'Asia/Yangon';
     assertValid(errors);
 
-    const shop = this.store.createShop({
-      ownerUserId: currentUser.id,
-      name,
-      timezone,
-    });
-    this.store.addShopMember({
-      shopId: shop.id,
-      userId: currentUser.id,
-      role: 'owner',
-    });
+    const shopId = generateId('shop');
+    await this.prisma.$transaction([
+      this.prisma.shop.create({
+        data: {
+          id: shopId,
+          ownerUserId: currentUser.id,
+          name,
+          timezone,
+        },
+      }),
+      this.prisma.shopMember.create({
+        data: {
+          id: generateId('mem'),
+          shopId,
+          userId: currentUser.id,
+          role: 'owner',
+          status: 'active',
+        },
+      }),
+    ]);
 
-    return this.serializeShop(shop.id);
-  }
-
-  getShop(currentUser: AuthenticatedUser, shopId: string) {
-    this.assertShopAccess(currentUser.id, shopId);
     return this.serializeShop(shopId);
   }
 
-  updateShop(
+  async getShop(currentUser: AuthenticatedUser, shopId: string) {
+    await this.assertShopAccess(currentUser.id, shopId);
+    return this.serializeShop(shopId);
+  }
+
+  async updateShop(
     currentUser: AuthenticatedUser,
     shopId: string,
     body: Record<string, unknown>,
   ) {
-    const { shop } = this.assertOwnerAccess(currentUser.id, shopId);
+    await this.assertOwnerAccess(currentUser.id, shopId);
     const errors: Array<{ field: string; errors: string[] }> = [];
     const name = optionalString(body.name, 'name', errors, 'shop name');
     const timezone = optionalString(
@@ -82,27 +115,30 @@ export class ShopsService {
     );
     assertValid(errors);
 
-    if (name) {
-      shop.name = name;
-    }
-
-    if (timezone) {
-      shop.timezone = timezone;
-    }
+    await this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        ...(name ? { name } : {}),
+        ...(timezone ? { timezone } : {}),
+      },
+    });
 
     return this.serializeShop(shopId);
   }
 
-  listMembers(
+  async listMembers(
     currentUser: AuthenticatedUser,
     shopId: string,
     query: Record<string, unknown>,
   ) {
-    this.assertShopAccess(currentUser.id, shopId);
-    const members = this.store.shopMembers
-      .filter((member) => member.shopId === shopId)
-      .map((member) => this.serializeMember(member.id))
-      .sort((left, right) => left.created_at.localeCompare(right.created_at));
+    await this.assertShopAccess(currentUser.id, shopId);
+    const members = (
+      await this.prisma.shopMember.findMany({
+        where: { shopId },
+        include: { user: true },
+        orderBy: { createdAt: 'asc' },
+      })
+    ).map((member) => this.serializeMemberRecord(member));
 
     const page = paginate(
       members,
@@ -112,12 +148,12 @@ export class ShopsService {
     return paged(page.items, page.pagination);
   }
 
-  addMember(
+  async addMember(
     currentUser: AuthenticatedUser,
     shopId: string,
     body: Record<string, unknown>,
   ) {
-    this.assertOwnerAccess(currentUser.id, shopId);
+    await this.assertOwnerAccess(currentUser.id, shopId);
 
     const errors: Array<{ field: string; errors: string[] }> = [];
     const userId = optionalString(body.user_id, 'user_id', errors, 'user ID');
@@ -131,8 +167,14 @@ export class ShopsService {
     assertValid(errors);
 
     let targetUser =
-      (userId && this.store.findUserById(userId)) ||
-      (phone && this.store.findUserByPhone(phone));
+      (userId &&
+        (await this.prisma.user.findUnique({
+          where: { id: userId },
+        }))) ||
+      (phone &&
+        (await this.prisma.user.findUnique({
+          where: { phone },
+        })));
 
     if (!targetUser) {
       if (!phone || !name) {
@@ -141,39 +183,56 @@ export class ShopsService {
         );
       }
 
-      targetUser = this.store.createUser({
-        name,
-        phone,
+      targetUser = await this.prisma.user.create({
+        data: {
+          id: generateId('usr'),
+          name,
+          phone,
+        },
       });
     }
 
-    const existingMember = this.store.shopMembers.find(
-      (member) => member.shopId === shopId && member.userId === targetUser.id,
-    );
+    const existingMember = await this.prisma.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId,
+          userId: targetUser.id,
+        },
+      },
+    });
     if (existingMember) {
       throw conflictError('User is already a member of this shop');
     }
 
-    const member = this.store.addShopMember({
-      shopId,
-      userId: targetUser.id,
-      role,
-      status: 'active',
+    const member = await this.prisma.shopMember.create({
+      data: {
+        id: generateId('mem'),
+        shopId,
+        userId: targetUser.id,
+        role,
+        status: 'active',
+      },
+      include: {
+        user: true,
+      },
     });
 
-    return this.serializeMember(member.id);
+    return this.serializeMemberRecord(member);
   }
 
-  updateMember(
+  async updateMember(
     currentUser: AuthenticatedUser,
     shopId: string,
     memberId: string,
     body: Record<string, unknown>,
   ) {
-    this.assertOwnerAccess(currentUser.id, shopId);
-    const member = this.store.shopMembers.find(
-      (item) => item.id === memberId && item.shopId === shopId,
-    );
+    await this.assertOwnerAccess(currentUser.id, shopId);
+    const member = await this.prisma.shopMember.findFirst({
+      where: {
+        id: memberId,
+        shopId,
+      },
+    });
     if (!member) {
       throw notFoundError('Shop member not found');
     }
@@ -199,34 +258,41 @@ export class ShopsService {
     );
     assertValid(errors);
 
-    if (role) {
-      member.role = role;
-    }
+    const updated = await this.prisma.shopMember.update({
+      where: { id: member.id },
+      data: {
+        ...(role ? { role } : {}),
+        ...(status ? { status } : {}),
+      },
+      include: {
+        user: true,
+      },
+    });
 
-    if (status) {
-      member.status = status;
-    }
-
-    return this.serializeMember(member.id);
+    return this.serializeMemberRecord(updated);
   }
 
-  assertShopAccess(userId: string, shopId: string) {
-    const shop = this.requireShop(shopId);
-    const member = this.store.shopMembers.find(
-      (item) =>
-        item.shopId === shopId &&
-        item.userId === userId &&
-        item.status === 'active',
-    );
-    if (!member) {
+  async assertShopAccess(userId: string, shopId: string) {
+    const member = await this.prisma.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId,
+          userId,
+        },
+      },
+      include: {
+        shop: true,
+      },
+    });
+    if (!member || member.status !== 'active') {
       throw forbiddenError();
     }
 
-    return { shop, member };
+    return { shop: member.shop, member };
   }
 
-  assertOwnerAccess(userId: string, shopId: string) {
-    const { shop, member } = this.assertShopAccess(userId, shopId);
+  async assertOwnerAccess(userId: string, shopId: string) {
+    const { shop, member } = await this.assertShopAccess(userId, shopId);
     if (member.role !== 'owner') {
       throw forbiddenError('Only shop owners can perform this action');
     }
@@ -234,54 +300,62 @@ export class ShopsService {
     return { shop, member };
   }
 
-  serializeShop(shopId: string) {
-    const shop = this.requireShop(shopId);
-    const members = this.store.shopMembers.filter(
-      (member) => member.shopId === shopId,
-    );
+  async serializeShop(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        _count: {
+          select: {
+            members: true,
+          },
+        },
+      },
+    });
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    return this.serializeShopRecord(shop);
+  }
+
+  async serializeMember(memberId: string) {
+    const member = await this.prisma.shopMember.findUnique({
+      where: { id: memberId },
+      include: { user: true },
+    });
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    return this.serializeMemberRecord(member);
+  }
+
+  private serializeShopRecord(shop: ShopWithCount) {
     return {
       id: shop.id,
       owner_user_id: shop.ownerUserId,
       name: shop.name,
       timezone: shop.timezone,
-      member_count: members.length,
-      created_at: shop.createdAt,
+      member_count: shop._count.members,
+      created_at: shop.createdAt.toISOString(),
     };
   }
 
-  serializeMember(memberId: string) {
-    const member = this.store.shopMembers.find((item) => item.id === memberId);
-    if (!member) {
-      throw notFoundError('Shop member not found');
-    }
-
-    const user = this.store.findUserById(member.userId);
-    if (!user) {
-      throw notFoundError('User not found');
-    }
-
+  private serializeMemberRecord(member: MemberWithUser) {
     return {
       id: member.id,
       shop_id: member.shopId,
       user_id: member.userId,
       role: member.role,
       status: member.status,
-      created_at: member.createdAt,
+      created_at: member.createdAt.toISOString(),
       user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        locale: user.locale,
+        id: member.user.id,
+        name: member.user.name,
+        phone: member.user.phone,
+        locale: member.user.locale,
       },
       permissions: [...permissionsForRole(member.role)],
     };
-  }
-
-  private requireShop(shopId: string) {
-    const shop = this.store.findShopById(shopId);
-    if (!shop) {
-      throw notFoundError('Shop not found');
-    }
-    return shop;
   }
 }

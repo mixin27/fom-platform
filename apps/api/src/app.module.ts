@@ -15,9 +15,9 @@ import { RequestContextMiddleware } from './common/http/request-context';
 import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.interceptor';
 import { OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
+import { PrismaService } from './common/prisma/prisma.service';
 import { ShopsController } from './shops/shops.controller';
 import { ShopsService } from './shops/shops.service';
-import { InMemoryStoreService } from './store/in-memory-store.service';
 import { SummariesController } from './summaries/summaries.controller';
 import { SummariesService } from './summaries/summaries.service';
 import { UsersController } from './users/users.controller';
@@ -38,7 +38,7 @@ import { RbacGuard } from './common/http/rbac.guard';
   ],
   providers: [
     AppService,
-    InMemoryStoreService,
+    PrismaService,
     AuthService,
     UsersService,
     ShopsService,

@@ -1,42 +1,51 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { toLocalDate, toLocalHour } from '../common/utils/dates';
 import { ShopsService } from '../shops/shops.service';
-import { InMemoryStoreService } from '../store/in-memory-store.service';
 
 @Injectable()
 export class SummariesService {
   constructor(
-    private readonly store: InMemoryStoreService,
+    private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
   ) {}
 
-  getDailySummary(
+  async getDailySummary(
     currentUser: AuthenticatedUser,
     shopId: string,
     query: Record<string, unknown>,
   ) {
-    const { shop } = this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const { shop } = await this.shopsService.assertShopAccess(
+      currentUser.id,
+      shopId,
+    );
     const targetDate =
       typeof query.date === 'string' && query.date.trim().length > 0
         ? query.date.trim()
-        : this.resolveReferenceDate(shopId, shop.timezone);
+        : await this.resolveReferenceDate(shopId, shop.timezone);
 
-    const dayOrders = this.store.orders
-      .filter(
-        (order) =>
-          order.shopId === shopId &&
-          order.status !== 'cancelled' &&
-          toLocalDate(order.createdAt, shop.timezone) === targetDate,
-      )
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const allOrders = await this.prisma.order.findMany({
+      where: {
+        shopId,
+        status: { not: 'cancelled' },
+      },
+      include: {
+        items: true,
+        customer: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const dayOrders = allOrders.filter(
+      (order) =>
+        toLocalDate(order.createdAt.toISOString(), shop.timezone) === targetDate,
+    );
     const previousDate = this.resolvePreviousDate(targetDate);
-    const previousRevenue = this.store.orders
+    const previousRevenue = allOrders
       .filter(
         (order) =>
-          order.shopId === shopId &&
-          order.status !== 'cancelled' &&
-          toLocalDate(order.createdAt, shop.timezone) === previousDate,
+          toLocalDate(order.createdAt.toISOString(), shop.timezone) === previousDate,
       )
       .reduce((sum, order) => sum + order.totalPrice, 0);
 
@@ -72,7 +81,7 @@ export class SummariesService {
     >();
 
     for (const order of dayOrders) {
-      const hour = toLocalHour(order.createdAt, shop.timezone);
+      const hour = toLocalHour(order.createdAt.toISOString(), shop.timezone);
       const hourEntry = hourlyMap.get(hour) ?? { order_count: 0, revenue: 0 };
       hourEntry.order_count += 1;
       hourEntry.revenue += order.totalPrice;
@@ -86,10 +95,7 @@ export class SummariesService {
       customerEntry.total_spent += order.totalPrice;
       customerMap.set(order.customerId, customerEntry);
 
-      const items = this.store.orderItems.filter(
-        (item) => item.orderId === order.id,
-      );
-      for (const item of items) {
+      for (const item of order.items) {
         const productEntry = productMap.get(item.productName) ?? {
           qty: 0,
           revenue: 0,
@@ -139,7 +145,9 @@ export class SummariesService {
         .sort((left, right) => right[1].total_spent - left[1].total_spent)
         .slice(0, 5)
         .map(([customerId, value]) => {
-          const customer = this.store.findCustomerById(customerId);
+          const customer = dayOrders.find(
+            (order) => order.customerId === customerId,
+          )?.customer;
           return {
             customer_id: customerId,
             customer_name: customer?.name ?? 'Unknown customer',
@@ -147,29 +155,31 @@ export class SummariesService {
             total_spent: value.total_spent,
           };
         }),
-      recent_orders: dayOrders.slice(0, 5).map((order) => {
-        const customer = this.store.findCustomerById(order.customerId);
-        const firstItem = this.store.orderItems.find(
-          (item) => item.orderId === order.id,
-        );
-        return {
-          id: order.id,
-          order_no: order.orderNo,
-          customer_name: customer?.name ?? 'Unknown customer',
-          product_name: firstItem?.productName ?? 'Item',
-          status: order.status,
-          total_price: order.totalPrice,
-          created_at: order.createdAt,
-        };
-      }),
+      recent_orders: dayOrders.slice(0, 5).map((order) => ({
+        id: order.id,
+        order_no: order.orderNo,
+        customer_name: order.customer.name,
+        product_name: order.items[0]?.productName ?? 'Item',
+        status: order.status,
+        total_price: order.totalPrice,
+        created_at: order.createdAt.toISOString(),
+      })),
     };
   }
 
-  private resolveReferenceDate(shopId: string, timeZone: string): string {
-    const latest = this.store.orders
-      .filter((order) => order.shopId === shopId)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
-    return toLocalDate(latest?.createdAt ?? this.store.now(), timeZone);
+  private async resolveReferenceDate(
+    shopId: string,
+    timeZone: string,
+  ): Promise<string> {
+    const latest = await this.prisma.order.findFirst({
+      where: { shopId },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    return toLocalDate(
+      latest?.createdAt.toISOString() ?? new Date().toISOString(),
+      timeZone,
+    );
   }
 
   private resolvePreviousDate(targetDate: string): string {

@@ -14,6 +14,10 @@ export class AppService {
         otp_note:
           'Use debug_otp_code from /api/v1/auth/phone/start in development',
       },
+      storage: {
+        database: 'postgresql',
+        orm: 'prisma',
+      },
       scope: {
         implemented: [
           'auth',

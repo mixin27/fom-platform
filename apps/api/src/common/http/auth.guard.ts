@@ -7,7 +7,7 @@ import type { RequestWithContext } from './request-context';
 export class AuthGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithContext>();
     const token = this.extractBearerToken(
       request.headers?.authorization ?? request.headers?.Authorization,
@@ -17,7 +17,7 @@ export class AuthGuard implements CanActivate {
       throw unauthorizedError();
     }
 
-    request.user = this.authService.authenticate(token);
+    request.user = await this.authService.authenticate(token);
     return true;
   }
 

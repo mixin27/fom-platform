@@ -4,16 +4,16 @@ import { forbiddenError, notFoundError } from './app-http.exception';
 import { PERMISSIONS_KEY } from './permissions.decorator';
 import { permissionsForRole, type Permission } from './rbac.constants';
 import type { RequestWithContext } from './request-context';
-import { InMemoryStoreService } from '../../store/in-memory-store.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class RbacGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly store: InMemoryStoreService,
+    private readonly prisma: PrismaService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
       PERMISSIONS_KEY,
       [context.getHandler(), context.getClass()],
@@ -39,13 +39,15 @@ export class RbacGuard implements CanActivate {
       throw notFoundError('Shop context is missing for RBAC evaluation');
     }
 
-    const membership = this.store.shopMembers.find(
-      (member) =>
-        member.shopId === shopId &&
-        member.userId === currentUser.id &&
-        member.status === 'active',
-    );
-    if (!membership) {
+    const membership = await this.prisma.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId,
+          userId: currentUser.id,
+        },
+      },
+    });
+    if (!membership || membership.status !== 'active') {
       throw forbiddenError();
     }
 

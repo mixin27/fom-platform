@@ -1,0 +1,166 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LocaleCode {
+  en
+  my
+}
+
+enum ShopRole {
+  owner
+  staff
+}
+
+enum ShopMemberStatus {
+  active
+  invited
+  disabled
+}
+
+enum OrderStatus {
+  new
+  confirmed
+  out_for_delivery
+  delivered
+  cancelled
+}
+
+enum OrderSource {
+  messenger
+  manual
+}
+
+model User {
+  id             String             @id
+  name           String
+  phone          String             @unique
+  locale         LocaleCode         @default(my)
+  createdAt      DateTime           @default(now())
+  ownedShops     Shop[]             @relation("ShopOwner")
+  memberships    ShopMember[]
+  sessions       Session[]
+  authChallenges AuthChallenge[]
+  statusEvents   OrderStatusEvent[] @relation("ChangedByUser")
+}
+
+model Shop {
+  id          String       @id
+  ownerUserId String
+  name        String
+  timezone    String
+  createdAt   DateTime     @default(now())
+  owner       User         @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  members     ShopMember[]
+  customers   Customer[]
+  orders      Order[]
+
+  @@index([ownerUserId])
+}
+
+model ShopMember {
+  id        String           @id
+  shopId    String
+  userId    String
+  role      ShopRole
+  status    ShopMemberStatus @default(active)
+  createdAt DateTime         @default(now())
+  shop      Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, userId])
+  @@index([userId, status])
+}
+
+model Customer {
+  id        String   @id
+  shopId    String
+  name      String
+  phone     String
+  township  String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orders    Order[]
+
+  @@unique([shopId, phone])
+  @@index([shopId, name])
+}
+
+model Order {
+  id           String             @id
+  shopId       String
+  customerId   String
+  orderNo      String             @unique
+  status       OrderStatus
+  totalPrice   Int
+  currency     String             @default("MMK")
+  deliveryFee  Int                @default(0)
+  note         String?
+  source       OrderSource        @default(manual)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  shop         Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items        OrderItem[]
+  statusEvents OrderStatusEvent[]
+
+  @@index([shopId, status, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model OrderItem {
+  id          String  @id
+  orderId     String
+  productId   String?
+  productName String
+  qty         Int
+  unitPrice   Int
+  lineTotal   Int
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model OrderStatusEvent {
+  id              String       @id
+  orderId         String
+  fromStatus      OrderStatus?
+  toStatus        OrderStatus
+  changedByUserId String
+  changedAt       DateTime     @default(now())
+  note            String?
+  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser   User         @relation("ChangedByUser", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, changedAt])
+}
+
+model AuthChallenge {
+  id        String   @id
+  phone     String
+  otpCode   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone, expiresAt])
+}
+
+model Session {
+  token     String   @id
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

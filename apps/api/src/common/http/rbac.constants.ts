@@ -1,4 +1,6 @@
-import type { ShopRole } from '../../store/store.types';
+export const shopRoles = ['owner', 'staff'] as const;
+
+export type ShopRole = (typeof shopRoles)[number];
 
 export const permissions = {
   shopsRead: 'shops.read',

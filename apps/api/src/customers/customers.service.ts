@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser } from '../common/http/request-context';
 import { paged } from '../common/http/api-result';
+import { PrismaService } from '../common/prisma/prisma.service';
+import type { AuthenticatedUser } from '../common/http/request-context';
 import { notFoundError } from '../common/http/app-http.exception';
 import { paginate } from '../common/utils/pagination';
 import {
@@ -9,29 +10,38 @@ import {
   requiredString,
 } from '../common/utils/validation';
 import { ShopsService } from '../shops/shops.service';
-import { InMemoryStoreService } from '../store/in-memory-store.service';
+import { generateId } from '../common/utils/id';
 
 @Injectable()
 export class CustomersService {
   constructor(
-    private readonly store: InMemoryStoreService,
+    private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
   ) {}
 
-  listCustomers(
+  async listCustomers(
     currentUser: AuthenticatedUser,
     shopId: string,
     query: Record<string, unknown>,
   ) {
-    this.shopsService.assertShopAccess(currentUser.id, shopId);
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
     const search =
       typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
     const segment = typeof query.segment === 'string' ? query.segment : 'all';
     const sort = typeof query.sort === 'string' ? query.sort : undefined;
 
-    let customers = this.store.customers
-      .filter((customer) => customer.shopId === shopId)
-      .map((customer) => this.serializeCustomer(customer.id));
+    let customers = (
+      await this.prisma.customer.findMany({
+        where: { shopId },
+        include: {
+          orders: {
+            where: { status: { not: 'cancelled' } },
+            include: { items: true },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      })
+    ).map((customer) => this.serializeCustomerRecord(customer));
 
     if (search) {
       customers = customers.filter((customer) =>
@@ -75,12 +85,12 @@ export class CustomersService {
     return paged(page.items, page.pagination);
   }
 
-  createCustomer(
+  async createCustomer(
     currentUser: AuthenticatedUser,
     shopId: string,
     body: Record<string, unknown>,
   ) {
-    this.shopsService.assertShopAccess(currentUser.id, shopId);
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
     const errors: Array<{ field: string; errors: string[] }> = [];
     const name = requiredString(body.name, 'name', errors, 'customer name');
     const phone = requiredString(body.phone, 'phone', errors, 'phone number');
@@ -94,49 +104,87 @@ export class CustomersService {
     const notes = optionalString(body.notes, 'notes', errors, 'notes');
     assertValid(errors);
 
-    const existing = this.store.customers.find(
-      (customer) => customer.shopId === shopId && customer.phone === phone,
-    );
-    if (existing) {
-      existing.name = name;
-      existing.township = township ?? existing.township;
-      existing.address = address ?? existing.address;
-      existing.notes = notes ?? existing.notes;
-      return this.serializeCustomer(existing.id);
-    }
-
-    const customer = this.store.createCustomer({
-      shopId,
-      name,
-      phone,
-      township,
-      address,
-      notes,
+    const existing = await this.prisma.customer.findUnique({
+      where: {
+        shopId_phone: {
+          shopId,
+          phone,
+        },
+      },
     });
-    return this.serializeCustomer(customer.id);
+
+    const customer = existing
+      ? await this.prisma.customer.update({
+          where: { id: existing.id },
+          data: {
+            name,
+            township: township ?? existing.township,
+            address: address ?? existing.address,
+            notes: notes ?? existing.notes,
+          },
+          include: {
+            orders: {
+              where: { status: { not: 'cancelled' } },
+              include: { items: true },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        })
+      : await this.prisma.customer.create({
+          data: {
+            id: generateId('cus'),
+            shopId,
+            name,
+            phone,
+            township: township ?? null,
+            address: address ?? null,
+            notes: notes ?? null,
+          },
+          include: {
+            orders: {
+              where: { status: { not: 'cancelled' } },
+              include: { items: true },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        });
+
+    return this.serializeCustomerRecord(customer);
   }
 
-  getCustomer(
+  async getCustomer(
     currentUser: AuthenticatedUser,
     shopId: string,
     customerId: string,
   ) {
-    this.shopsService.assertShopAccess(currentUser.id, shopId);
-    const customer = this.store.findCustomerById(customerId);
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        orders: {
+          where: { status: { not: 'cancelled' } },
+          include: { items: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
     if (!customer || customer.shopId !== shopId) {
       throw notFoundError('Customer not found');
     }
-    return this.serializeCustomer(customerId, { includeHistory: true });
+
+    return this.serializeCustomerRecord(customer, { includeHistory: true });
   }
 
-  updateCustomer(
+  async updateCustomer(
     currentUser: AuthenticatedUser,
     shopId: string,
     customerId: string,
     body: Record<string, unknown>,
   ) {
-    this.shopsService.assertShopAccess(currentUser.id, shopId);
-    const customer = this.store.findCustomerById(customerId);
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+    });
     if (!customer || customer.shopId !== shopId) {
       throw notFoundError('Customer not found');
     }
@@ -154,55 +202,46 @@ export class CustomersService {
     const notes = optionalString(body.notes, 'notes', errors, 'notes');
     assertValid(errors);
 
-    if (name) {
-      customer.name = name;
-    }
-    if (phone) {
-      customer.phone = phone;
-    }
-    if (township !== undefined) {
-      customer.township = township ?? null;
-    }
-    if (address !== undefined) {
-      customer.address = address ?? null;
-    }
-    if (notes !== undefined) {
-      customer.notes = notes ?? null;
-    }
+    const updated = await this.prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        ...(name ? { name } : {}),
+        ...(phone ? { phone } : {}),
+        ...(township !== undefined ? { township: township ?? null } : {}),
+        ...(address !== undefined ? { address: address ?? null } : {}),
+        ...(notes !== undefined ? { notes: notes ?? null } : {}),
+      },
+      include: {
+        orders: {
+          where: { status: { not: 'cancelled' } },
+          include: { items: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
 
-    return this.serializeCustomer(customer.id, { includeHistory: true });
+    return this.serializeCustomerRecord(updated, { includeHistory: true });
   }
 
-  serializeCustomer(
-    customerId: string,
+  private serializeCustomerRecord(
+    customer: any,
     options?: { includeHistory?: boolean },
   ) {
-    const customer = this.store.findCustomerById(customerId);
-    if (!customer) {
-      throw notFoundError('Customer not found');
-    }
-
-    const orders = this.store.orders
-      .filter(
-        (order) =>
-          order.customerId === customerId && order.status !== 'cancelled',
-      )
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-    const totalSpent = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const orders = [...customer.orders].sort((left, right) =>
+      right.createdAt.toISOString().localeCompare(left.createdAt.toISOString()),
+    );
+    const totalSpent = orders.reduce(
+      (sum: number, order: any) => sum + order.totalPrice,
+      0,
+    );
     const deliveredCount = orders.filter(
-      (order) => order.status === 'delivered',
+      (order: any) => order.status === 'delivered',
     ).length;
     const latestOrder = orders[0];
 
-    const productFrequency = new Map<
-      string,
-      { qty: number; revenue: number }
-    >();
+    const productFrequency = new Map<string, { qty: number; revenue: number }>();
     for (const order of orders) {
-      const items = this.store.orderItems.filter(
-        (item) => item.orderId === order.id,
-      );
-      for (const item of items) {
+      for (const item of order.items) {
         const current = productFrequency.get(item.productName) ?? {
           qty: 0,
           revenue: 0,
@@ -218,13 +257,12 @@ export class CustomersService {
         (left, right) => right[1].qty - left[1].qty,
       )[0]?.[0] ?? null;
     const largestOrder = orders.reduce(
-      (max, order) => Math.max(max, order.totalPrice),
+      (max: number, order: any) => Math.max(max, order.totalPrice),
       0,
     );
     const isVip = totalSpent >= 200000 || orders.length >= 10;
     const isNewThisWeek =
-      Date.now() - new Date(customer.createdAt).getTime() <=
-      7 * 24 * 60 * 60 * 1000;
+      Date.now() - customer.createdAt.getTime() <= 7 * 24 * 60 * 60 * 1000;
 
     return {
       id: customer.id,
@@ -234,10 +272,10 @@ export class CustomersService {
       township: customer.township,
       address: customer.address,
       notes: customer.notes,
-      created_at: customer.createdAt,
+      created_at: customer.createdAt.toISOString(),
       total_orders: orders.length,
       total_spent: totalSpent,
-      last_order_at: latestOrder?.createdAt ?? null,
+      last_order_at: latestOrder?.createdAt.toISOString() ?? null,
       delivered_rate:
         orders.length === 0
           ? 0
@@ -248,19 +286,14 @@ export class CustomersService {
       favourite_item: favouriteItem,
       ...(options?.includeHistory
         ? {
-            recent_orders: orders.slice(0, 10).map((order) => {
-              const firstItem = this.store.orderItems.find(
-                (item) => item.orderId === order.id,
-              );
-              return {
-                id: order.id,
-                order_no: order.orderNo,
-                status: order.status,
-                total_price: order.totalPrice,
-                created_at: order.createdAt,
-                product_name: firstItem?.productName ?? 'Item',
-              };
-            }),
+            recent_orders: orders.slice(0, 10).map((order: any) => ({
+              id: order.id,
+              order_no: order.orderNo,
+              status: order.status,
+              total_price: order.totalPrice,
+              created_at: order.createdAt.toISOString(),
+              product_name: order.items[0]?.productName ?? 'Item',
+            })),
           }
         : {}),
     };

@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser } from '../common/http/request-context';
 import { paged } from '../common/http/api-result';
+import { PrismaService } from '../common/prisma/prisma.service';
+import type { AuthenticatedUser } from '../common/http/request-context';
 import {
   conflictError,
   notFoundError,
 } from '../common/http/app-http.exception';
 import { toLocalDate } from '../common/utils/dates';
+import { generateId } from '../common/utils/id';
 import { paginate } from '../common/utils/pagination';
 import {
   assertValid,
@@ -19,12 +21,8 @@ import {
   requiredString,
 } from '../common/utils/validation';
 import { ShopsService } from '../shops/shops.service';
-import { InMemoryStoreService } from '../store/in-memory-store.service';
-import type {
-  CustomerRecord,
-  OrderRecord,
-  OrderStatus,
-} from '../store/store.types';
+
+type DbClient = PrismaService | any;
 
 type NewOrderItem = {
   productName: string;
@@ -43,16 +41,19 @@ export class OrdersService {
   ] as const;
 
   constructor(
-    private readonly store: InMemoryStoreService,
+    private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
   ) {}
 
-  listOrders(
+  async listOrders(
     currentUser: AuthenticatedUser,
     shopId: string,
     query: Record<string, unknown>,
   ) {
-    const { shop } = this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const { shop } = await this.shopsService.assertShopAccess(
+      currentUser.id,
+      shopId,
+    );
     const requestedStatus =
       typeof query.status === 'string' ? query.status.trim() : undefined;
     const requestedDate =
@@ -60,9 +61,14 @@ export class OrdersService {
     const search =
       typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
 
-    let orders = this.store.orders
-      .filter((order) => order.shopId === shopId)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    let orders = await this.prisma.order.findMany({
+      where: { shopId },
+      include: {
+        customer: true,
+        items: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
     if (requestedStatus) {
       orders = orders.filter((order) =>
@@ -73,34 +79,30 @@ export class OrdersService {
     if (requestedDate) {
       const targetDate =
         requestedDate === 'today'
-          ? this.resolveReferenceDate(shopId, shop.timezone)
+          ? await this.resolveReferenceDate(shopId, shop.timezone)
           : requestedDate;
       orders = orders.filter(
-        (order) => toLocalDate(order.createdAt, shop.timezone) === targetDate,
+        (order) => toLocalDate(order.createdAt.toISOString(), shop.timezone) === targetDate,
       );
     }
 
     if (search) {
-      orders = orders.filter((order) => {
-        const customer = this.requireCustomer(order.customerId);
-        const items = this.store.orderItems.filter(
-          (item) => item.orderId === order.id,
-        );
-        return [
+      orders = orders.filter((order) =>
+        [
           order.orderNo,
-          customer.name,
-          customer.phone,
-          customer.address ?? '',
-          customer.township ?? '',
-          ...items.map((item) => item.productName),
+          order.customer.name,
+          order.customer.phone,
+          order.customer.address ?? '',
+          order.customer.township ?? '',
+          ...order.items.map((item) => item.productName),
         ]
           .join(' ')
           .toLowerCase()
-          .includes(search);
-      });
+          .includes(search),
+      );
     }
 
-    const serialized = orders.map((order) => this.serializeOrder(order.id));
+    const serialized = orders.map((order) => this.serializeOrderRecord(order));
     const page = paginate(
       serialized,
       query.limit as string | undefined,
@@ -109,323 +111,375 @@ export class OrdersService {
     return paged(page.items, page.pagination);
   }
 
-  createOrder(
+  async createOrder(
     currentUser: AuthenticatedUser,
     shopId: string,
     body: Record<string, unknown>,
   ) {
-    this.shopsService.assertShopAccess(currentUser.id, shopId);
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    const customer = this.resolveCustomer(shopId, body);
-    const items = this.extractItems(body);
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const deliveryFee =
-      optionalNumber(body.delivery_fee, 'delivery_fee', errors, {
-        min: 0,
-        label: 'delivery fee',
-      }) ?? 0;
-    const note = optionalString(body.note, 'note', errors, 'note') ?? null;
-    const currency =
-      optionalString(body.currency, 'currency', errors, 'currency') ?? 'MMK';
-    const source =
-      asEnum(body.source, 'source', ['messenger', 'manual'] as const, errors, {
-        label: 'source',
-      }) ?? 'manual';
-    const status =
-      asEnum(body.status, 'status', this.validStatuses, errors, {
-        label: 'status',
-      }) ?? 'new';
-    assertValid(errors);
+    return this.prisma.$transaction(async (tx) => {
+      const customer = await this.resolveCustomer(tx, shopId, body);
+      const items = this.extractItems(body);
+      const errors: Array<{ field: string; errors: string[] }> = [];
+      const deliveryFee =
+        optionalNumber(body.delivery_fee, 'delivery_fee', errors, {
+          min: 0,
+          label: 'delivery fee',
+        }) ?? 0;
+      const note = optionalString(body.note, 'note', errors, 'note') ?? null;
+      const currency =
+        optionalString(body.currency, 'currency', errors, 'currency') ?? 'MMK';
+      const source =
+        asEnum(body.source, 'source', ['messenger', 'manual'] as const, errors, {
+          label: 'source',
+        }) ?? 'manual';
+      const status =
+        asEnum(body.status, 'status', this.validStatuses, errors, {
+          label: 'status',
+        }) ?? 'new';
+      assertValid(errors);
 
-    const subtotal = items.reduce(
-      (sum, item) => sum + item.qty * item.unitPrice,
-      0,
-    );
-    const order: OrderRecord = {
-      id: this.store.generateId('ord'),
-      shopId,
-      customerId: customer.id,
-      orderNo: this.store.nextOrderNumber(shopId),
-      status,
-      totalPrice: subtotal + deliveryFee,
-      currency,
-      deliveryFee,
-      note,
-      source,
-      createdAt: this.store.now(),
-      updatedAt: this.store.now(),
-    };
-    this.store.orders.push(order);
-
-    for (const item of items) {
-      this.store.orderItems.push({
-        id: this.store.generateId('item'),
-        orderId: order.id,
-        productId: null,
-        productName: item.productName,
-        qty: item.qty,
-        unitPrice: item.unitPrice,
-        lineTotal: item.qty * item.unitPrice,
+      const subtotal = items.reduce(
+        (sum, item) => sum + item.qty * item.unitPrice,
+        0,
+      );
+      const order = await tx.order.create({
+        data: {
+          id: generateId('ord'),
+          shopId,
+          customerId: customer.id,
+          orderNo: await this.nextOrderNumber(tx, shopId),
+          status,
+          totalPrice: subtotal + deliveryFee,
+          currency,
+          deliveryFee,
+          note,
+          source,
+          items: {
+            create: items.map((item) => ({
+              id: generateId('item'),
+              productName: item.productName,
+              qty: item.qty,
+              unitPrice: item.unitPrice,
+              lineTotal: item.qty * item.unitPrice,
+            })),
+          },
+          statusEvents: {
+            create: {
+              id: generateId('evt'),
+              fromStatus: null,
+              toStatus: status,
+              changedByUserId: currentUser.id,
+              note: note ? `Created order: ${note}` : 'Order created',
+            },
+          },
+        },
+        include: {
+          customer: true,
+          items: true,
+          statusEvents: {
+            include: { changedByUser: true },
+            orderBy: { changedAt: 'desc' },
+          },
+        },
       });
-    }
 
-    this.store.orderStatusEvents.push({
-      id: this.store.generateId('evt'),
-      orderId: order.id,
-      fromStatus: null,
-      toStatus: status,
-      changedByUserId: currentUser.id,
-      changedAt: this.store.now(),
-      note: note ? `Created order: ${note}` : 'Order created',
+      return this.serializeOrderRecord(order, { includeHistory: true });
     });
+  }
 
+  async getOrder(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    orderId: string,
+  ) {
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const order = await this.requireOrderForShop(this.prisma, shopId, orderId);
     return this.serializeOrder(order.id, { includeHistory: true });
   }
 
-  getOrder(currentUser: AuthenticatedUser, shopId: string, orderId: string) {
-    this.requireOrderForShop(currentUser.id, shopId, orderId);
-    return this.serializeOrder(orderId, { includeHistory: true });
-  }
-
-  updateOrder(
+  async updateOrder(
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
     body: Record<string, unknown>,
   ) {
-    const order = this.requireOrderForShop(currentUser.id, shopId, orderId);
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const deliveryFee = optionalNumber(
-      body.delivery_fee,
-      'delivery_fee',
-      errors,
-      {
-        min: 0,
-        label: 'delivery fee',
-      },
-    );
-    const note = optionalString(body.note, 'note', errors, 'note');
-    const currency = optionalString(
-      body.currency,
-      'currency',
-      errors,
-      'currency',
-    );
-    const source = asEnum(
-      body.source,
-      'source',
-      ['messenger', 'manual'] as const,
-      errors,
-      {
-        label: 'source',
-      },
-    );
-    const customerId = optionalString(
-      body.customer_id,
-      'customer_id',
-      errors,
-      'customer ID',
-    );
-    assertValid(errors);
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    if (deliveryFee !== undefined) {
-      order.deliveryFee = deliveryFee;
-    }
-    if (note !== undefined) {
-      order.note = note ?? null;
-    }
-    if (currency) {
-      order.currency = currency;
-    }
-    if (source) {
-      order.source = source;
-    }
-    if (customerId) {
-      const customer = this.requireCustomer(customerId);
-      if (customer.shopId !== shopId) {
-        throw conflictError('Customer does not belong to this shop');
+    return this.prisma.$transaction(async (tx) => {
+      const order = await this.requireOrderForShop(tx, shopId, orderId);
+      const errors: Array<{ field: string; errors: string[] }> = [];
+      const deliveryFee = optionalNumber(
+        body.delivery_fee,
+        'delivery_fee',
+        errors,
+        {
+          min: 0,
+          label: 'delivery fee',
+        },
+      );
+      const note = optionalString(body.note, 'note', errors, 'note');
+      const currency = optionalString(
+        body.currency,
+        'currency',
+        errors,
+        'currency',
+      );
+      const source = asEnum(
+        body.source,
+        'source',
+        ['messenger', 'manual'] as const,
+        errors,
+        {
+          label: 'source',
+        },
+      );
+      const customerId = optionalString(
+        body.customer_id,
+        'customer_id',
+        errors,
+        'customer ID',
+      );
+      assertValid(errors);
+
+      if (customerId) {
+        const customer = await this.requireCustomer(tx, customerId);
+        if (customer.shopId !== shopId) {
+          throw conflictError('Customer does not belong to this shop');
+        }
       }
-      order.customerId = customer.id;
-    }
 
-    this.recalculateTotal(order.id);
-    order.updatedAt = this.store.now();
+      const subtotal = await this.sumOrderItems(tx, order.id);
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          ...(deliveryFee !== undefined ? { deliveryFee } : {}),
+          ...(note !== undefined ? { note: note ?? null } : {}),
+          ...(currency ? { currency } : {}),
+          ...(source ? { source } : {}),
+          ...(customerId ? { customerId } : {}),
+          totalPrice: subtotal + (deliveryFee ?? order.deliveryFee),
+        },
+      });
 
-    return this.serializeOrder(order.id, { includeHistory: true });
+      return this.serializeOrder(order.id, { includeHistory: true }, tx);
+    });
   }
 
-  changeStatus(
+  async changeStatus(
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
     body: Record<string, unknown>,
   ) {
-    const order = this.requireOrderForShop(currentUser.id, shopId, orderId);
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const status = asEnum(body.status, 'status', this.validStatuses, errors, {
-      required: true,
-      label: 'status',
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const order = await this.requireOrderForShop(tx, shopId, orderId);
+      const errors: Array<{ field: string; errors: string[] }> = [];
+      const status = asEnum(body.status, 'status', this.validStatuses, errors, {
+        required: true,
+        label: 'status',
+      });
+      const note = optionalString(body.note, 'note', errors, 'note') ?? null;
+      assertValid(errors);
+
+      if (!status) {
+        throw conflictError('Status is required');
+      }
+
+      if (order.status === status) {
+        throw conflictError(`Order status already ${status}`);
+      }
+
+      this.assertValidTransition(order.status, status);
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status },
+      });
+      await tx.orderStatusEvent.create({
+        data: {
+          id: generateId('evt'),
+          orderId: order.id,
+          fromStatus: order.status,
+          toStatus: status,
+          changedByUserId: currentUser.id,
+          note,
+        },
+      });
+
+      return this.serializeOrder(order.id, { includeHistory: true }, tx);
     });
-    const note = optionalString(body.note, 'note', errors, 'note') ?? null;
-    assertValid(errors);
-
-    if (!status) {
-      throw conflictError('Status is required');
-    }
-
-    if (order.status === status) {
-      throw conflictError(`Order status already ${status}`);
-    }
-
-    this.assertValidTransition(order.status, status);
-    const previousStatus = order.status;
-    order.status = status;
-    order.updatedAt = this.store.now();
-
-    this.store.orderStatusEvents.push({
-      id: this.store.generateId('evt'),
-      orderId: order.id,
-      fromStatus: previousStatus,
-      toStatus: status,
-      changedByUserId: currentUser.id,
-      changedAt: order.updatedAt,
-      note,
-    });
-
-    return this.serializeOrder(order.id, { includeHistory: true });
   }
 
-  addItem(
+  async addItem(
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
     body: Record<string, unknown>,
   ) {
-    const order = this.requireOrderForShop(currentUser.id, shopId, orderId);
-    const item = this.parseItem(body, 'item');
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    const created = {
-      id: this.store.generateId('item'),
-      orderId: order.id,
-      productId: null,
-      productName: item.productName,
-      qty: item.qty,
-      unitPrice: item.unitPrice,
-      lineTotal: item.qty * item.unitPrice,
-    };
-    this.store.orderItems.push(created);
-    this.recalculateTotal(order.id);
-    order.updatedAt = this.store.now();
+    return this.prisma.$transaction(async (tx) => {
+      const order = await this.requireOrderForShop(tx, shopId, orderId);
+      const item = this.parseItem(body, 'item');
 
-    return this.serializeItem(created.id);
+      const created = await tx.orderItem.create({
+        data: {
+          id: generateId('item'),
+          orderId: order.id,
+          productName: item.productName,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          lineTotal: item.qty * item.unitPrice,
+        },
+      });
+
+      const subtotal = await this.sumOrderItems(tx, order.id);
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          totalPrice: subtotal + order.deliveryFee,
+        },
+      });
+
+      return this.serializeItemRecord(created);
+    });
   }
 
-  updateItem(
+  async updateItem(
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
     itemId: string,
     body: Record<string, unknown>,
   ) {
-    const order = this.requireOrderForShop(currentUser.id, shopId, orderId);
-    const item = this.store.orderItems.find(
-      (entry) => entry.id === itemId && entry.orderId === order.id,
-    );
-    if (!item) {
-      throw notFoundError('Order item not found');
-    }
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const productName = optionalString(
-      body.product_name,
-      'product_name',
-      errors,
-      'product name',
-    );
-    const qty = optionalNumber(body.qty, 'qty', errors, {
-      min: 1,
-      integer: true,
-      label: 'quantity',
+    return this.prisma.$transaction(async (tx) => {
+      const order = await this.requireOrderForShop(tx, shopId, orderId);
+      const item = await tx.orderItem.findFirst({
+        where: {
+          id: itemId,
+          orderId: order.id,
+        },
+      });
+      if (!item) {
+        throw notFoundError('Order item not found');
+      }
+
+      const errors: Array<{ field: string; errors: string[] }> = [];
+      const productName = optionalString(
+        body.product_name,
+        'product_name',
+        errors,
+        'product name',
+      );
+      const qty = optionalNumber(body.qty, 'qty', errors, {
+        min: 1,
+        integer: true,
+        label: 'quantity',
+      });
+      const unitPrice = optionalNumber(body.unit_price, 'unit_price', errors, {
+        min: 0,
+        label: 'unit price',
+      });
+      assertValid(errors);
+
+      const updated = await tx.orderItem.update({
+        where: { id: item.id },
+        data: {
+          ...(productName ? { productName } : {}),
+          ...(qty !== undefined ? { qty } : {}),
+          ...(unitPrice !== undefined ? { unitPrice } : {}),
+          lineTotal: (qty ?? item.qty) * (unitPrice ?? item.unitPrice),
+        },
+      });
+
+      const subtotal = await this.sumOrderItems(tx, order.id);
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          totalPrice: subtotal + order.deliveryFee,
+        },
+      });
+
+      return this.serializeItemRecord(updated);
     });
-    const unitPrice = optionalNumber(body.unit_price, 'unit_price', errors, {
-      min: 0,
-      label: 'unit price',
-    });
-    assertValid(errors);
-
-    if (productName) {
-      item.productName = productName;
-    }
-    if (qty !== undefined) {
-      item.qty = qty;
-    }
-    if (unitPrice !== undefined) {
-      item.unitPrice = unitPrice;
-    }
-    item.lineTotal = item.qty * item.unitPrice;
-
-    this.recalculateTotal(order.id);
-    order.updatedAt = this.store.now();
-
-    return this.serializeItem(item.id);
   }
 
-  removeItem(
+  async removeItem(
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
     itemId: string,
   ) {
-    const order = this.requireOrderForShop(currentUser.id, shopId, orderId);
-    const orderItems = this.store.orderItems.filter(
-      (item) => item.orderId === order.id,
-    );
-    if (orderItems.length <= 1) {
-      throw conflictError('Order must contain at least one item');
-    }
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    const index = this.store.orderItems.findIndex(
-      (item) => item.id === itemId && item.orderId === order.id,
-    );
-    if (index < 0) {
-      throw notFoundError('Order item not found');
-    }
+    await this.prisma.$transaction(async (tx) => {
+      const order = await this.requireOrderForShop(tx, shopId, orderId);
+      const orderItems = await tx.orderItem.findMany({
+        where: { orderId: order.id },
+      });
+      if (orderItems.length <= 1) {
+        throw conflictError('Order must contain at least one item');
+      }
 
-    this.store.orderItems.splice(index, 1);
-    this.recalculateTotal(order.id);
-    order.updatedAt = this.store.now();
+      const item = orderItems.find((entry) => entry.id === itemId);
+      if (!item) {
+        throw notFoundError('Order item not found');
+      }
+
+      await tx.orderItem.delete({
+        where: { id: item.id },
+      });
+      const subtotal = await this.sumOrderItems(tx, order.id);
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          totalPrice: subtotal + order.deliveryFee,
+        },
+      });
+    });
   }
 
-  serializeOrder(orderId: string, options?: { includeHistory?: boolean }) {
-    const order = this.store.findOrderById(orderId);
+  async serializeOrder(
+    orderId: string,
+    options?: { includeHistory?: boolean },
+    db: DbClient = this.prisma,
+  ) {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        items: true,
+        statusEvents: {
+          include: { changedByUser: true },
+          orderBy: { changedAt: 'desc' },
+        },
+      },
+    });
     if (!order) {
       throw notFoundError('Order not found');
     }
 
-    const customer = this.requireCustomer(order.customerId);
-    const items = this.store.orderItems
-      .filter((item) => item.orderId === order.id)
-      .map((item) => this.serializeItem(item.id));
-    const statusHistory = this.store.orderStatusEvents
-      .filter((event) => event.orderId === order.id)
-      .sort((left, right) => right.changedAt.localeCompare(left.changedAt))
-      .map((event) => {
-        const actor = this.store.findUserById(event.changedByUserId);
-        return {
-          id: event.id,
-          from_status: event.fromStatus,
-          to_status: event.toStatus,
-          changed_at: event.changedAt,
-          note: event.note,
-          changed_by: actor
-            ? {
-                id: actor.id,
-                name: actor.name,
-              }
-            : null,
-        };
-      });
+    return this.serializeOrderRecord(order, options);
+  }
 
+  async serializeItem(itemId: string, db: DbClient = this.prisma) {
+    const item = await db.orderItem.findUnique({
+      where: { id: itemId },
+    });
+    if (!item) {
+      throw notFoundError('Order item not found');
+    }
+
+    return this.serializeItemRecord(item);
+  }
+
+  private serializeOrderRecord(order: any, options?: { includeHistory?: boolean }) {
     const response = {
       id: order.id,
       shop_id: order.shopId,
@@ -437,32 +491,39 @@ export class OrdersService {
       delivery_fee: order.deliveryFee,
       note: order.note,
       source: order.source,
-      created_at: order.createdAt,
-      updated_at: order.updatedAt,
+      created_at: order.createdAt.toISOString(),
+      updated_at: order.updatedAt.toISOString(),
       customer: {
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        township: customer.township,
-        address: customer.address,
+        id: order.customer.id,
+        name: order.customer.name,
+        phone: order.customer.phone,
+        township: order.customer.township,
+        address: order.customer.address,
       },
-      items,
+      items: order.items.map((item: any) => this.serializeItemRecord(item)),
     };
 
     return options?.includeHistory
       ? {
           ...response,
-          status_history: statusHistory,
+          status_history: order.statusEvents.map((event: any) => ({
+            id: event.id,
+            from_status: event.fromStatus,
+            to_status: event.toStatus,
+            changed_at: event.changedAt.toISOString(),
+            note: event.note,
+            changed_by: event.changedByUser
+              ? {
+                  id: event.changedByUser.id,
+                  name: event.changedByUser.name,
+                }
+              : null,
+          })),
         }
       : response;
   }
 
-  serializeItem(itemId: string) {
-    const item = this.store.orderItems.find((entry) => entry.id === itemId);
-    if (!item) {
-      throw notFoundError('Order item not found');
-    }
-
+  private serializeItemRecord(item: any) {
     return {
       id: item.id,
       order_id: item.orderId,
@@ -474,10 +535,11 @@ export class OrdersService {
     };
   }
 
-  private resolveCustomer(
+  private async resolveCustomer(
+    db: DbClient,
     shopId: string,
     body: Record<string, unknown>,
-  ): CustomerRecord {
+  ) {
     const errors: Array<{ field: string; errors: string[] }> = [];
     const customerId = optionalString(
       body.customer_id,
@@ -487,7 +549,7 @@ export class OrdersService {
     );
     if (customerId) {
       assertValid(errors);
-      const customer = this.requireCustomer(customerId);
+      const customer = await this.requireCustomer(db, customerId);
       if (customer.shopId !== shopId) {
         throw conflictError('Customer does not belong to this shop');
       }
@@ -516,22 +578,34 @@ export class OrdersService {
     );
     assertValid(errors);
 
-    const existing = this.store.customers.find(
-      (customer) => customer.shopId === shopId && customer.phone === phone,
-    );
+    const existing = await db.customer.findUnique({
+      where: {
+        shopId_phone: {
+          shopId,
+          phone,
+        },
+      },
+    });
     if (existing) {
-      existing.name = name;
-      existing.township = township ?? existing.township;
-      existing.address = address ?? existing.address;
-      return existing;
+      return db.customer.update({
+        where: { id: existing.id },
+        data: {
+          name,
+          township: township ?? existing.township,
+          address: address ?? existing.address,
+        },
+      });
     }
 
-    return this.store.createCustomer({
-      shopId,
-      name,
-      phone,
-      township,
-      address,
+    return db.customer.create({
+      data: {
+        id: generateId('cus'),
+        shopId,
+        name,
+        phone,
+        township: township ?? null,
+        address: address ?? null,
+      },
     });
   }
 
@@ -592,46 +666,58 @@ export class OrdersService {
     return { productName, qty, unitPrice };
   }
 
-  private requireOrderForShop(userId: string, shopId: string, orderId: string) {
-    this.shopsService.assertShopAccess(userId, shopId);
-    const order = this.store.findOrderById(orderId);
+  private async requireOrderForShop(db: DbClient, shopId: string, orderId: string) {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+    });
     if (!order || order.shopId !== shopId) {
       throw notFoundError('Order not found');
     }
     return order;
   }
 
-  private requireCustomer(customerId: string) {
-    const customer = this.store.findCustomerById(customerId);
+  private async requireCustomer(db: DbClient, customerId: string) {
+    const customer = await db.customer.findUnique({
+      where: { id: customerId },
+    });
     if (!customer) {
       throw notFoundError('Customer not found');
     }
     return customer;
   }
 
-  private recalculateTotal(orderId: string): void {
-    const order = this.store.findOrderById(orderId);
-    if (!order) {
-      throw notFoundError('Order not found');
-    }
-
-    const subtotal = this.store.orderItems
-      .filter((item) => item.orderId === orderId)
-      .reduce((sum, item) => sum + item.lineTotal, 0);
-    order.totalPrice = subtotal + order.deliveryFee;
+  private async sumOrderItems(db: DbClient, orderId: string): Promise<number> {
+    const items = await db.orderItem.findMany({
+      where: { orderId },
+      select: { lineTotal: true },
+    });
+    return items.reduce((sum, item) => sum + item.lineTotal, 0);
   }
 
-  private matchesStatus(
-    orderStatus: OrderStatus,
-    requestedStatus: string,
-  ): boolean {
+  private async nextOrderNumber(db: DbClient, shopId: string): Promise<string> {
+    const orders = await db.order.findMany({
+      where: { shopId },
+      select: { orderNo: true },
+    });
+    const maxOrderSequence = orders.reduce((max, order) => {
+      const match = order.orderNo.match(/ORD-(\d+)/);
+      if (!match) {
+        return max;
+      }
+      return Math.max(max, Number.parseInt(match[1] ?? '0', 10));
+    }, 240);
+
+    return `ORD-${String(maxOrderSequence + 1).padStart(4, '0')}`;
+  }
+
+  private matchesStatus(orderStatus: string, requestedStatus: string): boolean {
     if (requestedStatus === 'pending') {
       return ['new', 'confirmed', 'out_for_delivery'].includes(orderStatus);
     }
     return orderStatus === requestedStatus;
   }
 
-  private assertValidTransition(current: OrderStatus, next: OrderStatus): void {
+  private assertValidTransition(current: string, next: string): void {
     if (current === 'delivered' || current === 'cancelled') {
       throw conflictError(`Order status already ${current}`);
     }
@@ -640,7 +726,7 @@ export class OrdersService {
       return;
     }
 
-    const rank: Record<OrderStatus, number> = {
+    const rank: Record<string, number> = {
       new: 0,
       confirmed: 1,
       out_for_delivery: 2,
@@ -655,10 +741,18 @@ export class OrdersService {
     }
   }
 
-  private resolveReferenceDate(shopId: string, timeZone: string): string {
-    const latest = this.store.orders
-      .filter((order) => order.shopId === shopId)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
-    return toLocalDate(latest?.createdAt ?? this.store.now(), timeZone);
+  private async resolveReferenceDate(
+    shopId: string,
+    timeZone: string,
+  ): Promise<string> {
+    const latest = await this.prisma.order.findFirst({
+      where: { shopId },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    return toLocalDate(
+      latest?.createdAt.toISOString() ?? new Date().toISOString(),
+      timeZone,
+    );
   }
 }
