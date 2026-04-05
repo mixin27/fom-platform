@@ -313,6 +313,86 @@ describe('Facebook Order Manager API (e2e)', () => {
     });
   });
 
+  dbIt('creates an order with nested customer and typed items', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/shops/shop_ma_aye/orders',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+      payload: {
+        customer: {
+          name: 'Daw New Customer',
+          phone: '09 7777 0000',
+          township: 'Bahan',
+          address: 'No. 7, Example Street, Bahan, Yangon',
+        },
+        items: [
+          {
+            product_name: 'T-shirt',
+            qty: 1,
+            unit_price: 12000,
+          },
+          {
+            product_name: 'Cap',
+            qty: 2,
+            unit_price: 8000,
+          },
+        ],
+        delivery_fee: 3000,
+        currency: 'MMK',
+        source: 'manual',
+        note: 'Deliver after 5pm',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.objectContaining({
+        order_no: expect.stringMatching(/^ORD-\d+$/),
+        status: 'new',
+        total_price: 31000,
+        customer: expect.objectContaining({
+          name: 'Daw New Customer',
+          phone: '09 7777 0000',
+        }),
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            product_name: 'T-shirt',
+            qty: 1,
+            unit_price: 12000,
+          }),
+          expect.objectContaining({
+            product_name: 'Cap',
+            qty: 2,
+            unit_price: 8000,
+          }),
+        ]),
+      }),
+    );
+    expect(body.data.status_history).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          to_status: 'new',
+        }),
+      ]),
+    );
+  });
+
   dbIt('enforces RBAC for member management', async () => {
     const loginResponse = await app.inject({
       method: 'POST',

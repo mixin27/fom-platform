@@ -1,30 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { paged } from '../common/http/api-result';
-import { PrismaService } from '../common/prisma/prisma.service';
-import type { AuthenticatedUser } from '../common/http/request-context';
 import {
   conflictError,
   notFoundError,
+  validationError,
 } from '../common/http/app-http.exception';
+import { paged } from '../common/http/api-result';
+import type { AuthenticatedUser } from '../common/http/request-context';
+import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate } from '../common/utils/dates';
-import { generateId } from '../common/utils/id';
 import { paginate } from '../common/utils/pagination';
-import {
-  assertValid,
-  asEnum,
-  isRecord,
-  optionalNumber,
-  optionalString,
-  requiredArray,
-  requiredNumber,
-  requiredRecord,
-  requiredString,
-} from '../common/utils/validation';
 import { ShopsService } from '../shops/shops.service';
+import { AddOrderItemDto } from './dto/add-order-item.dto';
+import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import {
+  orderStatuses,
+  type OrderStatusValue,
+} from './dto/order.constants';
+import { UpdateOrderDto } from './dto/update-order.dto';
+import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 
 type DbClient = PrismaService | any;
 
 type NewOrderItem = {
+  productId?: string | null;
   productName: string;
   qty: number;
   unitPrice: number;
@@ -32,13 +32,7 @@ type NewOrderItem = {
 
 @Injectable()
 export class OrdersService {
-  private readonly validStatuses = [
-    'new',
-    'confirmed',
-    'out_for_delivery',
-    'delivered',
-    'cancelled',
-  ] as const;
+  private readonly validStatuses = orderStatuses;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -48,18 +42,15 @@ export class OrdersService {
   async listOrders(
     currentUser: AuthenticatedUser,
     shopId: string,
-    query: Record<string, unknown>,
+    query: ListOrdersQueryDto,
   ) {
     const { shop } = await this.shopsService.assertShopAccess(
       currentUser.id,
       shopId,
     );
-    const requestedStatus =
-      typeof query.status === 'string' ? query.status.trim() : undefined;
-    const requestedDate =
-      typeof query.date === 'string' ? query.date.trim() : undefined;
-    const search =
-      typeof query.search === 'string' ? query.search.trim().toLowerCase() : '';
+    const requestedStatus = query.status;
+    const requestedDate = query.date;
+    const search = query.search?.toLowerCase() ?? '';
 
     let orders = await this.prisma.order.findMany({
       where: { shopId },
@@ -82,7 +73,9 @@ export class OrdersService {
           ? await this.resolveReferenceDate(shopId, shop.timezone)
           : requestedDate;
       orders = orders.filter(
-        (order) => toLocalDate(order.createdAt.toISOString(), shop.timezone) === targetDate,
+        (order) =>
+          toLocalDate(order.createdAt.toISOString(), shop.timezone) ===
+          targetDate,
       );
     }
 
@@ -103,42 +96,25 @@ export class OrdersService {
     }
 
     const serialized = orders.map((order) => this.serializeOrderRecord(order));
-    const page = paginate(
-      serialized,
-      query.limit as string | undefined,
-      query.cursor as string | undefined,
-    );
+    const page = paginate(serialized, query.limit, query.cursor);
     return paged(page.items, page.pagination);
   }
 
   async createOrder(
     currentUser: AuthenticatedUser,
     shopId: string,
-    body: Record<string, unknown>,
+    body: CreateOrderDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
     return this.prisma.$transaction(async (tx) => {
       const customer = await this.resolveCustomer(tx, shopId, body);
       const items = this.extractItems(body);
-      const errors: Array<{ field: string; errors: string[] }> = [];
-      const deliveryFee =
-        optionalNumber(body.delivery_fee, 'delivery_fee', errors, {
-          min: 0,
-          label: 'delivery fee',
-        }) ?? 0;
-      const note = optionalString(body.note, 'note', errors, 'note') ?? null;
-      const currency =
-        optionalString(body.currency, 'currency', errors, 'currency') ?? 'MMK';
-      const source =
-        asEnum(body.source, 'source', ['messenger', 'manual'] as const, errors, {
-          label: 'source',
-        }) ?? 'manual';
-      const status =
-        asEnum(body.status, 'status', this.validStatuses, errors, {
-          label: 'status',
-        }) ?? 'new';
-      assertValid(errors);
+      const deliveryFee = body.delivery_fee ?? 0;
+      const note = body.note ?? null;
+      const currency = body.currency ?? 'MMK';
+      const source = body.source ?? 'manual';
+      const status = body.status ?? 'new';
 
       const subtotal = items.reduce(
         (sum, item) => sum + item.qty * item.unitPrice,
@@ -146,7 +122,6 @@ export class OrdersService {
       );
       const order = await tx.order.create({
         data: {
-          id: generateId('ord'),
           shopId,
           customerId: customer.id,
           orderNo: await this.nextOrderNumber(tx, shopId),
@@ -158,7 +133,7 @@ export class OrdersService {
           source,
           items: {
             create: items.map((item) => ({
-              id: generateId('item'),
+              productId: item.productId ?? null,
               productName: item.productName,
               qty: item.qty,
               unitPrice: item.unitPrice,
@@ -167,7 +142,6 @@ export class OrdersService {
           },
           statusEvents: {
             create: {
-              id: generateId('evt'),
               fromStatus: null,
               toStatus: status,
               changedByUserId: currentUser.id,
@@ -203,48 +177,30 @@ export class OrdersService {
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
-    body: Record<string, unknown>,
+    body: UpdateOrderDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
     return this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
-      const errors: Array<{ field: string; errors: string[] }> = [];
-      const deliveryFee = optionalNumber(
-        body.delivery_fee,
-        'delivery_fee',
-        errors,
-        {
-          min: 0,
-          label: 'delivery fee',
-        },
-      );
-      const note = optionalString(body.note, 'note', errors, 'note');
-      const currency = optionalString(
-        body.currency,
-        'currency',
-        errors,
-        'currency',
-      );
-      const source = asEnum(
-        body.source,
-        'source',
-        ['messenger', 'manual'] as const,
-        errors,
-        {
-          label: 'source',
-        },
-      );
-      const customerId = optionalString(
-        body.customer_id,
-        'customer_id',
-        errors,
-        'customer ID',
-      );
-      assertValid(errors);
 
-      if (customerId) {
-        const customer = await this.requireCustomer(tx, customerId);
+      if (
+        body.delivery_fee === undefined &&
+        body.note === undefined &&
+        body.currency === undefined &&
+        body.source === undefined &&
+        body.customer_id === undefined
+      ) {
+        throw validationError([
+          {
+            field: 'body',
+            errors: ['Provide at least one field to update'],
+          },
+        ]);
+      }
+
+      if (body.customer_id) {
+        const customer = await this.requireCustomer(tx, body.customer_id);
         if (customer.shopId !== shopId) {
           throw conflictError('Customer does not belong to this shop');
         }
@@ -254,12 +210,16 @@ export class OrdersService {
       await tx.order.update({
         where: { id: order.id },
         data: {
-          ...(deliveryFee !== undefined ? { deliveryFee } : {}),
-          ...(note !== undefined ? { note: note ?? null } : {}),
-          ...(currency ? { currency } : {}),
-          ...(source ? { source } : {}),
-          ...(customerId ? { customerId } : {}),
-          totalPrice: subtotal + (deliveryFee ?? order.deliveryFee),
+          ...(body.delivery_fee !== undefined
+            ? { deliveryFee: body.delivery_fee }
+            : {}),
+          ...(body.note !== undefined ? { note: body.note ?? null } : {}),
+          ...(body.currency !== undefined ? { currency: body.currency } : {}),
+          ...(body.source !== undefined ? { source: body.source } : {}),
+          ...(body.customer_id !== undefined
+            ? { customerId: body.customer_id }
+            : {}),
+          totalPrice: subtotal + (body.delivery_fee ?? order.deliveryFee),
         },
       });
 
@@ -271,23 +231,14 @@ export class OrdersService {
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
-    body: Record<string, unknown>,
+    body: ChangeOrderStatusDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
     return this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
-      const errors: Array<{ field: string; errors: string[] }> = [];
-      const status = asEnum(body.status, 'status', this.validStatuses, errors, {
-        required: true,
-        label: 'status',
-      });
-      const note = optionalString(body.note, 'note', errors, 'note') ?? null;
-      assertValid(errors);
-
-      if (!status) {
-        throw conflictError('Status is required');
-      }
+      const status = body.status;
+      const note = body.note ?? null;
 
       if (order.status === status) {
         throw conflictError(`Order status already ${status}`);
@@ -301,7 +252,6 @@ export class OrdersService {
       });
       await tx.orderStatusEvent.create({
         data: {
-          id: generateId('evt'),
           orderId: order.id,
           fromStatus: order.status,
           toStatus: status,
@@ -318,18 +268,18 @@ export class OrdersService {
     currentUser: AuthenticatedUser,
     shopId: string,
     orderId: string,
-    body: Record<string, unknown>,
+    body: AddOrderItemDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
     return this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
-      const item = this.parseItem(body, 'item');
+      const item = this.toNewOrderItem(body);
 
       const created = await tx.orderItem.create({
         data: {
-          id: generateId('item'),
           orderId: order.id,
+          productId: item.productId ?? null,
           productName: item.productName,
           qty: item.qty,
           unitPrice: item.unitPrice,
@@ -354,7 +304,7 @@ export class OrdersService {
     shopId: string,
     orderId: string,
     itemId: string,
-    body: Record<string, unknown>,
+    body: UpdateOrderItemDto,
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
@@ -370,31 +320,34 @@ export class OrdersService {
         throw notFoundError('Order item not found');
       }
 
-      const errors: Array<{ field: string; errors: string[] }> = [];
-      const productName = optionalString(
-        body.product_name,
-        'product_name',
-        errors,
-        'product name',
-      );
-      const qty = optionalNumber(body.qty, 'qty', errors, {
-        min: 1,
-        integer: true,
-        label: 'quantity',
-      });
-      const unitPrice = optionalNumber(body.unit_price, 'unit_price', errors, {
-        min: 0,
-        label: 'unit price',
-      });
-      assertValid(errors);
+      if (
+        body.product_id === undefined &&
+        body.product_name === undefined &&
+        body.qty === undefined &&
+        body.unit_price === undefined
+      ) {
+        throw validationError([
+          {
+            field: 'body',
+            errors: ['Provide at least one field to update'],
+          },
+        ]);
+      }
 
       const updated = await tx.orderItem.update({
         where: { id: item.id },
         data: {
-          ...(productName ? { productName } : {}),
-          ...(qty !== undefined ? { qty } : {}),
-          ...(unitPrice !== undefined ? { unitPrice } : {}),
-          lineTotal: (qty ?? item.qty) * (unitPrice ?? item.unitPrice),
+          ...(body.product_id !== undefined
+            ? { productId: body.product_id ?? null }
+            : {}),
+          ...(body.product_name !== undefined
+            ? { productName: body.product_name }
+            : {}),
+          ...(body.qty !== undefined ? { qty: body.qty } : {}),
+          ...(body.unit_price !== undefined
+            ? { unitPrice: body.unit_price }
+            : {}),
+          lineTotal: (body.qty ?? item.qty) * (body.unit_price ?? item.unitPrice),
         },
       });
 
@@ -479,7 +432,10 @@ export class OrdersService {
     return this.serializeItemRecord(item);
   }
 
-  private serializeOrderRecord(order: any, options?: { includeHistory?: boolean }) {
+  private serializeOrderRecord(
+    order: any,
+    options?: { includeHistory?: boolean },
+  ) {
     const response = {
       id: order.id,
       shop_id: order.shopId,
@@ -538,46 +494,49 @@ export class OrdersService {
   private async resolveCustomer(
     db: DbClient,
     shopId: string,
-    body: Record<string, unknown>,
+    body: CreateOrderDto,
   ) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const customerId = optionalString(
-      body.customer_id,
-      'customer_id',
-      errors,
-      'customer ID',
-    );
-    if (customerId) {
-      assertValid(errors);
-      const customer = await this.requireCustomer(db, customerId);
+    if (body.customer_id) {
+      const customer = await this.requireCustomer(db, body.customer_id);
       if (customer.shopId !== shopId) {
         throw conflictError('Customer does not belong to this shop');
       }
       return customer;
     }
 
-    const source = isRecord(body.customer) ? body.customer : body;
-    const name = requiredString(
-      source.customer_name ?? source.name,
-      'customer_name',
-      errors,
-      'customer name',
-    );
-    const phone = requiredString(source.phone, 'phone', errors, 'phone number');
-    const township = optionalString(
-      source.township,
-      'township',
-      errors,
-      'township',
-    );
-    const address = optionalString(
-      source.address,
-      'address',
-      errors,
-      'address',
-    );
-    assertValid(errors);
+    const inlineCustomer = body.customer
+      ? {
+          name: body.customer.name,
+          phone: body.customer.phone,
+          township: body.customer.township,
+          address: body.customer.address,
+        }
+      : {
+          name: body.customer_name,
+          phone: body.phone,
+          township: body.township,
+          address: body.address,
+        };
 
+    const errors: Array<{ field: string; errors: string[] }> = [];
+    if (!inlineCustomer.name) {
+      errors.push({
+        field: body.customer ? 'customer.name' : 'customer_name',
+        errors: ['Customer name is required'],
+      });
+    }
+    if (!inlineCustomer.phone) {
+      errors.push({
+        field: body.customer ? 'customer.phone' : 'phone',
+        errors: ['Phone number is required'],
+      });
+    }
+    if (errors.length > 0 || !inlineCustomer.name || !inlineCustomer.phone) {
+      throw validationError(errors);
+    }
+
+    const name = inlineCustomer.name;
+    const phone = this.normalizePhone(inlineCustomer.phone);
     const existing = await db.customer.findUnique({
       where: {
         shopId_phone: {
@@ -591,82 +550,75 @@ export class OrdersService {
         where: { id: existing.id },
         data: {
           name,
-          township: township ?? existing.township,
-          address: address ?? existing.address,
+          township: inlineCustomer.township ?? existing.township,
+          address: inlineCustomer.address ?? existing.address,
         },
       });
     }
 
     return db.customer.create({
       data: {
-        id: generateId('cus'),
         shopId,
         name,
         phone,
-        township: township ?? null,
-        address: address ?? null,
+        township: inlineCustomer.township ?? null,
+        address: inlineCustomer.address ?? null,
       },
     });
   }
 
-  private extractItems(body: Record<string, unknown>): NewOrderItem[] {
+  private extractItems(body: CreateOrderDto): NewOrderItem[] {
+    if (body.items && body.items.length > 0) {
+      return body.items.map((item) => this.toNewOrderItem(item));
+    }
+
     const errors: Array<{ field: string; errors: string[] }> = [];
-
-    if (body.items !== undefined) {
-      const rawItems = requiredArray(body.items, 'items', errors, 'items');
-      const items = rawItems.map((rawItem, index) => {
-        const record = requiredRecord(
-          rawItem,
-          `items.${index}`,
-          errors,
-          `item ${index + 1}`,
-        );
-        return this.parseItem(record, `items.${index}`, errors);
+    if (body.product_name === undefined) {
+      errors.push({
+        field: 'product_name',
+        errors: ['Product name is required when items is omitted'],
       });
-      assertValid(errors);
-      return items;
+    }
+    if (body.qty === undefined) {
+      errors.push({
+        field: 'qty',
+        errors: ['Quantity is required when items is omitted'],
+      });
+    }
+    if (body.unit_price === undefined) {
+      errors.push({
+        field: 'unit_price',
+        errors: ['Unit price is required when items is omitted'],
+      });
+    }
+    if (errors.length > 0) {
+      throw validationError(errors);
     }
 
-    const item = this.parseItem(body, 'item', errors);
-    assertValid(errors);
-    return [item];
+    return [
+      this.toNewOrderItem({
+        product_id: body.product_id,
+        product_name: body.product_name!,
+        qty: body.qty!,
+        unit_price: body.unit_price!,
+      }),
+    ];
   }
 
-  private parseItem(
-    value: Record<string, unknown>,
-    fieldPrefix: string,
-    inheritedErrors?: Array<{ field: string; errors: string[] }>,
-  ): NewOrderItem {
-    const errors = inheritedErrors ?? [];
-    const productName = requiredString(
-      value.product_name ?? value.productName,
-      `${fieldPrefix}.product_name`,
-      errors,
-      'product name',
-    );
-    const qty = requiredNumber(value.qty, `${fieldPrefix}.qty`, errors, {
-      min: 1,
-      integer: true,
-      label: 'quantity',
-    });
-    const unitPrice = requiredNumber(
-      value.unit_price ?? value.unitPrice,
-      `${fieldPrefix}.unit_price`,
-      errors,
-      {
-        min: 0,
-        label: 'unit price',
-      },
-    );
-
-    if (!inheritedErrors) {
-      assertValid(errors);
-    }
-
-    return { productName, qty, unitPrice };
+  private toNewOrderItem(item: AddOrderItemDto): NewOrderItem {
+    return {
+      productId: item.product_id ?? null,
+      productName: item.product_name,
+      qty: item.qty,
+      unitPrice: item.unit_price,
+    };
   }
 
-  private async requireOrderForShop(db: DbClient, shopId: string, orderId: string) {
+  private async requireOrderForShop(
+    db: DbClient,
+    shopId: string,
+    orderId: string,
+  ) {
     const order = await db.order.findUnique({
       where: { id: orderId },
     });
@@ -710,14 +662,17 @@ export class OrdersService {
     return `ORD-${String(maxOrderSequence + 1).padStart(4, '0')}`;
   }
 
-  private matchesStatus(orderStatus: string, requestedStatus: string): boolean {
+  private matchesStatus(
+    orderStatus: string,
+    requestedStatus: ListOrdersQueryDto['status'],
+  ): boolean {
     if (requestedStatus === 'pending') {
       return ['new', 'confirmed', 'out_for_delivery'].includes(orderStatus);
     }
     return orderStatus === requestedStatus;
   }
 
-  private assertValidTransition(current: string, next: string): void {
+  private assertValidTransition(current: string, next: OrderStatusValue): void {
     if (current === 'delivered' || current === 'cancelled') {
       throw conflictError(`Order status already ${current}`);
     }
@@ -726,7 +681,7 @@ export class OrdersService {
       return;
     }
 
-    const rank: Record<string, number> = {
+    const rank: Record<OrderStatusValue, number> = {
       new: 0,
       confirmed: 1,
       out_for_delivery: 2,
@@ -734,7 +689,7 @@ export class OrdersService {
       cancelled: 4,
     };
 
-    if (rank[next] < rank[current]) {
+    if (rank[next] < rank[current as OrderStatusValue]) {
       throw conflictError(
         `Cannot move order status backwards from ${current} to ${next}`,
       );
@@ -754,5 +709,9 @@ export class OrdersService {
       latest?.createdAt.toISOString() ?? new Date().toISOString(),
       timeZone,
     );
+  }
+
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\s+/g, ' ').trim();
   }
 }

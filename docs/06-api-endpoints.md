@@ -84,6 +84,19 @@ Customer write notes:
 | PATCH  | /shops/{shopId}/orders/{orderId}        | Update order             | 200 Single Order |
 | POST   | /shops/{shopId}/orders/{orderId}/status | Change status            | 200 Single Order |
 
+Order list filters:
+
+- `status`: `pending`, `new`, `confirmed`, `out_for_delivery`, `delivered`, `cancelled`
+- `date`: `today` or a shop-local date in `YYYY-MM-DD`
+- `search`: case-insensitive match across order number, customer fields, and item names
+- `limit` and `cursor`: standard cursor pagination fields
+
+Order write notes:
+
+- `POST /shops/{shopId}/orders` accepts either `customer_id` or inline customer details. The preferred request body uses `customer` plus `items`, while legacy inline customer and single-item fields are still accepted.
+- `PATCH /shops/{shopId}/orders/{orderId}` requires at least one field and accepts `note: null` to clear the note.
+- `POST /shops/{shopId}/orders/{orderId}/status` expects `{ "status": "...", "note": "..." }`.
+
 ## Order Items
 
 | Method | Path                                            | Description       | Response             |
@@ -91,6 +104,11 @@ Customer write notes:
 | POST   | /shops/{shopId}/orders/{orderId}/items          | Add order item    | 201 Single OrderItem |
 | PATCH  | /shops/{shopId}/orders/{orderId}/items/{itemId} | Update order item | 200 Single OrderItem |
 | DELETE | /shops/{shopId}/orders/{orderId}/items/{itemId} | Remove order item | 204 No Content       |
+
+Order item write notes:
+
+- `POST /shops/{shopId}/orders/{orderId}/items` expects `product_name`, `qty`, `unit_price`, and optional `product_id`.
+- `PATCH /shops/{shopId}/orders/{orderId}/items/{itemId}` requires at least one field and accepts `product_id: null` to clear the product reference.
 
 ## Message Templates
 
