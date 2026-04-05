@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Manager — For Facebook Sellers in Myanmar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #FAFAF8;
+  color: #1C1C1E;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── TOKENS ─────────────────────────────────────────────────── */
+:root {
+  --orange:       #F4622A;
+  --orange-light: #FFF2ED;
+  --orange-mid:   #FDDCCC;
+  --orange-hover: #E0521C;
+  --teal:         #1E9E96;
+  --teal-light:   #E6F7F6;
+  --dark:         #0F0F0F;
+  --dark-2:       #1A1A1A;
+  --text:         #1C1C1E;
+  --text-2:       #555558;
+  --text-3:       #96969C;
+  --border:       #E8E8E4;
+  --surface:      #FFFFFF;
+  --bg:           #FAFAF8;
+}
+
+/* ─── TYPOGRAPHY ─────────────────────────────────────────────── */
+.serif   { font-family: 'DM Serif Display', Georgia, serif; }
+.myanmar { font-family: 'Noto Sans Myanmar', 'Padauk', sans-serif; }
+
+/* ─── LAYOUT ─────────────────────────────────────────────────── */
+.container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+section { padding: 96px 0; }
+
+/* ─── NAV ────────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(250,250,248,0.92);
+  backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom: 1px solid var(--border);
+  transition: box-shadow 0.3s;
+}
+.nav-inner {
+  max-width: 1120px; margin: 0 auto; padding: 0 24px;
+  height: 66px; display: flex; align-items: center; gap: 40px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 9px;
+  text-decoration: none;
+}
+.nav-logo-mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--orange);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.nav-logo-mark svg { width: 17px; height: 17px; }
+.nav-logo-name {
+  font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em;
+}
+.nav-links {
+  display: flex; gap: 28px; align-items: center; margin-left: 8px;
+}
+.nav-links a {
+  font-size: 14px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.btn-nav-ghost {
+  font-size: 14px; font-weight: 600; color: var(--text-2);
+  text-decoration: none; padding: 8px 16px; border-radius: 8px;
+  transition: background 0.2s;
+}
+.btn-nav-ghost:hover { background: var(--border); color: var(--text); }
+.btn-nav-cta {
+  font-size: 14px; font-weight: 600; color: white;
+  background: var(--orange); text-decoration: none;
+  padding: 9px 20px; border-radius: 9px;
+  transition: background 0.2s, transform 0.2s;
+  white-space: nowrap;
+}
+.btn-nav-cta:hover { background: var(--orange-hover); transform: translateY(-1px); }
+
+/* ─── HERO ───────────────────────────────────────────────────── */
+.hero {
+  padding: 160px 0 100px;
+  background: var(--dark);
+  position: relative; overflow: hidden;
+}
+.hero-bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.hero-bg-glow {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 55% 65% at 75% -10%, rgba(244,98,42,0.22), transparent 65%),
+    radial-gradient(ellipse 40% 50% at 5% 90%, rgba(30,158,150,0.14), transparent 60%);
+}
+.hero-inner {
+  position: relative; z-index: 2;
+  max-width: 1120px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; gap: 80px;
+}
+.hero-text { flex: 1; max-width: 560px; }
+
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(244,98,42,0.14); border: 1px solid rgba(244,98,42,0.28);
+  color: #FFB088; padding: 6px 14px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  margin-bottom: 28px;
+  animation: fadeUp 0.6s ease both;
+}
+.hero-tag-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--orange);
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.hero-h1 {
+  font-size: clamp(40px, 5.5vw, 66px);
+  font-weight: 400; line-height: 1.08;
+  letter-spacing: -0.03em; color: #FFFFFF;
+  margin-bottom: 8px;
+  animation: fadeUp 0.6s 0.08s ease both;
+}
+.hero-h1 em { font-style: italic; color: var(--orange); }
+
+.hero-mm {
+  font-size: 16px; color: rgba(255,255,255,0.32);
+  margin-bottom: 22px; font-weight: 400;
+  animation: fadeUp 0.6s 0.14s ease both;
+}
+
+.hero-desc {
+  font-size: 17px; line-height: 1.72; font-weight: 400;
+  color: rgba(255,255,255,0.56); max-width: 480px;
+  margin-bottom: 38px;
+  animation: fadeUp 0.6s 0.18s ease both;
+}
+
+.hero-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 48px;
+  animation: fadeUp 0.6s 0.24s ease both;
+}
+.btn-hero-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--orange); color: white;
+  padding: 15px 28px; border-radius: 11px;
+  font-size: 15px; font-weight: 600; text-decoration: none;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 28px rgba(244,98,42,0.36);
+}
+.btn-hero-primary:hover {
+  background: var(--orange-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(244,98,42,0.44);
+}
+.btn-hero-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: rgba(255,255,255,0.72); padding: 15px 24px;
+  border-radius: 11px; font-size: 15px; font-weight: 600;
+  text-decoration: none; border: 1px solid rgba(255,255,255,0.14);
+  transition: background 0.2s, color 0.2s;
+}
+.btn-hero-outline:hover { background: rgba(255,255,255,0.06); color: white; }
+
+.hero-trust {
+  display: flex; flex-wrap: wrap; gap: 20px; align-items: center;
+  animation: fadeUp 0.6s 0.32s ease both;
+}
+.trust-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.38);
+}
+.trust-divider { width: 1px; height: 16px; background: rgba(255,255,255,0.12); }
+
+/* Hero phone mockup */
+.hero-visual {
+  flex-shrink: 0; width: 256px;
+  animation: fadeUp 0.7s 0.28s ease both;
+}
+.phone-frame {
+  background: #1A1A28;
+  border-radius: 36px;
+  border: 1.5px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 48px 96px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.07);
+  padding: 18px 16px 22px;
+  animation: floatPhone 5s ease-in-out infinite;
+}
+@keyframes floatPhone { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+.phone-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.45);
+  margin-bottom: 14px;
+}
+.phone-shop-chip {
+  background: rgba(255,255,255,0.07); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 10px;
+}
+.phone-shop-name { font-size: 12px; font-weight: 700; color: white; }
+.phone-shop-sub  { font-size: 9px; color: rgba(255,255,255,0.38); margin-top: 1px; }
+.phone-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px; margin-bottom: 10px;
+}
+.phone-stat {
+  background: rgba(255,255,255,0.06); border-radius: 8px;
+  padding: 8px 6px; text-align: center;
+}
+.phone-stat-val { font-size: 13px; font-weight: 800; color: white; line-height: 1; }
+.phone-stat-lbl { font-size: 8px; color: rgba(255,255,255,0.35); margin-top: 2px; font-weight: 500; }
+.phone-order {
+  background: rgba(255,255,255,0.06); border-radius: 10px;
+  padding: 9px 10px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+.phone-order-stripe { width: 3px; border-radius: 2px; align-self: stretch; flex-shrink: 0; }
+.phone-order-name { font-size: 10px; font-weight: 700; color: white; flex: 1; }
+.phone-order-price { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.6); }
+.phone-badge { font-size: 7px; font-weight: 800; padding: 2px 6px; border-radius: 99px; }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+/* ─── PROBLEM ─────────────────────────────────────────────────── */
+.problem-section { background: #FFFFFF; border-top: 1px solid var(--border); }
+.section-eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--orange); margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(32px, 3.6vw, 48px);
+  font-weight: 400; line-height: 1.12; letter-spacing: -0.025em;
+  color: var(--text); margin-bottom: 16px;
+}
+.section-title em { font-style: italic; color: var(--orange); }
+.section-body {
+  font-size: 17px; color: var(--text-2); line-height: 1.7; font-weight: 400;
+  max-width: 520px;
+}
+.problem-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 20px; margin-top: 56px;
+}
+.problem-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px;
+  position: relative;
+}
+.problem-card-icon { font-size: 28px; margin-bottom: 14px; }
+.problem-card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+.problem-card-desc  { font-size: 13px; color: var(--text-2); line-height: 1.65; font-weight: 400; }
+.problem-card-x {
+  position: absolute; top: 16px; right: 16px;
+  width: 20px; height: 20px; border-radius: 99px;
+  background: #FEE2E2; color: #EF4444;
+  font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ─── FEATURES ───────────────────────────────────────────────── */
+.features-section { background: var(--bg); }
+.features-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 20px; margin-top: 56px;
+}
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 28px;
+  transition: box-shadow 0.25s, transform 0.25s, border-color 0.25s;
+}
+.feature-card:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+  transform: translateY(-3px);
+  border-color: var(--orange-mid);
+}
+.feature-card.wide { grid-column: span 2; display: flex; gap: 28px; align-items: center; }
+.feature-icon {
+  width: 46px; height: 46px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 16px; flex-shrink: 0;
+}
+.feature-icon.orange { background: var(--orange-light); }
+.feature-icon.teal   { background: var(--teal-light); }
+.feature-icon.slate  { background: #F1F5F9; }
+.feature-card-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.feature-card-mm    { font-size: 11px; color: var(--teal); margin-bottom: 10px; }
+.feature-card-desc  { font-size: 13px; color: var(--text-2); line-height: 1.68; font-weight: 400; }
+.feature-visual {
+  width: 140px; flex-shrink: 0;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px;
+}
+.fv-row {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface); border-radius: 8px;
+  padding: 7px 10px; margin-bottom: 5px;
+}
+.fv-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.fv-line { flex:1; height: 5px; border-radius: 3px; background: var(--border); }
+.fv-tag { font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 99px; white-space: nowrap; }
+
+/* ─── HOW IT WORKS ───────────────────────────────────────────── */
+.howitworks-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.steps-track {
+  display: flex; gap: 0; margin-top: 60px; position: relative;
+}
+.steps-track::before {
+  content: '';
+  position: absolute; top: 33px; left: calc(12.5% + 16px); right: calc(12.5% + 16px);
+  height: 1px; background: var(--border);
+}
+.step-item { flex: 1; text-align: center; padding: 0 20px; }
+.step-num {
+  width: 66px; height: 66px; border-radius: 20px;
+  margin: 0 auto 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700;
+  position: relative; z-index: 1;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.3s;
+}
+.step-item:nth-child(1) .step-num { border-color: var(--orange-mid); color: var(--orange); background: var(--orange-light); }
+.step-item:nth-child(2) .step-num { border-color: #C7D9FF; color: #2563EB; background: #EFF6FF; }
+.step-item:nth-child(3) .step-num { border-color: #DDD6FE; color: #6D28D9; background: #F5F3FF; }
+.step-item:nth-child(4) .step-num { border-color: #BBF7D0; color: #15803D; background: #F0FDF4; }
+.step-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.step-mm    { font-size: 11px; color: var(--teal); margin-bottom: 7px; }
+.step-desc  { font-size: 12px; color: var(--text-2); line-height: 1.65; font-weight: 400; }
+
+/* ─── PRICING ────────────────────────────────────────────────── */
+.pricing-section { background: var(--bg); }
+.pricing-toggle {
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; padding: 4px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+  width: fit-content; margin: 0 auto 48px;
+}
+.toggle-btn {
+  padding: 8px 20px; border-radius: 7px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; background: none; color: var(--text-2);
+  transition: all 0.2s; font-family: inherit;
+}
+.toggle-btn.active { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,0.10); color: var(--text); }
+.pricing-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 18px; max-width: 960px; margin: 0 auto;
+}
+.price-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px 28px;
+  position: relative; overflow: hidden;
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+.price-card:hover { box-shadow: 0 16px 48px rgba(0,0,0,0.09); transform: translateY(-4px); }
+.price-card.featured {
+  background: var(--dark);
+  border-color: transparent;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+  transform: translateY(-8px);
+}
+.price-card.featured:hover { transform: translateY(-12px); }
+
+.price-featured-badge {
+  position: absolute; top: 20px; right: 20px;
+  background: var(--orange); color: white;
+  font-size: 10px; font-weight: 700; padding: 4px 10px;
+  border-radius: 99px; letter-spacing: 0.05em;
+}
+
+.price-plan {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 8px;
+}
+.price-card.featured .price-plan { color: rgba(255,255,255,0.38); }
+
+.price-name {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  margin-bottom: 20px; letter-spacing: -0.02em;
+}
+.price-card.featured .price-name { color: white; }
+
+.price-amount {
+  display: flex; align-items: flex-end; gap: 4px; margin-bottom: 6px;
+}
+.price-num {
+  font-size: 42px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.04em; line-height: 1;
+}
+.price-card.featured .price-num { color: white; }
+.price-currency {
+  font-size: 16px; font-weight: 600; color: var(--text-3);
+  padding-bottom: 6px;
+}
+.price-card.featured .price-currency { color: rgba(255,255,255,0.45); }
+.price-period {
+  font-size: 13px; color: var(--text-3); font-weight: 500;
+  padding-bottom: 7px; margin-left: 2px;
+}
+.price-card.featured .price-period { color: rgba(255,255,255,0.38); }
+.price-sub {
+  font-size: 12px; color: var(--text-3); margin-bottom: 24px; font-weight: 400;
+}
+.price-card.featured .price-sub { color: rgba(255,255,255,0.38); }
+.price-sub.highlight { color: var(--orange); font-weight: 600; }
+
+.price-divider { height: 1px; background: var(--border); margin-bottom: 22px; }
+.price-card.featured .price-divider { background: rgba(255,255,255,0.10); }
+
+.price-features { list-style: none; margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+.price-features li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: var(--text-2); line-height: 1.5; font-weight: 400;
+}
+.price-card.featured .price-features li { color: rgba(255,255,255,0.65); }
+.price-features li.dim { opacity: 0.42; }
+.pf-check { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.pf-cross { font-size: 14px; flex-shrink: 0; margin-top: 1px; color: var(--text-3); }
+
+.price-btn {
+  display: block; width: 100%; padding: 14px;
+  border-radius: 11px; font-size: 14px; font-weight: 600;
+  text-align: center; text-decoration: none; cursor: pointer;
+  border: none; font-family: inherit;
+  transition: all 0.22s;
+}
+.price-btn-orange {
+  background: var(--orange); color: white;
+  box-shadow: 0 6px 20px rgba(244,98,42,0.30);
+}
+.price-btn-orange:hover { background: var(--orange-hover); box-shadow: 0 8px 28px rgba(244,98,42,0.42); transform: translateY(-1px); }
+.price-btn-outline {
+  background: transparent; color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.price-btn-outline:hover { background: var(--bg); border-color: var(--border); }
+.price-btn-teal {
+  background: var(--teal-light); color: var(--teal);
+}
+.price-btn-teal:hover { background: #C8EFED; }
+
+.pricing-footer {
+  text-align: center; margin-top: 28px;
+  font-size: 13px; color: var(--text-3); line-height: 1.7;
+}
+.pricing-footer strong { color: var(--text-2); }
+
+/* ─── TESTIMONIALS ───────────────────────────────────────────── */
+.testimonials-section { background: var(--surface); border-top: 1px solid var(--border); }
+.testimonials-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 20px; margin-top: 52px;
+}
+.testimonial-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 18px; padding: 26px;
+}
+.tc-stars { color: var(--orange); font-size: 13px; margin-bottom: 14px; letter-spacing: 2px; }
+.tc-text {
+  font-size: 14px; color: var(--text-2); line-height: 1.74;
+  margin-bottom: 10px; font-weight: 400;
+  font-style: italic;
+}
+.tc-mm {
+  font-size: 12px; color: var(--teal); margin-bottom: 18px; font-weight: 500;
+}
+.tc-author { display: flex; align-items: center; gap: 10px; }
+.tc-avatar {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--orange-light); display: flex;
+  align-items: center; justify-content: center; font-size: 17px;
+  flex-shrink: 0;
+}
+.tc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.tc-role { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+/* ─── FAQ ─────────────────────────────────────────────────────── */
+.faq-section { background: var(--bg); border-top: 1px solid var(--border); }
+.faq-list { max-width: 660px; margin: 52px auto 0; }
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+.faq-item:first-child { border-top: 1px solid var(--border); }
+.faq-q {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 4px; cursor: pointer; text-align: left;
+  background: none; border: none; font-family: inherit; gap: 16px;
+}
+.faq-q-text {
+  font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4;
+}
+.faq-q-icon {
+  width: 24px; height: 24px; border-radius: 99px; border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--text-3); flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s, transform 0.3s;
+}
+.faq-item.open .faq-q-icon {
+  background: var(--orange-light); border-color: var(--orange-mid);
+  color: var(--orange); transform: rotate(45deg);
+}
+.faq-a {
+  padding: 0 4px 18px;
+  font-size: 14px; color: var(--text-2); line-height: 1.74; font-weight: 400;
+  display: none;
+}
+.faq-a-mm { font-size: 12px; color: var(--teal); margin-top: 8px; }
+.faq-item.open .faq-a { display: block; }
+
+/* ─── CTA SECTION ────────────────────────────────────────────── */
+.cta-section {
+  background: var(--dark); padding: 100px 0;
+  position: relative; overflow: hidden;
+}
+.cta-section-bg {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(244,98,42,0.10), transparent 70%);
+}
+.cta-inner { position: relative; z-index: 1; text-align: center; max-width: 640px; margin: 0 auto; padding: 0 24px; }
+.cta-title {
+  font-size: clamp(34px, 4.5vw, 56px);
+  font-weight: 400; line-height: 1.1; letter-spacing: -0.03em;
+  color: white; margin-bottom: 12px;
+}
+.cta-title em { font-style: italic; color: var(--orange); }
+.cta-mm { font-size: 15px; color: rgba(255,255,255,0.28); margin-bottom: 20px; }
+.cta-desc { font-size: 16px; color: rgba(255,255,255,0.48); line-height: 1.7; margin-bottom: 38px; font-weight: 400; }
+.cta-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ─── FOOTER ─────────────────────────────────────────────────── */
+footer {
+  background: #0A0A0A; padding: 30px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-inner {
+  max-width: 1120px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+}
+.footer-logo { display: flex; align-items: center; gap: 8px; }
+.footer-logo-mark {
+  width: 28px; height: 28px; border-radius: 8px; background: var(--orange);
+  display: flex; align-items: center; justify-content: center;
+}
+.footer-logo-mark svg { width: 13px; height: 13px; }
+.footer-logo-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.45); }
+.footer-copy { font-size: 12px; color: rgba(255,255,255,0.22); }
+.footer-links { display: flex; gap: 18px; }
+.footer-links a { font-size: 12px; color: rgba(255,255,255,0.28); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: rgba(255,255,255,0.6); }
+
+/* ─── SCROLL REVEAL ──────────────────────────────────────────── */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.65s ease, transform 0.65s ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero-inner { flex-direction: column; gap: 48px; }
+  .hero-visual { width: 100%; max-width: 300px; align-self: center; }
+  .problem-grid { grid-template-columns: 1fr 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .feature-card.wide { flex-direction: column; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
+  .price-card.featured { transform: none; }
+  .testimonials-grid { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  .steps-track { flex-direction: column; gap: 28px; }
+  .steps-track::before { display: none; }
+  section { padding: 68px 0; }
+}
+@media (max-width: 600px) {
+  .problem-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────── -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      </div>
+      <div class="nav-logo-name">Order Manager</div>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-cta-wrap">
+      <a href="#" class="btn-nav-ghost">Log in</a>
+      <a href="#pricing" class="btn-nav-cta">Start free trial →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────── -->
+<section class="hero" id="home">
+  <div class="hero-bg-grid"></div>
+  <div class="hero-bg-glow"></div>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-tag">
+        <div class="hero-tag-dot"></div>
+        Built for Myanmar Facebook sellers
+      </div>
+      <h1 class="hero-h1 serif">
+        Run your shop.<br><em>Not your notes.</em>
+      </h1>
+      <p class="hero-mm">Messenger မှ order များကို လွယ်ကူစွာ စီမံခန့်ခွဲပါ</p>
+      <p class="hero-desc">
+        Stop losing orders in chat threads. Track every order, manage customers, and see your daily revenue — one simple app, made for Myanmar sellers.
+      </p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn-hero-primary">
+          Start free — 7 days
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <a href="#how" class="btn-hero-outline">See how it works</a>
+      </div>
+      <div class="hero-trust">
+        <div class="trust-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          No card needed
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Setup in 2 minutes
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">🇲🇲 Full Burmese UI</div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">📱 Mobile first</div>
+      </div>
+    </div>
+
+    <!-- Phone mockup -->
+    <div class="hero-visual">
+      <div class="phone-frame">
+        <div class="phone-bar"><span>9:41</span><span>●●● 🔋</span></div>
+        <div class="phone-shop-chip">
+          <div class="phone-shop-name">👗 Ma Aye Shop</div>
+          <div class="phone-shop-sub">Yangon Fashion · Today</div>
+        </div>
+        <div class="phone-stats">
+          <div class="phone-stat"><div class="phone-stat-val" style="color:#FFB088;">485K</div><div class="phone-stat-lbl">MMK</div></div>
+          <div class="phone-stat"><div class="phone-stat-val">23</div><div class="phone-stat-lbl">Orders</div></div>
+          <div class="phone-stat"><div class="phone-stat-val" style="color:#4DD9D2;">11</div><div class="phone-stat-lbl">Done</div></div>
+        </div>
+        <div class="phone-order">
+          <div class="phone-order-stripe" style="background:var(--orange);"></div>
+          <div style="flex:1;"><div class="phone-order-name">Daw Khin Myat</div><div style="font-size:8px;color:rgba(255,255,255,0.35);">Silk Longyi × 2</div></div>
+          <div style="text-align:right;"><div class="phone-order-price">45K</div><div class="phone-badge" style="background:rgba(244,98,42,0.25);color:#FFB088;">NEW</div></div>
+        </div>
+        <div class="phone-order">
+          <div class="phone-order-stripe" style="background:#F59E0B;"></div>
+          <div style="flex:1;"><div class="phone-order-name">Ko Zaw Lin</div><div style="font-size:8px;color:rgba(255,255,255,0.35);">Men Shirt × 1</div></div>
+          <div style="text-align:right;"><div class="phone-order-price">21K</div><div class="phone-badge" style="background:rgba(245,158,11,0.25);color:#FCD34D;">WAY</div></div>
+        </div>
+        <div class="phone-order">
+          <div class="phone-order-stripe" style="background:#22C55E;"></div>
+          <div style="flex:1;"><div class="phone-order-name">Ma Thin Zar</div><div style="font-size:8px;color:rgba(255,255,255,0.35);">Handbag × 1</div></div>
+          <div style="text-align:right;"><div class="phone-order-price">32K</div><div class="phone-badge" style="background:rgba(34,197,94,0.25);color:#86EFAC;">✓</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROBLEM ────────────────────────────────────────────────── -->
+<section class="problem-section reveal" id="problem">
+  <div class="container">
+    <div class="section-eyebrow">The Problem</div>
+    <h2 class="section-title serif">Sound <em>familiar?</em></h2>
+    <p class="section-body">Every Facebook seller in Myanmar deals with the same chaos every single day.</p>
+    <div class="problem-grid">
+      <div class="problem-card reveal">
+        <div class="problem-card-x">✗</div>
+        <div class="problem-card-icon">😩</div>
+        <div class="problem-card-title">Lost orders in Messenger</div>
+        <div class="problem-card-desc">You scroll up to find their address and sometimes forget entirely. Orders fall through the cracks.</div>
+      </div>
+      <div class="problem-card reveal">
+        <div class="problem-card-x">✗</div>
+        <div class="problem-card-icon">📓</div>
+        <div class="problem-card-title">Messy notes & spreadsheets</div>
+        <div class="problem-card-desc">Orders in notebooks, delivery in WhatsApp, payments in Excel. Nothing connects to anything.</div>
+      </div>
+      <div class="problem-card reveal">
+        <div class="problem-card-x">✗</div>
+        <div class="problem-card-icon">😰</div>
+        <div class="problem-card-title">Can't track deliveries</div>
+        <div class="problem-card-desc">Confirmed? Shipped? Delivered? You check three places and still don't know for sure.</div>
+      </div>
+      <div class="problem-card reveal">
+        <div class="problem-card-x">✗</div>
+        <div class="problem-card-icon">😵</div>
+        <div class="problem-card-title">No idea how much you made</div>
+        <div class="problem-card-desc">End of day: how much revenue? Best product? You're guessing instead of growing.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ───────────────────────────────────────────────── -->
+<section class="features-section reveal" id="features">
+  <div class="container">
+    <div class="section-eyebrow">Features</div>
+    <h2 class="section-title serif">Everything you need.<br><em>Nothing you don't.</em></h2>
+    <p class="section-body">Designed for the real daily workflow of Myanmar Facebook sellers — fast, simple, in your language.</p>
+    <div class="features-grid">
+
+      <!-- Wide highlight card -->
+      <div class="feature-card wide reveal">
+        <div style="flex:1;">
+          <div class="feature-icon orange" style="margin-bottom:16px;">📋</div>
+          <div class="feature-card-title">Paste from Messenger</div>
+          <div class="feature-card-mm">မက်ဆင်ဂျာမှ ကူးယူပြီး ချက်ချင်းထည့်ပါ</div>
+          <div class="feature-card-desc">Copy a customer's message, paste into the app, and fields auto-fill. Adding an order takes under 10 seconds. No retyping, no mistakes.</div>
+        </div>
+        <div class="feature-visual">
+          <div class="fv-row"><div class="fv-dot" style="background:var(--orange);"></div><div class="fv-line" style="width:60%;"></div><div class="fv-tag" style="background:var(--orange-light);color:var(--orange);">NEW</div></div>
+          <div class="fv-row"><div class="fv-dot" style="background:var(--teal);"></div><div class="fv-line" style="width:78%;"></div><div class="fv-tag" style="background:var(--teal-light);color:var(--teal);">OK</div></div>
+          <div class="fv-row"><div class="fv-dot" style="background:#22C55E;"></div><div class="fv-line" style="width:55%;"></div><div class="fv-tag" style="background:#F0FDF4;color:#15803D;">✓</div></div>
+          <div style="margin-top:8px;font-size:9px;color:var(--text-3);text-align:center;font-weight:500;">← 10 sec to add an order</div>
+        </div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon teal">🚀</div>
+        <div class="feature-card-title">One-tap Status Updates</div>
+        <div class="feature-card-mm">တစ်ချက်နှိပ် အခြေအနေပြောင်းမည်</div>
+        <div class="feature-card-desc">New → Confirmed → Shipping → Delivered. Update any order in one tap. Your whole day, organised in seconds.</div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon orange">📊</div>
+        <div class="feature-card-title">Daily Revenue Summary</div>
+        <div class="feature-card-mm">နေ့စဉ် ဝင်ငွေ အကျဉ်းချုပ်</div>
+        <div class="feature-card-desc">See today's total orders, revenue, and delivery rate at a glance. Share your stats straight to Facebook Story.</div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon slate">👥</div>
+        <div class="feature-card-title">Customer Profiles</div>
+        <div class="feature-card-mm">ဖောက်သည် အချက်အလက်</div>
+        <div class="feature-card-desc">Every customer's order history, total spend, and favourite products — all in one place. Know your VIPs by name.</div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon teal">🔍</div>
+        <div class="feature-card-title">Smart Search & Filter</div>
+        <div class="feature-card-mm">လျင်မြန်သော ရှာဖွေမှု</div>
+        <div class="feature-card-desc">Find any order by name, phone number, or product in under two seconds. Filter by status, date, or price range.</div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon orange">🇲🇲</div>
+        <div class="feature-card-title">Full Burmese Language</div>
+        <div class="feature-card-mm">မြန်မာဘာသာ အပြည့်အဝ</div>
+        <div class="feature-card-desc">The only order management app built specifically for Myanmar sellers, with native Burmese labels and UI throughout.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ───────────────────────────────────────────── -->
+<section class="howitworks-section reveal" id="how">
+  <div class="container">
+    <div style="text-align:center;max-width:520px;margin:0 auto;">
+      <div class="section-eyebrow">How It Works</div>
+      <h2 class="section-title serif">Start in <em>4 simple steps</em></h2>
+      <p class="section-body" style="max-width:100%;">No technical setup. No complicated onboarding. Open the app and go.</p>
+    </div>
+    <div class="steps-track">
+      <div class="step-item reveal">
+        <div class="step-num">1</div>
+        <div class="step-title">Create your shop</div>
+        <div class="step-mm">ဆိုင်ဖွင့်ပါ</div>
+        <div class="step-desc">Sign up in 60 seconds. Enter your shop name, category, and you're in.</div>
+      </div>
+      <div class="step-item reveal">
+        <div class="step-num">2</div>
+        <div class="step-title">Get an order on Messenger</div>
+        <div class="step-mm">Order ရပါသည်</div>
+        <div class="step-desc">Customer messages you on Facebook as usual — nothing changes for them.</div>
+      </div>
+      <div class="step-item reveal">
+        <div class="step-num">3</div>
+        <div class="step-title">Add it in 10 seconds</div>
+        <div class="step-mm">ဆယ်စက္ကန့်ထည့်ပါ</div>
+        <div class="step-desc">Paste the message or type details. Product, price, address — done.</div>
+      </div>
+      <div class="step-item reveal">
+        <div class="step-num">4</div>
+        <div class="step-title">Track until delivered</div>
+        <div class="step-mm">ပို့ဆောင်ပြီးစီးသည်</div>
+        <div class="step-desc">Update status as you go. Watch your revenue grow in real time.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ────────────────────────────────────────────────── -->
+<section class="pricing-section reveal" id="pricing">
+  <div class="container">
+    <div style="text-align:center;max-width:520px;margin:0 auto 0;">
+      <div class="section-eyebrow">Pricing</div>
+      <h2 class="section-title serif">Simple, <em>local-friendly</em> pricing</h2>
+      <p class="section-body" style="max-width:100%;margin:0 auto;">No hidden fees. Pay in MMK. Cancel anytime.</p>
+    </div>
+
+    <!-- Billing toggle -->
+    <div class="pricing-toggle" style="margin-top:32px;margin-bottom:40px;" id="billing-toggle">
+      <button class="toggle-btn active" onclick="setBilling('monthly',this)">Monthly</button>
+      <button class="toggle-btn" onclick="setBilling('yearly',this)">Yearly <span style="font-size:11px;background:#F0FDF4;color:#15803D;padding:2px 7px;border-radius:99px;margin-left:4px;font-weight:600;">Save 20%</span></button>
+    </div>
+
+    <div class="pricing-grid">
+
+      <!-- Basic -->
+      <div class="price-card reveal">
+        <div class="price-plan">Basic</div>
+        <div class="price-name">Starter</div>
+        <div class="price-amount">
+          <span class="price-num" id="basic-price">5,000</span>
+          <span class="price-currency">MMK</span>
+          <span class="price-period">/ month</span>
+        </div>
+        <div class="price-sub" id="basic-sub">For shops just getting started</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="pf-check">✓</span> Up to 200 orders / month</li>
+          <li><span class="pf-check">✓</span> Full order management</li>
+          <li><span class="pf-check">✓</span> Customer profiles</li>
+          <li><span class="pf-check">✓</span> Daily summary</li>
+          <li><span class="pf-check">✓</span> Burmese UI</li>
+          <li class="dim"><span class="pf-cross">—</span> Reports & data export</li>
+          <li class="dim"><span class="pf-cross">—</span> Priority support</li>
+        </ul>
+        <a href="#" class="price-btn price-btn-outline">Get started</a>
+      </div>
+
+      <!-- Pro (featured) -->
+      <div class="price-card featured reveal">
+        <div class="price-featured-badge">MOST POPULAR</div>
+        <div class="price-plan">Pro</div>
+        <div class="price-name" style="color:white;">Professional</div>
+        <div class="price-amount">
+          <span class="price-num" id="pro-price">10,000</span>
+          <span class="price-currency">MMK</span>
+          <span class="price-period">/ month</span>
+        </div>
+        <div class="price-sub highlight" id="pro-sub">≈ 333 MMK per day</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="pf-check">✓</span> Unlimited orders</li>
+          <li><span class="pf-check">✓</span> Everything in Basic</li>
+          <li><span class="pf-check">✓</span> Weekly & monthly reports</li>
+          <li><span class="pf-check">✓</span> Export to Excel / PDF</li>
+          <li><span class="pf-check">✓</span> Share to Facebook Story</li>
+          <li><span class="pf-check">✓</span> Advanced search & filters</li>
+          <li><span class="pf-check">✓</span> Priority support (same day)</li>
+        </ul>
+        <a href="#" class="price-btn price-btn-orange">Start 7-day free trial</a>
+      </div>
+
+      <!-- Custom -->
+      <div class="price-card reveal">
+        <div class="price-plan">Custom</div>
+        <div class="price-name">Enterprise</div>
+        <div class="price-amount" style="margin-bottom:6px;">
+          <span style="font-size:32px;font-weight:700;color:var(--text);letter-spacing:-0.03em;line-height:1;">Let's talk</span>
+        </div>
+        <div class="price-sub">Tailored for large shops & teams</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="pf-check">✓</span> Everything in Pro</li>
+          <li><span class="pf-check">✓</span> Multi-user staff accounts</li>
+          <li><span class="pf-check">✓</span> Custom integrations</li>
+          <li><span class="pf-check">✓</span> Dedicated onboarding</li>
+          <li><span class="pf-check">✓</span> SLA & uptime guarantee</li>
+          <li><span class="pf-check">✓</span> White-label option</li>
+          <li><span class="pf-check">✓</span> Direct WhatsApp/Viber support</li>
+        </ul>
+        <a href="#" class="price-btn price-btn-teal">Contact us</a>
+      </div>
+
+    </div>
+
+    <div class="pricing-footer">
+      All prices in Myanmar Kyat (MMK). Pay via KBZ Pay, Wave Money, or AYA Pay.<br>
+      <strong>Questions?</strong> Message us on Facebook — we reply within 1 hour.
+    </div>
+  </div>
+</section>
+
+<!-- ── TESTIMONIALS ───────────────────────────────────────────── -->
+<section class="testimonials-section reveal" id="testimonials">
+  <div class="container">
+    <div style="text-align:center;max-width:480px;margin:0 auto;">
+      <div class="section-eyebrow">Early Users</div>
+      <h2 class="section-title serif">Sellers who tried it <em>love it</em></h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card reveal">
+        <div class="tc-stars">★★★★★</div>
+        <p class="tc-text">"Before this app I was losing 2–3 orders every week just because I couldn't track them in Messenger. Now everything is in one place and I haven't missed a single order since."</p>
+        <p class="tc-mm">ဒီ app မရှိတော့ မဖြစ်နိုင်ပါဘူး</p>
+        <div class="tc-author">
+          <div class="tc-avatar">👩</div>
+          <div>
+            <div class="tc-name">Daw Su Su</div>
+            <div class="tc-role">Fashion Shop · Yangon</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card reveal">
+        <div class="tc-stars">★★★★★</div>
+        <p class="tc-text">"The daily summary is my favourite feature. I check it every night and now I actually know how much I'm making. My revenue went up 30% just from being more organised."</p>
+        <p class="tc-mm">နေ့တိုင်း မည်မျှ ရသည်ကို ကြည့်နိုင်သည်</p>
+        <div class="tc-author">
+          <div class="tc-avatar">👩</div>
+          <div>
+            <div class="tc-name">Ma Hnin Wai</div>
+            <div class="tc-role">Beauty Products · Mandalay</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card reveal">
+        <div class="tc-stars">★★★★★</div>
+        <p class="tc-text">"The Burmese interface makes a huge difference. It feels like it was made for people like us, not just translated from some foreign app that doesn't understand how we sell."</p>
+        <p class="tc-mm">မြန်မာဘာသာဖြင့် ရေးထားသောကြောင့် အသုံးပြုရလွယ်</p>
+        <div class="tc-author">
+          <div class="tc-avatar">👨</div>
+          <div>
+            <div class="tc-name">Ko Aung Kyaw</div>
+            <div class="tc-role">Electronics · Bago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ─────────────────────────────────────────────────────── -->
+<section class="faq-section reveal" id="faq">
+  <div class="container">
+    <div style="text-align:center;max-width:480px;margin:0 auto;">
+      <div class="section-eyebrow">FAQ</div>
+      <h2 class="section-title serif">Common <em>questions</em></h2>
+    </div>
+    <div class="faq-list">
+
+      <div class="faq-item open">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span class="faq-q-text">Does it connect to Facebook or Messenger automatically?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">
+          No — and that's intentional. Connecting to Facebook's API is complex and takes months to approve. Instead, you copy the order info from Messenger and paste it into the app. It takes about 10 seconds and you stay in full control.
+          <div class="faq-a-mm">Facebook API နှင့် တိုက်ရိုက်ချိတ်မထားပါ — ရည်ရွယ်ချက်ရှိရှိ ဒီဇိုင်းဆွဲထားပါသည်</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span class="faq-q-text">What's the difference between Basic and Pro?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Basic is ideal for shops handling up to 200 orders per month and covers all core order management features. Pro is for growing shops that need unlimited orders, weekly and monthly reports, data export, and faster support. Both include the full Burmese UI.
+          <div class="faq-a-mm">Basic သည် လစဉ် order 200 အထိ၊ Pro သည် unlimited order များအတွက်ဖြစ်သည်</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span class="faq-q-text">How do I pay? Do you accept KBZ Pay or Wave Money?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Yes — we accept KBZ Pay, Wave Money, and AYA Pay. After subscribing, message us on Facebook with your payment screenshot and we'll activate your account within 1 hour.
+          <div class="faq-a-mm">KBZ Pay, Wave Money, AYA Pay ဖြင့် ပေးချေနိုင်သည်</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span class="faq-q-text">Can I use it on both Android and iPhone?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Yes. Order Manager works on Android and iOS. A web browser version is also available so you can access it from your phone, tablet, or computer without installing anything.
+          <div class="faq-a-mm">Android နှင့် iPhone နှစ်မျိုးလုံးတွင် အသုံးပြုနိုင်သည်</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span class="faq-q-text">What is the Custom / Enterprise plan?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">
+          The Custom plan is designed for larger shops or businesses with a team of staff. It includes multi-user accounts, dedicated onboarding support, custom integrations, and a white-label option. Pricing is discussed directly based on your needs.
+          <div class="faq-a-mm">Custom plan သည် ကြီးမားသောဆိုင်များနှင့် အဖွဲ့အစည်းများအတွက်ဖြစ်သည်</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span class="faq-q-text">Is my data safe if I cancel?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Your data is stored securely and never sold. If you cancel your subscription, you have 30 days to export all your orders and customer data before the account closes.
+          <div class="faq-a-mm">သင်၏ data များ လုံခြုံစွာ သိမ်းဆည်းထားမည်</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ─────────────────────────────────────────────────────── -->
+<section class="cta-section reveal">
+  <div class="cta-section-bg"></div>
+  <div class="cta-inner">
+    <h2 class="cta-title serif">Ready to run your shop <em>the smart way?</em></h2>
+    <p class="cta-mm">ယနေ့ပင် စတင်ပြီး ၇ ရက် အခမဲ့ သုံးကြည့်ပါ</p>
+    <p class="cta-desc">Join Myanmar sellers who already manage their orders without chaos. 7-day free trial, no card needed.</p>
+    <div class="cta-actions">
+      <a href="#pricing" class="btn-hero-primary">Start free trial</a>
+      <a href="#" class="btn-hero-outline">💬 Message us on Facebook</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="footer-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      </div>
+      <div class="footer-logo-name">Order Manager</div>
+    </div>
+    <div class="footer-copy">© 2025 Order Manager · Made for Myanmar sellers 🇲🇲</div>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll reveal
+const ro = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+
+// Nav shadow on scroll
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').style.boxShadow = window.scrollY > 16 ? '0 2px 20px rgba(0,0,0,0.07)' : 'none';
+});
+
+// FAQ
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
+// Billing toggle
+const prices = {
+  monthly: { basic: '5,000', basicSub: 'For shops just getting started', pro: '10,000', proSub: '≈ 333 MMK per day' },
+  yearly:  { basic: '4,000', basicSub: 'Billed yearly — save 20%', pro: '8,000', proSub: '≈ 267 MMK per day · save 20%' },
+};
+function setBilling(type, btn) {
+  document.querySelectorAll('#billing-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const p = prices[type];
+  document.getElementById('basic-price').textContent = p.basic;
+  document.getElementById('basic-sub').textContent   = p.basicSub;
+  document.getElementById('pro-price').textContent   = p.pro;
+  document.getElementById('pro-sub').textContent     = p.proSub;
+}
+</script>
+</body>
+</html>
