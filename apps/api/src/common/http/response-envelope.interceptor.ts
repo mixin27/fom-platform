@@ -6,14 +6,23 @@ import {
 } from '@nestjs/common';
 import { map, type Observable } from 'rxjs';
 import { ApiResult } from './api-result';
-import type { RequestWithContext } from './request-context';
+import {
+  ensureRequestContext,
+  type RequestWithContext,
+} from './request-context';
 
 @Injectable()
 export class ResponseEnvelopeInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
     const request = http.getRequest<RequestWithContext>();
-    const response = http.getResponse<{ statusCode?: number }>();
+    const response = http.getResponse<{
+      statusCode?: number;
+      setHeader?: (name: string, value: string) => void;
+      header?: (name: string, value: string) => unknown;
+    }>();
+
+    ensureRequestContext(request, response);
 
     return next.handle().pipe(
       map((value) => {

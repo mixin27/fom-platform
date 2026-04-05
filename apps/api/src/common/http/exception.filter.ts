@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { RequestWithContext } from './request-context';
+import { ensureRequestContext } from './request-context';
 import { AppHttpException } from './app-http.exception';
 
 @Catch()
@@ -17,8 +18,12 @@ export class AppExceptionFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const response = http.getResponse<{
       status: (code: number) => { send: (body: unknown) => void };
+      setHeader?: (name: string, value: string) => void;
+      header?: (name: string, value: string) => unknown;
     }>();
     const request = http.getRequest<RequestWithContext>();
+
+    ensureRequestContext(request, response);
 
     const status = this.resolveStatus(exception);
     const error = this.resolveErrorPayload(exception, status);

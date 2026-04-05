@@ -26,27 +26,19 @@ export type SessionRequestMetadata = {
   userAgent: string | null;
 };
 
+type ResponseWithRequestIdHeader = {
+  setHeader?: (name: string, value: string) => void;
+  header?: (name: string, value: string) => unknown;
+};
+
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
   use(
     request: RequestWithContext,
-    response: { setHeader?: (name: string, value: string) => void },
+    response: ResponseWithRequestIdHeader,
     next: () => void,
   ): void {
-    const headerValue = readHeaderValue(request.headers?.['x-request-id']);
-    const requestId =
-      headerValue || `req_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
-    const forwardedFor = readHeaderValue(request.headers?.['x-forwarded-for']);
-    const forwardedIp = forwardedFor?.split(',')[0]?.trim() || null;
-    const directIp =
-      typeof request.ip === 'string' && request.ip.trim().length > 0
-        ? request.ip.trim()
-        : null;
-
-    request.requestId = requestId;
-    request.ipAddress = forwardedIp ?? directIp;
-    request.userAgent = readHeaderValue(request.headers?.['user-agent']);
-    response.setHeader?.('X-Request-Id', requestId);
+    ensureRequestContext(request, response);
     next();
   }
 }
@@ -54,10 +46,43 @@ export class RequestContextMiddleware implements NestMiddleware {
 export function getSessionRequestMetadata(
   request?: Pick<RequestWithContext, 'ipAddress' | 'userAgent'>,
 ): SessionRequestMetadata {
+  if (request) {
+    ensureRequestContext(request as RequestWithContext);
+  }
+
   return {
     ipAddress: request?.ipAddress?.trim() || null,
     userAgent: request?.userAgent?.trim() || null,
   };
+}
+
+export function ensureRequestContext(
+  request: RequestWithContext,
+  response?: ResponseWithRequestIdHeader,
+): void {
+  request.requestId ??=
+    readHeaderValue(request.headers?.['x-request-id']) ??
+    `req_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+
+  if (request.ipAddress === undefined) {
+    const forwardedFor = readHeaderValue(request.headers?.['x-forwarded-for']);
+    const forwardedIp = forwardedFor?.split(',')[0]?.trim() || null;
+    const directIp =
+      typeof request.ip === 'string' && request.ip.trim().length > 0
+        ? request.ip.trim()
+        : null;
+
+    request.ipAddress = forwardedIp ?? directIp;
+  }
+
+  if (request.userAgent === undefined) {
+    request.userAgent = readHeaderValue(request.headers?.['user-agent']);
+  }
+
+  if (request.requestId) {
+    response?.setHeader?.('X-Request-Id', request.requestId);
+    response?.header?.('X-Request-Id', request.requestId);
+  }
 }
 
 function readHeaderValue(value: string | string[] | undefined): string | null {
