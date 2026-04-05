@@ -1,5 +1,7 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/app/router/app_route_paths.dart';
+import 'package:go_router/go_router.dart';
 
 import '../widgets/home_header.dart';
 import '../widgets/order_card.dart';
@@ -89,7 +91,7 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () => context.push(AppRoutePaths.addOrder),
         backgroundColor: AppColors.softOrange,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

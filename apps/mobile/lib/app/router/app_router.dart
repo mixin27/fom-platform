@@ -67,6 +67,11 @@ class AppRouter {
           return CustomerProfilePage(customerId: id);
         },
       ),
+      GoRoute(
+        path: AppRoutePaths.addOrder,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddOrderPage(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);

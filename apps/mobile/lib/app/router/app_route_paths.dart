@@ -11,6 +11,7 @@ abstract final class AppRoutePaths {
 
   // Orders
   static const String orders = '/orders';
+  static const String addOrder = '/orders/add';
 
   // Customers
   static const String customers = '/customers';
