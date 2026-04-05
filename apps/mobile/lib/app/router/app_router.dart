@@ -9,6 +9,7 @@ import 'package:fom_mobile/features/devtools/feature_devtools.dart';
 import 'package:fom_mobile/features/onboarding/feature_onboarding.dart';
 import 'package:fom_mobile/features/orders/feature_orders.dart';
 import 'package:fom_mobile/features/reports/feature_reports.dart';
+import 'package:fom_mobile/features/settings/feature_settings.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app_route_paths.dart';
@@ -28,6 +29,7 @@ class AppRouter {
   static const devtoolsLogsPath = AppRoutePaths.devtoolsLogs;
   static const ordersPath = AppRoutePaths.orders;
   static const reportsPath = AppRoutePaths.reports;
+  static const settingsPath = AppRoutePaths.settings;
 
   final AppLogger _appLogger;
   final bool _enableLogDevTools;
@@ -82,6 +84,11 @@ class AppRouter {
           return OrderDetailsPage(orderId: id);
         },
       ),
+      GoRoute(
+        path: AppRoutePaths.editProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditShopProfilePage(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -114,9 +121,8 @@ class AppRouter {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/four',
-                builder: (context, state) =>
-                    const _DetailUnavailablePage(title: 'Four'),
+                path: settingsPath,
+                builder: (context, state) => const SettingsHomePage(),
               ),
             ],
           ),
@@ -192,20 +198,6 @@ class AppShell extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DetailUnavailablePage extends StatelessWidget {
-  const _DetailUnavailablePage({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Unavailable')),
-      body: Center(child: Text(title)),
     );
   }
 }

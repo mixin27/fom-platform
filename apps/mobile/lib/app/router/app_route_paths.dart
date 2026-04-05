@@ -21,6 +21,10 @@ abstract final class AppRoutePaths {
   // Reports
   static const String reports = '/reports';
 
+  // Settings
+  static const String settings = '/settings';
+  static const String editProfile = '/settings/edit-profile';
+
   // Dev Tools
   static const String devtoolsLogs = '/devtools/logs';
 }

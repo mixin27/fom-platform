@@ -14,11 +14,13 @@ export 'src/components/app_progress_bar_dots.dart';
 export 'src/components/app_search_bar.dart';
 export 'src/components/app_section_header.dart';
 export 'src/components/app_selection_option.dart';
+export 'src/components/app_setting_tile.dart';
 export 'src/components/app_status_badge.dart';
 export 'src/components/app_stepper.dart';
 export 'src/components/app_summary_card.dart';
 export 'src/components/app_text_field.dart';
 export 'src/components/app_timeline.dart';
+export 'src/components/app_toggle.dart';
 export 'src/components/charts/app_bar_chart.dart';
 
 // Theme and tokens
