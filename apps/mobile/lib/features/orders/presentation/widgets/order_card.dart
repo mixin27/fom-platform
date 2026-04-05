@@ -28,9 +28,10 @@ class OrderEntryData {
 }
 
 class OrderCard extends StatelessWidget {
-  const OrderCard({super.key, required this.data});
+  const OrderCard({super.key, required this.data, this.onTap});
 
   final OrderEntryData data;
+  final VoidCallback? onTap;
 
   Color get _statusColor {
     switch (data.status) {
@@ -80,196 +81,201 @@ class OrderCard extends StatelessWidget {
         border: Border.all(color: AppColors.border, width: 1.5),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Stack(
-        children: [
-          // Left border indicator
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _statusColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  bottomLeft: Radius.circular(4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          children: [
+            // Left border indicator
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _statusColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    bottomLeft: Radius.circular(4),
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // Content
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top: Customer & Status
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.softOrangeLight,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              data.customerAvatar,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  data.customerName,
-                                  style: TextTheme.of(context).bodyLarge
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.textDark,
-                                        fontSize: 14,
-                                        height: 1.2,
-                                      ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '📞 ${data.customerPhone}',
-                                  style: TextTheme.of(context).labelSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textLight,
-                                        fontSize: 11,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _statusBgColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _statusLabel,
-                        style: TextTheme.of(context).labelSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: _statusColor,
-                          fontSize: 10,
-                          letterSpacing: 0.4, // 0.04em
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Middle: Product & Price
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Text(
-                            data.productIcon,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              data.productSummary,
-                              style: TextTheme.of(context).bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textMid,
-                                fontSize: 12,
+            // Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Top: Customer & Status
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.softOrangeLight,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                data.customerAvatar,
+                                style: const TextStyle(fontSize: 16),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text.rich(
-                      TextSpan(
-                        text: _formatInt(data.priceMmk),
-                        style: TextTheme.of(context).titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textDark,
-                          fontSize: 15,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: ' MMK',
-                            style: TextTheme.of(context).labelSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textLight,
-                              fontSize: 10,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data.customerName,
+                                    style: TextTheme.of(context).bodyLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: AppColors.textDark,
+                                          fontSize: 14,
+                                          height: 1.2,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '📞 ${data.customerPhone}',
+                                    style: TextTheme.of(context).labelSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textLight,
+                                          fontSize: 11,
+                                        ),
+                                  ),
+                                ],
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusBgColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _statusLabel,
+                          style: TextTheme.of(context).labelSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: _statusColor,
+                            fontSize: 10,
+                            letterSpacing: 0.4, // 0.04em
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Divider(
-                    color: AppColors.border,
-                    height: 1,
-                    thickness: 1,
+                    ],
                   ),
-                ),
-
-                // Footer: ID & Time
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '#${data.id}',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textLight,
-                        fontSize: 10,
-                      ),
-                    ),
-                    Text(
-                      data.timeLabel,
-                      style: TextTheme.of(context).labelSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textLight,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Quick Actions (if not delivered)
-                if (data.status != OrderStatusType.delivered) ...[
                   const SizedBox(height: 10),
-                  Row(children: _buildQuickActions(context)),
+
+                  // Middle: Product & Price
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Text(
+                              data.productIcon,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                data.productSummary,
+                                style: TextTheme.of(context).bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textMid,
+                                      fontSize: 12,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text.rich(
+                        TextSpan(
+                          text: _formatInt(data.priceMmk),
+                          style: TextTheme.of(context).titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textDark,
+                            fontSize: 15,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: ' MMK',
+                              style: TextTheme.of(context).labelSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textLight,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(
+                      color: AppColors.border,
+                      height: 1,
+                      thickness: 1,
+                    ),
+                  ),
+
+                  // Footer: ID & Time
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '#${data.id}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textLight,
+                          fontSize: 10,
+                        ),
+                      ),
+                      Text(
+                        data.timeLabel,
+                        style: TextTheme.of(context).labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textLight,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Quick Actions (if not delivered)
+                  if (data.status != OrderStatusType.delivered) ...[
+                    const SizedBox(height: 10),
+                    Row(children: _buildQuickActions(context)),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

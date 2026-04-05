@@ -274,6 +274,7 @@ class AppOrderCard extends StatelessWidget {
       AppStatusVariant.confirmed => AppColors.teal,
       AppStatusVariant.shipping => AppColors.yellow,
       AppStatusVariant.delivered => AppColors.green,
+      AppStatusVariant.cancelled => const Color(0xFFEF4444),
     };
   }
 }

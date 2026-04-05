@@ -167,16 +167,46 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
                     _buildSectionHeader('Needs Confirmation', context),
                     ...displayingOrders
                         .where((o) => o.status == OrderStatusType.newOrder)
-                        .map((o) => OrderCard(data: o)),
+                        .map(
+                          (o) => OrderCard(
+                            data: o,
+                            onTap: () => context.push(
+                              AppRoutePaths.orderDetails.replaceFirst(
+                                ':id',
+                                o.id,
+                              ),
+                            ),
+                          ),
+                        ),
                     _buildSectionHeader('Ready to Ship', context),
                     ...displayingOrders
                         .where((o) => o.status == OrderStatusType.confirmed)
-                        .map((o) => OrderCard(data: o)),
+                        .map(
+                          (o) => OrderCard(
+                            data: o,
+                            onTap: () => context.push(
+                              AppRoutePaths.orderDetails.replaceFirst(
+                                ':id',
+                                o.id,
+                              ),
+                            ),
+                          ),
+                        ),
                   ] else ...[
                     _buildSectionHeader('Today — April 2', context),
                     ...displayingOrders
                         .where((o) => o.status != OrderStatusType.delivered)
-                        .map((o) => OrderCard(data: o)),
+                        .map(
+                          (o) => OrderCard(
+                            data: o,
+                            onTap: () => context.push(
+                              AppRoutePaths.orderDetails.replaceFirst(
+                                ':id',
+                                o.id,
+                              ),
+                            ),
+                          ),
+                        ),
                     _buildSectionHeader('Yesterday — April 1', context),
                     ...displayingOrders
                         .where((o) => o.status == OrderStatusType.delivered)

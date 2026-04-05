@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../tokens/app_colors.dart';
 
 /// Supported status variants for the badge.
-enum AppStatusVariant { newOrder, confirmed, shipping, delivered }
+enum AppStatusVariant { newOrder, confirmed, shipping, delivered, cancelled }
 
 /// A pill-shaped status indicator with defined design color states.
 class AppStatusBadge extends StatelessWidget {
@@ -40,6 +40,11 @@ class AppStatusBadge extends StatelessWidget {
         backgroundColor = const Color(0xFFDCFCE7);
         foregroundColor = const Color(0xFF22C55E);
         text = 'DELIVERED ✓';
+        break;
+      case AppStatusVariant.cancelled:
+        backgroundColor = const Color(0xFFFEE2E2);
+        foregroundColor = const Color(0xFFEF4444);
+        text = 'CANCELLED';
         break;
     }
 
