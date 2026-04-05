@@ -7,6 +7,7 @@ NestJS backend for the Facebook Order Manager app. The API is now backed by a lo
 - NestJS 11
 - Prisma 7
 - PostgreSQL
+- Redis
 - Fastify adapter for e2e tests
 
 ## API Scope
@@ -23,6 +24,8 @@ Implemented under `/api/v1`:
 - order items
 - order status updates
 - daily summaries
+- weekly reports
+- monthly reports
 - database-backed RBAC with roles, permissions, and role assignments
 
 ## Local Database
@@ -39,6 +42,7 @@ Default connection string:
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/fom_platform_api?schema=public"
 JWT_ACCESS_SECRET="dev_access_secret_change_me_facebook_order_manager"
 JWT_REFRESH_SECRET="dev_refresh_secret_change_me_facebook_order_manager"
+REDIS_URL="redis://localhost:6379/0"
 ```
 
 Create the database if it does not already exist:
@@ -48,6 +52,46 @@ createdb -U postgres fom_platform_api
 ```
 
 If you do not have `createdb` locally, create the same database name using your PostgreSQL admin tool and keep `DATABASE_URL` aligned.
+
+## Docker Compose
+
+From the repository root:
+
+```bash
+pnpm docker:up
+```
+
+This starts:
+
+- API on `http://localhost:4000`
+- PostgreSQL on `localhost:5432`
+- Redis on `localhost:6379`
+
+The API container applies Prisma migrations on startup. It does not seed automatically, because the current seed script resets demo data. To load demo data into the Docker PostgreSQL instance, run:
+
+```bash
+pnpm docker:seed
+```
+
+Useful container commands:
+
+```bash
+pnpm docker:logs
+pnpm docker:down
+```
+
+Compose values can be overridden through a root-level `.env` file, for example:
+
+```bash
+API_PORT=4000
+POSTGRES_DB=fom_platform_api
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_PORT=5432
+REDIS_PORT=6379
+JWT_ACCESS_SECRET=dev_access_secret_change_me_facebook_order_manager
+JWT_REFRESH_SECRET=dev_refresh_secret_change_me_facebook_order_manager
+```
 
 ## Setup
 

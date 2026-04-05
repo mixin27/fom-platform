@@ -1,21 +1,33 @@
-# shadcn/ui monorepo template
+# Facebook Order Manager Platform
 
-This is a Next.js monorepo template with shadcn/ui.
+Monorepo for the Facebook Order Manager project.
 
-## Adding components
+## Apps
 
-To add components to your app, run the following command at the root of your `web` app:
+- `apps/api`: NestJS + Prisma backend
+- `apps/mobile`: Flutter mobile app
+- `apps/web`: web surfaces and supporting UI work
+
+## Local Infrastructure
+
+The repository includes Docker Compose for the API stack:
+
+- API
+- PostgreSQL
+- Redis
+
+Start the stack from the repository root:
 
 ```bash
-pnpm dlx shadcn@latest add button -c apps/web
+pnpm docker:up
 ```
 
-This will place the ui components in the `packages/ui/src/components` directory.
+Useful commands:
 
-## Using components
-
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
+```bash
+pnpm docker:logs
+pnpm docker:seed
+pnpm docker:down
 ```
+
+The API listens on `http://localhost:4000` by default. More API-specific setup notes live in [apps/api/README.md](./apps/api/README.md).
