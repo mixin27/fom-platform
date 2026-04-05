@@ -18,6 +18,9 @@ abstract final class AppRoutePaths {
   static const String customers = '/customers';
   static const String customerProfile = '/customers/:id';
 
+  // Reports
+  static const String reports = '/reports';
+
   // Dev Tools
   static const String devtoolsLogs = '/devtools/logs';
 }

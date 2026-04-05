@@ -8,6 +8,7 @@ import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
 import 'package:fom_mobile/features/onboarding/feature_onboarding.dart';
 import 'package:fom_mobile/features/orders/feature_orders.dart';
+import 'package:fom_mobile/features/reports/feature_reports.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app_route_paths.dart';
@@ -26,6 +27,7 @@ class AppRouter {
   static const authOtpPath = AppRoutePaths.authOtp;
   static const devtoolsLogsPath = AppRoutePaths.devtoolsLogs;
   static const ordersPath = AppRoutePaths.orders;
+  static const reportsPath = AppRoutePaths.reports;
 
   final AppLogger _appLogger;
   final bool _enableLogDevTools;
@@ -104,9 +106,8 @@ class AppRouter {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/three',
-                builder: (context, state) =>
-                    const _DetailUnavailablePage(title: 'Three'),
+                path: reportsPath,
+                builder: (context, state) => const ReportsHomePage(),
               ),
             ],
           ),
