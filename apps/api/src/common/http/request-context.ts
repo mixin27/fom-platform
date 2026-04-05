@@ -4,7 +4,8 @@ import { Injectable, type NestMiddleware } from '@nestjs/common';
 export interface AuthenticatedUser {
   id: string;
   name: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   locale: string;
 }
 

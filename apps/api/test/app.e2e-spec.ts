@@ -48,7 +48,57 @@ describe('Facebook Order Manager API (e2e)', () => {
       });
   });
 
-  dbIt('supports OTP auth and lists seeded shops', async () => {
+  dbIt(
+    'supports email/password login and refresh with seeded accounts',
+    async () => {
+      const loginResponse = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: {
+          identifier: 'maaye@example.com',
+          password: 'Password123!',
+        },
+      });
+      expect(loginResponse.statusCode).toBe(200);
+      const loginBody = loginResponse.json();
+
+      expect(loginBody.success).toBe(true);
+      expect(loginBody.data.user.email).toBe('maaye@example.com');
+      expect(loginBody.data.shops).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'shop_ma_aye',
+            membership: expect.objectContaining({
+              role: 'owner',
+              roles: expect.arrayContaining([
+                expect.objectContaining({ code: 'owner' }),
+              ]),
+              permissions: expect.arrayContaining([
+                'members.manage',
+                'shops.write',
+              ]),
+            }),
+          }),
+        ]),
+      );
+
+      const refreshResponse = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: {
+          refresh_token: loginBody.data.refresh_token,
+        },
+      });
+      expect(refreshResponse.statusCode).toBe(200);
+      const refreshBody = refreshResponse.json();
+
+      expect(refreshBody.success).toBe(true);
+      expect(refreshBody.data.access_token).toEqual(expect.any(String));
+      expect(refreshBody.data.refresh_token).toEqual(expect.any(String));
+    },
+  );
+
+  dbIt('supports phone OTP auth as an optional sign-in method', async () => {
     const challengeResponse = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/phone/start',
@@ -70,25 +120,37 @@ describe('Facebook Order Manager API (e2e)', () => {
 
     expect(verifyBody.success).toBe(true);
     expect(verifyBody.data.user.phone).toBe('09 7800 1111');
-    expect(verifyBody.data.shops).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'shop_ma_aye',
-          membership: expect.objectContaining({
-            role: 'owner',
-            permissions: expect.arrayContaining(['members.manage']),
-          }),
-        }),
-      ]),
-    );
+    expect(verifyBody.data.access_token).toEqual(expect.any(String));
   });
+
+  dbIt(
+    'supports social identity sign-in when the provider identity is supplied',
+    async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/social/login',
+        payload: {
+          provider: 'facebook',
+          provider_user_id: 'fb_demo_owner',
+          email: 'maaye@example.com',
+          name: 'Ma Aye',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.user.email).toBe('maaye@example.com');
+      expect(body.data.access_token).toEqual(expect.any(String));
+    },
+  );
 
   dbIt('lists seeded orders with documented envelopes', async () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/shops/shop_ma_aye/orders?status=pending&date=today&limit=2',
       headers: {
-        authorization: 'Bearer tok_demo_owner',
+        authorization: 'Bearer atk_demo_owner',
       },
     });
     expect(response.statusCode).toBe(200);
@@ -109,35 +171,27 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('enforces RBAC for member management', async () => {
-    const challengeResponse = await app.inject({
+    const loginResponse = await app.inject({
       method: 'POST',
-      url: '/api/v1/auth/phone/start',
-      payload: { phone: '09 7800 2222' },
-    });
-    expect(challengeResponse.statusCode).toBe(200);
-    const challengeBody = challengeResponse.json();
-
-    const verifyResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/phone/verify',
+      url: '/api/v1/auth/login',
       payload: {
-        challenge_id: challengeBody.data.challenge_id,
-        otp_code: challengeBody.data.debug_otp_code,
+        identifier: 'komin@example.com',
+        password: 'Password123!',
       },
     });
-    expect(verifyResponse.statusCode).toBe(200);
-    const verifyBody = verifyResponse.json();
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
 
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/shops/shop_ma_aye/members',
       headers: {
-        authorization: `Bearer ${verifyBody.data.token}`,
+        authorization: `Bearer ${loginBody.data.access_token}`,
       },
       payload: {
-        phone: '09 7800 3333',
+        email: 'newstaff@example.com',
         name: 'New Staff',
-        role: 'staff',
+        role_codes: ['staff'],
       },
     });
 

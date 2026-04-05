@@ -14,11 +14,6 @@ enum LocaleCode {
   my
 }
 
-enum ShopRole {
-  owner
-  staff
-}
-
 enum ShopMemberStatus {
   active
   invited
@@ -39,20 +34,26 @@ enum OrderSource {
 }
 
 model User {
-  id             String             @id
-  name           String
-  phone          String             @unique
-  locale         LocaleCode         @default(my)
-  createdAt      DateTime           @default(now())
-  ownedShops     Shop[]             @relation("ShopOwner")
-  memberships    ShopMember[]
-  sessions       Session[]
-  authChallenges AuthChallenge[]
-  statusEvents   OrderStatusEvent[] @relation("ChangedByUser")
+  id                 String              @id @default(cuid())
+  name               String
+  email              String?             @unique
+  phone              String?             @unique
+  locale             LocaleCode          @default(my)
+  emailVerifiedAt    DateTime?
+  phoneVerifiedAt    DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  ownedShops         Shop[]              @relation("ShopOwner")
+  memberships        ShopMember[]
+  passwordCredential PasswordCredential?
+  authIdentities     AuthIdentity[]
+  sessions           Session[]
+  authChallenges     AuthChallenge[]
+  statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
 }
 
 model Shop {
-  id          String       @id
+  id          String       @id @default(cuid())
   ownerUserId String
   name        String
   timezone    String
@@ -66,21 +67,102 @@ model Shop {
 }
 
 model ShopMember {
-  id        String           @id
-  shopId    String
-  userId    String
-  role      ShopRole
-  status    ShopMemberStatus @default(active)
-  createdAt DateTime         @default(now())
-  shop      Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String                     @id @default(cuid())
+  shopId          String
+  userId          String
+  status          ShopMemberStatus           @default(active)
+  createdAt       DateTime                   @default(now())
+  shop            Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleAssignments ShopMemberRoleAssignment[]
 
   @@unique([shopId, userId])
   @@index([userId, status])
 }
 
+model PasswordCredential {
+  userId       String   @id
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_credentials")
+}
+
+model AuthIdentity {
+  id              String    @id @default(cuid())
+  userId          String
+  provider        String
+  providerUserId  String
+  email           String?
+  phone           String?
+  displayName     String?
+  profileImageUrl String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId, provider])
+  @@map("auth_identities")
+}
+
+model Role {
+  id                    String                     @id @default(cuid())
+  code                  String                     @unique
+  name                  String
+  description           String?
+  isSystem              Boolean                    @default(true)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  permissionAssignments RolePermissionAssignment[]
+  memberAssignments     ShopMemberRoleAssignment[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String                     @id @default(cuid())
+  code            String                     @unique
+  name            String
+  description     String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  roleAssignments RolePermissionAssignment[]
+
+  @@map("permissions")
+}
+
+model RolePermissionAssignment {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("roles_permissions_assignment")
+}
+
+model ShopMemberRoleAssignment {
+  id           String     @id @default(cuid())
+  shopMemberId String
+  roleId       String
+  createdAt    DateTime   @default(now())
+  shopMember   ShopMember @relation(fields: [shopMemberId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([shopMemberId, roleId])
+  @@index([roleId])
+  @@map("shop_member_role_assignments")
+}
+
 model Customer {
-  id        String   @id
+  id        String   @id @default(cuid())
   shopId    String
   name      String
   phone     String
@@ -96,7 +178,7 @@ model Customer {
 }
 
 model Order {
-  id           String             @id
+  id           String             @id @default(cuid())
   shopId       String
   customerId   String
   orderNo      String             @unique
@@ -118,7 +200,7 @@ model Order {
 }
 
 model OrderItem {
-  id          String  @id
+  id          String  @id @default(cuid())
   orderId     String
   productId   String?
   productName String
@@ -131,7 +213,7 @@ model OrderItem {
 }
 
 model OrderStatusEvent {
-  id              String       @id
+  id              String       @id @default(cuid())
   orderId         String
   fromStatus      OrderStatus?
   toStatus        OrderStatus
@@ -145,22 +227,34 @@ model OrderStatusEvent {
 }
 
 model AuthChallenge {
-  id        String   @id
-  phone     String
-  otpCode   String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id         String    @id @default(cuid())
+  phone      String
+  otpCode    String
+  purpose    String    @default("login")
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([phone, expiresAt])
+  @@index([phone, purpose, expiresAt])
+  @@map("auth_challenges")
 }
 
 model Session {
-  token     String   @id
-  userId    String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  userId           String
+  accessToken      String    @unique
+  refreshToken     String    @unique
+  accessExpiresAt  DateTime
+  refreshExpiresAt DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime?
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
+  @@index([userId, revokedAt])
+  @@index([accessExpiresAt])
+  @@index([refreshExpiresAt])
+  @@map("sessions")
 }

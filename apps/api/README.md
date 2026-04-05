@@ -13,7 +13,9 @@ NestJS backend for the Facebook Order Manager app. The API is now backed by a lo
 
 Implemented under `/api/v1`:
 
-- OTP auth and bearer sessions
+- email/password auth with access and refresh tokens
+- phone OTP auth as an optional sign-in method
+- social identity sign-in records for Google and Facebook
 - current user profile
 - shops and members
 - customers
@@ -21,7 +23,7 @@ Implemented under `/api/v1`:
 - order items
 - order status updates
 - daily summaries
-- RBAC for owner/staff permissions
+- database-backed RBAC with roles, permissions, and role assignments
 
 ## Local Database
 
@@ -61,9 +63,14 @@ pnpm db:setup
 
 The seed creates:
 
-- owner session token: `tok_demo_owner`
-- owner user: `09 7800 1111`
-- staff user: `09 7800 2222`
+- owner access token: `atk_demo_owner`
+- owner refresh token: `rtk_demo_owner`
+- owner login: `maaye@example.com` / `Password123!`
+- staff access token: `atk_demo_staff`
+- staff refresh token: `rtk_demo_staff`
+- staff login: `komin@example.com` / `Password123!`
+- owner phone: `09 7800 1111`
+- staff phone: `09 7800 2222`
 - demo shop: `shop_ma_aye`
 
 ## Development
@@ -85,6 +92,24 @@ pnpm db:reset
 ```
 
 `src/generated/prisma` is generated code and is intentionally ignored from git.
+
+## Auth Notes
+
+- `POST /api/v1/auth/register` creates an account with email/password.
+- `POST /api/v1/auth/login` accepts `identifier` plus `password`, where identifier can be email or phone.
+- `POST /api/v1/auth/refresh` rotates access and refresh tokens.
+- `POST /api/v1/auth/phone/start` and `POST /api/v1/auth/phone/verify` support optional phone OTP login.
+- `POST /api/v1/auth/social/login` stores provider identities for `google` and `facebook`.
+
+Social login currently persists the provider identity supplied by the caller. Provider token verification still needs to be added before treating it as production-ready OAuth.
+
+## RBAC Notes
+
+- Roles live in the `roles` table.
+- Permissions live in the `permissions` table.
+- Role-to-permission mappings live in `roles_permissions_assignment`.
+- Shop membership roles are assigned through `shop_member_role_assignments`.
+- The default seeded roles are `owner` and `staff`.
 
 ## Testing
 

@@ -5,9 +5,6 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "LocaleCode" AS ENUM ('en', 'my');
 
 -- CreateEnum
-CREATE TYPE "ShopRole" AS ENUM ('owner', 'staff');
-
--- CreateEnum
 CREATE TYPE "ShopMemberStatus" AS ENUM ('active', 'invited', 'disabled');
 
 -- CreateEnum
@@ -20,9 +17,13 @@ CREATE TYPE "OrderSource" AS ENUM ('messenger', 'manual');
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "phone" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
     "locale" "LocaleCode" NOT NULL DEFAULT 'my',
+    "emailVerifiedAt" TIMESTAMP(3),
+    "phoneVerifiedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -43,11 +44,82 @@ CREATE TABLE "ShopMember" (
     "id" TEXT NOT NULL,
     "shopId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "role" "ShopRole" NOT NULL,
     "status" "ShopMemberStatus" NOT NULL DEFAULT 'active',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ShopMember_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "password_credentials" (
+    "userId" TEXT NOT NULL,
+    "passwordHash" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "password_credentials_pkey" PRIMARY KEY ("userId")
+);
+
+-- CreateTable
+CREATE TABLE "auth_identities" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "providerUserId" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "displayName" TEXT,
+    "profileImageUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "lastLoginAt" TIMESTAMP(3),
+
+    CONSTRAINT "auth_identities_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "roles" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "isSystem" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "permissions" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "roles_permissions_assignment" (
+    "id" TEXT NOT NULL,
+    "roleId" TEXT NOT NULL,
+    "permissionId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "roles_permissions_assignment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "shop_member_role_assignments" (
+    "id" TEXT NOT NULL,
+    "shopMemberId" TEXT NOT NULL,
+    "roleId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "shop_member_role_assignments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -109,25 +181,36 @@ CREATE TABLE "OrderStatusEvent" (
 );
 
 -- CreateTable
-CREATE TABLE "AuthChallenge" (
+CREATE TABLE "auth_challenges" (
     "id" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "otpCode" TEXT NOT NULL,
+    "purpose" TEXT NOT NULL DEFAULT 'login',
     "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userId" TEXT,
 
-    CONSTRAINT "AuthChallenge_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "auth_challenges_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Session" (
-    "token" TEXT NOT NULL,
+CREATE TABLE "sessions" (
+    "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "accessToken" TEXT NOT NULL,
+    "refreshToken" TEXT NOT NULL,
+    "accessExpiresAt" TIMESTAMP(3) NOT NULL,
+    "refreshExpiresAt" TIMESTAMP(3) NOT NULL,
+    "revokedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastUsedAt" TIMESTAMP(3),
 
-    CONSTRAINT "Session_pkey" PRIMARY KEY ("token")
+    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
@@ -140,6 +223,30 @@ CREATE INDEX "ShopMember_userId_status_idx" ON "ShopMember"("userId", "status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ShopMember_shopId_userId_key" ON "ShopMember"("shopId", "userId");
+
+-- CreateIndex
+CREATE INDEX "auth_identities_userId_provider_idx" ON "auth_identities"("userId", "provider");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "auth_identities_provider_providerUserId_key" ON "auth_identities"("provider", "providerUserId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "roles_code_key" ON "roles"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "permissions_code_key" ON "permissions"("code");
+
+-- CreateIndex
+CREATE INDEX "roles_permissions_assignment_permissionId_idx" ON "roles_permissions_assignment"("permissionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "roles_permissions_assignment_roleId_permissionId_key" ON "roles_permissions_assignment"("roleId", "permissionId");
+
+-- CreateIndex
+CREATE INDEX "shop_member_role_assignments_roleId_idx" ON "shop_member_role_assignments"("roleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shop_member_role_assignments_shopMemberId_roleId_key" ON "shop_member_role_assignments"("shopMemberId", "roleId");
 
 -- CreateIndex
 CREATE INDEX "Customer_shopId_name_idx" ON "Customer"("shopId", "name");
@@ -163,10 +270,22 @@ CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem"("orderId");
 CREATE INDEX "OrderStatusEvent_orderId_changedAt_idx" ON "OrderStatusEvent"("orderId", "changedAt");
 
 -- CreateIndex
-CREATE INDEX "AuthChallenge_phone_expiresAt_idx" ON "AuthChallenge"("phone", "expiresAt");
+CREATE INDEX "auth_challenges_phone_purpose_expiresAt_idx" ON "auth_challenges"("phone", "purpose", "expiresAt");
 
 -- CreateIndex
-CREATE INDEX "Session_userId_createdAt_idx" ON "Session"("userId", "createdAt");
+CREATE UNIQUE INDEX "sessions_accessToken_key" ON "sessions"("accessToken");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sessions_refreshToken_key" ON "sessions"("refreshToken");
+
+-- CreateIndex
+CREATE INDEX "sessions_userId_revokedAt_idx" ON "sessions"("userId", "revokedAt");
+
+-- CreateIndex
+CREATE INDEX "sessions_accessExpiresAt_idx" ON "sessions"("accessExpiresAt");
+
+-- CreateIndex
+CREATE INDEX "sessions_refreshExpiresAt_idx" ON "sessions"("refreshExpiresAt");
 
 -- AddForeignKey
 ALTER TABLE "Shop" ADD CONSTRAINT "Shop_ownerUserId_fkey" FOREIGN KEY ("ownerUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -176,6 +295,24 @@ ALTER TABLE "ShopMember" ADD CONSTRAINT "ShopMember_shopId_fkey" FOREIGN KEY ("s
 
 -- AddForeignKey
 ALTER TABLE "ShopMember" ADD CONSTRAINT "ShopMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "password_credentials" ADD CONSTRAINT "password_credentials_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "auth_identities" ADD CONSTRAINT "auth_identities_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "roles_permissions_assignment" ADD CONSTRAINT "roles_permissions_assignment_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "roles_permissions_assignment" ADD CONSTRAINT "roles_permissions_assignment_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "shop_member_role_assignments" ADD CONSTRAINT "shop_member_role_assignments_shopMemberId_fkey" FOREIGN KEY ("shopMemberId") REFERENCES "ShopMember"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "shop_member_role_assignments" ADD CONSTRAINT "shop_member_role_assignments_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Customer" ADD CONSTRAINT "Customer_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -196,7 +333,7 @@ ALTER TABLE "OrderStatusEvent" ADD CONSTRAINT "OrderStatusEvent_orderId_fkey" FO
 ALTER TABLE "OrderStatusEvent" ADD CONSTRAINT "OrderStatusEvent_changedByUserId_fkey" FOREIGN KEY ("changedByUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AuthChallenge" ADD CONSTRAINT "AuthChallenge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "auth_challenges" ADD CONSTRAINT "auth_challenges_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

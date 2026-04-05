@@ -1,22 +1,42 @@
 import {
   Body,
   Controller,
-  Get,
   Headers,
   HttpCode,
-  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
-import { CurrentUser } from '../common/http/current-user.decorator';
-import type { AuthenticatedUser } from '../common/http/request-context';
 import { AuthService } from './auth.service';
 
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  @HttpCode(200)
+  register(@Body() body: Record<string, unknown>) {
+    return ok(this.authService.register(body));
+  }
+
+  @Post('login')
+  @HttpCode(200)
+  login(@Body() body: Record<string, unknown>) {
+    return ok(this.authService.login(body));
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  refresh(@Body() body: Record<string, unknown>) {
+    return ok(this.authService.refreshSession(body));
+  }
+
+  @Post('social/login')
+  @HttpCode(200)
+  socialLogin(@Body() body: Record<string, unknown>) {
+    return ok(this.authService.socialLogin(body));
+  }
 
   @Post('phone/start')
   @HttpCode(200)

@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
+import { hashPassword } from '../src/common/auth/password';
+import {
+  defaultRoleCatalog,
+  permissionCatalog,
+} from '../src/common/http/rbac.constants';
 
 const connectionString =
   process.env.DATABASE_URL ??
@@ -16,26 +21,146 @@ async function main() {
   await prisma.order.deleteMany();
   await prisma.session.deleteMany();
   await prisma.authChallenge.deleteMany();
+  await prisma.shopMemberRoleAssignment.deleteMany();
   await prisma.shopMember.deleteMany();
+  await prisma.authIdentity.deleteMany();
+  await prisma.passwordCredential.deleteMany();
   await prisma.customer.deleteMany();
+  await prisma.rolePermissionAssignment.deleteMany();
+  await prisma.permission.deleteMany();
+  await prisma.role.deleteMany();
   await prisma.shop.deleteMany();
   await prisma.user.deleteMany();
+
+  await prisma.permission.createMany({
+    data: permissionCatalog.map((permission) => ({
+      id: `perm_${permission.code.replace(/[^\w]+/g, '_')}`,
+      code: permission.code,
+      name: permission.name,
+      description: permission.description,
+      createdAt: new Date('2026-03-20T08:50:00.000Z'),
+      updatedAt: new Date('2026-03-20T08:50:00.000Z'),
+    })),
+  });
+
+  await prisma.role.createMany({
+    data: defaultRoleCatalog.map((role) => ({
+      id: `role_${role.code}`,
+      code: role.code,
+      name: role.name,
+      description: role.description,
+      isSystem: true,
+      createdAt: new Date('2026-03-20T08:55:00.000Z'),
+      updatedAt: new Date('2026-03-20T08:55:00.000Z'),
+    })),
+  });
+
+  await prisma.rolePermissionAssignment.createMany({
+    data: defaultRoleCatalog.flatMap((role) =>
+      role.permissionCodes.map((permissionCode) => ({
+        id: `rpa_${role.code}_${permissionCode.replace(/[^\w]+/g, '_')}`,
+        roleId: `role_${role.code}`,
+        permissionId: `perm_${permissionCode.replace(/[^\w]+/g, '_')}`,
+        createdAt: new Date('2026-03-20T08:58:00.000Z'),
+      })),
+    ),
+  });
 
   await prisma.user.createMany({
     data: [
       {
         id: 'usr_ma_aye',
         name: 'Ma Aye',
+        email: 'maaye@example.com',
         phone: '09 7800 1111',
         locale: 'my',
+        emailVerifiedAt: new Date('2026-03-20T09:00:00.000Z'),
+        phoneVerifiedAt: new Date('2026-03-20T09:00:00.000Z'),
         createdAt: new Date('2026-03-20T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-20T09:00:00.000Z'),
       },
       {
         id: 'usr_ko_min',
         name: 'Ko Min',
+        email: 'komin@example.com',
         phone: '09 7800 2222',
         locale: 'my',
+        emailVerifiedAt: new Date('2026-03-21T09:00:00.000Z'),
+        phoneVerifiedAt: new Date('2026-03-21T09:00:00.000Z'),
         createdAt: new Date('2026-03-21T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-21T09:00:00.000Z'),
+      },
+    ],
+  });
+
+  const demoPasswordHash = await hashPassword('Password123!');
+
+  await prisma.passwordCredential.createMany({
+    data: [
+      {
+        userId: 'usr_ma_aye',
+        passwordHash: demoPasswordHash,
+        createdAt: new Date('2026-03-20T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-20T09:00:00.000Z'),
+      },
+      {
+        userId: 'usr_ko_min',
+        passwordHash: demoPasswordHash,
+        createdAt: new Date('2026-03-21T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-21T09:00:00.000Z'),
+      },
+    ],
+  });
+
+  await prisma.authIdentity.createMany({
+    data: [
+      {
+        id: 'aid_pwd_owner',
+        userId: 'usr_ma_aye',
+        provider: 'password',
+        providerUserId: 'maaye@example.com',
+        email: 'maaye@example.com',
+        phone: '09 7800 1111',
+        displayName: 'Ma Aye',
+        createdAt: new Date('2026-03-20T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-20T09:00:00.000Z'),
+        lastLoginAt: new Date('2026-04-02T00:00:00.000Z'),
+      },
+      {
+        id: 'aid_phone_owner',
+        userId: 'usr_ma_aye',
+        provider: 'phone',
+        providerUserId: '09 7800 1111',
+        email: 'maaye@example.com',
+        phone: '09 7800 1111',
+        displayName: 'Ma Aye',
+        createdAt: new Date('2026-03-20T09:01:00.000Z'),
+        updatedAt: new Date('2026-03-20T09:01:00.000Z'),
+        lastLoginAt: new Date('2026-04-02T00:00:00.000Z'),
+      },
+      {
+        id: 'aid_pwd_staff',
+        userId: 'usr_ko_min',
+        provider: 'password',
+        providerUserId: 'komin@example.com',
+        email: 'komin@example.com',
+        phone: '09 7800 2222',
+        displayName: 'Ko Min',
+        createdAt: new Date('2026-03-21T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-21T09:00:00.000Z'),
+        lastLoginAt: new Date('2026-04-02T00:30:00.000Z'),
+      },
+      {
+        id: 'aid_phone_staff',
+        userId: 'usr_ko_min',
+        provider: 'phone',
+        providerUserId: '09 7800 2222',
+        email: 'komin@example.com',
+        phone: '09 7800 2222',
+        displayName: 'Ko Min',
+        createdAt: new Date('2026-03-21T09:01:00.000Z'),
+        updatedAt: new Date('2026-03-21T09:01:00.000Z'),
+        lastLoginAt: new Date('2026-04-02T00:30:00.000Z'),
       },
     ],
   });
@@ -56,7 +181,6 @@ async function main() {
         id: 'mem_owner',
         shopId: 'shop_ma_aye',
         userId: 'usr_ma_aye',
-        role: 'owner',
         status: 'active',
         createdAt: new Date('2026-03-20T09:05:00.000Z'),
       },
@@ -64,8 +188,24 @@ async function main() {
         id: 'mem_staff',
         shopId: 'shop_ma_aye',
         userId: 'usr_ko_min',
-        role: 'staff',
         status: 'active',
+        createdAt: new Date('2026-03-22T09:05:00.000Z'),
+      },
+    ],
+  });
+
+  await prisma.shopMemberRoleAssignment.createMany({
+    data: [
+      {
+        id: 'smra_owner_owner',
+        shopMemberId: 'mem_owner',
+        roleId: 'role_owner',
+        createdAt: new Date('2026-03-20T09:05:00.000Z'),
+      },
+      {
+        id: 'smra_staff_staff',
+        shopMemberId: 'mem_staff',
+        roleId: 'role_staff',
         createdAt: new Date('2026-03-22T09:05:00.000Z'),
       },
     ],
@@ -468,12 +608,29 @@ async function main() {
     ],
   });
 
-  await prisma.session.create({
-    data: {
-      token: 'tok_demo_owner',
-      userId: 'usr_ma_aye',
-      createdAt: new Date('2026-04-02T00:00:00.000Z'),
-    },
+  await prisma.session.createMany({
+    data: [
+      {
+        id: 'ses_demo_owner',
+        userId: 'usr_ma_aye',
+        accessToken: 'atk_demo_owner',
+        refreshToken: 'rtk_demo_owner',
+        accessExpiresAt: new Date('2026-12-31T00:00:00.000Z'),
+        refreshExpiresAt: new Date('2027-01-31T00:00:00.000Z'),
+        createdAt: new Date('2026-04-02T00:00:00.000Z'),
+        lastUsedAt: new Date('2026-04-02T00:00:00.000Z'),
+      },
+      {
+        id: 'ses_demo_staff',
+        userId: 'usr_ko_min',
+        accessToken: 'atk_demo_staff',
+        refreshToken: 'rtk_demo_staff',
+        accessExpiresAt: new Date('2026-12-31T00:00:00.000Z'),
+        refreshExpiresAt: new Date('2027-01-31T00:00:00.000Z'),
+        createdAt: new Date('2026-04-02T00:30:00.000Z'),
+        lastUsedAt: new Date('2026-04-02T00:30:00.000Z'),
+      },
+    ],
   });
 }
 

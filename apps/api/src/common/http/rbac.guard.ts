@@ -2,15 +2,15 @@ import { CanActivate, Injectable, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { forbiddenError, notFoundError } from './app-http.exception';
 import { PERMISSIONS_KEY } from './permissions.decorator';
-import { permissionsForRole, type Permission } from './rbac.constants';
+import type { Permission } from './rbac.constants';
 import type { RequestWithContext } from './request-context';
-import { PrismaService } from '../prisma/prisma.service';
+import { ShopsService } from '../../shops/shops.service';
 
 @Injectable()
 export class RbacGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
+    private readonly shopsService: ShopsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -39,25 +39,11 @@ export class RbacGuard implements CanActivate {
       throw notFoundError('Shop context is missing for RBAC evaluation');
     }
 
-    const membership = await this.prisma.shopMember.findUnique({
-      where: {
-        shopId_userId: {
-          shopId,
-          userId: currentUser.id,
-        },
-      },
-    });
-    if (!membership || membership.status !== 'active') {
-      throw forbiddenError();
-    }
-
-    const grantedPermissions = new Set(permissionsForRole(membership.role));
-    const missing = requiredPermissions.filter(
-      (permission) => !grantedPermissions.has(permission),
+    await this.shopsService.assertPermission(
+      currentUser.id,
+      shopId,
+      requiredPermissions,
     );
-    if (missing.length > 0) {
-      throw forbiddenError('You do not have permission to perform this action');
-    }
 
     return true;
   }

@@ -14,7 +14,7 @@ import {
   requiredString,
 } from '../common/utils/validation';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { permissionsForRole } from '../common/http/rbac.constants';
+import { permissions, type Permission } from '../common/http/rbac.constants';
 import { generateId } from '../common/utils/id';
 
 type ShopWithCount = any & {
@@ -23,7 +23,7 @@ type ShopWithCount = any & {
   };
 };
 
-type MemberWithUser = any;
+type MemberWithAccess = any;
 
 @Injectable()
 export class ShopsService {
@@ -45,18 +45,36 @@ export class ShopsService {
             },
           },
         },
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
-    return memberships.map((member) => ({
-      ...this.serializeShopRecord(member.shop),
-      membership: {
-        id: member.id,
-        role: member.role,
-        status: member.status,
-        permissions: [...permissionsForRole(member.role)],
-      },
-    }));
+    return memberships.map((member) => {
+      const access = this.extractMemberAccess(member);
+
+      return {
+        ...this.serializeShopRecord(member.shop),
+        membership: {
+          id: member.id,
+          role: access.primaryRole,
+          roles: access.roles,
+          status: member.status,
+          permissions: access.permissions,
+        },
+      };
+    });
   }
 
   async createShop(
@@ -70,32 +88,40 @@ export class ShopsService {
       'Asia/Yangon';
     assertValid(errors);
 
-    const shopId = generateId('shop');
-    await this.prisma.$transaction([
-      this.prisma.shop.create({
+    const ownerRole = await this.requireRolesByCodes(['owner']);
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const shop = await tx.shop.create({
         data: {
-          id: shopId,
           ownerUserId: currentUser.id,
           name,
           timezone,
         },
-      }),
-      this.prisma.shopMember.create({
+      });
+
+      const member = await tx.shopMember.create({
         data: {
-          id: generateId('mem'),
-          shopId,
+          shopId: shop.id,
           userId: currentUser.id,
-          role: 'owner',
           status: 'active',
         },
-      }),
-    ]);
+      });
 
-    return this.serializeShop(shopId);
+      await tx.shopMemberRoleAssignment.createMany({
+        data: ownerRole.map((role) => ({
+          shopMemberId: member.id,
+          roleId: role.id,
+        })),
+      });
+
+      return shop;
+    });
+
+    return this.serializeShop(created.id);
   }
 
   async getShop(currentUser: AuthenticatedUser, shopId: string) {
-    await this.assertShopAccess(currentUser.id, shopId);
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
     return this.serializeShop(shopId);
   }
 
@@ -104,7 +130,7 @@ export class ShopsService {
     shopId: string,
     body: Record<string, unknown>,
   ) {
-    await this.assertOwnerAccess(currentUser.id, shopId);
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
     const errors: Array<{ field: string; errors: string[] }> = [];
     const name = optionalString(body.name, 'name', errors, 'shop name');
     const timezone = optionalString(
@@ -131,11 +157,30 @@ export class ShopsService {
     shopId: string,
     query: Record<string, unknown>,
   ) {
-    await this.assertShopAccess(currentUser.id, shopId);
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersRead,
+    );
     const members = (
       await this.prisma.shopMember.findMany({
         where: { shopId },
-        include: { user: true },
+        include: {
+          user: true,
+          roleAssignments: {
+            include: {
+              role: {
+                include: {
+                  permissionAssignments: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
         orderBy: { createdAt: 'asc' },
       })
     ).map((member) => this.serializeMemberRecord(member));
@@ -153,17 +198,18 @@ export class ShopsService {
     shopId: string,
     body: Record<string, unknown>,
   ) {
-    await this.assertOwnerAccess(currentUser.id, shopId);
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
 
     const errors: Array<{ field: string; errors: string[] }> = [];
     const userId = optionalString(body.user_id, 'user_id', errors, 'user ID');
     const phone = optionalString(body.phone, 'phone', errors, 'phone number');
+    const email = optionalString(body.email, 'email', errors, 'email');
     const name = optionalString(body.name, 'name', errors, 'name');
-    const role =
-      asEnum(body.role, 'role', ['owner', 'staff'] as const, errors, {
-        required: true,
-        label: 'role',
-      }) ?? 'staff';
+    const roleCodes = this.extractRequestedRoleCodes(body, errors, ['staff']);
     assertValid(errors);
 
     let targetUser =
@@ -171,23 +217,27 @@ export class ShopsService {
         (await this.prisma.user.findUnique({
           where: { id: userId },
         }))) ||
+      (email &&
+        (await this.prisma.user.findUnique({
+          where: { email: email.trim().toLowerCase() },
+        }))) ||
       (phone &&
         (await this.prisma.user.findUnique({
-          where: { phone },
+          where: { phone: phone.replace(/\s+/g, ' ').trim() },
         })));
 
     if (!targetUser) {
-      if (!phone || !name) {
+      if (!name || (!email && !phone)) {
         throw conflictError(
-          'Existing user was not found. Provide phone and name to create one',
+          'Existing user was not found. Provide name with email or phone to create one',
         );
       }
 
       targetUser = await this.prisma.user.create({
         data: {
-          id: generateId('usr'),
           name,
-          phone,
+          email: email?.trim().toLowerCase() ?? null,
+          phone: phone?.replace(/\s+/g, ' ').trim() ?? null,
         },
       });
     }
@@ -204,17 +254,42 @@ export class ShopsService {
       throw conflictError('User is already a member of this shop');
     }
 
-    const member = await this.prisma.shopMember.create({
-      data: {
-        id: generateId('mem'),
-        shopId,
-        userId: targetUser.id,
-        role,
-        status: 'active',
-      },
-      include: {
-        user: true,
-      },
+    const roles = await this.requireRolesByCodes(roleCodes ?? ['staff']);
+    const member = await this.prisma.$transaction(async (tx) => {
+      const createdMember = await tx.shopMember.create({
+        data: {
+          shopId,
+          userId: targetUser.id,
+          status: 'active',
+        },
+      });
+
+      await tx.shopMemberRoleAssignment.createMany({
+        data: roles.map((role) => ({
+          shopMemberId: createdMember.id,
+          roleId: role.id,
+        })),
+      });
+
+      return tx.shopMember.findUnique({
+        where: { id: createdMember.id },
+        include: {
+          user: true,
+          roleAssignments: {
+            include: {
+              role: {
+                include: {
+                  permissionAssignments: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
     });
 
     return this.serializeMemberRecord(member);
@@ -226,11 +301,31 @@ export class ShopsService {
     memberId: string,
     body: Record<string, unknown>,
   ) {
-    await this.assertOwnerAccess(currentUser.id, shopId);
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
     const member = await this.prisma.shopMember.findFirst({
       where: {
         id: memberId,
         shopId,
+      },
+      include: {
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!member) {
@@ -238,15 +333,6 @@ export class ShopsService {
     }
 
     const errors: Array<{ field: string; errors: string[] }> = [];
-    const role = asEnum(
-      body.role,
-      'role',
-      ['owner', 'staff'] as const,
-      errors,
-      {
-        label: 'role',
-      },
-    );
     const status = asEnum(
       body.status,
       'status',
@@ -256,17 +342,52 @@ export class ShopsService {
         label: 'status',
       },
     );
+    const roleCodes = this.extractRequestedRoleCodes(body, errors);
     assertValid(errors);
 
-    const updated = await this.prisma.shopMember.update({
-      where: { id: member.id },
-      data: {
-        ...(role ? { role } : {}),
-        ...(status ? { status } : {}),
-      },
-      include: {
-        user: true,
-      },
+    const roles = roleCodes ? await this.requireRolesByCodes(roleCodes) : null;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (status) {
+        await tx.shopMember.update({
+          where: { id: member.id },
+          data: {
+            status,
+          },
+        });
+      }
+
+      if (roles) {
+        await tx.shopMemberRoleAssignment.deleteMany({
+          where: { shopMemberId: member.id },
+        });
+        await tx.shopMemberRoleAssignment.createMany({
+          data: roles.map((role) => ({
+            shopMemberId: member.id,
+            roleId: role.id,
+          })),
+        });
+      }
+
+      return tx.shopMember.findUnique({
+        where: { id: member.id },
+        include: {
+          user: true,
+          roleAssignments: {
+            include: {
+              role: {
+                include: {
+                  permissionAssignments: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
     });
 
     return this.serializeMemberRecord(updated);
@@ -282,22 +403,51 @@ export class ShopsService {
       },
       include: {
         shop: true,
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!member || member.status !== 'active') {
       throw forbiddenError();
     }
 
-    return { shop: member.shop, member };
+    return {
+      shop: member.shop,
+      member,
+      access: this.extractMemberAccess(member),
+    };
   }
 
-  async assertOwnerAccess(userId: string, shopId: string) {
-    const { shop, member } = await this.assertShopAccess(userId, shopId);
-    if (member.role !== 'owner') {
-      throw forbiddenError('Only shop owners can perform this action');
+  async assertPermission(
+    userId: string,
+    shopId: string,
+    requiredPermissions: Permission | Permission[],
+  ) {
+    const result = await this.assertShopAccess(userId, shopId);
+    const required = Array.isArray(requiredPermissions)
+      ? requiredPermissions
+      : [requiredPermissions];
+
+    const missing = required.filter(
+      (permission) => !result.access.permissions.includes(permission),
+    );
+    if (missing.length > 0) {
+      throw forbiddenError('You do not have permission to perform this action');
     }
 
-    return { shop, member };
+    return result;
   }
 
   async serializeShop(shopId: string) {
@@ -321,13 +471,120 @@ export class ShopsService {
   async serializeMember(memberId: string) {
     const member = await this.prisma.shopMember.findUnique({
       where: { id: memberId },
-      include: { user: true },
+      include: {
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
     if (!member) {
       throw notFoundError('Shop member not found');
     }
 
     return this.serializeMemberRecord(member);
+  }
+
+  private async requireRolesByCodes(roleCodes: string[]) {
+    const uniqueRoleCodes = [
+      ...new Set(roleCodes.map((role) => role.trim())),
+    ].sort();
+    const roles = await this.prisma.role.findMany({
+      where: {
+        code: {
+          in: uniqueRoleCodes,
+        },
+      },
+    });
+
+    const missingRoleCodes = uniqueRoleCodes.filter(
+      (code) => !roles.some((role) => role.code === code),
+    );
+    if (missingRoleCodes.length > 0) {
+      throw notFoundError(
+        `Roles not found: ${missingRoleCodes.join(', ')}. Seed RBAC defaults first.`,
+      );
+    }
+
+    return roles.sort((left, right) => left.code.localeCompare(right.code));
+  }
+
+  private extractRequestedRoleCodes(
+    body: Record<string, unknown>,
+    errors: Array<{ field: string; errors: string[] }>,
+    defaultRoleCodes?: string[],
+  ): string[] | undefined {
+    const directRole =
+      optionalString(body.role, 'role', errors, 'role') ??
+      optionalString(body.role_code, 'role_code', errors, 'role code');
+
+    const roleCodesRaw =
+      body.role_codes ?? body.roles ?? (directRole ? [directRole] : undefined);
+
+    if (roleCodesRaw === undefined || roleCodesRaw === null) {
+      return defaultRoleCodes;
+    }
+
+    if (!Array.isArray(roleCodesRaw)) {
+      errors.push({
+        field: 'role_codes',
+        errors: ['Role codes must be an array of role codes'],
+      });
+      return defaultRoleCodes;
+    }
+
+    const roleCodes = roleCodesRaw
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    if (roleCodes.length !== roleCodesRaw.length || roleCodes.length === 0) {
+      errors.push({
+        field: 'role_codes',
+        errors: ['Role codes must be a non-empty array of strings'],
+      });
+      return defaultRoleCodes;
+    }
+
+    return [...new Set(roleCodes)];
+  }
+
+  private extractMemberAccess(member: MemberWithAccess) {
+    const roles = [...member.roleAssignments]
+      .map((assignment) => assignment.role)
+      .sort((left, right) => left.code.localeCompare(right.code))
+      .map((role) => ({
+        id: role.id,
+        code: role.code,
+        name: role.name,
+        description: role.description,
+      }));
+
+    const permissionCodes = [
+      ...new Set(
+        member.roleAssignments.flatMap((assignment) =>
+          assignment.role.permissionAssignments.map(
+            (permissionAssignment) => permissionAssignment.permission.code,
+          ),
+        ),
+      ),
+    ].sort();
+
+    return {
+      primaryRole: roles[0]?.code ?? null,
+      roles,
+      permissions: permissionCodes,
+    };
   }
 
   private serializeShopRecord(shop: ShopWithCount) {
@@ -341,21 +598,29 @@ export class ShopsService {
     };
   }
 
-  private serializeMemberRecord(member: MemberWithUser) {
+  private serializeMemberRecord(member: MemberWithAccess | null) {
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    const access = this.extractMemberAccess(member);
+
     return {
       id: member.id,
       shop_id: member.shopId,
       user_id: member.userId,
-      role: member.role,
+      role: access.primaryRole,
+      roles: access.roles,
       status: member.status,
       created_at: member.createdAt.toISOString(),
       user: {
         id: member.user.id,
         name: member.user.name,
+        email: member.user.email,
         phone: member.user.phone,
         locale: member.user.locale,
       },
-      permissions: [...permissionsForRole(member.role)],
+      permissions: access.permissions,
     };
   }
 }
