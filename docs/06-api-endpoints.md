@@ -134,6 +134,11 @@ Order item write notes:
 | GET    | /shops/{shopId}/reports/weekly  | Weekly report         | 200 Single Report       |
 | GET    | /shops/{shopId}/reports/monthly | Monthly report        | 200 Single Report       |
 
+Summary query notes:
+
+- `GET /shops/{shopId}/summaries/daily` accepts `date=YYYY-MM-DD` in the shop timezone.
+- When `date` is omitted, the API uses the latest order date for that shop.
+
 ## Example: Create Order Request
 
 ```json

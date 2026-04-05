@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate, toLocalHour } from '../common/utils/dates';
 import { ShopsService } from '../shops/shops.service';
+import { GetDailySummaryQueryDto } from './dto/get-daily-summary-query.dto';
 
 @Injectable()
 export class SummariesService {
@@ -14,16 +15,14 @@ export class SummariesService {
   async getDailySummary(
     currentUser: AuthenticatedUser,
     shopId: string,
-    query: Record<string, unknown>,
+    query: GetDailySummaryQueryDto,
   ) {
     const { shop } = await this.shopsService.assertShopAccess(
       currentUser.id,
       shopId,
     );
     const targetDate =
-      typeof query.date === 'string' && query.date.trim().length > 0
-        ? query.date.trim()
-        : await this.resolveReferenceDate(shopId, shop.timezone);
+      query.date ?? (await this.resolveReferenceDate(shopId, shop.timezone));
 
     const allOrders = await this.prisma.order.findMany({
       where: {

@@ -393,6 +393,47 @@ describe('Facebook Order Manager API (e2e)', () => {
     );
   });
 
+  dbIt('returns a typed daily summary for a shop date', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/shops/shop_ma_aye/summaries/daily?date=2026-04-02',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.objectContaining({
+        shop_id: 'shop_ma_aye',
+        summary_date: '2026-04-02',
+        total_orders: expect.any(Number),
+        total_revenue: expect.any(Number),
+        status_breakdown: expect.objectContaining({
+          new: expect.any(Number),
+          confirmed: expect.any(Number),
+          out_for_delivery: expect.any(Number),
+          delivered: expect.any(Number),
+        }),
+        top_products: expect.any(Array),
+        recent_orders: expect.any(Array),
+      }),
+    );
+  });
+
   dbIt('enforces RBAC for member management', async () => {
     const loginResponse = await app.inject({
       method: 'POST',
