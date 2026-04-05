@@ -5,6 +5,7 @@ export 'src/components/app_card.dart';
 export 'src/components/app_chip.dart';
 export 'src/components/app_empty_state.dart';
 export 'src/components/app_fab.dart';
+export 'src/components/app_filter_pill.dart';
 export 'src/components/app_filter_tabs.dart';
 export 'src/components/app_icon_button.dart';
 export 'src/components/app_nav_bar.dart';

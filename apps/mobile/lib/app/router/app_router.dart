@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
 import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
+import 'package:fom_mobile/features/notifications/feature_notifications.dart';
 import 'package:fom_mobile/features/onboarding/feature_onboarding.dart';
 import 'package:fom_mobile/features/orders/feature_orders.dart';
 import 'package:fom_mobile/features/reports/feature_reports.dart';
+import 'package:fom_mobile/features/search/feature_search.dart';
 import 'package:fom_mobile/features/settings/feature_settings.dart';
 import 'package:go_router/go_router.dart';
 
@@ -30,6 +32,8 @@ class AppRouter {
   static const ordersPath = AppRoutePaths.orders;
   static const reportsPath = AppRoutePaths.reports;
   static const settingsPath = AppRoutePaths.settings;
+  static const notificationsPath = AppRoutePaths.notifications;
+  static const searchPath = AppRoutePaths.search;
 
   final AppLogger _appLogger;
   final bool _enableLogDevTools;
@@ -88,6 +92,16 @@ class AppRouter {
         path: AppRoutePaths.editProfile,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EditShopProfilePage(),
+      ),
+      GoRoute(
+        path: notificationsPath,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationsHomePage(),
+      ),
+      GoRoute(
+        path: searchPath,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SearchHomePage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

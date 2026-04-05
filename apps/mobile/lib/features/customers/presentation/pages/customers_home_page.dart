@@ -1,5 +1,6 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/app/router/app_route_paths.dart';
 import 'package:go_router/go_router.dart';
 
 import '../widgets/customer_card.dart';
@@ -300,6 +301,11 @@ class _CustomersHomePageState extends State<CustomersHomePage> {
                 ),
                 Row(
                   children: [
+                    _IconBtn(
+                      icon: '🔔',
+                      onTap: () => context.push(AppRoutePaths.notifications),
+                    ),
+                    const SizedBox(width: 8),
                     _IconBtn(icon: '↕', onTap: () {}),
                     const SizedBox(width: 8),
                     _IconBtn(icon: '+', onTap: () {}),
@@ -319,11 +325,15 @@ class _CustomersHomePageState extends State<CustomersHomePage> {
                 border: Border.all(color: AppColors.border, width: 2),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const TextField(
-                decoration: InputDecoration(
+              child: TextField(
+                readOnly: true,
+                onTap: () => context.push(AppRoutePaths.search),
+                decoration: const InputDecoration(
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
                   prefixIcon: Icon(Icons.search, size: 20),
                   prefixIconConstraints: BoxConstraints(minWidth: 32),
                   hintText: 'Search name, phone, township...',

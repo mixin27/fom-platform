@@ -1,5 +1,7 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/app/router/app_route_paths.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
@@ -76,7 +78,11 @@ class HomeHeader extends StatelessWidget {
                 // Actions
                 Row(
                   children: [
-                    _IconBtn(icon: '🔔', hasDot: true, onTap: () {}),
+                    _IconBtn(
+                      icon: '🔔',
+                      hasDot: true,
+                      onTap: () => context.push(AppRoutePaths.notifications),
+                    ),
                     const SizedBox(width: 8),
                     _IconBtn(icon: '⋯', onTap: () {}),
                   ],

@@ -118,15 +118,17 @@ class _OrdersHomePageState extends State<OrdersHomePage> {
                     ),
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.background,
                       border: Border.all(color: AppColors.border, width: 2),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: TextField(
+                      readOnly: true,
+                      onTap: () => context.push(AppRoutePaths.search),
                       decoration: InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
+                        // border: InputBorder.none,
+                        // enabledBorder: InputBorder.none,
+                        // focusedBorder: InputBorder.none,
                         prefixIcon: const Icon(Icons.search, size: 20),
                         prefixIconConstraints: const BoxConstraints(
                           minWidth: 32,
