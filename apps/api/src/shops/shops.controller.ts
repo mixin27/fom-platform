@@ -1,3 +1,4 @@
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -19,6 +20,8 @@ import { ShopsService } from './shops.service';
 
 @Controller('api/v1/shops')
 @UseGuards(AuthGuard)
+@ApiTags('Shops')
+@ApiBearerAuth('access-token')
 export class ShopsController {
   constructor(private readonly shopsService: ShopsService) {}
 

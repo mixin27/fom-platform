@@ -28,6 +28,12 @@ export class AppService {
         database: 'postgresql',
         orm: 'prisma',
       },
+      docs: {
+        swagger_ui: '/docs',
+        openapi_json: '/openapi.json',
+        openapi_yaml: '/openapi.yaml',
+        scalar: '/reference',
+      },
       scope: {
         implemented: [
           'auth',

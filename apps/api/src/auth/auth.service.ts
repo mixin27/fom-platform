@@ -5,7 +5,11 @@ import {
   notFoundError,
   unauthorizedError,
 } from '../common/http/app-http.exception';
-import type { AuthenticatedUser } from '../common/http/request-context';
+import type { User } from '../generated/prisma/client';
+import type {
+  AuthenticatedUser,
+  SessionRequestMetadata,
+} from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { generateId } from '../common/utils/id';
 import { hashPassword, verifyPassword } from '../common/auth/password';
@@ -51,7 +55,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(body: RegisterDto) {
+  async register(body: RegisterDto, metadata: SessionRequestMetadata) {
     const normalizedEmail = body.email.trim().toLowerCase();
     const normalizedPhone = this.normalizePhone(body.phone);
 
@@ -81,11 +85,11 @@ export class AuthService {
       displayName: user.name,
     });
 
-    const issuedSession = await this.issueSessionForUser(user.id);
+    const issuedSession = await this.issueSessionForUser(user.id, metadata);
     return this.buildAuthResponse(issuedSession);
   }
 
-  async login(body: LoginDto) {
+  async login(body: LoginDto, metadata: SessionRequestMetadata) {
     const normalizedEmail = body.email.trim().toLowerCase();
 
     const user = await this.prisma.user.findUnique({
@@ -117,11 +121,14 @@ export class AuthService {
       displayName: user.name,
     });
 
-    const issuedSession = await this.issueSessionForUser(user.id);
+    const issuedSession = await this.issueSessionForUser(user.id, metadata);
     return this.buildAuthResponse(issuedSession);
   }
 
-  async refreshSession(body: RefreshSessionDto) {
+  async refreshSession(
+    body: RefreshSessionDto,
+    metadata: SessionRequestMetadata,
+  ) {
     const refreshPayload = await this.verifyRefreshToken(body.refresh_token);
     const session = await this.prisma.session.findUnique({
       where: { id: refreshPayload.sid },
@@ -139,12 +146,13 @@ export class AuthService {
 
     const issuedSession = await this.issueSessionForUser(
       session.userId,
+      metadata,
       session.id,
     );
     return this.buildAuthResponse(issuedSession);
   }
 
-  async socialLogin(body: SocialLoginDto) {
+  async socialLogin(body: SocialLoginDto, metadata: SessionRequestMetadata) {
     const normalizedEmail = body.email?.trim().toLowerCase() ?? null;
     const normalizedPhone = this.normalizePhone(body.phone);
 
@@ -160,7 +168,7 @@ export class AuthService {
       },
     });
 
-    let user: any = existingIdentity?.user ?? null;
+    let user: User | null = existingIdentity?.user ?? null;
     if (!user && normalizedEmail) {
       user = await this.prisma.user.findUnique({
         where: { email: normalizedEmail },
@@ -205,7 +213,7 @@ export class AuthService {
       displayName: body.name ?? user.name,
     });
 
-    const issuedSession = await this.issueSessionForUser(user.id);
+    const issuedSession = await this.issueSessionForUser(user.id, metadata);
     return this.buildAuthResponse(issuedSession);
   }
 
@@ -237,7 +245,10 @@ export class AuthService {
     };
   }
 
-  async verifyPhoneChallenge(body: VerifyPhoneChallengeDto) {
+  async verifyPhoneChallenge(
+    body: VerifyPhoneChallengeDto,
+    metadata: SessionRequestMetadata,
+  ) {
     const challenge = await this.prisma.authChallenge.findUnique({
       where: { id: body.challenge_id },
     });
@@ -313,7 +324,7 @@ export class AuthService {
       displayName: user.name,
     });
 
-    const issuedSession = await this.issueSessionForUser(user.id);
+    const issuedSession = await this.issueSessionForUser(user.id, metadata);
     return this.buildAuthResponse(issuedSession);
   }
 
@@ -332,7 +343,10 @@ export class AuthService {
     });
   }
 
-  async authenticate(accessToken: string): Promise<AuthenticatedUser> {
+  async authenticate(
+    accessToken: string,
+    metadata: SessionRequestMetadata,
+  ): Promise<AuthenticatedUser> {
     const payload = await this.verifyAccessToken(accessToken);
     const session = await this.prisma.session.findUnique({
       where: { id: payload.sid },
@@ -348,9 +362,15 @@ export class AuthService {
       throw unauthorizedError();
     }
 
+    const normalizedMetadata = this.normalizeSessionMetadata(metadata);
+
     await this.prisma.session.update({
       where: { id: session.id },
-      data: { lastUsedAt: new Date() },
+      data: {
+        lastUsedAt: new Date(),
+        lastUsedIpAddress: normalizedMetadata.ipAddress,
+        lastUsedUserAgent: normalizedMetadata.userAgent,
+      },
     });
 
     return {
@@ -393,8 +413,13 @@ export class AuthService {
     };
   }
 
-  private async issueSessionForUser(userId: string, sessionId?: string) {
+  private async issueSessionForUser(
+    userId: string,
+    metadata: SessionRequestMetadata,
+    sessionId?: string,
+  ) {
     const context = await this.buildSessionContext(userId);
+    const normalizedMetadata = this.normalizeSessionMetadata(metadata);
     const accessExpiresAt = new Date(
       Date.now() + jwtConfig.accessTokenTtlSeconds * 1000,
     );
@@ -413,6 +438,10 @@ export class AuthService {
               accessExpiresAt,
               refreshExpiresAt,
               lastUsedAt: new Date(),
+              ipAddress: normalizedMetadata.ipAddress,
+              userAgent: normalizedMetadata.userAgent,
+              lastUsedIpAddress: normalizedMetadata.ipAddress,
+              lastUsedUserAgent: normalizedMetadata.userAgent,
             },
             select: { id: true },
           });
@@ -455,6 +484,8 @@ export class AuthService {
         refreshExpiresAt,
         revokedAt: null,
         lastUsedAt: new Date(),
+        lastUsedIpAddress: normalizedMetadata.ipAddress,
+        lastUsedUserAgent: normalizedMetadata.userAgent,
       },
       select: {
         id: true,
@@ -629,5 +660,30 @@ export class AuthService {
 
     const normalized = value.replace(/\s+/g, ' ').trim();
     return normalized.length > 0 ? normalized : null;
+  }
+
+  private normalizeSessionMetadata(
+    metadata: SessionRequestMetadata,
+  ): SessionRequestMetadata {
+    return {
+      ipAddress: this.normalizeMetadataValue(metadata.ipAddress, 64),
+      userAgent: this.normalizeMetadataValue(metadata.userAgent, 1024),
+    };
+  }
+
+  private normalizeMetadataValue(
+    value: string | null | undefined,
+    maxLength: number,
+  ): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.trim();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    return normalized.slice(0, maxLength);
   }
 }

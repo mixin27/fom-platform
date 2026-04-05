@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
@@ -10,6 +11,8 @@ import { SummariesService } from './summaries.service';
 
 @Controller('api/v1/shops/:shopId/summaries')
 @UseGuards(AuthGuard, RbacGuard)
+@ApiTags('Summaries')
+@ApiBearerAuth('access-token')
 export class SummariesController {
   constructor(private readonly summariesService: SummariesService) {}
 

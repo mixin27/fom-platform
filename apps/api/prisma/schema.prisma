@@ -242,16 +242,20 @@ model AuthChallenge {
 }
 
 model Session {
-  id               String    @id @default(cuid())
-  userId           String
-  accessToken      String    @unique
-  refreshToken     String    @unique
-  accessExpiresAt  DateTime
-  refreshExpiresAt DateTime
-  revokedAt        DateTime?
-  createdAt        DateTime  @default(now())
-  lastUsedAt       DateTime?
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  userId            String
+  accessToken       String    @unique
+  refreshToken      String    @unique
+  accessExpiresAt   DateTime
+  refreshExpiresAt  DateTime
+  ipAddress         String?
+  userAgent         String?
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  lastUsedAt        DateTime?
+  lastUsedIpAddress String?
+  lastUsedUserAgent String?
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@index([accessExpiresAt])

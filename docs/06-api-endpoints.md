@@ -2,12 +2,20 @@
 
 ## Conventions
 
-- Base URL: `/v1`
+- Base URL: `/api/v1`
 - Auth: `Authorization: Bearer <access_token>`
 - Access tokens are JWTs and include shop-scoped role and permission claims for mobile UI decisions.
+- Sessions capture request metadata including IP address and user-agent.
 - Pagination: `limit` and `cursor`
 - Timezone: use shop timezone for date filters
 - Response envelopes follow `docs/17-api-response-structure.md`
+
+## Docs and Testing
+
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/openapi.json`
+- OpenAPI YAML: `/openapi.yaml`
+- Scalar API Reference: `/reference`
 
 ## Response Types
 
@@ -134,4 +142,4 @@
 
 ## Example: List Orders
 
-`GET /v1/shops/{shopId}/orders?status=pending&date=today&limit=50`
+`GET /api/v1/shops/{shopId}/orders?status=pending&date=today&limit=50`

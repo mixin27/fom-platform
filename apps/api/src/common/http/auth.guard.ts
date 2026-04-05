@@ -1,7 +1,10 @@
 import { CanActivate, Injectable, type ExecutionContext } from '@nestjs/common';
 import { AuthService } from '../../auth/auth.service';
 import { unauthorizedError } from './app-http.exception';
-import type { RequestWithContext } from './request-context';
+import {
+  getSessionRequestMetadata,
+  type RequestWithContext,
+} from './request-context';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -17,7 +20,10 @@ export class AuthGuard implements CanActivate {
       throw unauthorizedError();
     }
 
-    request.user = await this.authService.authenticate(token);
+    request.user = await this.authService.authenticate(
+      token,
+      getSessionRequestMetadata(request),
+    );
     return true;
   }
 

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { AppController } from './../src/app.controller';
 import { AppService } from './../src/app.service';
+import { PrismaService } from './../src/common/prisma/prisma.service';
 
 const dbIt = process.env.RUN_DB_E2E === '1' ? it : it.skip;
 
@@ -20,7 +21,7 @@ describe('Facebook Order Manager API (e2e)', () => {
     const moduleFixture: TestingModule =
       process.env.RUN_DB_E2E === '1'
         ? await Test.createTestingModule({
-            imports: [(await import('./../src/app.module')).AppModule],
+            imports: [(await import('./../src/app.module.js')).AppModule],
           }).compile()
         : await Test.createTestingModule({
             controllers: [AppController],
@@ -59,6 +60,10 @@ describe('Facebook Order Manager API (e2e)', () => {
       const loginResponse = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/login',
+        headers: {
+          'user-agent': 'jest-e2e-client/1.0',
+          'x-forwarded-for': '203.0.113.10',
+        },
         payload: {
           email: 'maaye@example.com',
           password: 'Password123!',
@@ -70,8 +75,19 @@ describe('Facebook Order Manager API (e2e)', () => {
       expect(loginBody.success).toBe(true);
       expect(loginBody.data.user.email).toBe('maaye@example.com');
       const accessPayload = decodeJwtPayload(loginBody.data.access_token);
+      const prisma = app.get(PrismaService);
+      const session = await prisma.session.findUnique({
+        where: { id: accessPayload.sid },
+      });
+
       expect(accessPayload.sub).toBeDefined();
       expect(accessPayload.type).toBe('access');
+      expect(session).toMatchObject({
+        ipAddress: '203.0.113.10',
+        userAgent: 'jest-e2e-client/1.0',
+        lastUsedIpAddress: '203.0.113.10',
+        lastUsedUserAgent: 'jest-e2e-client/1.0',
+      });
       expect(accessPayload.shops).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -105,6 +121,10 @@ describe('Facebook Order Manager API (e2e)', () => {
       const refreshResponse = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/refresh',
+        headers: {
+          'user-agent': 'jest-e2e-client/1.1',
+          'x-forwarded-for': '203.0.113.11',
+        },
         payload: {
           refresh_token: loginBody.data.refresh_token,
         },
@@ -115,6 +135,19 @@ describe('Facebook Order Manager API (e2e)', () => {
       expect(refreshBody.success).toBe(true);
       expect(refreshBody.data.access_token).toEqual(expect.any(String));
       expect(refreshBody.data.refresh_token).toEqual(expect.any(String));
+
+      const refreshedAccessPayload = decodeJwtPayload(
+        refreshBody.data.access_token,
+      );
+      const refreshedSession = await prisma.session.findUnique({
+        where: { id: refreshedAccessPayload.sid },
+      });
+      expect(refreshedSession).toMatchObject({
+        ipAddress: '203.0.113.10',
+        userAgent: 'jest-e2e-client/1.0',
+        lastUsedIpAddress: '203.0.113.11',
+        lastUsedUserAgent: 'jest-e2e-client/1.1',
+      });
     },
   );
 

@@ -12,8 +12,11 @@ export class ApiResult<T> {
   ) {}
 }
 
-export function ok<T>(data: T, meta?: Record<string, unknown>): ApiResult<T> {
-  return new ApiResult(data, meta);
+export async function ok<T>(
+  data: T | Promise<T>,
+  meta?: Record<string, unknown>,
+): Promise<ApiResult<Awaited<T>>> {
+  return new ApiResult(await data, meta);
 }
 
 export function paged<T>(

@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsIn,
@@ -11,17 +12,26 @@ import {
 import { trimLowercaseString, trimString } from './transforms';
 
 export class RegisterDto {
+  @ApiProperty({
+    example: 'Ma Aye',
+  })
   @Transform(trimString)
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   name!: string;
 
+  @ApiProperty({
+    example: 'maaye@example.com',
+  })
   @Transform(trimLowercaseString)
   @IsEmail()
   @MaxLength(190)
   email!: string;
 
+  @ApiProperty({
+    example: 'Password123!',
+  })
   @Transform(trimString)
   @IsString()
   @MinLength(8)
@@ -32,12 +42,19 @@ export class RegisterDto {
   })
   password!: string;
 
+  @ApiPropertyOptional({
+    example: '09 7800 1111',
+  })
   @Transform(trimString)
   @IsOptional()
   @IsString()
   @MaxLength(40)
   phone?: string;
 
+  @ApiPropertyOptional({
+    enum: ['en', 'my'],
+    example: 'my',
+  })
   @Transform(trimString)
   @IsOptional()
   @IsIn(['en', 'my'])

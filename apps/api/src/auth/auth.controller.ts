@@ -1,13 +1,19 @@
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
   Headers,
   HttpCode,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
+import {
+  getSessionRequestMetadata,
+  type RequestWithContext,
+} from '../common/http/request-context';
 import { LoginDto } from './dto/login.dto';
 import { RefreshSessionDto } from './dto/refresh-session.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -17,52 +23,80 @@ import { VerifyPhoneChallengeDto } from './dto/verify-phone-challenge.dto';
 import { AuthService } from './auth.service';
 
 @Controller('api/v1/auth')
+@ApiTags('Auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @HttpCode(200)
-  register(@Body() body: RegisterDto) {
-    return ok(this.authService.register(body));
+  @ApiOperation({ summary: 'Register with email and password' })
+  register(@Body() body: RegisterDto, @Req() request: RequestWithContext) {
+    return ok(
+      this.authService.register(body, getSessionRequestMetadata(request)),
+    );
   }
 
   @Post('login')
   @HttpCode(200)
-  login(@Body() body: LoginDto) {
-    return ok(this.authService.login(body));
+  @ApiOperation({ summary: 'Login with email and password' })
+  login(@Body() body: LoginDto, @Req() request: RequestWithContext) {
+    return ok(this.authService.login(body, getSessionRequestMetadata(request)));
   }
 
   @Post('refresh')
   @HttpCode(200)
-  refresh(@Body() body: RefreshSessionDto) {
-    return ok(this.authService.refreshSession(body));
+  @ApiOperation({ summary: 'Rotate JWT access and refresh tokens' })
+  refresh(@Body() body: RefreshSessionDto, @Req() request: RequestWithContext) {
+    return ok(
+      this.authService.refreshSession(body, getSessionRequestMetadata(request)),
+    );
   }
 
   @Post('social/login')
   @HttpCode(200)
-  socialLogin(@Body() body: SocialLoginDto) {
-    return ok(this.authService.socialLogin(body));
+  @ApiOperation({ summary: 'Sign in with a social identity payload' })
+  socialLogin(
+    @Body() body: SocialLoginDto,
+    @Req() request: RequestWithContext,
+  ) {
+    return ok(
+      this.authService.socialLogin(body, getSessionRequestMetadata(request)),
+    );
   }
 
   @Post('phone/start')
   @HttpCode(200)
+  @ApiOperation({ summary: 'Start an optional phone OTP challenge' })
   startPhoneChallenge(@Body() body: StartPhoneChallengeDto) {
     return ok(this.authService.startPhoneChallenge(body));
   }
 
   @Post('phone/verify')
   @HttpCode(200)
-  verifyPhoneChallenge(@Body() body: VerifyPhoneChallengeDto) {
-    return ok(this.authService.verifyPhoneChallenge(body));
+  @ApiOperation({
+    summary: 'Verify a phone OTP challenge and create a session',
+  })
+  verifyPhoneChallenge(
+    @Body() body: VerifyPhoneChallengeDto,
+    @Req() request: RequestWithContext,
+  ) {
+    return ok(
+      this.authService.verifyPhoneChallenge(
+        body,
+        getSessionRequestMetadata(request),
+      ),
+    );
   }
 
   @Post('logout')
   @UseGuards(AuthGuard)
   @HttpCode(204)
-  logout(@Headers('authorization') authorization?: string) {
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Revoke the current access token session' })
+  async logout(@Headers('authorization') authorization?: string) {
     const token = authorization?.replace(/^Bearer\s+/i, '').trim();
     if (token) {
-      this.authService.logout(token);
+      await this.authService.logout(token);
     }
   }
 }

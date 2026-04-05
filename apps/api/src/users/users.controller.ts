@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
@@ -8,6 +9,8 @@ import { UsersService } from './users.service';
 
 @Controller('api/v1/users')
 @UseGuards(AuthGuard)
+@ApiTags('Users')
+@ApiBearerAuth('access-token')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

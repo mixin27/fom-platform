@@ -99,8 +99,18 @@ pnpm db:reset
 - `POST /api/v1/auth/phone/start` and `POST /api/v1/auth/phone/verify` support optional phone OTP login.
 - `POST /api/v1/auth/social/login` stores provider identities for `google` and `facebook`.
 - Access JWT payloads include shop-scoped `roles` and `permissions` so the mobile app can tailor UX without an extra lookup.
+- Sessions persist request metadata including IP address and user-agent so later device/session management work has a reliable base.
 
 Social login currently persists the provider identity supplied by the caller. Provider token verification still needs to be added before treating it as production-ready OAuth.
+
+## API Docs
+
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/openapi.json`
+- OpenAPI YAML: `/openapi.yaml`
+- Scalar API Reference: `/reference`
+
+Scalar is the recommended interactive surface for manual API testing.
 
 ## RBAC Notes
 

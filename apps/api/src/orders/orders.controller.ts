@@ -1,3 +1,4 @@
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -21,6 +22,8 @@ import { OrdersService } from './orders.service';
 
 @Controller('api/v1/shops/:shopId/orders')
 @UseGuards(AuthGuard, RbacGuard)
+@ApiTags('Orders')
+@ApiBearerAuth('access-token')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
