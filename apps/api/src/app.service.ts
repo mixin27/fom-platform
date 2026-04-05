@@ -12,10 +12,15 @@ export class AppService {
       version: '0.1.0',
       base_url: '/api/v1',
       auth: {
-        type: 'bearer-access-token',
+        type: 'bearer-jwt',
         methods: ['email_password', 'phone_otp', 'google', 'facebook'],
-        demo_owner_access_token: 'atk_demo_owner',
-        demo_owner_refresh_token: 'rtk_demo_owner',
+        jwt_claims: ['sub', 'sid', 'shops.roles', 'shops.permissions'],
+        demo_credentials: {
+          owner_email: 'maaye@example.com',
+          owner_password: 'Password123!',
+          staff_email: 'komin@example.com',
+          staff_password: 'Password123!',
+        },
         otp_note:
           'Use debug_otp_code from /api/v1/auth/phone/start in development',
       },

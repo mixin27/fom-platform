@@ -2,8 +2,10 @@ import {
   type MiddlewareConsumer,
   Module,
   type NestModule,
+  ValidationPipe,
 } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthController } from './auth/auth.controller';
@@ -24,9 +26,10 @@ import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { AuthGuard } from './common/http/auth.guard';
 import { RbacGuard } from './common/http/rbac.guard';
+import { createAppValidationPipe } from './common/http/validation-pipe';
 
 @Module({
-  imports: [],
+  imports: [JwtModule.register({})],
   controllers: [
     AppController,
     AuthController,
@@ -54,6 +57,10 @@ import { RbacGuard } from './common/http/rbac.guard';
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseEnvelopeInterceptor,
+    },
+    {
+      provide: APP_PIPE,
+      useFactory: (): ValidationPipe => createAppValidationPipe(),
     },
   ],
 })

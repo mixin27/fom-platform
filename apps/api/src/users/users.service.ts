@@ -5,9 +5,9 @@ import {
   notFoundError,
 } from '../common/http/app-http.exception';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { assertValid, optionalString } from '../common/utils/validation';
 import { AuthService } from '../auth/auth.service';
 import { ShopsService } from '../shops/shops.service';
+import type { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -26,7 +26,7 @@ export class UsersService {
 
   async updateCurrentUser(
     currentUser: AuthenticatedUser,
-    body: Record<string, unknown>,
+    body: UpdateCurrentUserDto,
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.id },
@@ -35,15 +35,8 @@ export class UsersService {
       throw notFoundError('User not found');
     }
 
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const name = optionalString(body.name, 'name', errors, 'name');
-    const locale = optionalString(body.locale, 'locale', errors, 'locale');
-    const email = optionalString(body.email, 'email', errors, 'email');
-    const phone = optionalString(body.phone, 'phone', errors, 'phone number');
-    assertValid(errors);
-
-    const normalizedEmail = email?.trim().toLowerCase();
-    const normalizedPhone = phone?.replace(/\s+/g, ' ').trim();
+    const normalizedEmail = body.email?.trim().toLowerCase();
+    const normalizedPhone = body.phone?.replace(/\s+/g, ' ').trim();
 
     if (normalizedEmail && normalizedEmail !== user.email) {
       const existingEmail = await this.prisma.user.findUnique({
@@ -66,8 +59,8 @@ export class UsersService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        ...(name ? { name } : {}),
-        ...(locale === 'en' || locale === 'my' ? { locale } : {}),
+        ...(body.name ? { name: body.name } : {}),
+        ...(body.locale ? { locale: body.locale } : {}),
         ...(normalizedEmail ? { email: normalizedEmail } : {}),
         ...(normalizedPhone ? { phone: normalizedPhone } : {}),
       },

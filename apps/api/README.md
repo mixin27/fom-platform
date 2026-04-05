@@ -37,6 +37,8 @@ Default connection string:
 
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/fom_platform_api?schema=public"
+JWT_ACCESS_SECRET="dev_access_secret_change_me_facebook_order_manager"
+JWT_REFRESH_SECRET="dev_refresh_secret_change_me_facebook_order_manager"
 ```
 
 Create the database if it does not already exist:
@@ -63,11 +65,7 @@ pnpm db:setup
 
 The seed creates:
 
-- owner access token: `atk_demo_owner`
-- owner refresh token: `rtk_demo_owner`
 - owner login: `maaye@example.com` / `Password123!`
-- staff access token: `atk_demo_staff`
-- staff refresh token: `rtk_demo_staff`
 - staff login: `komin@example.com` / `Password123!`
 - owner phone: `09 7800 1111`
 - staff phone: `09 7800 2222`
@@ -96,10 +94,11 @@ pnpm db:reset
 ## Auth Notes
 
 - `POST /api/v1/auth/register` creates an account with email/password.
-- `POST /api/v1/auth/login` accepts `identifier` plus `password`, where identifier can be email or phone.
-- `POST /api/v1/auth/refresh` rotates access and refresh tokens.
+- `POST /api/v1/auth/login` accepts `email` plus `password`.
+- `POST /api/v1/auth/refresh` rotates JWT access and refresh tokens.
 - `POST /api/v1/auth/phone/start` and `POST /api/v1/auth/phone/verify` support optional phone OTP login.
 - `POST /api/v1/auth/social/login` stores provider identities for `google` and `facebook`.
+- Access JWT payloads include shop-scoped `roles` and `permissions` so the mobile app can tailor UX without an extra lookup.
 
 Social login currently persists the provider identity supplied by the caller. Provider token verification still needs to be added before treating it as production-ready OAuth.
 

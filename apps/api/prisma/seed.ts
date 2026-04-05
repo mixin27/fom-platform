@@ -607,31 +607,6 @@ async function main() {
       },
     ],
   });
-
-  await prisma.session.createMany({
-    data: [
-      {
-        id: 'ses_demo_owner',
-        userId: 'usr_ma_aye',
-        accessToken: 'atk_demo_owner',
-        refreshToken: 'rtk_demo_owner',
-        accessExpiresAt: new Date('2026-12-31T00:00:00.000Z'),
-        refreshExpiresAt: new Date('2027-01-31T00:00:00.000Z'),
-        createdAt: new Date('2026-04-02T00:00:00.000Z'),
-        lastUsedAt: new Date('2026-04-02T00:00:00.000Z'),
-      },
-      {
-        id: 'ses_demo_staff',
-        userId: 'usr_ko_min',
-        accessToken: 'atk_demo_staff',
-        refreshToken: 'rtk_demo_staff',
-        accessExpiresAt: new Date('2026-12-31T00:00:00.000Z'),
-        refreshExpiresAt: new Date('2027-01-31T00:00:00.000Z'),
-        createdAt: new Date('2026-04-02T00:30:00.000Z'),
-        lastUsedAt: new Date('2026-04-02T00:30:00.000Z'),
-      },
-    ],
-  });
 }
 
 main()

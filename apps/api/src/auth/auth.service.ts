@@ -1,20 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedUser } from '../common/http/request-context';
+import { JwtService } from '@nestjs/jwt';
 import {
   conflictError,
   notFoundError,
   unauthorizedError,
 } from '../common/http/app-http.exception';
-import {
-  assertValid,
-  asEnum,
-  optionalString,
-  requiredString,
-} from '../common/utils/validation';
+import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { generateId } from '../common/utils/id';
 import { hashPassword, verifyPassword } from '../common/auth/password';
 import { ShopsService } from '../shops/shops.service';
+import type { LoginDto } from './dto/login.dto';
+import type { RefreshSessionDto } from './dto/refresh-session.dto';
+import type { RegisterDto } from './dto/register.dto';
+import type { SocialLoginDto } from './dto/social-login.dto';
+import type { StartPhoneChallengeDto } from './dto/start-phone-challenge.dto';
+import type { VerifyPhoneChallengeDto } from './dto/verify-phone-challenge.dto';
+import type {
+  AccessTokenPayload,
+  JwtShopAccess,
+  RefreshTokenPayload,
+} from './auth.types';
+import { jwtConfig } from './jwt.config';
 
 type SessionRecord = {
   id: string;
@@ -24,107 +31,66 @@ type SessionRecord = {
   refreshExpiresAt: Date;
 };
 
+type AuthSessionContext = {
+  user: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    locale: string;
+  };
+  shops: Awaited<ReturnType<ShopsService['listUserShops']>>;
+  jwtShops: JwtShopAccess[];
+};
+
 @Injectable()
 export class AuthService {
-  private readonly accessTokenTtlMs = 24 * 60 * 60 * 1000;
-  private readonly refreshTokenTtlMs = 30 * 24 * 60 * 60 * 1000;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async register(body: Record<string, unknown>) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const name = requiredString(body.name, 'name', errors, 'name');
-    const email = requiredString(body.email, 'email', errors, 'email');
-    const password = requiredString(
-      body.password,
-      'password',
-      errors,
-      'password',
-    );
-    const phone = optionalString(body.phone, 'phone', errors, 'phone number');
-    const locale =
-      optionalString(body.locale, 'locale', errors, 'locale') ?? 'my';
-
-    const normalizedEmail = this.normalizeEmail(email);
-    const normalizedPhone = this.normalizePhone(phone);
-    if (!normalizedEmail) {
-      errors.push({
-        field: 'email',
-        errors: ['Email is required'],
-      });
-    }
-    this.assertValidEmail(normalizedEmail, 'email', errors);
-    this.assertPasswordStrength(password, errors);
-    assertValid(errors);
+  async register(body: RegisterDto) {
+    const normalizedEmail = body.email.trim().toLowerCase();
+    const normalizedPhone = this.normalizePhone(body.phone);
 
     await this.assertUniqueIdentifiers(normalizedEmail, normalizedPhone);
 
     const user = await this.prisma.user.create({
       data: {
-        id: generateId('usr'),
-        name,
+        name: body.name,
         email: normalizedEmail,
         phone: normalizedPhone,
-        locale: locale === 'en' ? 'en' : 'my',
+        locale: body.locale ?? 'my',
       },
     });
 
     await this.prisma.passwordCredential.create({
       data: {
         userId: user.id,
-        passwordHash: await hashPassword(password),
+        passwordHash: await hashPassword(body.password),
       },
     });
 
-    await this.prisma.authIdentity.create({
-      data: {
-        id: generateId('aid'),
-        userId: user.id,
-        provider: 'password',
-        providerUserId: normalizedEmail ?? user.id,
-        email: normalizedEmail ?? null,
-        phone: normalizedPhone ?? null,
-        displayName: user.name,
-        lastLoginAt: new Date(),
-      },
+    await this.upsertIdentity(user.id, {
+      provider: 'password',
+      providerUserId: normalizedEmail,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      displayName: user.name,
     });
 
-    const session = await this.createSession(user.id);
-    return this.buildAuthResponse(user.id, session);
+    const issuedSession = await this.issueSessionForUser(user.id);
+    return this.buildAuthResponse(issuedSession);
   }
 
-  async login(body: Record<string, unknown>) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const identifier = requiredString(
-      body.identifier,
-      'identifier',
-      errors,
-      'email or phone',
-    );
-    const password = requiredString(
-      body.password,
-      'password',
-      errors,
-      'password',
-    );
-    assertValid(errors);
+  async login(body: LoginDto) {
+    const normalizedEmail = body.email.trim().toLowerCase();
 
-    const normalizedEmail = this.normalizeEmail(identifier);
-    const normalizedPhone = this.normalizePhone(identifier);
-    const lookupFilters: Array<{ email?: string; phone?: string }> = [];
-    if (normalizedEmail) {
-      lookupFilters.push({ email: normalizedEmail });
-    }
-    if (normalizedPhone) {
-      lookupFilters.push({ phone: normalizedPhone });
-    }
-
-    const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.user.findUnique({
       where: {
-        OR: lookupFilters,
+        email: normalizedEmail,
       },
       include: {
         passwordCredential: true,
@@ -132,96 +98,61 @@ export class AuthService {
     });
 
     if (!user?.passwordCredential) {
-      throw unauthorizedError('Email, phone, or password is incorrect');
+      throw unauthorizedError('Email or password is incorrect');
     }
 
     const passwordMatches = await verifyPassword(
-      password,
+      body.password,
       user.passwordCredential.passwordHash,
     );
     if (!passwordMatches) {
-      throw unauthorizedError('Email, phone, or password is incorrect');
+      throw unauthorizedError('Email or password is incorrect');
     }
 
-    const identityKey = user.email ?? normalizedPhone ?? user.id;
     await this.upsertIdentity(user.id, {
       provider: 'password',
-      providerUserId: identityKey,
+      providerUserId: user.email ?? normalizedEmail,
       email: user.email,
       phone: user.phone,
       displayName: user.name,
     });
 
-    const session = await this.createSession(user.id);
-    return this.buildAuthResponse(user.id, session);
+    const issuedSession = await this.issueSessionForUser(user.id);
+    return this.buildAuthResponse(issuedSession);
   }
 
-  async refreshSession(body: Record<string, unknown>) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const refreshToken = requiredString(
-      body.refresh_token,
-      'refresh_token',
-      errors,
-      'refresh token',
-    );
-    assertValid(errors);
-
+  async refreshSession(body: RefreshSessionDto) {
+    const refreshPayload = await this.verifyRefreshToken(body.refresh_token);
     const session = await this.prisma.session.findUnique({
-      where: { refreshToken },
+      where: { id: refreshPayload.sid },
     });
+
     if (
       !session ||
+      session.userId !== refreshPayload.sub ||
       session.revokedAt ||
+      session.refreshToken !== body.refresh_token ||
       session.refreshExpiresAt.getTime() < Date.now()
     ) {
       throw unauthorizedError('Refresh token is invalid or expired');
     }
 
-    const rotated = await this.prisma.session.update({
-      where: { id: session.id },
-      data: this.sessionTokenUpdateData(),
-    });
-
-    return this.buildAuthResponse(session.userId, rotated);
+    const issuedSession = await this.issueSessionForUser(
+      session.userId,
+      session.id,
+    );
+    return this.buildAuthResponse(issuedSession);
   }
 
-  async socialLogin(body: Record<string, unknown>) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const provider = asEnum(
-      body.provider,
-      'provider',
-      ['google', 'facebook'] as const,
-      errors,
-      { required: true, label: 'social provider' },
-    );
-    const providerUserId = requiredString(
-      body.provider_user_id,
-      'provider_user_id',
-      errors,
-      'provider user ID',
-    );
-    const name = optionalString(body.name, 'name', errors, 'name');
-    const email = optionalString(body.email, 'email', errors, 'email');
-    const phone = optionalString(body.phone, 'phone', errors, 'phone number');
-    const locale =
-      optionalString(body.locale, 'locale', errors, 'locale') ?? 'my';
-
-    const normalizedEmail = this.normalizeEmail(email);
-    const normalizedPhone = this.normalizePhone(phone);
-    if (normalizedEmail) {
-      this.assertValidEmail(normalizedEmail, 'email', errors);
-    }
-    assertValid(errors);
-
-    if (!provider) {
-      throw unauthorizedError('Social provider is required');
-    }
+  async socialLogin(body: SocialLoginDto) {
+    const normalizedEmail = body.email?.trim().toLowerCase() ?? null;
+    const normalizedPhone = this.normalizePhone(body.phone);
 
     const existingIdentity = await this.prisma.authIdentity.findUnique({
       where: {
         provider_providerUserId: {
-          provider,
-          providerUserId,
+          provider: body.provider,
+          providerUserId: body.provider_user_id,
         },
       },
       include: {
@@ -244,11 +175,10 @@ export class AuthService {
     if (!user) {
       user = await this.prisma.user.create({
         data: {
-          id: generateId('usr'),
-          name: name ?? `${provider} user`,
+          name: body.name ?? `${body.provider} user`,
           email: normalizedEmail,
           phone: normalizedPhone,
-          locale: locale === 'en' ? 'en' : 'my',
+          locale: body.locale ?? 'my',
           ...(normalizedEmail ? { emailVerifiedAt: new Date() } : {}),
         },
       });
@@ -256,50 +186,44 @@ export class AuthService {
       user = await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          ...(name ? { name } : {}),
+          ...(body.name ? { name: body.name } : {}),
           ...(normalizedEmail && !user.email ? { email: normalizedEmail } : {}),
           ...(normalizedPhone && !user.phone ? { phone: normalizedPhone } : {}),
           ...(normalizedEmail && !user.emailVerifiedAt
             ? { emailVerifiedAt: new Date() }
             : {}),
-          locale: locale === 'en' ? 'en' : 'my',
+          locale: body.locale ?? 'my',
         },
       });
     }
 
     await this.upsertIdentity(user.id, {
-      provider,
-      providerUserId,
+      provider: body.provider,
+      providerUserId: body.provider_user_id,
       email: normalizedEmail,
       phone: normalizedPhone,
-      displayName: name ?? user.name,
+      displayName: body.name ?? user.name,
     });
 
-    const session = await this.createSession(user.id);
-    return this.buildAuthResponse(user.id, session);
+    const issuedSession = await this.issueSessionForUser(user.id);
+    return this.buildAuthResponse(issuedSession);
   }
 
-  async startPhoneChallenge(body: Record<string, unknown>) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const phone = requiredString(body.phone, 'phone', errors, 'phone number');
-    const purpose =
-      optionalString(body.purpose, 'purpose', errors, 'purpose') ?? 'login';
-    assertValid(errors);
-
-    const normalizedPhone = this.normalizePhone(phone);
+  async startPhoneChallenge(body: StartPhoneChallengeDto) {
+    const normalizedPhone = this.normalizePhone(body.phone);
     if (!normalizedPhone) {
       throw unauthorizedError('Phone number is required');
     }
+
     const user = await this.prisma.user.findUnique({
       where: { phone: normalizedPhone },
     });
 
     const challenge = await this.prisma.authChallenge.create({
       data: {
-        id: generateId('chl'),
         phone: normalizedPhone,
         otpCode: '123456',
-        purpose,
+        purpose: body.purpose ?? 'login',
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),
         userId: user?.id ?? null,
       },
@@ -313,33 +237,9 @@ export class AuthService {
     };
   }
 
-  async verifyPhoneChallenge(body: Record<string, unknown>) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const challengeId = requiredString(
-      body.challenge_id,
-      'challenge_id',
-      errors,
-      'challenge ID',
-    );
-    const otpCode = requiredString(
-      body.otp_code,
-      'otp_code',
-      errors,
-      'OTP code',
-    );
-    const name = optionalString(body.name, 'name', errors, 'name');
-    const email = optionalString(body.email, 'email', errors, 'email');
-    const locale =
-      optionalString(body.locale, 'locale', errors, 'locale') ?? 'my';
-
-    const normalizedEmail = this.normalizeEmail(email);
-    if (normalizedEmail) {
-      this.assertValidEmail(normalizedEmail, 'email', errors);
-    }
-    assertValid(errors);
-
+  async verifyPhoneChallenge(body: VerifyPhoneChallengeDto) {
     const challenge = await this.prisma.authChallenge.findUnique({
-      where: { id: challengeId },
+      where: { id: body.challenge_id },
     });
     if (
       !challenge ||
@@ -349,9 +249,11 @@ export class AuthService {
       throw unauthorizedError('OTP challenge is invalid or expired');
     }
 
-    if (challenge.otpCode !== otpCode) {
+    if (challenge.otpCode !== body.otp_code) {
       throw unauthorizedError('OTP code is invalid');
     }
+
+    const normalizedEmail = body.email?.trim().toLowerCase() ?? null;
 
     let user =
       (challenge.userId &&
@@ -369,11 +271,10 @@ export class AuthService {
 
       user = await this.prisma.user.create({
         data: {
-          id: generateId('usr'),
-          name: name ?? `Seller ${challenge.phone.slice(-4)}`,
+          name: body.name ?? `Seller ${challenge.phone.slice(-4)}`,
           email: normalizedEmail,
           phone: challenge.phone,
-          locale: locale === 'en' ? 'en' : 'my',
+          locale: body.locale ?? 'my',
           phoneVerifiedAt: new Date(),
         },
       });
@@ -387,11 +288,11 @@ export class AuthService {
       user = await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          ...(name ? { name } : {}),
+          ...(body.name ? { name: body.name } : {}),
           ...(normalizedEmail && !user.email ? { email: normalizedEmail } : {}),
           phone: challenge.phone,
           phoneVerifiedAt: new Date(),
-          locale: locale === 'en' ? 'en' : 'my',
+          locale: body.locale ?? 'my',
         },
       });
     }
@@ -412,13 +313,16 @@ export class AuthService {
       displayName: user.name,
     });
 
-    const session = await this.createSession(user.id);
-    return this.buildAuthResponse(user.id, session);
+    const issuedSession = await this.issueSessionForUser(user.id);
+    return this.buildAuthResponse(issuedSession);
   }
 
   async logout(accessToken: string): Promise<void> {
+    const payload = await this.verifyAccessToken(accessToken);
+
     await this.prisma.session.updateMany({
       where: {
+        id: payload.sid,
         accessToken,
         revokedAt: null,
       },
@@ -429,13 +333,16 @@ export class AuthService {
   }
 
   async authenticate(accessToken: string): Promise<AuthenticatedUser> {
+    const payload = await this.verifyAccessToken(accessToken);
     const session = await this.prisma.session.findUnique({
-      where: { accessToken },
-      include: { user: true },
+      where: { id: payload.sid },
     });
+
     if (
       !session ||
+      session.userId !== payload.sub ||
       session.revokedAt ||
+      session.accessToken !== accessToken ||
       session.accessExpiresAt.getTime() < Date.now()
     ) {
       throw unauthorizedError();
@@ -447,11 +354,13 @@ export class AuthService {
     });
 
     return {
-      id: session.user.id,
-      name: session.user.name,
-      email: session.user.email,
-      phone: session.user.phone,
-      locale: session.user.locale,
+      id: payload.sub,
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+      locale: payload.locale,
+      sessionId: payload.sid,
+      shops: payload.shops,
     };
   }
 
@@ -484,25 +393,68 @@ export class AuthService {
     };
   }
 
-  private async buildAuthResponse(userId: string, session: SessionRecord) {
-    return {
-      token: session.accessToken,
-      access_token: session.accessToken,
-      refresh_token: session.refreshToken,
-      token_type: 'Bearer',
-      expires_at: session.accessExpiresAt.toISOString(),
-      refresh_expires_at: session.refreshExpiresAt.toISOString(),
-      user: await this.serializeUser(userId),
-      shops: await this.shopsService.listUserShops(userId),
-    };
-  }
+  private async issueSessionForUser(userId: string, sessionId?: string) {
+    const context = await this.buildSessionContext(userId);
+    const accessExpiresAt = new Date(
+      Date.now() + jwtConfig.accessTokenTtlSeconds * 1000,
+    );
+    const refreshExpiresAt = new Date(
+      Date.now() + jwtConfig.refreshTokenTtlSeconds * 1000,
+    );
 
-  private async createSession(userId: string): Promise<SessionRecord> {
-    return this.prisma.session.create({
+    const session =
+      sessionId !== undefined
+        ? { id: sessionId }
+        : await this.prisma.session.create({
+            data: {
+              userId,
+              accessToken: `pending_access_${generateId('tmp')}`,
+              refreshToken: `pending_refresh_${generateId('tmp')}`,
+              accessExpiresAt,
+              refreshExpiresAt,
+              lastUsedAt: new Date(),
+            },
+            select: { id: true },
+          });
+
+    const accessPayload: AccessTokenPayload = {
+      type: 'access',
+      sub: context.user.id,
+      sid: session.id,
+      name: context.user.name,
+      email: context.user.email,
+      phone: context.user.phone,
+      locale: context.user.locale,
+      shops: context.jwtShops,
+    };
+    const refreshPayload: RefreshTokenPayload = {
+      type: 'refresh',
+      sub: context.user.id,
+      sid: session.id,
+    };
+
+    const accessToken = await this.jwtService.signAsync(accessPayload, {
+      secret: jwtConfig.accessSecret,
+      issuer: jwtConfig.issuer,
+      audience: jwtConfig.audience,
+      expiresIn: jwtConfig.accessTokenTtlSeconds,
+    });
+    const refreshToken = await this.jwtService.signAsync(refreshPayload, {
+      secret: jwtConfig.refreshSecret,
+      issuer: jwtConfig.issuer,
+      audience: jwtConfig.audience,
+      expiresIn: jwtConfig.refreshTokenTtlSeconds,
+    });
+
+    const persistedSession = await this.prisma.session.update({
+      where: { id: session.id },
       data: {
-        id: generateId('ses'),
-        userId,
-        ...this.sessionTokenCreateData(),
+        accessToken,
+        refreshToken,
+        accessExpiresAt,
+        refreshExpiresAt,
+        revokedAt: null,
+        lastUsedAt: new Date(),
       },
       select: {
         id: true,
@@ -512,23 +464,103 @@ export class AuthService {
         refreshExpiresAt: true,
       },
     });
-  }
 
-  private sessionTokenCreateData() {
     return {
-      accessToken: generateId('atk'),
-      refreshToken: generateId('rtk'),
-      accessExpiresAt: new Date(Date.now() + this.accessTokenTtlMs),
-      refreshExpiresAt: new Date(Date.now() + this.refreshTokenTtlMs),
-      lastUsedAt: new Date(),
+      session: persistedSession,
+      context,
     };
   }
 
-  private sessionTokenUpdateData() {
+  private async buildSessionContext(
+    userId: string,
+  ): Promise<AuthSessionContext> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw notFoundError('User not found');
+    }
+
+    const shops = await this.shopsService.listUserShops(userId);
+    const jwtShops: JwtShopAccess[] = shops.map((shop) => ({
+      shop_id: shop.id,
+      role: shop.membership.role,
+      roles: shop.membership.roles.map((role) => role.code),
+      permissions: shop.membership.permissions.map((permission) =>
+        String(permission),
+      ),
+    }));
+
     return {
-      ...this.sessionTokenCreateData(),
-      revokedAt: null,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        locale: user.locale,
+      },
+      shops,
+      jwtShops,
     };
+  }
+
+  private buildAuthResponse(input: {
+    session: SessionRecord;
+    context: AuthSessionContext;
+  }) {
+    return {
+      token: input.session.accessToken,
+      access_token: input.session.accessToken,
+      refresh_token: input.session.refreshToken,
+      token_type: 'Bearer',
+      expires_at: input.session.accessExpiresAt.toISOString(),
+      refresh_expires_at: input.session.refreshExpiresAt.toISOString(),
+      user: {
+        ...input.context.user,
+        shops: input.context.jwtShops,
+      },
+      shops: input.context.shops,
+    };
+  }
+
+  private async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
+    try {
+      const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(
+        token,
+        {
+          secret: jwtConfig.accessSecret,
+          issuer: jwtConfig.issuer,
+          audience: jwtConfig.audience,
+        },
+      );
+      if (payload.type !== 'access') {
+        throw new Error('Invalid token type');
+      }
+      return payload;
+    } catch {
+      throw unauthorizedError('Access token is invalid or expired');
+    }
+  }
+
+  private async verifyRefreshToken(
+    token: string,
+  ): Promise<RefreshTokenPayload> {
+    try {
+      const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        token,
+        {
+          secret: jwtConfig.refreshSecret,
+          issuer: jwtConfig.issuer,
+          audience: jwtConfig.audience,
+        },
+      );
+      if (payload.type !== 'refresh') {
+        throw new Error('Invalid token type');
+      }
+      return payload;
+    } catch {
+      throw unauthorizedError('Refresh token is invalid or expired');
+    }
   }
 
   private async upsertIdentity(
@@ -556,7 +588,6 @@ export class AuthService {
         lastLoginAt: new Date(),
       },
       create: {
-        id: generateId('aid'),
         userId,
         provider: input.provider,
         providerUserId: input.providerUserId,
@@ -589,35 +620,6 @@ export class AuthService {
         throw conflictError('Phone number is already registered');
       }
     }
-  }
-
-  private assertValidEmail(
-    email: string | null | undefined,
-    field: string,
-    errors: Array<{ field: string; errors: string[] }>,
-  ) {
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.push({
-        field,
-        errors: ['Email must be a valid email address'],
-      });
-    }
-  }
-
-  private assertPasswordStrength(
-    password: string,
-    errors: Array<{ field: string; errors: string[] }>,
-  ) {
-    if (password.length < 8) {
-      errors.push({
-        field: 'password',
-        errors: ['Password must be at least 8 characters'],
-      });
-    }
-  }
-
-  private normalizeEmail(value: string | undefined): string | null {
-    return value ? value.trim().toLowerCase() : null;
   }
 
   private normalizePhone(value: string | undefined): string | null {

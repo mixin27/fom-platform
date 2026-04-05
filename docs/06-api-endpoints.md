@@ -4,6 +4,7 @@
 
 - Base URL: `/v1`
 - Auth: `Authorization: Bearer <access_token>`
+- Access tokens are JWTs and include shop-scoped role and permission claims for mobile UI decisions.
 - Pagination: `limit` and `cursor`
 - Timezone: use shop timezone for date filters
 - Response envelopes follow `docs/17-api-response-structure.md`
@@ -23,7 +24,7 @@
 | Method | Path               | Description                                            | Response                                       |
 | ------ | ------------------ | ------------------------------------------------------ | ---------------------------------------------- |
 | POST   | /auth/register     | Register with email/password                           | 200 Single {access_token, refresh_token, user} |
-| POST   | /auth/login        | Login with email or phone plus password                | 200 Single {access_token, refresh_token, user} |
+| POST   | /auth/login        | Login with email plus password                         | 200 Single {access_token, refresh_token, user} |
 | POST   | /auth/refresh      | Rotate access and refresh tokens                       | 200 Single {access_token, refresh_token, user} |
 | POST   | /auth/social/login | Create or reuse a Google/Facebook identity and sign in | 200 Single {access_token, refresh_token, user} |
 | POST   | /auth/phone/start  | Send OTP to phone number                               | 200 Single {challenge_id, purpose, expires_at} |

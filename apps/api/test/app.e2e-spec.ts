@@ -8,6 +8,11 @@ import { AppService } from './../src/app.service';
 
 const dbIt = process.env.RUN_DB_E2E === '1' ? it : it.skip;
 
+function decodeJwtPayload(token: string) {
+  const [, payload] = token.split('.');
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+}
+
 describe('Facebook Order Manager API (e2e)', () => {
   let app: NestFastifyApplication;
 
@@ -55,7 +60,7 @@ describe('Facebook Order Manager API (e2e)', () => {
         method: 'POST',
         url: '/api/v1/auth/login',
         payload: {
-          identifier: 'maaye@example.com',
+          email: 'maaye@example.com',
           password: 'Password123!',
         },
       });
@@ -64,6 +69,21 @@ describe('Facebook Order Manager API (e2e)', () => {
 
       expect(loginBody.success).toBe(true);
       expect(loginBody.data.user.email).toBe('maaye@example.com');
+      const accessPayload = decodeJwtPayload(loginBody.data.access_token);
+      expect(accessPayload.sub).toBeDefined();
+      expect(accessPayload.type).toBe('access');
+      expect(accessPayload.shops).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            shop_id: 'shop_ma_aye',
+            roles: expect.arrayContaining(['owner']),
+            permissions: expect.arrayContaining([
+              'members.manage',
+              'shops.write',
+            ]),
+          }),
+        ]),
+      );
       expect(loginBody.data.shops).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -146,11 +166,22 @@ describe('Facebook Order Manager API (e2e)', () => {
   );
 
   dbIt('lists seeded orders with documented envelopes', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/shops/shop_ma_aye/orders?status=pending&date=today&limit=2',
       headers: {
-        authorization: 'Bearer atk_demo_owner',
+        authorization: `Bearer ${loginBody.data.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -175,7 +206,7 @@ describe('Facebook Order Manager API (e2e)', () => {
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: {
-        identifier: 'komin@example.com',
+        email: 'komin@example.com',
         password: 'Password123!',
       },
     });

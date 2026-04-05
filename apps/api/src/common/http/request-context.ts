@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, type NestMiddleware } from '@nestjs/common';
+import type { JwtShopAccess } from '../../auth/auth.types';
 
 export interface AuthenticatedUser {
   id: string;
@@ -7,6 +8,8 @@ export interface AuthenticatedUser {
   email: string | null;
   phone: string | null;
   locale: string;
+  sessionId?: string;
+  shops?: JwtShopAccess[];
 }
 
 export interface RequestWithContext {

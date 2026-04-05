@@ -3,6 +3,7 @@ import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { UsersService } from './users.service';
 
 @Controller('api/v1/users')
@@ -18,7 +19,7 @@ export class UsersController {
   @Patch('me')
   updateCurrentUser(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateCurrentUserDto,
   ) {
     return ok(this.usersService.updateCurrentUser(currentUser, body));
   }
