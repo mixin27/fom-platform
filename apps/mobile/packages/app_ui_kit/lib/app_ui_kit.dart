@@ -19,6 +19,7 @@ export 'src/components/app_stepper.dart';
 export 'src/components/app_summary_card.dart';
 export 'src/components/app_text_field.dart';
 export 'src/components/app_timeline.dart';
+export 'src/components/charts/app_bar_chart.dart';
 
 // Theme and tokens
 export 'src/theme/app_theme.dart';

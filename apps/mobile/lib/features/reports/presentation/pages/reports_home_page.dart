@@ -278,63 +278,63 @@ class _DailyReportView extends StatelessWidget {
           iconBgColor: AppColors.tealLight,
           title: 'Orders by Hour',
         ),
-        const MiniBarChart(
+        const AppBarChart(
           title: 'Peak',
           subtitle: '10AM–12PM · 8 orders',
           titleColor: AppColors.textLight,
           data: [
-            BarData(
+            AppBarChartData(
               label: '8',
               valueLabel: '1',
-              heightFactor: 0.15,
+              value: 1,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: '9',
               valueLabel: '3',
-              heightFactor: 0.45,
+              value: 3,
               color: AppColors.softOrange,
             ),
-            BarData(
+            AppBarChartData(
               label: '10',
               valueLabel: '5',
-              heightFactor: 0.75,
+              value: 5,
               color: AppColors.softOrange,
             ),
-            BarData(
+            AppBarChartData(
               label: '11',
               valueLabel: '3',
-              heightFactor: 0.45,
+              value: 3,
               color: AppColors.softOrange,
             ),
-            BarData(
+            AppBarChartData(
               label: '12',
               valueLabel: '4',
-              heightFactor: 0.60,
+              value: 4,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: '1P',
               valueLabel: '2',
-              heightFactor: 0.30,
+              value: 2,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: '2P',
               valueLabel: '3',
-              heightFactor: 0.45,
+              value: 3,
               color: AppColors.softOrange,
             ),
-            BarData(
+            AppBarChartData(
               label: '3P',
               valueLabel: '1',
-              heightFactor: 0.15,
+              value: 1,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: '4P',
               valueLabel: '1',
-              heightFactor: 0.15,
+              value: 1,
               color: AppColors.border,
             ),
           ],
@@ -387,53 +387,53 @@ class _WeeklyReportView extends StatelessWidget {
           iconBgColor: AppColors.tealLight,
           title: 'Revenue by Day',
         ),
-        const MiniBarChart(
+        const AppBarChart(
           title: 'Best day',
           subtitle: 'Wednesday · 520K MMK',
           titleColor: AppColors.textLight,
           data: [
-            BarData(
+            AppBarChartData(
               label: 'Mon',
               valueLabel: '320K',
-              heightFactor: 0.5,
+              value: 320,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: 'Tue',
               valueLabel: '410K',
-              heightFactor: 0.65,
+              value: 410,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: 'Wed',
               valueLabel: '520K',
-              heightFactor: 0.82,
+              value: 520,
               color: AppColors.softOrange,
             ),
-            BarData(
+            AppBarChartData(
               label: 'Thu',
               valueLabel: '380K',
-              heightFactor: 0.6,
+              value: 380,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: 'Fri',
               valueLabel: '460K',
-              heightFactor: 0.73,
+              value: 460,
               color: AppColors.softOrange,
             ),
-            BarData(
+            AppBarChartData(
               label: 'Sat',
               valueLabel: '265K',
-              heightFactor: 0.42,
+              value: 265,
               color: AppColors.softOrangeMid,
             ),
-            BarData(
+            AppBarChartData(
               label: 'Today',
               valueLabel: '485K',
-              heightFactor: 0.76,
+              value: 485,
               color: AppColors.softOrange,
-              isToday: true,
+              isHighlighted: true,
             ),
           ],
         ),
