@@ -1,21 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import {
   conflictError,
   forbiddenError,
   notFoundError,
+  validationError,
 } from '../common/http/app-http.exception';
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
-import {
-  assertValid,
-  asEnum,
-  optionalString,
-  requiredString,
-} from '../common/utils/validation';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { permissions, type Permission } from '../common/http/rbac.constants';
-import { generateId } from '../common/utils/id';
+import { AddShopMemberDto } from './dto/add-shop-member.dto';
+import { CreateShopDto } from './dto/create-shop.dto';
+import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
+import { UpdateShopDto } from './dto/update-shop.dto';
 
 type ShopWithCount = any & {
   _count: {
@@ -34,6 +33,9 @@ export class ShopsService {
       where: {
         userId,
         status: 'active',
+      },
+      orderBy: {
+        createdAt: 'asc',
       },
       include: {
         shop: {
@@ -77,16 +79,18 @@ export class ShopsService {
     });
   }
 
-  async createShop(
+  async listShops(
     currentUser: AuthenticatedUser,
-    body: Record<string, unknown>,
+    query: CursorPaginationQueryDto,
   ) {
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const name = requiredString(body.name, 'name', errors, 'shop name');
-    const timezone =
-      optionalString(body.timezone, 'timezone', errors, 'timezone') ??
-      'Asia/Yangon';
-    assertValid(errors);
+    const shops = await this.listUserShops(currentUser.id);
+    const page = paginate(shops, query.limit, query.cursor);
+    return paged(page.items, page.pagination);
+  }
+
+  async createShop(currentUser: AuthenticatedUser, body: CreateShopDto) {
+    const timezone = body.timezone ?? 'Asia/Yangon';
+    this.assertValidTimeZone(timezone);
 
     const ownerRole = await this.requireRolesByCodes(['owner']);
 
@@ -94,7 +98,7 @@ export class ShopsService {
       const shop = await tx.shop.create({
         data: {
           ownerUserId: currentUser.id,
-          name,
+          name: body.name,
           timezone,
         },
       });
@@ -128,24 +132,27 @@ export class ShopsService {
   async updateShop(
     currentUser: AuthenticatedUser,
     shopId: string,
-    body: Record<string, unknown>,
+    body: UpdateShopDto,
   ) {
     await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const name = optionalString(body.name, 'name', errors, 'shop name');
-    const timezone = optionalString(
-      body.timezone,
-      'timezone',
-      errors,
-      'timezone',
-    );
-    assertValid(errors);
+    if (!body.name && !body.timezone) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    if (body.timezone) {
+      this.assertValidTimeZone(body.timezone);
+    }
 
     await this.prisma.shop.update({
       where: { id: shopId },
       data: {
-        ...(name ? { name } : {}),
-        ...(timezone ? { timezone } : {}),
+        ...(body.name ? { name: body.name } : {}),
+        ...(body.timezone ? { timezone: body.timezone } : {}),
       },
     });
 
@@ -155,7 +162,7 @@ export class ShopsService {
   async listMembers(
     currentUser: AuthenticatedUser,
     shopId: string,
-    query: Record<string, unknown>,
+    query: CursorPaginationQueryDto,
   ) {
     await this.assertPermission(
       currentUser.id,
@@ -185,18 +192,14 @@ export class ShopsService {
       })
     ).map((member) => this.serializeMemberRecord(member));
 
-    const page = paginate(
-      members,
-      query.limit as string | undefined,
-      query.cursor as string | undefined,
-    );
+    const page = paginate(members, query.limit, query.cursor);
     return paged(page.items, page.pagination);
   }
 
   async addMember(
     currentUser: AuthenticatedUser,
     shopId: string,
-    body: Record<string, unknown>,
+    body: AddShopMemberDto,
   ) {
     await this.assertPermission(
       currentUser.id,
@@ -204,13 +207,20 @@ export class ShopsService {
       permissions.membersManage,
     );
 
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const userId = optionalString(body.user_id, 'user_id', errors, 'user ID');
-    const phone = optionalString(body.phone, 'phone', errors, 'phone number');
-    const email = optionalString(body.email, 'email', errors, 'email');
-    const name = optionalString(body.name, 'name', errors, 'name');
-    const roleCodes = this.extractRequestedRoleCodes(body, errors, ['staff']);
-    assertValid(errors);
+    const userId = body.user_id ?? null;
+    const phone = this.normalizePhone(body.phone);
+    const email = body.email ?? null;
+    const name = body.name ?? null;
+    const roleCodes = body.role_codes ?? ['staff'];
+
+    if (!userId && !email && !phone) {
+      throw validationError([
+        {
+          field: 'user_id',
+          errors: ['Provide user_id, email, or phone to identify the member'],
+        },
+      ]);
+    }
 
     let targetUser =
       (userId &&
@@ -228,9 +238,14 @@ export class ShopsService {
 
     if (!targetUser) {
       if (!name || (!email && !phone)) {
-        throw conflictError(
-          'Existing user was not found. Provide name with email or phone to create one',
-        );
+        throw validationError([
+          {
+            field: 'name',
+            errors: [
+              'Provide name with email or phone when creating a new shop member',
+            ],
+          },
+        ]);
       }
 
       targetUser = await this.prisma.user.create({
@@ -254,7 +269,7 @@ export class ShopsService {
       throw conflictError('User is already a member of this shop');
     }
 
-    const roles = await this.requireRolesByCodes(roleCodes ?? ['staff']);
+    const roles = await this.requireRolesByCodes(roleCodes);
     const member = await this.prisma.$transaction(async (tx) => {
       const createdMember = await tx.shopMember.create({
         data: {
@@ -299,7 +314,7 @@ export class ShopsService {
     currentUser: AuthenticatedUser,
     shopId: string,
     memberId: string,
-    body: Record<string, unknown>,
+    body: UpdateShopMemberDto,
   ) {
     await this.assertPermission(
       currentUser.id,
@@ -332,27 +347,25 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    const errors: Array<{ field: string; errors: string[] }> = [];
-    const status = asEnum(
-      body.status,
-      'status',
-      ['active', 'invited', 'disabled'] as const,
-      errors,
-      {
-        label: 'status',
-      },
-    );
-    const roleCodes = this.extractRequestedRoleCodes(body, errors);
-    assertValid(errors);
+    if (!body.status && !body.role_codes) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide status or role_codes to update the shop member'],
+        },
+      ]);
+    }
 
-    const roles = roleCodes ? await this.requireRolesByCodes(roleCodes) : null;
+    const roles = body.role_codes
+      ? await this.requireRolesByCodes(body.role_codes)
+      : null;
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      if (status) {
+      if (body.status) {
         await tx.shopMember.update({
           where: { id: member.id },
           data: {
-            status,
+            status: body.status,
           },
         });
       }
@@ -519,46 +532,6 @@ export class ShopsService {
     return roles.sort((left, right) => left.code.localeCompare(right.code));
   }
 
-  private extractRequestedRoleCodes(
-    body: Record<string, unknown>,
-    errors: Array<{ field: string; errors: string[] }>,
-    defaultRoleCodes?: string[],
-  ): string[] | undefined {
-    const directRole =
-      optionalString(body.role, 'role', errors, 'role') ??
-      optionalString(body.role_code, 'role_code', errors, 'role code');
-
-    const roleCodesRaw =
-      body.role_codes ?? body.roles ?? (directRole ? [directRole] : undefined);
-
-    if (roleCodesRaw === undefined || roleCodesRaw === null) {
-      return defaultRoleCodes;
-    }
-
-    if (!Array.isArray(roleCodesRaw)) {
-      errors.push({
-        field: 'role_codes',
-        errors: ['Role codes must be an array of role codes'],
-      });
-      return defaultRoleCodes;
-    }
-
-    const roleCodes = roleCodesRaw
-      .filter((value): value is string => typeof value === 'string')
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
-
-    if (roleCodes.length !== roleCodesRaw.length || roleCodes.length === 0) {
-      errors.push({
-        field: 'role_codes',
-        errors: ['Role codes must be a non-empty array of strings'],
-      });
-      return defaultRoleCodes;
-    }
-
-    return [...new Set(roleCodes)];
-  }
-
   private extractMemberAccess(member: MemberWithAccess) {
     const roles = [...member.roleAssignments]
       .map((assignment) => assignment.role)
@@ -622,5 +595,27 @@ export class ShopsService {
       },
       permissions: access.permissions,
     };
+  }
+
+  private normalizePhone(value: string | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private assertValidTimeZone(timeZone: string) {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone });
+    } catch {
+      throw validationError([
+        {
+          field: 'timezone',
+          errors: ['Timezone must be a valid IANA timezone'],
+        },
+      ]);
+    }
   }
 }

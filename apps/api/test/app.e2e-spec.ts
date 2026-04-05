@@ -151,6 +151,47 @@ describe('Facebook Order Manager API (e2e)', () => {
     },
   );
 
+  dbIt('lists current user shops with membership access details', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/shops?limit=10',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'shop_ma_aye',
+          name: 'Ma Aye Shop',
+          membership: expect.objectContaining({
+            role: 'owner',
+            permissions: expect.arrayContaining(['shops.write']),
+          }),
+        }),
+      ]),
+    );
+    expect(body.meta.pagination).toMatchObject({
+      limit: 10,
+      total: expect.any(Number),
+    });
+  });
+
   dbIt('supports phone OTP auth as an optional sign-in method', async () => {
     const challengeResponse = await app.inject({
       method: 'POST',

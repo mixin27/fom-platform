@@ -45,6 +45,7 @@
 
 | Method | Path                               | Description                 | Response          |
 | ------ | ---------------------------------- | --------------------------- | ----------------- |
+| GET    | /shops                             | List current user shops     | 200 List Shop     |
 | POST   | /shops                             | Create shop                 | 201 Single Shop   |
 | GET    | /shops/{shopId}                    | Get shop details            | 200 Single Shop   |
 | PATCH  | /shops/{shopId}                    | Update shop                 | 200 Single Shop   |
