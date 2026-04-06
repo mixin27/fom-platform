@@ -393,6 +393,96 @@ describe('Facebook Order Manager API (e2e)', () => {
     );
   });
 
+  dbIt('creates, lists, and updates message templates', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const suffix = Date.now().toString();
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/shops/shop_ma_aye/templates',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+      payload: {
+        title: `Delivery follow-up ${suffix}`,
+        shortcut: `/followup-${suffix}`,
+        body: 'မင်္ဂလာပါရှင်။ ပစ္စည်းလက်ခံရရှိပြီလား ဆိုတာ ပြန်ပြောပေးပါရှင်။',
+        is_active: true,
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+    const createBody = createResponse.json();
+    expect(createBody.success).toBe(true);
+    expect(createBody.data).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        shop_id: 'shop_ma_aye',
+        title: `Delivery follow-up ${suffix}`,
+        shortcut: `/followup-${suffix}`,
+        is_active: true,
+      }),
+    );
+
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/shops/shop_ma_aye/templates?search=${suffix}&state=active&limit=5`,
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+
+    expect(listResponse.statusCode).toBe(200);
+    const listBody = listResponse.json();
+    expect(listBody.success).toBe(true);
+    expect(listBody.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createBody.data.id,
+          title: `Delivery follow-up ${suffix}`,
+        }),
+      ]),
+    );
+    expect(listBody.meta.pagination).toMatchObject({
+      limit: 5,
+      total: expect.any(Number),
+    });
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/shops/shop_ma_aye/templates/${createBody.data.id}`,
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+      payload: {
+        body: 'မင်္ဂလာပါရှင်။ အော်ဒါပို့ပြီးပါပြီ။ လက်ခံရရှိချိန် ပြန်ပြောပေးပါရှင်။',
+        is_active: false,
+        shortcut: null,
+      },
+    });
+
+    expect(updateResponse.statusCode).toBe(200);
+    const updateBody = updateResponse.json();
+    expect(updateBody.success).toBe(true);
+    expect(updateBody.data).toEqual(
+      expect.objectContaining({
+        id: createBody.data.id,
+        shortcut: null,
+        is_active: false,
+      }),
+    );
+  });
+
   dbIt('returns a typed daily summary for a shop date', async () => {
     const loginResponse = await app.inject({
       method: 'POST',

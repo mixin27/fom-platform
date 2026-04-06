@@ -16,6 +16,7 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
+  await prisma.messageTemplate.deleteMany();
   await prisma.orderStatusEvent.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
@@ -207,6 +208,41 @@ async function main() {
         shopMemberId: 'mem_staff',
         roleId: 'role_staff',
         createdAt: new Date('2026-03-22T09:05:00.000Z'),
+      },
+    ],
+  });
+
+  await prisma.messageTemplate.createMany({
+    data: [
+      {
+        id: 'tpl_confirm_payment',
+        shopId: 'shop_ma_aye',
+        title: 'Payment confirmation',
+        shortcut: '/paid',
+        body: 'မင်္ဂလာပါရှင်။ ငွေလွှဲလက်ခံရရှိပါတယ်။ မနက်ဖြန်အတွင်းပို့ပေးပါမယ်ရှင်။',
+        isActive: true,
+        createdAt: new Date('2026-03-20T09:10:00.000Z'),
+        updatedAt: new Date('2026-04-01T08:00:00.000Z'),
+      },
+      {
+        id: 'tpl_delivery_update',
+        shopId: 'shop_ma_aye',
+        title: 'Out for delivery',
+        shortcut: '/delivery',
+        body: 'အော်ဒါကို ပို့ဆောင်နေပါပြီရှင်။ ဒီနေ့အတွင်း ရောက်ရှိဖို့ ခန့်မှန်းထားပါတယ်။',
+        isActive: true,
+        createdAt: new Date('2026-03-20T09:12:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+      {
+        id: 'tpl_address_followup',
+        shopId: 'shop_ma_aye',
+        title: 'Need address details',
+        shortcut: '/address',
+        body: 'ပို့ရန်အတွက် Township နဲ့ လိပ်စာအသေးစိတ်ကို ပြန်ပို့ပေးပါရှင်။',
+        isActive: true,
+        createdAt: new Date('2026-03-20T09:15:00.000Z'),
+        updatedAt: new Date('2026-03-28T06:00:00.000Z'),
       },
     ],
   });

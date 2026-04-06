@@ -44,14 +44,12 @@ export class AppService {
           'orders',
           'order items',
           'order status updates',
+          'message templates',
           'daily summaries',
           'weekly reports',
           'monthly reports',
         ],
-        deferred: [
-          'deliveries',
-          'message templates',
-        ],
+        deferred: ['deliveries'],
       },
       rbac: {
         roles: defaultRoleCatalog,

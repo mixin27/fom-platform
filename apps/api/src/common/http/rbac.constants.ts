@@ -9,6 +9,8 @@ export const permissions = {
   ordersWrite: 'orders.write',
   orderItemsWrite: 'order_items.write',
   orderStatusWrite: 'order_status.write',
+  templatesRead: 'templates.read',
+  templatesWrite: 'templates.write',
   summariesRead: 'summaries.read',
 } as const;
 
@@ -70,6 +72,16 @@ export const permissionCatalog: ReadonlyArray<{
     description: 'Advance or correct order status transitions.',
   },
   {
+    code: permissions.templatesRead,
+    name: 'Read message templates',
+    description: 'View shop message templates and quick replies.',
+  },
+  {
+    code: permissions.templatesWrite,
+    name: 'Manage message templates',
+    description: 'Create and update shop message templates.',
+  },
+  {
     code: permissions.summariesRead,
     name: 'Read summaries',
     description: 'View daily summary analytics.',
@@ -101,6 +113,8 @@ export const defaultRoleCatalog: ReadonlyArray<{
       permissions.ordersWrite,
       permissions.orderItemsWrite,
       permissions.orderStatusWrite,
+      permissions.templatesRead,
+      permissions.templatesWrite,
       permissions.summariesRead,
     ],
   },

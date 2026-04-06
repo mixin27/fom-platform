@@ -53,15 +53,16 @@ model User {
 }
 
 model Shop {
-  id          String       @id @default(cuid())
-  ownerUserId String
-  name        String
-  timezone    String
-  createdAt   DateTime     @default(now())
-  owner       User         @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
-  members     ShopMember[]
-  customers   Customer[]
-  orders      Order[]
+  id               String            @id @default(cuid())
+  ownerUserId      String
+  name             String
+  timezone         String
+  createdAt        DateTime          @default(now())
+  owner            User              @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  members          ShopMember[]
+  customers        Customer[]
+  orders           Order[]
+  messageTemplates MessageTemplate[]
 
   @@index([ownerUserId])
 }
@@ -175,6 +176,23 @@ model Customer {
 
   @@unique([shopId, phone])
   @@index([shopId, name])
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  shopId    String
+  title     String
+  shortcut  String?
+  body      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, title])
+  @@unique([shopId, shortcut])
+  @@index([shopId, isActive, updatedAt])
+  @@map("message_templates")
 }
 
 model Order {

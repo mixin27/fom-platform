@@ -23,6 +23,8 @@ import { ReportsController } from './summaries/reports.controller';
 import { ShopsService } from './shops/shops.service';
 import { SummariesController } from './summaries/summaries.controller';
 import { SummariesService } from './summaries/summaries.service';
+import { TemplatesController } from './templates/templates.controller';
+import { TemplatesService } from './templates/templates.service';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { AuthGuard } from './common/http/auth.guard';
@@ -38,6 +40,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     ShopsController,
     CustomersController,
     OrdersController,
+    TemplatesController,
     SummariesController,
     ReportsController,
   ],
@@ -49,6 +52,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     ShopsService,
     CustomersService,
     OrdersService,
+    TemplatesService,
     SummariesService,
     AuthGuard,
     RbacGuard,

@@ -118,6 +118,14 @@ Order item write notes:
 | POST   | /shops/{shopId}/templates              | Create template | 201 Single Template |
 | PATCH  | /shops/{shopId}/templates/{templateId} | Update template | 200 Single Template |
 
+Message template notes:
+
+- `GET /shops/{shopId}/templates` accepts `search`, `state` (`all`, `active`, `inactive`), `limit`, and `cursor`.
+- Templates include `title`, `body`, optional `shortcut`, and `is_active`.
+- `title` must be unique within the shop.
+- `shortcut` is optional, must also be unique within the shop when present, and may be cleared with `null` on update.
+- `PATCH /shops/{shopId}/templates/{templateId}` requires at least one field to update.
+
 ## Deliveries
 
 | Method | Path                                    | Description            | Response            |
