@@ -30,9 +30,9 @@ export default async function PlatformLayout({
             <div className="border-t border-white/6 px-4 py-4">
               <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
                 <p className="text-sm font-semibold text-white">
-                  {session.displayName}
+                  {session.user.name}
                 </p>
-                <p className="mt-1 text-xs text-white/40">{session.email}</p>
+                <p className="mt-1 text-xs text-white/40">{session.user.email}</p>
                 <div className="mt-4 flex gap-2">
                   <Button
                     asChild

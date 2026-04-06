@@ -1,43 +1,72 @@
+import "server-only"
+
+import { createHmac, timingSafeEqual } from "node:crypto"
+import { Buffer } from "node:buffer"
+
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
+import type { AuthResponse } from "@/lib/auth/api"
+
 export const AUTH_COOKIE_NAME = "fom_web_session"
 
-export type AppRole = "platform_admin" | "shop_admin"
-export type SubscriptionStatus = "trial" | "active" | "inactive"
+export type AppRole = "platform_owner" | "shop_admin"
 
 export type AppSession = {
   role: AppRole
-  email: string
-  displayName: string
-  shopName?: string
-  subscriptionStatus?: SubscriptionStatus
+  accessToken: string
+  refreshToken: string
+  accessExpiresAt: string
+  refreshExpiresAt: string
+  user: {
+    id: string
+    name: string
+    email: string | null
+    phone: string | null
+    locale: string
+  }
+  platformAccess: {
+    role: string | null
+    roles: string[]
+    permissions: string[]
+  } | null
+  shops: Array<{
+    id: string
+    name: string
+    timezone: string
+    membership: {
+      role: string | null
+      roles: string[]
+      permissions: string[]
+    }
+  }>
+  activeShopId: string | null
 }
 
-function getPlatformAdminEmail() {
+function getPlatformOwnerEmailHint() {
   return (
+    process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() ??
     process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase() ??
-    "admin@fom-platform.local"
+    "owner@fom-platform.local"
   )
 }
 
-function deriveDisplayName(email: string) {
-  const localPart = email.split("@")[0] ?? "owner"
-
-  return localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
+function getSessionSecret() {
+  return (
+    process.env.WEB_SESSION_SECRET ??
+    process.env.FOM_WEB_SESSION_SECRET ??
+    "dev_fom_web_session_secret_change_me"
+  )
 }
 
-function deriveShopName(email: string) {
-  const localPart = email.split("@")[0] ?? "shop"
-  return `${deriveDisplayName(localPart)} Shop`
+function signValue(value: string) {
+  return createHmac("sha256", getSessionSecret()).update(value).digest("base64url")
 }
 
 function encodeSession(session: AppSession) {
-  return Buffer.from(JSON.stringify(session), "utf8").toString("base64url")
+  const payload = Buffer.from(JSON.stringify(session), "utf8").toString("base64url")
+  const signature = signValue(payload)
+  return `${payload}.${signature}`
 }
 
 function decodeSession(value?: string) {
@@ -45,12 +74,46 @@ function decodeSession(value?: string) {
     return null
   }
 
+  const separatorIndex = value.lastIndexOf(".")
+  if (separatorIndex <= 0) {
+    return null
+  }
+
+  const payload = value.slice(0, separatorIndex)
+  const signature = value.slice(separatorIndex + 1)
+  const expectedSignature = signValue(payload)
+
   try {
+    if (
+      signature.length === 0 ||
+      signature.length !== expectedSignature.length ||
+      !timingSafeEqual(
+        Buffer.from(signature, "utf8"),
+        Buffer.from(expectedSignature, "utf8")
+      )
+    ) {
+      return null
+    }
+
     const parsed = JSON.parse(
-      Buffer.from(value, "base64url").toString("utf8")
+      Buffer.from(payload, "base64url").toString("utf8")
     ) as AppSession
 
-    if (!parsed?.email || !parsed?.role) {
+    if (
+      !parsed?.user?.id ||
+      !parsed.user.name ||
+      !parsed.accessToken ||
+      !parsed.refreshToken ||
+      !parsed.role
+    ) {
+      return null
+    }
+
+    if (!parsed.accessExpiresAt || !parsed.refreshExpiresAt) {
+      return null
+    }
+
+    if (Number.isNaN(Date.parse(parsed.refreshExpiresAt))) {
       return null
     }
 
@@ -60,43 +123,108 @@ function decodeSession(value?: string) {
   }
 }
 
+function getCookieMaxAgeSeconds(session: AppSession) {
+  const refreshExpiryMs = Date.parse(session.refreshExpiresAt)
+
+  if (Number.isNaN(refreshExpiryMs)) {
+    return 60 * 60 * 24
+  }
+
+  const maxAgeSeconds = Math.floor((refreshExpiryMs - Date.now()) / 1000)
+  return Math.max(0, maxAgeSeconds)
+}
+
 export function getPlatformAdminHint() {
-  return getPlatformAdminEmail()
+  return getPlatformOwnerEmailHint()
+}
+
+export function buildSessionFromAuth(auth: AuthResponse): AppSession {
+  const shops = auth.shops.map((shop) => ({
+    id: shop.id,
+    name: shop.name,
+    timezone: shop.timezone,
+    membership: {
+      role: shop.membership.role,
+      roles: shop.membership.roles.map((role) => role.code),
+      permissions: [...shop.membership.permissions],
+    },
+  }))
+
+  const platformAccess = auth.platform_access
+    ? {
+        role: auth.platform_access.role,
+        roles: auth.platform_access.roles.map((role) => role.code),
+        permissions: [...auth.platform_access.permissions],
+      }
+    : null
+
+  const hasPlatformAccess =
+    platformAccess !== null && platformAccess.permissions.length > 0
+  const activeShopId = shops[0]?.id ?? null
+
+  return {
+    role: hasPlatformAccess ? "platform_owner" : "shop_admin",
+    accessToken: auth.access_token,
+    refreshToken: auth.refresh_token,
+    accessExpiresAt: auth.expires_at,
+    refreshExpiresAt: auth.refresh_expires_at,
+    user: {
+      id: auth.user.id,
+      name: auth.user.name,
+      email: auth.user.email,
+      phone: auth.user.phone,
+      locale: auth.user.locale,
+    },
+    platformAccess,
+    shops,
+    activeShopId,
+  }
 }
 
 export function defaultPathForSession(session: AppSession) {
-  return session.role === "platform_admin" ? "/platform" : "/dashboard"
+  if (hasPlatformAccess(session)) {
+    return "/platform"
+  }
+
+  if (hasShopAccess(session)) {
+    return "/dashboard"
+  }
+
+  return "/sign-in?error=no_access"
 }
 
-export function createSessionFromEmail(input: {
-  email: string
-  displayName?: string
-  shopName?: string
-  mode: "sign-in" | "register"
-}): AppSession {
-  const email = input.email.trim().toLowerCase()
-  const isPlatformAdmin = email === getPlatformAdminEmail()
-
-  if (isPlatformAdmin) {
-    return {
-      role: "platform_admin",
-      email,
-      displayName: input.displayName?.trim() || "Platform Admin",
-    }
+export function getActiveShop(session: AppSession) {
+  if (!session.activeShopId) {
+    return session.shops[0] ?? null
   }
 
-  return {
-    role: "shop_admin",
-    email,
-    displayName: input.displayName?.trim() || deriveDisplayName(email),
-    shopName: input.shopName?.trim() || deriveShopName(email),
-    subscriptionStatus: input.mode === "register" ? "trial" : "active",
-  }
+  return session.shops.find((shop) => shop.id === session.activeShopId) ?? session.shops[0] ?? null
+}
+
+export function hasPlatformAccess(session: AppSession) {
+  return (
+    session.platformAccess !== null &&
+    session.platformAccess.permissions.length > 0
+  )
+}
+
+export function hasShopAccess(session: AppSession) {
+  return session.shops.length > 0
 }
 
 export async function getSession() {
   const cookieStore = await cookies()
-  return decodeSession(cookieStore.get(AUTH_COOKIE_NAME)?.value)
+  const session = decodeSession(cookieStore.get(AUTH_COOKIE_NAME)?.value)
+
+  if (!session) {
+    return null
+  }
+
+  if (Date.parse(session.refreshExpiresAt) <= Date.now()) {
+    return null
+  }
+
+  return session
 }
 
 export async function persistSession(session: AppSession) {
@@ -107,7 +235,7 @@ export async function persistSession(session: AppSession) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: getCookieMaxAgeSeconds(session),
   })
 }
 
@@ -131,7 +259,7 @@ export async function requirePlatformAdmin() {
     redirect("/sign-in")
   }
 
-  if (session.role !== "platform_admin") {
+  if (!hasPlatformAccess(session)) {
     redirect("/dashboard")
   }
 
@@ -145,12 +273,8 @@ export async function requireShopAdmin() {
     redirect("/sign-in")
   }
 
-  if (session.role !== "shop_admin") {
-    redirect("/platform")
-  }
-
-  if (session.subscriptionStatus === "inactive") {
-    redirect("/sign-in?reason=subscription")
+  if (!hasShopAccess(session)) {
+    redirect(hasPlatformAccess(session) ? "/platform" : "/sign-in?error=no_access")
   }
 
   return session

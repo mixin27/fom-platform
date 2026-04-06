@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { registerAction } from "@/app/actions"
+import { defaultPathForSession, getSession } from "@/lib/auth/session"
 import {
   Field,
   FieldDescription,
@@ -18,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { getSession } from "@/lib/auth/session"
 
 type RegisterPageProps = {
   searchParams?: Promise<{
@@ -32,11 +32,16 @@ export default async function RegisterPage({
   const session = await getSession()
 
   if (session) {
-    redirect(session.role === "platform_admin" ? "/platform" : "/dashboard")
+    redirect(defaultPathForSession(session))
   }
 
   const params = await searchParams
   const hasError = params?.error === "invalid_registration"
+  const emailInUse = params?.error === "email_in_use"
+  const shopSetupFailed =
+    params?.error === "shop_setup_failed" ||
+    params?.error === "shop_name_unavailable"
+  const registrationFailed = params?.error === "registration_failed"
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
@@ -49,6 +54,21 @@ export default async function RegisterPage({
           {hasError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               Fill in all fields with a valid email and a password of at least 8 characters.
+            </div>
+          ) : null}
+          {emailInUse ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              That email is already registered. Sign in instead or use another email.
+            </div>
+          ) : null}
+          {shopSetupFailed ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Your account was created, but the initial shop setup did not complete. Try signing in and create the shop again later.
+            </div>
+          ) : null}
+          {registrationFailed ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              Registration could not be completed right now. Check the API connection and try again.
             </div>
           ) : null}
           <form action={registerAction} className="flex flex-col gap-5">
@@ -69,7 +89,7 @@ export default async function RegisterPage({
                 <FieldLabel htmlFor="password">Password</FieldLabel>
                 <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
                 <FieldDescription>
-                  Registration currently opens the shop portal in trial mode until billing and real backend auth are wired in.
+                  Registration creates your account in the API, provisions the first shop, then signs you into the dashboard.
                 </FieldDescription>
               </Field>
             </FieldGroup>

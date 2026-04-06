@@ -3,6 +3,7 @@ import { ArrowRight, Clock3, Store } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { signInAction } from "@/app/actions"
+import { defaultPathForSession, getSession } from "@/lib/auth/session"
 import {
   Field,
   FieldDescription,
@@ -18,12 +19,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { getSession } from "@/lib/auth/session"
 
 type SignInPageProps = {
   searchParams?: Promise<{
     error?: string
-    reason?: string
   }>
 }
 
@@ -31,12 +30,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const session = await getSession()
 
   if (session) {
-    redirect(session.role === "platform_admin" ? "/platform" : "/dashboard")
+    redirect(defaultPathForSession(session))
   }
 
   const params = await searchParams
   const hasError = params?.error === "invalid_credentials"
-  const subscriptionBlocked = params?.reason === "subscription"
+  const noAccess = params?.error === "no_access"
+  const authFailed = params?.error === "auth_failed"
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -89,12 +89,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              Enter a valid email and a password with at least 8 characters.
+              Email or password is incorrect.
             </div>
           ) : null}
-          {subscriptionBlocked ? (
+          {noAccess ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              Your shop access needs an active subscription before the portal can open.
+              This account exists, but it does not have platform or shop access yet.
+            </div>
+          ) : null}
+          {authFailed ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              Sign-in could not be completed right now. Check the API connection and try again.
             </div>
           ) : null}
           <form action={signInAction} className="flex flex-col gap-5">
@@ -107,7 +112,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 <FieldLabel htmlFor="password">Password</FieldLabel>
                 <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
                 <FieldDescription>
-                  Email/password UI is scaffolded for the backend auth flow already built in the API.
+                  Your credentials are verified by the backend API and a signed web session cookie is created on success.
                 </FieldDescription>
               </Field>
             </FieldGroup>
