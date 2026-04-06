@@ -134,6 +134,16 @@ Message template notes:
 | POST   | /shops/{shopId}/deliveries              | Create delivery        | 201 Single Delivery |
 | PATCH  | /shops/{shopId}/deliveries/{deliveryId} | Update delivery status | 200 Single Delivery |
 
+Delivery notes:
+
+- `GET /shops/{shopId}/deliveries` accepts `status`, `driver_user_id`, `search`, `limit`, and `cursor`.
+- Delivery status values are `scheduled`, `out_for_delivery`, and `delivered`.
+- `POST /shops/{shopId}/deliveries` requires `order_id` and `driver_user_id`.
+- Each order can have at most one delivery record.
+- `driver_user_id` must belong to an active member of the same shop.
+- Delivery status updates sync the related order status forward to `confirmed`, `out_for_delivery`, or `delivered`.
+- `address_snapshot` falls back to the current order customer address when omitted on create or reset with `null` on update.
+
 ## Summaries and Reports
 
 | Method | Path                            | Description           | Response                |

@@ -17,6 +17,7 @@ const prisma = new PrismaClient({
 
 async function main() {
   await prisma.messageTemplate.deleteMany();
+  await prisma.delivery.deleteMany();
   await prisma.orderStatusEvent.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
@@ -494,6 +495,45 @@ async function main() {
         qty: 2,
         unitPrice: 24000,
         lineTotal: 48000,
+      },
+    ],
+  });
+
+  await prisma.delivery.createMany({
+    data: [
+      {
+        id: 'del_0240',
+        orderId: 'ord_0240',
+        driverUserId: 'usr_ko_min',
+        status: 'out_for_delivery',
+        deliveryFee: 3000,
+        addressSnapshot: '12/B, Thitsar Rd, Tarmwe, Yangon',
+        scheduledAt: new Date('2026-04-02T03:30:00.000Z'),
+        createdAt: new Date('2026-04-02T03:00:00.000Z'),
+        updatedAt: new Date('2026-04-02T04:35:00.000Z'),
+      },
+      {
+        id: 'del_0239',
+        orderId: 'ord_0239',
+        driverUserId: 'usr_ko_min',
+        status: 'scheduled',
+        deliveryFee: 3000,
+        addressSnapshot: 'No. 18, Hlaing Main Road, Yangon',
+        scheduledAt: new Date('2026-04-02T06:30:00.000Z'),
+        createdAt: new Date('2026-04-02T03:55:00.000Z'),
+        updatedAt: new Date('2026-04-02T03:55:00.000Z'),
+      },
+      {
+        id: 'del_0238',
+        orderId: 'ord_0238',
+        driverUserId: 'usr_ma_aye',
+        status: 'delivered',
+        deliveryFee: 0,
+        addressSnapshot: 'No. 12, Shwe Taung Gyar St, Hlaing, Yangon',
+        scheduledAt: new Date('2026-04-01T09:30:00.000Z'),
+        deliveredAt: new Date('2026-04-01T10:22:00.000Z'),
+        createdAt: new Date('2026-04-01T09:10:00.000Z'),
+        updatedAt: new Date('2026-04-01T10:22:00.000Z'),
       },
     ],
   });

@@ -33,6 +33,12 @@ enum OrderSource {
   manual
 }
 
+enum DeliveryStatus {
+  scheduled
+  out_for_delivery
+  delivered
+}
+
 model User {
   id                 String              @id @default(cuid())
   name               String
@@ -50,6 +56,7 @@ model User {
   sessions           Session[]
   authChallenges     AuthChallenge[]
   statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
+  assignedDeliveries Delivery[]          @relation("DeliveryDriver")
 }
 
 model Shop {
@@ -212,9 +219,29 @@ model Order {
   customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items        OrderItem[]
   statusEvents OrderStatusEvent[]
+  delivery     Delivery?
 
   @@index([shopId, status, createdAt])
   @@index([customerId, createdAt])
+}
+
+model Delivery {
+  id              String         @id @default(cuid())
+  orderId         String         @unique
+  driverUserId    String
+  status          DeliveryStatus @default(scheduled)
+  deliveryFee     Int?
+  addressSnapshot String
+  scheduledAt     DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driverUser      User           @relation("DeliveryDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
+
+  @@index([driverUserId, status])
+  @@index([status, scheduledAt])
+  @@map("deliveries")
 }
 
 model OrderItem {

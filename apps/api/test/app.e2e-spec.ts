@@ -483,6 +483,100 @@ describe('Facebook Order Manager API (e2e)', () => {
     );
   });
 
+  dbIt('creates, lists, and updates deliveries with order sync', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/shops/shop_ma_aye/deliveries',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+      payload: {
+        order_id: 'ord_0244',
+        driver_user_id: 'usr_ko_min',
+        status: 'scheduled',
+        scheduled_at: '2026-04-02T05:00:00.000Z',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+    const createBody = createResponse.json();
+    expect(createBody.success).toBe(true);
+    expect(createBody.data).toEqual(
+      expect.objectContaining({
+        shop_id: 'shop_ma_aye',
+        order_id: 'ord_0244',
+        driver_user_id: 'usr_ko_min',
+        status: 'scheduled',
+        order: expect.objectContaining({
+          id: 'ord_0244',
+          status: 'confirmed',
+        }),
+      }),
+    );
+
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/api/v1/shops/shop_ma_aye/deliveries?status=scheduled&driver_user_id=usr_ko_min&search=0244&limit=5',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+    });
+
+    expect(listResponse.statusCode).toBe(200);
+    const listBody = listResponse.json();
+    expect(listBody.success).toBe(true);
+    expect(listBody.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createBody.data.id,
+          order_id: 'ord_0244',
+        }),
+      ]),
+    );
+    expect(listBody.meta.pagination).toMatchObject({
+      limit: 5,
+      total: expect.any(Number),
+    });
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/shops/shop_ma_aye/deliveries/${createBody.data.id}`,
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+      payload: {
+        status: 'delivered',
+        delivered_at: '2026-04-02T11:30:00.000Z',
+      },
+    });
+
+    expect(updateResponse.statusCode).toBe(200);
+    const updateBody = updateResponse.json();
+    expect(updateBody.success).toBe(true);
+    expect(updateBody.data).toEqual(
+      expect.objectContaining({
+        id: createBody.data.id,
+        status: 'delivered',
+        delivered_at: '2026-04-02T11:30:00.000Z',
+        order: expect.objectContaining({
+          id: 'ord_0244',
+          status: 'delivered',
+        }),
+      }),
+    );
+  });
+
   dbIt('returns a typed daily summary for a shop date', async () => {
     const loginResponse = await app.inject({
       method: 'POST',

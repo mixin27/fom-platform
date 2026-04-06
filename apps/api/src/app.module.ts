@@ -12,6 +12,8 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
+import { DeliveriesController } from './deliveries/deliveries.controller';
+import { DeliveriesService } from './deliveries/deliveries.service';
 import { AppExceptionFilter } from './common/http/exception.filter';
 import { RequestContextMiddleware } from './common/http/request-context';
 import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.interceptor';
@@ -40,6 +42,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     ShopsController,
     CustomersController,
     OrdersController,
+    DeliveriesController,
     TemplatesController,
     SummariesController,
     ReportsController,
@@ -52,6 +55,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     ShopsService,
     CustomersService,
     OrdersService,
+    DeliveriesService,
     TemplatesService,
     SummariesService,
     AuthGuard,
