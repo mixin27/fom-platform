@@ -67,6 +67,26 @@ const TOWNSHIP_PATTERNS = [
   /\b([က-အ][က-အ\s]+?)\s*မြို့နယ်/u,
 ] as const;
 
+const PRODUCT_LABEL_PATTERNS = [
+  /^(?:product(?:\s*name)?|item|ပစ္စည်း|ကုန်ပစ္စည်း)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
+const QTY_LABEL_PATTERNS = [
+  /^(?:qty|quantity|အရေအတွက်)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
+const PRICE_LABEL_PATTERNS = [
+  /^(?:unit\s*price|price|amount|ဈေး|စျေး|ကျသင့်ငွေ)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
+const DELIVERY_FEE_LABEL_PATTERNS = [
+  /^(?:delivery(?:\s*fee)?|deli(?:very)?|ပို့ခ|အိမ်အရောက်ခ)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
+const NOTE_LABEL_PATTERNS = [
+  /^(?:note|remark|မှတ်ချက်)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
 @Injectable()
 export class OrderMessageParserService {
   parseMessage(message: string): ParseResult {
@@ -163,33 +183,19 @@ export class OrderMessageParserService {
       }
     }
 
-    const labeledProduct = this.extractLabeledValue(lines, [
-      /^(?:product(?:\s*name)?|item|ပစ္စည်း|ကုန်ပစ္စည်း)\s*[:\-]?\s*(.+)$/i,
-    ]);
-    const labeledQty = this.extractLabeledValue(lines, [
-      /^(?:qty|quantity|အရေအတွက်)\s*[:\-]?\s*(.+)$/i,
-    ]);
-    const labeledPrice = this.extractLabeledValue(lines, [
-      /^(?:unit\s*price|price|amount|ဈေး|စျေး|ကျသင့်ငွေ)\s*[:\-]?\s*(.+)$/i,
-    ]);
-    const labeledDeliveryFee = this.extractLabeledValue(lines, [
-      /^(?:delivery(?:\s*fee)?|deli(?:very)?|ပို့ခ|အိမ်အရောက်ခ)\s*[:\-]?\s*(.+)$/i,
-    ]);
-    const labeledNote = this.extractLabeledValue(lines, [
-      /^(?:note|remark|မှတ်ချက်)\s*[:\-]?\s*(.+)$/i,
-    ]);
+    const labeledQty = this.extractLabeledValue(lines, QTY_LABEL_PATTERNS);
+    const labeledPrice = this.extractLabeledValue(lines, PRICE_LABEL_PATTERNS);
+    const labeledDeliveryFee = this.extractLabeledValue(
+      lines,
+      DELIVERY_FEE_LABEL_PATTERNS,
+    );
+    const labeledNote = this.extractLabeledValue(lines, NOTE_LABEL_PATTERNS);
 
-    const items: ParsedItemDraft[] = [];
-
-    if (labeledProduct) {
-      consumedLineIndexes.add(labeledProduct.index);
-    }
-    if (labeledQty) {
-      consumedLineIndexes.add(labeledQty.index);
-    }
-    if (labeledPrice) {
-      consumedLineIndexes.add(labeledPrice.index);
-    }
+    const items: ParsedItemDraft[] = this.extractItemsFromLabeledProductBlocks(
+      lines,
+      consumedLineIndexes,
+      warnings,
+    );
 
     if (labeledDeliveryFee) {
       consumedLineIndexes.add(labeledDeliveryFee.index);
@@ -198,36 +204,18 @@ export class OrderMessageParserService {
       consumedLineIndexes.add(labeledNote.index);
     }
 
-    if (labeledProduct) {
-      const qty = labeledQty
-        ? this.parseQuantity(labeledQty.value)
-        : this.extractQuantityFromText(labeledProduct.value);
-      const unitPrice = labeledPrice
-        ? this.parseMoney(labeledPrice.value)
-        : this.extractPriceFromText(labeledProduct.value);
-      items.push({
-        product_name: this.cleanProductName(labeledProduct.value),
-        qty: qty ?? 1,
-        unit_price: unitPrice,
-        line_total:
-          qty !== null && unitPrice !== null ? (qty ?? 1) * unitPrice : null,
-      });
-    }
-
-    if (items.length === 0) {
-      for (const line of lines) {
-        if (consumedLineIndexes.has(line.index)) {
-          continue;
-        }
-
-        const parsedItem = this.tryParseItemLine(line.raw);
-        if (!parsedItem) {
-          continue;
-        }
-
-        items.push(parsedItem);
-        consumedLineIndexes.add(line.index);
+    for (const line of lines) {
+      if (consumedLineIndexes.has(line.index)) {
+        continue;
       }
+
+      const parsedItem = this.tryParseItemLine(line.raw);
+      if (!parsedItem) {
+        continue;
+      }
+
+      items.push(parsedItem);
+      consumedLineIndexes.add(line.index);
     }
 
     if (items.length === 0) {
@@ -397,26 +385,142 @@ export class OrderMessageParserService {
     lines: LineInfo[],
     patterns: readonly RegExp[],
   ): { index: number; value: string } | null {
+    return this.extractLabeledValues(lines, patterns)[0] ?? null;
+  }
+
+  private extractLabeledValues(
+    lines: LineInfo[],
+    patterns: readonly RegExp[],
+  ): Array<{ index: number; value: string }> {
+    const values: Array<{ index: number; value: string }> = [];
+
     for (const line of lines) {
-      for (const pattern of patterns) {
-        const match = line.raw.match(pattern);
-        if (!match?.[1]) {
-          continue;
-        }
-
-        const value = match[1].trim();
-        if (value.length === 0) {
-          continue;
-        }
-
-        return {
-          index: line.index,
-          value,
-        };
+      const value = this.matchLabeledValue(line.raw, patterns);
+      if (!value) {
+        continue;
       }
+
+      values.push({
+        index: line.index,
+        value,
+      });
+    }
+
+    return values;
+  }
+
+  private matchLabeledValue(
+    value: string,
+    patterns: readonly RegExp[],
+  ): string | null {
+    for (const pattern of patterns) {
+      const match = value.match(pattern);
+      if (!match?.[1]) {
+        continue;
+      }
+
+      const extracted = match[1].trim();
+      if (extracted.length === 0) {
+        continue;
+      }
+
+      return extracted;
     }
 
     return null;
+  }
+
+  private extractItemsFromLabeledProductBlocks(
+    lines: LineInfo[],
+    consumedLineIndexes: Set<number>,
+    warnings: string[],
+  ): ParsedItemDraft[] {
+    const items: ParsedItemDraft[] = [];
+
+    let currentItem: {
+      product_name: string;
+      qty: number | null;
+      unit_price: number | null;
+    } | null = null;
+
+    const flushCurrentItem = () => {
+      if (!currentItem) {
+        return;
+      }
+
+      items.push({
+        product_name: currentItem.product_name,
+        qty: currentItem.qty ?? 1,
+        unit_price: currentItem.unit_price,
+        line_total:
+          currentItem.unit_price !== null
+            ? (currentItem.qty ?? 1) * currentItem.unit_price
+            : null,
+      });
+
+      if (currentItem.qty === null) {
+        warnings.push(
+          'One or more item quantities were not detected. Defaulted to 1.',
+        );
+      }
+
+      currentItem = null;
+    };
+
+    for (const line of lines) {
+      const productValue = this.matchLabeledValue(line.raw, PRODUCT_LABEL_PATTERNS);
+      if (productValue) {
+        flushCurrentItem();
+        consumedLineIndexes.add(line.index);
+
+        const inlineSegments = this.splitInlineItemSegments(productValue);
+        if (inlineSegments.length > 1) {
+          for (const segment of inlineSegments) {
+            const inlineItem =
+              this.tryParseItemLine(segment) ?? this.toInlineItemDraft(segment);
+            if (!inlineItem) {
+              continue;
+            }
+
+            items.push(inlineItem);
+          }
+          continue;
+        }
+
+        const productName = this.cleanProductName(productValue);
+        if (!productName) {
+          continue;
+        }
+
+        currentItem = {
+          product_name: productName,
+          qty: this.extractQuantityFromText(productValue),
+          unit_price: this.extractPriceFromText(productValue),
+        };
+        continue;
+      }
+
+      if (!currentItem) {
+        continue;
+      }
+
+      const qtyValue = this.matchLabeledValue(line.raw, QTY_LABEL_PATTERNS);
+      if (qtyValue && currentItem.qty === null) {
+        currentItem.qty = this.parseQuantity(qtyValue);
+        consumedLineIndexes.add(line.index);
+        continue;
+      }
+
+      const priceValue = this.matchLabeledValue(line.raw, PRICE_LABEL_PATTERNS);
+      if (priceValue && currentItem.unit_price === null) {
+        currentItem.unit_price = this.parseMoney(priceValue);
+        consumedLineIndexes.add(line.index);
+      }
+    }
+
+    flushCurrentItem();
+
+    return items;
   }
 
   private extractPhone(lines: LineInfo[]) {
@@ -556,6 +660,31 @@ export class OrderMessageParserService {
     }
 
     return null;
+  }
+
+  private splitInlineItemSegments(value: string): string[] {
+    return value
+      .split(/\s*(?:;|\|)\s*/g)
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length > 0);
+  }
+
+  private toInlineItemDraft(value: string): ParsedItemDraft | null {
+    const productName = this.cleanProductName(value);
+    if (!productName) {
+      return null;
+    }
+
+    const qty = this.extractQuantityFromText(value);
+    const unitPrice = this.extractPriceFromText(value);
+
+    return {
+      product_name: productName,
+      qty: qty ?? 1,
+      unit_price: unitPrice,
+      line_total:
+        unitPrice !== null ? (qty ?? 1) * unitPrice : null,
+    };
   }
 
   private extractFallbackProductLine(

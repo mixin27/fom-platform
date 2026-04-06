@@ -73,4 +73,69 @@ describe('OrderMessageParserService', () => {
     expect(result.suggested_order.status).toBe('confirmed');
     expect(result.parse_meta.is_ready_to_create).toBe(true);
   });
+
+  it('parses multiple unlabeled item lines into items array', () => {
+    const result = service.parseMessage(
+      [
+        'Daw Khin Myat',
+        '09 7812 3456',
+        'No. 45, Bo Gyoke St, Sanchaung Tsp, Yangon',
+        'Silk Longyi Set x2 18000',
+        'Handbag x1 25000',
+        'Deli 3000',
+      ].join('\n'),
+    );
+
+    expect(result.suggested_order.items).toEqual([
+      expect.objectContaining({
+        product_name: 'Silk Longyi Set',
+        qty: 2,
+        unit_price: 18000,
+        line_total: 36000,
+      }),
+      expect.objectContaining({
+        product_name: 'Handbag',
+        qty: 1,
+        unit_price: 25000,
+        line_total: 25000,
+      }),
+    ]);
+    expect(result.suggested_order.subtotal).toBe(61000);
+    expect(result.suggested_order.total_price).toBe(64000);
+    expect(result.parse_meta.is_ready_to_create).toBe(true);
+  });
+
+  it('parses repeated labeled product blocks as multiple items', () => {
+    const result = service.parseMessage(
+      [
+        'Name: Daw Khin Myat',
+        'Phone: 09 7812 3456',
+        'Product: Silk Longyi Set',
+        'Qty: 2',
+        'Price: 18,000',
+        'Product: Handbag',
+        'Qty: 1',
+        'Price: 25,000',
+        'Deli: 3,000',
+      ].join('\n'),
+    );
+
+    expect(result.suggested_order.items).toEqual([
+      expect.objectContaining({
+        product_name: 'Silk Longyi Set',
+        qty: 2,
+        unit_price: 18000,
+        line_total: 36000,
+      }),
+      expect.objectContaining({
+        product_name: 'Handbag',
+        qty: 1,
+        unit_price: 25000,
+        line_total: 25000,
+      }),
+    ]);
+    expect(result.suggested_order.subtotal).toBe(61000);
+    expect(result.suggested_order.total_price).toBe(64000);
+    expect(result.parse_meta.is_ready_to_create).toBe(true);
+  });
 });

@@ -96,6 +96,7 @@ Order write notes:
 
 - `POST /shops/{shopId}/orders` accepts either `customer_id` or inline customer details. The preferred request body uses `customer` plus `items`, while legacy inline customer and single-item fields are still accepted.
 - `POST /shops/{shopId}/orders/parse-message` does not create an order. It parses copied Messenger text and returns a `suggested_order`, parse warnings, confidence, and an optional `customer_match`.
+- The parser can return multiple `items` when the message contains separate item lines, repeated labeled product blocks, or semicolon-separated inline item segments.
 - `PATCH /shops/{shopId}/orders/{orderId}` requires at least one field and accepts `note: null` to clear the note.
 - `POST /shops/{shopId}/orders/{orderId}/status` expects `{ "status": "...", "note": "..." }`.
 
