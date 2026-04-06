@@ -67,7 +67,7 @@ This starts:
 - PostgreSQL on `localhost:5432`
 - Redis on `localhost:6379`
 
-The API container applies Prisma migrations on startup. It does not seed automatically, because the current seed script resets demo data. To load demo data into the Docker PostgreSQL instance, run:
+The API container applies Prisma migrations on startup. It does not seed automatically. To load demo data into the Docker PostgreSQL instance, run:
 
 ```bash
 pnpm docker:seed
@@ -101,7 +101,7 @@ Install dependencies and generate the Prisma client:
 pnpm install
 ```
 
-Apply migrations and seed demo data:
+Apply migrations and seed demo data locally:
 
 ```bash
 pnpm db:setup
@@ -109,11 +109,12 @@ pnpm db:setup
 
 The seed creates:
 
+- platform owner login: `owner@fom-platform.local` / `Password123!`
 - owner login: `maaye@example.com` / `Password123!`
 - staff login: `komin@example.com` / `Password123!`
 - owner phone: `09 7800 1111`
 - staff phone: `09 7800 2222`
-- demo shop: `shop_ma_aye`
+- demo shop: `Ma Aye Shop`
 
 ## Development
 
@@ -130,6 +131,7 @@ pnpm prisma:migrate:dev
 pnpm prisma:migrate:deploy
 pnpm prisma:push
 pnpm prisma:seed
+pnpm prisma:seed:demo
 pnpm db:reset
 ```
 
@@ -142,7 +144,7 @@ pnpm db:reset
 - `POST /api/v1/auth/refresh` rotates JWT access and refresh tokens.
 - `POST /api/v1/auth/phone/start` and `POST /api/v1/auth/phone/verify` support optional phone OTP login.
 - `POST /api/v1/auth/social/login` stores provider identities for `google` and `facebook`.
-- Access JWT payloads include shop-scoped `roles` and `permissions` so the mobile app can tailor UX without an extra lookup.
+- Access JWT payloads include platform-scoped and shop-scoped roles and permissions so the web and mobile clients can tailor UX without an extra lookup.
 - Sessions persist request metadata including IP address and user-agent so later device/session management work has a reliable base.
 
 Social login currently persists the provider identity supplied by the caller. Provider token verification still needs to be added before treating it as production-ready OAuth.
@@ -161,8 +163,11 @@ Scalar is the recommended interactive surface for manual API testing.
 - Roles live in the `roles` table.
 - Permissions live in the `permissions` table.
 - Role-to-permission mappings live in `roles_permissions_assignment`.
+- Platform-level user roles are assigned through `user_role_assignments`.
 - Shop membership roles are assigned through `shop_member_role_assignments`.
-- The default seeded roles are `owner` and `staff`.
+- `pnpm prisma:seed` is production-safe and only syncs the RBAC catalog.
+- Demo users, shops, and orders are only loaded through `pnpm prisma:seed:demo` or `pnpm db:setup`.
+- The default seeded roles are `platform_owner`, `owner`, and `staff`.
 
 ## Testing
 

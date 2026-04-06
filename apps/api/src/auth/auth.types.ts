@@ -5,6 +5,12 @@ export type JwtShopAccess = {
   permissions: string[];
 };
 
+export type JwtPlatformAccess = {
+  role: string | null;
+  roles: string[];
+  permissions: string[];
+};
+
 export type AccessTokenPayload = {
   type: 'access';
   sub: string;
@@ -13,6 +19,7 @@ export type AccessTokenPayload = {
   email: string | null;
   phone: string | null;
   locale: string;
+  platform: JwtPlatformAccess | null;
   shops: JwtShopAccess[];
 };
 

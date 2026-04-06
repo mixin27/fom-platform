@@ -30,4 +30,6 @@ pnpm docker:seed
 pnpm docker:down
 ```
 
+`pnpm docker:seed` loads the explicit demo dataset into the Docker PostgreSQL instance. The base API seed remains production-safe and only syncs RBAC roles, permissions, and role-permission assignments.
+
 The API listens on `http://localhost:4000` by default. More API-specific setup notes live in [apps/api/README.md](./apps/api/README.md).

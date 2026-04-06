@@ -55,6 +55,7 @@ model User {
   authIdentities     AuthIdentity[]
   sessions           Session[]
   authChallenges     AuthChallenge[]
+  roleAssignments    UserRoleAssignment[]
   statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
   assignedDeliveries Delivery[]          @relation("DeliveryDriver")
 }
@@ -120,6 +121,7 @@ model AuthIdentity {
 model Role {
   id                    String                     @id @default(cuid())
   code                  String                     @unique
+  scope                 String                     @default("shop")
   name                  String
   description           String?
   isSystem              Boolean                    @default(true)
@@ -127,6 +129,7 @@ model Role {
   updatedAt             DateTime                   @updatedAt
   permissionAssignments RolePermissionAssignment[]
   memberAssignments     ShopMemberRoleAssignment[]
+  userAssignments       UserRoleAssignment[]
 
   @@map("roles")
 }
@@ -134,6 +137,7 @@ model Role {
 model Permission {
   id              String                     @id @default(cuid())
   code            String                     @unique
+  scope           String                     @default("shop")
   name            String
   description     String?
   createdAt       DateTime                   @default(now())
@@ -167,6 +171,19 @@ model ShopMemberRoleAssignment {
   @@unique([shopMemberId, roleId])
   @@index([roleId])
   @@map("shop_member_role_assignments")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("user_role_assignments")
 }
 
 model Customer {

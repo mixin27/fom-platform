@@ -517,6 +517,7 @@ export class ShopsService {
         code: {
           in: uniqueRoleCodes,
         },
+        scope: 'shop',
       },
     });
 
@@ -533,7 +534,11 @@ export class ShopsService {
   }
 
   private extractMemberAccess(member: MemberWithAccess) {
-    const roles = [...member.roleAssignments]
+    const shopScopedAssignments = member.roleAssignments.filter(
+      (assignment: { role: { scope: string } }) => assignment.role.scope === 'shop',
+    );
+
+    const roles = [...shopScopedAssignments]
       .map((assignment) => assignment.role)
       .sort((left, right) => left.code.localeCompare(right.code))
       .map((role) => ({
@@ -545,7 +550,7 @@ export class ShopsService {
 
     const permissionCodes = [
       ...new Set(
-        member.roleAssignments.flatMap((assignment) =>
+        shopScopedAssignments.flatMap((assignment) =>
           assignment.role.permissionAssignments.map(
             (permissionAssignment) => permissionAssignment.permission.code,
           ),

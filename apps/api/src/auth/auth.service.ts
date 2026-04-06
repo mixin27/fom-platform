@@ -22,6 +22,7 @@ import type { StartPhoneChallengeDto } from './dto/start-phone-challenge.dto';
 import type { VerifyPhoneChallengeDto } from './dto/verify-phone-challenge.dto';
 import type {
   AccessTokenPayload,
+  JwtPlatformAccess,
   JwtShopAccess,
   RefreshTokenPayload,
 } from './auth.types';
@@ -43,7 +44,18 @@ type AuthSessionContext = {
     phone: string | null;
     locale: string;
   };
+  platform: {
+    role: string | null;
+    roles: Array<{
+      id: string;
+      code: string;
+      name: string;
+      description: string | null;
+    }>;
+    permissions: string[];
+  } | null;
   shops: Awaited<ReturnType<ShopsService['listUserShops']>>;
+  jwtPlatform: JwtPlatformAccess | null;
   jwtShops: JwtShopAccess[];
 };
 
@@ -380,6 +392,7 @@ export class AuthService {
       phone: payload.phone,
       locale: payload.locale,
       sessionId: payload.sid,
+      platform: payload.platform,
       shops: payload.shops,
     };
   }
@@ -405,6 +418,7 @@ export class AuthService {
       locale: user.locale,
       email_verified_at: user.emailVerifiedAt?.toISOString() ?? null,
       phone_verified_at: user.phoneVerifiedAt?.toISOString() ?? null,
+      platform_access: await this.buildPlatformAccess(user.id),
       auth_methods: [
         ...new Set(user.authIdentities.map((identity) => identity.provider)),
       ],
@@ -454,6 +468,7 @@ export class AuthService {
       email: context.user.email,
       phone: context.user.phone,
       locale: context.user.locale,
+      platform: context.jwtPlatform,
       shops: context.jwtShops,
     };
     const refreshPayload: RefreshTokenPayload = {
@@ -513,6 +528,16 @@ export class AuthService {
     }
 
     const shops = await this.shopsService.listUserShops(userId);
+    const platform = await this.buildPlatformAccess(userId);
+    const jwtPlatform: JwtPlatformAccess | null = platform
+      ? {
+          role: platform.role,
+          roles: platform.roles.map((role) => role.code),
+          permissions: platform.permissions.map((permission) =>
+            String(permission),
+          ),
+        }
+      : null;
     const jwtShops: JwtShopAccess[] = shops.map((shop) => ({
       shop_id: shop.id,
       role: shop.membership.role,
@@ -530,7 +555,9 @@ export class AuthService {
         phone: user.phone,
         locale: user.locale,
       },
+      platform,
       shops,
+      jwtPlatform,
       jwtShops,
     };
   }
@@ -548,9 +575,66 @@ export class AuthService {
       refresh_expires_at: input.session.refreshExpiresAt.toISOString(),
       user: {
         ...input.context.user,
+        platform: input.context.jwtPlatform,
         shops: input.context.jwtShops,
       },
+      platform_access: input.context.platform,
       shops: input.context.shops,
+    };
+  }
+
+  private async buildPlatformAccess(userId: string) {
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: {
+        userId,
+        role: {
+          scope: 'platform',
+        },
+      },
+      include: {
+        role: {
+          include: {
+            permissionAssignments: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    if (assignments.length === 0) {
+      return null;
+    }
+
+    const roles = assignments
+      .map((assignment) => assignment.role)
+      .sort((left, right) => left.code.localeCompare(right.code))
+      .map((role) => ({
+        id: role.id,
+        code: role.code,
+        name: role.name,
+        description: role.description,
+      }));
+
+    const permissions = [
+      ...new Set(
+        assignments.flatMap((assignment) =>
+          assignment.role.permissionAssignments.map(
+            (permissionAssignment) => permissionAssignment.permission.code,
+          ),
+        ),
+      ),
+    ].sort();
+
+    return {
+      role: roles[0]?.code ?? null,
+      roles,
+      permissions,
     };
   }
 

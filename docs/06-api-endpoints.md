@@ -4,7 +4,7 @@
 
 - Base URL: `/api/v1`
 - Auth: `Authorization: Bearer <access_token>`
-- Access tokens are JWTs and include shop-scoped role and permission claims for mobile UI decisions.
+- Access tokens are JWTs and include platform-scoped plus shop-scoped role and permission claims for client-side access decisions.
 - Sessions capture request metadata including IP address and user-agent.
 - Pagination: `limit` and `cursor`
 - Timezone: use shop timezone for date filters
@@ -31,12 +31,12 @@
 
 | Method | Path               | Description                                            | Response                                       |
 | ------ | ------------------ | ------------------------------------------------------ | ---------------------------------------------- |
-| POST   | /auth/register     | Register with email/password                           | 200 Single {access_token, refresh_token, user} |
-| POST   | /auth/login        | Login with email plus password                         | 200 Single {access_token, refresh_token, user} |
-| POST   | /auth/refresh      | Rotate access and refresh tokens                       | 200 Single {access_token, refresh_token, user} |
-| POST   | /auth/social/login | Create or reuse a Google/Facebook identity and sign in | 200 Single {access_token, refresh_token, user} |
+| POST   | /auth/register     | Register with email/password                           | 200 Single {access_token, refresh_token, user, platform_access, shops} |
+| POST   | /auth/login        | Login with email plus password                         | 200 Single {access_token, refresh_token, user, platform_access, shops} |
+| POST   | /auth/refresh      | Rotate access and refresh tokens                       | 200 Single {access_token, refresh_token, user, platform_access, shops} |
+| POST   | /auth/social/login | Create or reuse a Google/Facebook identity and sign in | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/phone/start  | Send OTP to phone number                               | 200 Single {challenge_id, purpose, expires_at} |
-| POST   | /auth/phone/verify | Verify OTP and create session                          | 200 Single {access_token, refresh_token, user} |
+| POST   | /auth/phone/verify | Verify OTP and create session                          | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/logout       | Revoke current token                                   | 204 No Content                                 |
 | GET    | /users/me          | Current user profile                                   | 200 Single User                                |
 | PATCH  | /users/me          | Update profile, locale, email, or phone                | 200 Single User                                |

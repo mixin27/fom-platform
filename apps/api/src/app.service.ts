@@ -7,6 +7,11 @@ import {
 @Injectable()
 export class AppService {
   getOverview() {
+    const platformOwnerEmail =
+      process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() ||
+      process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase() ||
+      'owner@fom-platform.local';
+
     return {
       name: 'facebook-order-manager-api',
       version: '0.1.0',
@@ -14,8 +19,18 @@ export class AppService {
       auth: {
         type: 'bearer-jwt',
         methods: ['email_password', 'phone_otp', 'google', 'facebook'],
-        jwt_claims: ['sub', 'sid', 'shops.roles', 'shops.permissions'],
+        jwt_claims: [
+          'sub',
+          'sid',
+          'platform.roles',
+          'platform.permissions',
+          'shops.roles',
+          'shops.permissions',
+        ],
         demo_credentials: {
+          platform_owner_email: platformOwnerEmail,
+          platform_owner_password:
+            process.env.PLATFORM_OWNER_PASSWORD ?? 'Password123!',
           owner_email: 'maaye@example.com',
           owner_password: 'Password123!',
           staff_email: 'komin@example.com',

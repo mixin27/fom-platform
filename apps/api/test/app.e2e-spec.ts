@@ -8,10 +8,88 @@ import { AppService } from './../src/app.service';
 import { PrismaService } from './../src/common/prisma/prisma.service';
 
 const dbIt = process.env.RUN_DB_E2E === '1' ? it : it.skip;
+const platformOwnerEmail =
+  process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() ||
+  process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase() ||
+  'owner@fom-platform.local';
+const platformOwnerPassword = process.env.PLATFORM_OWNER_PASSWORD ?? 'Password123!';
 
 function decodeJwtPayload(token: string) {
   const [, payload] = token.split('.');
   return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+}
+
+async function loginWithPassword(
+  app: NestFastifyApplication,
+  email: string,
+  password: string,
+) {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/login',
+    payload: {
+      email,
+      password,
+    },
+  });
+
+  expect(response.statusCode).toBe(200);
+  const body = response.json();
+  expect(body.success).toBe(true);
+  return body.data;
+}
+
+async function getSeedReferences(app: NestFastifyApplication) {
+  const prisma = app.get(PrismaService);
+  const shop = await prisma.shop.findFirst({
+    where: {
+      name: 'Ma Aye Shop',
+    },
+    select: {
+      id: true,
+    },
+  });
+  const staff = await prisma.user.findUnique({
+    where: {
+      email: 'komin@example.com',
+    },
+    select: {
+      id: true,
+    },
+  });
+  const ayeAye = shop
+    ? await prisma.customer.findUnique({
+        where: {
+          shopId_phone: {
+            shopId: shop.id,
+            phone: '09 9871 2345',
+          },
+        },
+        select: {
+          id: true,
+        },
+      })
+    : null;
+  const order0244 = await prisma.order.findUnique({
+    where: {
+      orderNo: 'ORD-0244',
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  expect(shop?.id).toBeDefined();
+  expect(staff?.id).toBeDefined();
+  expect(ayeAye?.id).toBeDefined();
+  expect(order0244?.id).toBeDefined();
+
+  return {
+    shopId: shop!.id,
+    staffUserId: staff!.id,
+    customerAyeAyeId: ayeAye!.id,
+    order0244Id: order0244!.id,
+  };
 }
 
 describe('Facebook Order Manager API (e2e)', () => {
@@ -57,6 +135,7 @@ describe('Facebook Order Manager API (e2e)', () => {
   dbIt(
     'supports email/password login and refresh with seeded accounts',
     async () => {
+      const seedRefs = await getSeedReferences(app);
       const loginResponse = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/login',
@@ -91,7 +170,7 @@ describe('Facebook Order Manager API (e2e)', () => {
       expect(accessPayload.shops).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            shop_id: 'shop_ma_aye',
+            shop_id: seedRefs.shopId,
             roles: expect.arrayContaining(['owner']),
             permissions: expect.arrayContaining([
               'members.manage',
@@ -103,7 +182,7 @@ describe('Facebook Order Manager API (e2e)', () => {
       expect(loginBody.data.shops).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: 'shop_ma_aye',
+            id: seedRefs.shopId,
             membership: expect.objectContaining({
               role: 'owner',
               roles: expect.arrayContaining([
@@ -151,23 +230,43 @@ describe('Facebook Order Manager API (e2e)', () => {
     },
   );
 
+  dbIt('includes platform owner access in the login payload', async () => {
+    const loginData = await loginWithPassword(
+      app,
+      platformOwnerEmail,
+      platformOwnerPassword,
+    );
+    const accessPayload = decodeJwtPayload(loginData.access_token);
+
+    expect(loginData.user.email).toBe(platformOwnerEmail);
+    expect(accessPayload.platform).toEqual(
+      expect.objectContaining({
+        role: 'platform_owner',
+        roles: expect.arrayContaining(['platform_owner']),
+        permissions: expect.arrayContaining(['platform.dashboard.read']),
+      }),
+    );
+    expect(loginData.platform_access).toEqual(
+      expect.objectContaining({
+        role: 'platform_owner',
+        permissions: expect.arrayContaining(['platform.dashboard.read']),
+      }),
+    );
+  });
+
   dbIt('lists current user shops with membership access details', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/shops?limit=10',
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -177,7 +276,7 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(body.data).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'shop_ma_aye',
+          id: seedRefs.shopId,
           name: 'Ma Aye Shop',
           membership: expect.objectContaining({
             role: 'owner',
@@ -193,22 +292,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('lists customers with typed query filters', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/shops/shop_ma_aye/customers?segment=vip&sort=top_spenders&limit=5',
+      url: `/api/v1/shops/${seedRefs.shopId}/customers?segment=vip&sort=top_spenders&limit=5`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -218,7 +313,8 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(body.data).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'cus_daw_aye_aye',
+          id: seedRefs.customerAyeAyeId,
+          phone: '09 9871 2345',
           is_vip: true,
           total_spent: expect.any(Number),
         }),
@@ -278,22 +374,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   );
 
   dbIt('lists seeded orders with documented envelopes', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/shops/shop_ma_aye/orders?status=pending&date=today&limit=2',
+      url: `/api/v1/shops/${seedRefs.shopId}/orders?status=pending&date=today&limit=2`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -314,22 +406,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('creates an order with nested customer and typed items', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/v1/shops/shop_ma_aye/orders',
+      url: `/api/v1/shops/${seedRefs.shopId}/orders`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
         customer: {
@@ -394,22 +482,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('parses copied Messenger text into a suggested order draft', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/v1/shops/shop_ma_aye/orders/parse-message',
+      url: `/api/v1/shops/${seedRefs.shopId}/orders/parse-message`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
         message: [
@@ -438,7 +522,7 @@ describe('Facebook Order Manager API (e2e)', () => {
           source: 'messenger',
         }),
         customer_match: expect.objectContaining({
-          id: 'cus_daw_aye_aye',
+          id: seedRefs.customerAyeAyeId,
           phone: '09 9871 2345',
         }),
         parse_meta: expect.objectContaining({
@@ -451,24 +535,20 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('creates, lists, and updates message templates', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const suffix = Date.now().toString();
 
     const createResponse = await app.inject({
       method: 'POST',
-      url: '/api/v1/shops/shop_ma_aye/templates',
+      url: `/api/v1/shops/${seedRefs.shopId}/templates`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
         title: `Delivery follow-up ${suffix}`,
@@ -484,7 +564,7 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(createBody.data).toEqual(
       expect.objectContaining({
         id: expect.any(String),
-        shop_id: 'shop_ma_aye',
+        shop_id: seedRefs.shopId,
         title: `Delivery follow-up ${suffix}`,
         shortcut: `/followup-${suffix}`,
         is_active: true,
@@ -493,9 +573,9 @@ describe('Facebook Order Manager API (e2e)', () => {
 
     const listResponse = await app.inject({
       method: 'GET',
-      url: `/api/v1/shops/shop_ma_aye/templates?search=${suffix}&state=active&limit=5`,
+      url: `/api/v1/shops/${seedRefs.shopId}/templates?search=${suffix}&state=active&limit=5`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
 
@@ -517,9 +597,9 @@ describe('Facebook Order Manager API (e2e)', () => {
 
     const updateResponse = await app.inject({
       method: 'PATCH',
-      url: `/api/v1/shops/shop_ma_aye/templates/${createBody.data.id}`,
+      url: `/api/v1/shops/${seedRefs.shopId}/templates/${createBody.data.id}`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
         body: 'မင်္ဂလာပါရှင်။ အော်ဒါပို့ပြီးပါပြီ။ လက်ခံရရှိချိန် ပြန်ပြောပေးပါရှင်။',
@@ -541,26 +621,22 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('creates, lists, and updates deliveries with order sync', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const createResponse = await app.inject({
       method: 'POST',
-      url: '/api/v1/shops/shop_ma_aye/deliveries',
+      url: `/api/v1/shops/${seedRefs.shopId}/deliveries`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
-        order_id: 'ord_0244',
-        driver_user_id: 'usr_ko_min',
+        order_id: seedRefs.order0244Id,
+        driver_user_id: seedRefs.staffUserId,
         status: 'scheduled',
         scheduled_at: '2026-04-02T05:00:00.000Z',
       },
@@ -571,12 +647,12 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(createBody.success).toBe(true);
     expect(createBody.data).toEqual(
       expect.objectContaining({
-        shop_id: 'shop_ma_aye',
-        order_id: 'ord_0244',
-        driver_user_id: 'usr_ko_min',
+        shop_id: seedRefs.shopId,
+        order_id: seedRefs.order0244Id,
+        driver_user_id: seedRefs.staffUserId,
         status: 'scheduled',
         order: expect.objectContaining({
-          id: 'ord_0244',
+          id: seedRefs.order0244Id,
           status: 'confirmed',
         }),
       }),
@@ -584,9 +660,9 @@ describe('Facebook Order Manager API (e2e)', () => {
 
     const listResponse = await app.inject({
       method: 'GET',
-      url: '/api/v1/shops/shop_ma_aye/deliveries?status=scheduled&driver_user_id=usr_ko_min&search=0244&limit=5',
+      url: `/api/v1/shops/${seedRefs.shopId}/deliveries?status=scheduled&driver_user_id=${seedRefs.staffUserId}&search=0244&limit=5`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
 
@@ -597,7 +673,7 @@ describe('Facebook Order Manager API (e2e)', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: createBody.data.id,
-          order_id: 'ord_0244',
+          order_id: seedRefs.order0244Id,
         }),
       ]),
     );
@@ -608,9 +684,9 @@ describe('Facebook Order Manager API (e2e)', () => {
 
     const updateResponse = await app.inject({
       method: 'PATCH',
-      url: `/api/v1/shops/shop_ma_aye/deliveries/${createBody.data.id}`,
+      url: `/api/v1/shops/${seedRefs.shopId}/deliveries/${createBody.data.id}`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
         status: 'delivered',
@@ -627,7 +703,7 @@ describe('Facebook Order Manager API (e2e)', () => {
         status: 'delivered',
         delivered_at: '2026-04-02T11:30:00.000Z',
         order: expect.objectContaining({
-          id: 'ord_0244',
+          id: seedRefs.order0244Id,
           status: 'delivered',
         }),
       }),
@@ -635,22 +711,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('returns a typed daily summary for a shop date', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/shops/shop_ma_aye/summaries/daily?date=2026-04-02',
+      url: `/api/v1/shops/${seedRefs.shopId}/summaries/daily?date=2026-04-02`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -659,7 +731,7 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(body.success).toBe(true);
     expect(body.data).toEqual(
       expect.objectContaining({
-        shop_id: 'shop_ma_aye',
+        shop_id: seedRefs.shopId,
         summary_date: '2026-04-02',
         total_orders: expect.any(Number),
         total_revenue: expect.any(Number),
@@ -676,22 +748,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('returns a weekly report for an anchor date', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/shops/shop_ma_aye/reports/weekly?date=2026-04-02',
+      url: `/api/v1/shops/${seedRefs.shopId}/reports/weekly?date=2026-04-02`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -700,7 +768,7 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(body.success).toBe(true);
     expect(body.data).toEqual(
       expect.objectContaining({
-        shop_id: 'shop_ma_aye',
+        shop_id: seedRefs.shopId,
         report_type: 'weekly',
         period_start_date: expect.any(String),
         period_end_date: expect.any(String),
@@ -711,22 +779,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('returns a monthly report for a month key', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'maaye@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'maaye@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/shops/shop_ma_aye/reports/monthly?month=2026-04',
+      url: `/api/v1/shops/${seedRefs.shopId}/reports/monthly?month=2026-04`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
     });
     expect(response.statusCode).toBe(200);
@@ -735,7 +799,7 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(body.success).toBe(true);
     expect(body.data).toEqual(
       expect.objectContaining({
-        shop_id: 'shop_ma_aye',
+        shop_id: seedRefs.shopId,
         report_type: 'monthly',
         period_key: '2026-04',
         period_label: expect.any(String),
@@ -746,22 +810,18 @@ describe('Facebook Order Manager API (e2e)', () => {
   });
 
   dbIt('enforces RBAC for member management', async () => {
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        email: 'komin@example.com',
-        password: 'Password123!',
-      },
-    });
-    expect(loginResponse.statusCode).toBe(200);
-    const loginBody = loginResponse.json();
+    const loginData = await loginWithPassword(
+      app,
+      'komin@example.com',
+      'Password123!',
+    );
+    const seedRefs = await getSeedReferences(app);
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/v1/shops/shop_ma_aye/members',
+      url: `/api/v1/shops/${seedRefs.shopId}/members`,
       headers: {
-        authorization: `Bearer ${loginBody.data.access_token}`,
+        authorization: `Bearer ${loginData.access_token}`,
       },
       payload: {
         email: 'newstaff@example.com',
