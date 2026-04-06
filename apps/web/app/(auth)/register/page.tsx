@@ -32,7 +32,7 @@ export default async function RegisterPage({
   const session = await getSession()
 
   if (session) {
-    redirect(session.role === "platform_admin" ? "/platform" : "/app")
+    redirect(session.role === "platform_admin" ? "/platform" : "/dashboard")
   }
 
   const params = await searchParams

@@ -65,7 +65,7 @@ export function getPlatformAdminHint() {
 }
 
 export function defaultPathForSession(session: AppSession) {
-  return session.role === "platform_admin" ? "/platform" : "/app"
+  return session.role === "platform_admin" ? "/platform" : "/dashboard"
 }
 
 export function createSessionFromEmail(input: {
@@ -132,7 +132,7 @@ export async function requirePlatformAdmin() {
   }
 
   if (session.role !== "platform_admin") {
-    redirect("/app")
+    redirect("/dashboard")
   }
 
   return session

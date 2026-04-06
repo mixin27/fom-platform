@@ -35,7 +35,7 @@ export default function ShopDashboardPage() {
         description="This is the owner-facing entry point after sign in. It is separate from the platform admin console and organized around daily operational work."
         actions={
           <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-            <Link href="/app/orders">
+            <Link href="/dashboard/orders">
               View orders
               <ArrowRight data-icon="inline-end" />
             </Link>

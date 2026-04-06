@@ -18,8 +18,8 @@ export default async function ShopAppLayout({
   const session = await requireShopAdmin()
 
   return (
-    <div className="fom-portal-canvas min-h-screen p-5">
-      <div className="fom-portal-shell mx-auto flex h-[calc(100vh-40px)] max-h-[900px] w-full max-w-[1440px] overflow-hidden rounded-[24px]">
+    <div className="fom-portal-canvas min-h-screen">
+      <div className="fom-portal-shell flex h-screen w-full max-w-none max-h-none overflow-hidden rounded-none shadow-none">
         <aside className="w-[260px] flex-shrink-0 border-r border-black/6 bg-[var(--fom-portal-sidebar)]">
           <div className="flex h-full flex-col">
             <div className="border-b border-black/6 px-4 py-4">
@@ -75,7 +75,7 @@ export default async function ShopAppLayout({
           <header className="flex h-16 items-center gap-4 border-b border-black/6 bg-white px-6">
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
-                Shop admin portal
+                Shop dashboard
               </span>
               <span className="text-xs text-muted-foreground">
                 Orders, customers, deliveries, templates, and reporting

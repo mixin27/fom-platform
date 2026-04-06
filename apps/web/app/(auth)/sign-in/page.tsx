@@ -31,7 +31,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const session = await getSession()
 
   if (session) {
-    redirect(session.role === "platform_admin" ? "/platform" : "/app")
+    redirect(session.role === "platform_admin" ? "/platform" : "/dashboard")
   }
 
   const params = await searchParams

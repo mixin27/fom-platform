@@ -18,13 +18,21 @@ export type NavItem = {
 }
 
 export const shopPortalNav: NavItem[] = [
-  { href: "/app", label: "Dashboard", icon: "dashboard", exact: true },
-  { href: "/app/orders", label: "Orders", icon: "orders" },
-  { href: "/app/customers", label: "Customers", icon: "customers" },
-  { href: "/app/deliveries", label: "Deliveries", icon: "deliveries" },
-  { href: "/app/templates", label: "Templates", icon: "templates" },
-  { href: "/app/reports", label: "Reports", icon: "reports" },
-  { href: "/app/settings", label: "Settings", icon: "settings" },
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
+  { href: "/dashboard/orders", label: "Orders", icon: "orders" },
+  { href: "/dashboard/customers", label: "Customers", icon: "customers" },
+  {
+    href: "/dashboard/deliveries",
+    label: "Deliveries",
+    icon: "deliveries",
+  },
+  {
+    href: "/dashboard/templates",
+    label: "Templates",
+    icon: "templates",
+  },
+  { href: "/dashboard/reports", label: "Reports", icon: "reports" },
+  { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ]
 
 export const platformPortalNav: NavItem[] = [
