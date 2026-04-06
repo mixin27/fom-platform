@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma Aye Shop — Order Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#F0EDE8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;-webkit-font-smoothing:antialiased;}
+
+/* ─── TOKENS ──────────────────────────────────────────────── */
+:root{
+  --orange:      #FF6B35;
+  --orange-d:    #E85820;
+  --orange-10:   rgba(255,107,53,0.10);
+  --orange-15:   rgba(255,107,53,0.15);
+  --orange-20:   rgba(255,107,53,0.20);
+  --orange-soft: #FFF3EE;
+  --orange-mid:  #FFD5C0;
+  --teal:        #2AA8A0;
+  --teal-soft:   #E8F7F6;
+  --green:       #22C55E;
+  --green-soft:  #F0FDF4;
+  --amber:       #F59E0B;
+  --amber-soft:  #FFFBEB;
+  --red:         #EF4444;
+  --red-soft:    #FEF2F2;
+  --violet:      #8B5CF6;
+  --violet-soft: #F5F3FF;
+  /* surfaces */
+  --bg:          #F7F4EF;
+  --surface:     #FFFFFF;
+  --surface-2:   #FDFAF7;
+  --border:      #EAE5DE;
+  --border-2:    #D8D0C6;
+  /* text */
+  --text-1:      #1A1410;
+  --text-2:      #4A4540;
+  --text-3:      #8A8580;
+  /* sidebar */
+  --sb-w:        220px;
+  --sb-bg:       #FFFCF8;
+  --sb-border:   #EAE5DE;
+  --radius:      12px;
+  --radius-lg:   18px;
+  --shadow-sm:   0 1px 3px rgba(26,20,16,0.06),0 1px 2px rgba(26,20,16,0.04);
+  --shadow:      0 4px 16px rgba(26,20,16,0.08),0 1px 4px rgba(26,20,16,0.05);
+  --shadow-lg:   0 16px 48px rgba(26,20,16,0.12);
+}
+
+/* ─── SHELL ───────────────────────────────────────────────── */
+.shell{
+  width:100%;max-width:1360px;
+  height:calc(100vh - 40px);max-height:880px;
+  display:flex;border-radius:22px;overflow:hidden;
+  box-shadow:0 32px 80px rgba(26,20,16,0.22),0 0 0 1px rgba(26,20,16,0.08);
+}
+
+/* ─── SIDEBAR ─────────────────────────────────────────────── */
+.sb{
+  width:var(--sb-w);flex-shrink:0;
+  background:var(--sb-bg);border-right:1px solid var(--sb-border);
+  display:flex;flex-direction:column;height:100%;
+}
+.sb-header{
+  padding:18px 16px 14px;border-bottom:1px solid var(--sb-border);flex-shrink:0;
+}
+.sb-shop-row{display:flex;align-items:center;gap:10px;}
+.sb-shop-avatar{
+  width:40px;height:40px;border-radius:13px;
+  background:linear-gradient(135deg,var(--orange),#FF8C5A);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+  box-shadow:0 4px 12px rgba(255,107,53,0.28);
+}
+.sb-shop-name{font-size:14px;font-weight:700;color:var(--text-1);letter-spacing:-0.01em;line-height:1.2;}
+.sb-shop-plan{font-size:10px;font-weight:600;color:var(--orange);background:var(--orange-soft);padding:2px 8px;border-radius:99px;margin-top:3px;width:fit-content;}
+.sb-today-chip{
+  margin-top:12px;background:var(--bg);border-radius:10px;
+  padding:9px 12px;display:flex;align-items:center;justify-content:space-between;
+}
+.sb-today-label{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;}
+.sb-today-val{font-size:18px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;}
+.sb-today-mmk{font-size:9px;font-weight:600;color:var(--text-3);}
+
+.sb-nav{flex:1;padding:10px 10px;overflow-y:auto;}
+.sb-nav::-webkit-scrollbar{display:none;}
+.sb-section-label{font-size:9px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-3);padding:10px 8px 4px;}
+.sb-item{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 10px;border-radius:10px;
+  cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600;
+  transition:all 0.14s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;
+  font-family:'DM Sans',sans-serif;
+  position:relative;
+}
+.sb-item:hover{background:var(--bg);color:var(--text-2);}
+.sb-item.active{background:var(--orange-soft);color:var(--orange);}
+.sb-item.active::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;background:var(--orange);border-radius:0 3px 3px 0;
+}
+.sb-item svg{width:15px;height:15px;flex-shrink:0;opacity:0.7;}
+.sb-item.active svg{opacity:1;}
+.sb-item-label{flex:1;}
+.sb-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--bg);color:var(--text-3);}
+.sb-item.active .sb-badge{background:var(--orange-15);color:var(--orange);}
+.sb-badge.alert{background:var(--red-soft);color:var(--red);}
+
+.sb-footer{padding:10px 10px 14px;border-top:1px solid var(--sb-border);flex-shrink:0;}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.14s;}
+.sb-user:hover{background:var(--bg);}
+.sb-user-av{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--teal),#3DC8BF);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0;}
+.sb-user-name{font-size:12px;font-weight:700;color:var(--text-2);}
+.sb-user-role{font-size:10px;color:var(--text-3);}
+
+/* ─── MAIN ────────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+
+/* ─── TOPBAR ──────────────────────────────────────────────── */
+.topbar{
+  height:58px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;padding:0 22px;flex-shrink:0;
+}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-1);flex:1;}
+.topbar-search{position:relative;}
+.topbar-search input{
+  height:33px;width:210px;padding:0 12px 0 32px;
+  border:1.5px solid var(--border);border-radius:9px;
+  background:var(--bg);font-size:13px;font-family:inherit;color:var(--text-1);outline:none;
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+.topbar-search input:focus{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.topbar-search input::placeholder{color:var(--text-3);}
+.topbar-search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);}
+.tb-icon{width:33px;height:33px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);position:relative;transition:background 0.14s;}
+.tb-icon:hover{background:var(--bg);}
+.notif-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--orange);border:1.5px solid white;}
+.tb-avatar{width:33px;height:33px;border-radius:9px;background:linear-gradient(135deg,var(--orange),#FF8C5A);display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:800;cursor:pointer;}
+.tb-divider{width:1px;height:20px;background:var(--border);}
+
+/* ─── PAGE SYSTEM ─────────────────────────────────────────── */
+.page{display:none;flex:1;overflow-y:auto;}
+.page.active{display:flex;flex-direction:column;}
+.page::-webkit-scrollbar{width:4px;}
+.page::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:99px;}
+.page-content{padding:22px;display:flex;flex-direction:column;gap:18px;min-height:100%;}
+
+/* ─── CARD ────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.card-title{font-size:13px;font-weight:700;color:var(--text-1);}
+.card-sub{font-size:11px;color:var(--text-3);margin-top:1px;}
+
+/* ─── KPI ROW ─────────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.kpi{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-sm);}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.kpi-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.kpi-change{font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px;}
+.kpi-change.up{color:#16A34A;} .kpi-change.warn{color:var(--amber);}
+.kpi-value{font-size:24px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;line-height:1;}
+.kpi-unit{font-size:12px;font-weight:600;color:var(--text-3);margin-left:3px;}
+.kpi-label{font-size:11px;color:var(--text-3);margin-top:3px;font-weight:500;}
+
+/* ─── BADGE ───────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;}
+.badge-new{background:var(--orange-soft);color:var(--orange);border:1px solid var(--orange-mid);}
+.badge-confirmed{background:var(--teal-soft);color:var(--teal);border:1px solid #A8DDD9;}
+.badge-out{background:var(--amber-soft);color:var(--amber);border:1px solid #FDE68A;}
+.badge-delivered{background:var(--green-soft);color:var(--green);border:1px solid #BBF7D0;}
+.badge-cancelled{background:var(--red-soft);color:var(--red);border:1px solid #FECACA;}
+.badge-pro{background:var(--orange-soft);color:var(--orange);}
+
+/* ─── STATUS DOT ──────────────────────────────────────────── */
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sdot-orange{background:var(--orange);box-shadow:0 0 0 2px var(--orange-20);}
+.sdot-teal{background:var(--teal);box-shadow:0 0 0 2px rgba(42,168,160,0.2);}
+.sdot-amber{background:var(--amber);box-shadow:0 0 0 2px rgba(245,158,11,0.2);}
+.sdot-green{background:var(--green);box-shadow:0 0 0 2px rgba(34,197,94,0.2);}
+.sdot-red{background:var(--red);}
+
+/* ─── BUTTONS ─────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;border-radius:9px;cursor:pointer;border:none;transition:all 0.15s;white-space:nowrap;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-md{padding:8px 16px;}
+.btn-primary{background:var(--orange);color:#fff;box-shadow:0 2px 8px rgba(255,107,53,0.28);}
+.btn-primary:hover{background:var(--orange-d);transform:translateY(-1px);}
+.btn-outline{background:var(--surface);color:var(--text-2);border:1.5px solid var(--border);}
+.btn-outline:hover{background:var(--bg);}
+.btn-ghost{background:transparent;color:var(--text-2);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-orange-soft{background:var(--orange-soft);color:var(--orange);}
+.btn-orange-soft:hover{background:var(--orange-mid);}
+.btn-teal{background:var(--teal-soft);color:var(--teal);}
+.btn-teal:hover{background:#C8EDEA;}
+.btn-green{background:var(--green-soft);color:var(--green);}
+.btn-green:hover{background:#DCFCE7;}
+.btn-danger{background:var(--red-soft);color:var(--red);border:1.5px solid #FECACA;}
+.btn-danger:hover{background:#FEE2E2;}
+
+/* ─── TABLE ───────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;padding:10px 18px;background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.12s;cursor:pointer;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:#FDFAF7;}
+tbody tr.row-selected{background:var(--orange-soft);}
+tbody td{padding:12px 18px;font-size:13px;color:var(--text-2);vertical-align:middle;}
+.td-name{color:var(--text-1);font-weight:700;}
+.td-mono{font-size:10px;color:var(--text-3);font-family:'SF Mono','Fira Code',monospace;}
+.td-price{font-size:14px;font-weight:800;color:var(--text-1);}
+
+/* ─── BAR ─────────────────────────────────────────────────── */
+.bar-track{height:5px;border-radius:99px;background:var(--bg);overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;transition:width 0.5s;}
+
+/* ─── INPUTS ──────────────────────────────────────────────── */
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.06em;}
+.form-label span{color:var(--orange);}
+.input-wrap{position:relative;}
+.input-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;}
+.input{width:100%;height:38px;padding:0 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--text-1);outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.input:focus{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.input::placeholder{color:var(--text-3);}
+.input.with-icon{padding-left:34px;}
+textarea.input{height:auto;padding:10px 12px;resize:none;line-height:1.5;}
+select.input{appearance:none;cursor:pointer;}
+
+/* ─── STATUS SELECTOR ─────────────────────────────────────── */
+.status-selector{display:flex;gap:8px;}
+.status-opt{flex:1;padding:10px 8px;border:1.5px solid var(--border);border-radius:10px;text-align:center;cursor:pointer;background:var(--surface);transition:all 0.15s;}
+.status-opt .so-icon{font-size:18px;margin-bottom:3px;}
+.status-opt .so-label{font-size:10px;font-weight:800;color:var(--text-3);}
+.status-opt .so-mm{font-size:9px;color:var(--text-3);display:block;font-family:'Noto Sans Myanmar',sans-serif;}
+.status-opt.sel-new{border-color:var(--orange);background:var(--orange-soft);}
+.status-opt.sel-new .so-label{color:var(--orange);}
+.status-opt.sel-confirmed{border-color:var(--teal);background:var(--teal-soft);}
+.status-opt.sel-confirmed .so-label{color:var(--teal);}
+.status-opt.sel-out{border-color:var(--amber);background:var(--amber-soft);}
+.status-opt.sel-out .so-label{color:var(--amber);}
+.status-opt.sel-delivered{border-color:var(--green);background:var(--green-soft);}
+.status-opt.sel-delivered .so-label{color:var(--green);}
+
+/* ─── PILL TABS ───────────────────────────────────────────── */
+.pills{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.pill{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--text-3);transition:all 0.14s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.pill:hover{border-color:var(--border-2);color:var(--text-2);}
+.pill.active{background:var(--orange);border-color:var(--orange);color:#fff;}
+.pill-n{font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,0.22);}
+.pill:not(.active) .pill-n{background:var(--bg);color:var(--text-3);}
+
+/* ─── TABS ────────────────────────────────────────────────── */
+.tabs{display:flex;gap:2px;padding:3px;background:var(--bg);border-radius:10px;width:fit-content;}
+.tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-3);border:none;background:none;transition:all 0.14s;font-family:'DM Sans',sans-serif;}
+.tab.active{background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-sm);}
+.tab:hover:not(.active){color:var(--text-2);}
+
+/* ─── ORDER CARD (compact) ────────────────────────────────── */
+.order-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;transition:box-shadow 0.18s,border-color 0.18s;position:relative;overflow:hidden;}
+.order-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
+.order-card.oc-new::before{background:var(--orange);}
+.order-card.oc-confirmed::before{background:var(--teal);}
+.order-card.oc-out::before{background:var(--amber);}
+.order-card.oc-delivered::before{background:var(--green);}
+.order-card:hover{box-shadow:var(--shadow);border-color:var(--border-2);}
+.oc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.oc-customer{display:flex;align-items:center;gap:9px;}
+.oc-avatar{width:34px;height:34px;border-radius:10px;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.oc-name{font-size:13px;font-weight:700;color:var(--text-1);}
+.oc-phone{font-size:11px;color:var(--text-3);font-weight:500;}
+.oc-bottom{display:flex;align-items:center;justify-content:space-between;}
+.oc-product{font-size:12px;color:var(--text-2);font-weight:600;display:flex;align-items:center;gap:5px;}
+.oc-price{font-size:14px;font-weight:800;color:var(--text-1);}
+.oc-divider{height:1px;background:var(--border);margin:10px 0;}
+.oc-footer{display:flex;align-items:center;justify-content:space-between;}
+.oc-id{font-size:10px;color:var(--text-3);font-family:monospace;}
+.oc-time{font-size:10px;color:var(--text-3);}
+.oc-actions{display:flex;gap:5px;margin-top:10px;}
+
+/* ─── QUICK ACTION BTNS ───────────────────────────────────── */
+.qa-btn{flex:1;padding:7px 6px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid var(--border);cursor:pointer;background:var(--surface);color:var(--text-2);transition:all 0.14s;text-align:center;font-family:'DM Sans',sans-serif;}
+.qa-btn.qa-primary{background:var(--orange);color:#fff;border-color:var(--orange);}
+.qa-btn.qa-teal{background:var(--teal-soft);color:var(--teal);border-color:var(--teal-soft);}
+.qa-btn.qa-green{background:var(--green-soft);color:var(--green);border-color:var(--green-soft);}
+
+/* ─── SIDE PANEL ──────────────────────────────────────────── */
+.side-panel{width:300px;flex-shrink:0;border-left:1.5px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;transition:width 0.22s;}
+.side-panel.closed{width:0;border:none;}
+.sp-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sp-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+.sp-body::-webkit-scrollbar{width:3px;}
+.sp-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+.sp-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-3);margin-bottom:7px;}
+.sp-detail-grid{border:1.5px solid var(--border);border-radius:10px;overflow:hidden;}
+.sp-detail-row{display:flex;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);gap:10px;}
+.sp-detail-row:last-child{border-bottom:none;}
+.sp-dk{font-size:11px;color:var(--text-3);font-weight:600;min-width:70px;flex-shrink:0;}
+.sp-dv{font-size:12px;font-weight:700;color:var(--text-1);}
+
+/* ─── STATUS STEPPER ──────────────────────────────────────── */
+.stepper{display:flex;align-items:center;margin-bottom:4px;}
+.stepper-node{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+.stepper-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;border:1.5px solid var(--border);background:var(--surface);flex-shrink:0;transition:all 0.3s;}
+.stepper-circle.s-done{background:var(--orange);border-color:var(--orange);color:white;}
+.stepper-circle.s-active{background:white;border-color:var(--orange);color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.stepper-circle.s-pending{color:var(--text-3);}
+.stepper-line{flex:1;height:1.5px;background:var(--border);}
+.stepper-line.sl-done{background:var(--orange);}
+.stepper-labels{display:flex;justify-content:space-between;margin-top:5px;}
+.stepper-lbl{flex:1;text-align:center;font-size:8px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;}
+.stepper-lbl.sl-active{color:var(--orange);}
+.stepper-lbl.sl-done{color:var(--text-2);}
+
+/* ─── MODAL ───────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,20,16,0.40);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:20px;border:1.5px solid var(--border);box-shadow:var(--shadow-lg);width:100%;max-width:500px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-size:15px;font-weight:800;color:var(--text-1);}
+.modal-sub{font-size:11px;color:var(--text-3);margin-top:2px;}
+.modal-body{padding:22px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1;}
+.modal-body::-webkit-scrollbar{width:3px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+.modal-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--border);flex-shrink:0;}
+.modal-close{border:none;background:none;cursor:pointer;color:var(--text-3);padding:4px;border-radius:6px;display:flex;transition:color 0.14s;}
+.modal-close:hover{color:var(--text-1);}
+
+/* ─── PASTE HELPER ────────────────────────────────────────── */
+.paste-helper{background:var(--orange-soft);border:1.5px dashed var(--orange-mid);border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all 0.18s;}
+.paste-helper:hover{background:var(--orange-20);border-style:solid;}
+.paste-icon{width:38px;height:38px;background:var(--orange);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.paste-text .pt-title{font-size:13px;font-weight:800;color:var(--orange);margin-bottom:2px;}
+.paste-text .pt-sub{font-size:11px;color:var(--text-2);font-weight:500;}
+
+/* ─── TIMELINE ────────────────────────────────────────────── */
+.timeline{position:relative;padding-left:22px;}
+.timeline::before{content:'';position:absolute;left:6px;top:8px;bottom:8px;width:1.5px;background:var(--border);}
+.tl-item{position:relative;margin-bottom:12px;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-dot{position:absolute;left:-22px;top:4px;width:13px;height:13px;border-radius:50%;border:1.5px solid white;}
+.tl-dot.td-orange{background:var(--orange);box-shadow:0 0 0 2px var(--orange-15);}
+.tl-dot.td-teal{background:var(--teal);box-shadow:0 0 0 2px rgba(42,168,160,0.2);}
+.tl-dot.td-gray{background:var(--border-2);}
+.tl-time{font-size:9px;color:var(--text-3);font-weight:700;margin-bottom:1px;}
+.tl-event{font-size:12px;font-weight:700;color:var(--text-1);}
+.tl-sub{font-size:11px;color:var(--text-3);}
+
+/* ─── CHART ───────────────────────────────────────────────── */
+.bar-chart{display:flex;align-items:flex-end;gap:7px;}
+.bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.bc-bar{width:100%;border-radius:5px 5px 0 0;cursor:pointer;transition:opacity 0.14s;}
+.bc-bar:hover{opacity:0.75;}
+.bc-lbl{font-size:9px;font-weight:700;color:var(--text-3);}
+.bc-lbl.today{color:var(--orange);}
+
+/* ─── CUSTOMER CARD ───────────────────────────────────────── */
+.cust-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:box-shadow 0.18s,border-color 0.18s;}
+.cust-card:hover{box-shadow:var(--shadow);border-color:var(--border-2);}
+.cust-card.selected{border-color:var(--orange);background:var(--orange-soft);}
+.cust-avatar{width:42px;height:42px;border-radius:13px;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;}
+.cust-avatar .vip-star{position:absolute;bottom:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#FCD34D;display:flex;align-items:center;justify-content:center;font-size:7px;border:1.5px solid white;}
+.cust-name{font-size:13px;font-weight:700;color:var(--text-1);}
+.cust-meta{font-size:11px;color:var(--text-3);font-weight:500;}
+.cust-spent{font-size:13px;font-weight:800;color:var(--text-1);text-align:right;}
+.cust-orders{font-size:10px;color:var(--text-3);text-align:right;}
+
+/* ─── SUMMARY STATS ───────────────────────────────────────── */
+.summary-hero{background:linear-gradient(135deg,#1A1410,#2A2016);border-radius:var(--radius-lg);padding:22px 24px;position:relative;overflow:hidden;}
+.sh-glow1{position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,107,53,0.18);filter:blur(50px);top:-60px;right:-40px;}
+.sh-glow2{position:absolute;width:150px;height:150px;border-radius:50%;background:rgba(42,168,160,0.12);filter:blur(40px);bottom:-30px;left:10px;}
+.sh-content{position:relative;z-index:1;}
+.sh-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:6px;}
+.sh-amount{font-size:40px;font-weight:800;color:white;letter-spacing:-0.04em;line-height:1;margin-bottom:4px;}
+.sh-amount span{font-size:18px;color:rgba(255,255,255,0.45);margin-left:4px;}
+.sh-change{font-size:12px;font-weight:700;color:#4ADE80;margin-bottom:18px;}
+.sh-stats{display:flex;gap:0;background:rgba(255,255,255,0.07);border-radius:10px;padding:12px 0;}
+.sh-stat{flex:1;text-align:center;border-right:1px solid rgba(255,255,255,0.08);}
+.sh-stat:last-child{border-right:none;}
+.sh-stat-val{font-size:18px;font-weight:800;color:white;}
+.sh-stat-lbl{font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;margin-top:2px;}
+
+/* ─── BREAKDOWN ROW ───────────────────────────────────────── */
+.bk-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.bk-row:last-child{border-bottom:none;}
+.bk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.bk-label{font-size:12px;font-weight:600;color:var(--text-1);flex:1;}
+.bk-count{font-size:12px;font-weight:700;color:var(--text-2);}
+.bk-amount{font-size:12px;font-weight:800;color:var(--text-1);min-width:90px;text-align:right;}
+
+/* ─── TOP PRODUCT ─────────────────────────────────────────── */
+.tp-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.tp-row:last-child{border-bottom:none;}
+.tp-rank{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
+.r1{background:#FEF9C3;color:#854D0E;} .r2{background:#F1F5F9;color:#475569;} .r3{background:#FFF7ED;color:#9A3412;} .rn{background:var(--bg);color:var(--text-3);}
+
+/* ─── PAGINATION ──────────────────────────────────────────── */
+.pagination{display:flex;align-items:center;gap:3px;}
+.pg{width:28px;height:28px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface);font-size:12px;font-weight:700;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;font-family:'DM Sans',sans-serif;}
+.pg:hover{background:var(--bg);}
+.pg.active{background:var(--orange);border-color:var(--orange);color:white;}
+.pg:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* ─── NOTICE ──────────────────────────────────────────────── */
+.notice{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;}
+.notice-amber{background:var(--amber-soft);border:1px solid #FDE68A;color:#92400E;}
+.notice-green{background:var(--green-soft);border:1px solid #BBF7D0;color:#14532D;}
+
+/* ─── FLEX HELPERS ────────────────────────────────────────── */
+.row{display:flex;align-items:center;}
+.gap-2{gap:8px;} .gap-3{gap:12px;} .gap-4{gap:16px;}
+.ml-auto{margin-left:auto;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fw-7{font-weight:700;} .fw-8{font-weight:800;}
+.fs-11{font-size:11px;} .fs-12{font-size:12px;} .fs-13{font-size:13px;}
+.text-1{color:var(--text-1);} .text-2{color:var(--text-2);} .text-3{color:var(--text-3);}
+.w-full{width:100%;}
+.myanmar{font-family:'Noto Sans Myanmar',sans-serif;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════════════════ -->
+<aside class="sb">
+  <div class="sb-header">
+    <div class="sb-shop-row">
+      <div class="sb-shop-avatar">👗</div>
+      <div>
+        <div class="sb-shop-name">Ma Aye Shop</div>
+        <div class="sb-shop-plan">Pro Plan</div>
+      </div>
+    </div>
+    <div class="sb-today-chip">
+      <div>
+        <div class="sb-today-label">Today's Revenue</div>
+        <div class="sb-today-val">485,000 <span class="sb-today-mmk">MMK</span></div>
+      </div>
+      <div style="text-align:right;">
+        <div class="sb-today-label">Orders</div>
+        <div class="sb-today-val" style="color:var(--orange);">23</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-section-label">Main</div>
+    <button class="sb-item active" onclick="go('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span class="sb-item-label">Dashboard</span>
+    </button>
+    <button class="sb-item" onclick="go('orders',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <span class="sb-item-label">Orders</span>
+      <span class="sb-badge alert">8</span>
+    </button>
+    <button class="sb-item" onclick="go('customers',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <span class="sb-item-label">Customers</span>
+      <span class="sb-badge">89</span>
+    </button>
+    <button class="sb-item" onclick="go('reports',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="sb-item-label">Reports</span>
+    </button>
+    <div class="sb-section-label" style="margin-top:8px;">Quick</div>
+    <button class="sb-item" onclick="openAddOrder()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span class="sb-item-label">Add Order</span>
+    </button>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-user-av">M</div>
+      <div>
+        <div class="sb-user-name">Ma Aye</div>
+        <div class="sb-user-role">Shop Owner</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════ MAIN ══════════════════════════════════ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-search">
+      <svg class="topbar-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search orders, customers…">
+    </div>
+    <div class="tb-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <div class="notif-dot"></div>
+    </div>
+    <div class="tb-divider"></div>
+    <div class="tb-avatar">M</div>
+    <button class="btn btn-sm btn-primary" onclick="openAddOrder()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Order
+    </button>
+  </header>
+
+  <!-- ════════════════ DASHBOARD PAGE ══════════════════════════ -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-content">
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--orange-soft);font-size:17px;">💰</div>
+            <span class="kpi-change up">↑ +72K vs yday</span>
+          </div>
+          <div><span class="kpi-value">485K</span><span class="kpi-unit">MMK</span></div>
+          <div class="kpi-label">Today's Revenue</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--teal-soft);font-size:17px;">📦</div>
+            <span class="kpi-change up">↑ +4 vs yday</span>
+          </div>
+          <div><span class="kpi-value">23</span></div>
+          <div class="kpi-label">Orders Today</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--green-soft);font-size:17px;">✅</div>
+            <span class="kpi-change up">48% rate</span>
+          </div>
+          <div><span class="kpi-value">11</span></div>
+          <div class="kpi-label">Delivered Today</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--amber-soft);font-size:17px;">⏳</div>
+            <span class="kpi-change warn">Need action</span>
+          </div>
+          <div><span class="kpi-value">8</span></div>
+          <div class="kpi-label">Pending Orders</div>
+        </div>
+      </div>
+
+      <!-- Middle: chart + status breakdown -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+
+        <!-- Bar chart -->
+        <div class="card" style="grid-column:span 2;">
+          <div class="card-header">
+            <div><div class="card-title">Revenue This Week</div><div class="card-sub">Daily MMK collected</div></div>
+            <div class="row gap-2">
+              <button class="btn btn-sm btn-primary">7D</button>
+              <button class="btn btn-sm btn-ghost text-3">30D</button>
+            </div>
+          </div>
+          <div style="padding:18px 20px;">
+            <div class="bar-chart" style="height:100px;">
+              <div class="bc-col"><div class="bc-bar" style="height:54%;background:var(--orange-20);"></div><div class="bc-lbl">Mon</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:71%;background:var(--orange-20);"></div><div class="bc-lbl">Tue</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:60%;background:var(--orange-20);"></div><div class="bc-lbl">Wed</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:88%;background:var(--orange-20);"></div><div class="bc-lbl">Thu</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:76%;background:var(--orange-20);"></div><div class="bc-lbl">Fri</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:62%;background:var(--orange-20);"></div><div class="bc-lbl">Sat</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:100%;background:var(--orange);border-radius:5px 5px 0 0;"></div><div class="bc-lbl today">Today</div></div>
+            </div>
+            <div class="row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+              <div><div class="fs-11 text-3 fw-7">This week total</div><div style="font-size:20px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;">2,840,000 <span style="font-size:13px;font-weight:500;color:var(--text-3);">MMK</span></div></div>
+              <div class="ml-auto row gap-2" style="color:#16A34A;font-size:13px;font-weight:700;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+                +22% vs last week
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status breakdown -->
+        <div class="card">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border);"><div class="card-title">Today's Status</div></div>
+          <div style="padding:14px 16px;">
+            <div class="bk-row"><div class="bk-dot" style="background:var(--orange);"></div><div class="bk-label">New</div><div class="bk-count" style="margin-right:8px;">4</div><div class="bk-amount" style="font-size:11px;color:var(--text-3);">124K MMK</div></div>
+            <div class="bk-row"><div class="bk-dot" style="background:var(--teal);"></div><div class="bk-label">Confirmed</div><div class="bk-count" style="margin-right:8px;">6</div><div class="bk-amount" style="font-size:11px;color:var(--text-3);">198K MMK</div></div>
+            <div class="bk-row"><div class="bk-dot" style="background:var(--amber);"></div><div class="bk-label">On the way</div><div class="bk-count" style="margin-right:8px;">2</div><div class="bk-amount" style="font-size:11px;color:var(--text-3);">63K MMK</div></div>
+            <div class="bk-row"><div class="bk-dot" style="background:var(--green);"></div><div class="bk-label">Delivered</div><div class="bk-count" style="margin-right:8px;">11</div><div class="bk-amount" style="font-size:11px;color:var(--text-3);">320K MMK</div></div>
+          </div>
+          <div style="padding:0 16px 14px;">
+            <div class="bar-track"><div class="bar-fill" style="width:48%;background:var(--green);"></div></div>
+            <div class="fs-11 text-3" style="margin-top:5px;">48% delivery rate today</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent orders -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Recent Orders</div><div class="card-sub">Today's activity</div></div>
+          <button class="btn btn-sm btn-outline" onclick="go('orders',document.querySelector('[onclick*=orders]'))">View all →</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Product</th><th>Status</th><th>Amount</th><th>Time</th><th></th></tr></thead>
+            <tbody>
+              <tr onclick="go('orders',document.querySelector('[onclick*=orders]'))">
+                <td><div class="row gap-2"><div class="oc-avatar" style="width:28px;height:28px;border-radius:8px;font-size:13px;">👩</div><div><div class="td-name fs-12">Daw Khin Myat</div><div class="td-mono">09 7812 3456</div></div></div></td>
+                <td class="fs-12 text-2">👗 Silk Longyi × 2</td>
+                <td><span class="badge badge-new">NEW</span></td>
+                <td class="td-price">45,000</td>
+                <td class="fs-11 text-3">10:32 AM</td>
+                <td><button class="btn btn-ghost btn-sm text-3" onclick="event.stopPropagation()">⋯</button></td>
+              </tr>
+              <tr onclick="go('orders',document.querySelector('[onclick*=orders]'))">
+                <td><div class="row gap-2"><div class="oc-avatar" style="width:28px;height:28px;border-radius:8px;font-size:13px;">👨</div><div><div class="td-name fs-12">Ko Zaw Lin</div><div class="td-mono">09 4556 7890</div></div></div></td>
+                <td class="fs-12 text-2">👔 Men Shirt × 1</td>
+                <td><span class="badge badge-out">ON WAY</span></td>
+                <td class="td-price">21,500</td>
+                <td class="fs-11 text-3">9:14 AM</td>
+                <td><button class="btn btn-ghost btn-sm text-3" onclick="event.stopPropagation()">⋯</button></td>
+              </tr>
+              <tr onclick="go('orders',document.querySelector('[onclick*=orders]'))">
+                <td><div class="row gap-2"><div class="oc-avatar" style="width:28px;height:28px;border-radius:8px;font-size:13px;">👩</div><div><div class="td-name fs-12">Ma Thin Zar</div><div class="td-mono">09 2234 5678</div></div></div></td>
+                <td class="fs-12 text-2">👜 Handbag × 1</td>
+                <td><span class="badge badge-confirmed">CONFIRMED</span></td>
+                <td class="td-price">32,000</td>
+                <td class="fs-11 text-3">8:50 AM</td>
+                <td><button class="btn btn-ghost btn-sm text-3" onclick="event.stopPropagation()">⋯</button></td>
+              </tr>
+              <tr onclick="go('orders',document.querySelector('[onclick*=orders]'))">
+                <td><div class="row gap-2"><div class="oc-avatar" style="width:28px;height:28px;border-radius:8px;font-size:13px;">👩</div><div><div class="td-name fs-12">Daw Aye Aye</div><div class="td-mono">09 9871 2345</div></div></div></td>
+                <td class="fs-12 text-2">👗 Summer Dress × 3</td>
+                <td><span class="badge badge-delivered">DELIVERED ✓</span></td>
+                <td class="td-price">54,000</td>
+                <td class="fs-11 text-3">Yesterday</td>
+                <td><button class="btn btn-ghost btn-sm text-3" onclick="event.stopPropagation()">⋯</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════ ORDERS PAGE ═════════════════════════════ -->
+  <div class="page" id="page-orders" style="flex-direction:row;">
+
+    <!-- Order list area -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Toolbar -->
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div style="position:relative;flex:1;max-width:230px;">
+          <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input with-icon" oninput="filterOrders(this.value)" placeholder="Search orders…">
+        </div>
+        <select class="input" style="width:120px;" onchange="filterOrderStatus(this.value)">
+          <option value="">All Status</option>
+          <option>New</option><option>Confirmed</option><option>On the way</option><option>Delivered</option>
+        </select>
+        <div class="ml-auto row gap-2">
+          <button class="btn btn-sm btn-outline">Export</button>
+          <button class="btn btn-sm btn-primary" onclick="openAddOrder()">+ Add Order</button>
+        </div>
+      </div>
+      <!-- Pills -->
+      <div style="padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+        <div class="pills">
+          <button class="pill active" onclick="filterOrderStatus('',this)">All <span class="pill-n">23</span></button>
+          <button class="pill" onclick="filterOrderStatus('New',this)" style="border-color:var(--orange-mid);color:var(--orange);background:var(--orange-soft);">New <span class="pill-n" style="background:var(--orange-15);color:var(--orange);">4</span></button>
+          <button class="pill" onclick="filterOrderStatus('Confirmed',this)">Confirmed <span class="pill-n">6</span></button>
+          <button class="pill" onclick="filterOrderStatus('On the way',this)">On Way <span class="pill-n">2</span></button>
+          <button class="pill" onclick="filterOrderStatus('Delivered',this)">Delivered <span class="pill-n">11</span></button>
+        </div>
+      </div>
+      <!-- Orders list scrollable -->
+      <div style="flex:1;overflow-y:auto;padding:16px;" id="orders-list">
+        <div class="fs-11 text-3 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:9px;">Today — April 2</div>
+        <div id="order-cards-container"></div>
+        <div class="fs-11 text-3 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;margin:14px 0 9px;">Yesterday — April 1</div>
+        <div class="order-card oc-delivered" style="margin-bottom:10px;" onclick="selectOrder('O238')">
+          <div class="oc-top"><div class="oc-customer"><div class="oc-avatar">👩</div><div><div class="oc-name">Daw Aye Aye</div><div class="oc-phone">📞 09 9871 2345 · Hlaing</div></div></div><span class="badge badge-delivered">DELIVERED ✓</span></div>
+          <div class="oc-bottom"><div class="oc-product">👗 Summer Dress × 3</div><div class="oc-price">54,000 MMK</div></div>
+          <div class="oc-divider"></div>
+          <div class="oc-footer"><div class="oc-id">#ORD-0238</div><div class="oc-time">Apr 1, 4:22 PM</div></div>
+        </div>
+      </div>
+      <!-- Pagination -->
+      <div style="padding:10px 20px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <span class="fs-12 text-3">Showing 8 of 23 orders</span>
+        <div class="pagination">
+          <button class="pg" disabled>‹</button>
+          <button class="pg active">1</button><button class="pg">2</button><button class="pg">3</button>
+          <button class="pg">›</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Detail Panel -->
+    <div class="side-panel" id="order-detail-panel">
+      <div class="sp-header">
+        <div class="fs-13 fw-7 text-1">Order Detail</div>
+        <button class="btn btn-ghost btn-sm text-3" onclick="document.getElementById('order-detail-panel').classList.add('closed')">✕</button>
+      </div>
+      <div class="sp-body">
+
+        <!-- Status stepper -->
+        <div>
+          <div class="sp-section-title">Order Status</div>
+          <div class="stepper">
+            <div class="stepper-node"><div class="stepper-circle s-done">✓</div></div>
+            <div class="stepper-line sl-done"></div>
+            <div class="stepper-node"><div class="stepper-circle s-active">2</div></div>
+            <div class="stepper-line"></div>
+            <div class="stepper-node"><div class="stepper-circle s-pending">3</div></div>
+            <div class="stepper-line"></div>
+            <div class="stepper-node"><div class="stepper-circle s-pending">4</div></div>
+          </div>
+          <div class="stepper-labels">
+            <div class="stepper-lbl sl-done">Received</div>
+            <div class="stepper-lbl sl-active">Confirm</div>
+            <div class="stepper-lbl">Shipping</div>
+            <div class="stepper-lbl">Done</div>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div>
+          <div class="sp-section-title">Update Status</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+            <button class="btn btn-sm btn-orange-soft w-full" style="justify-content:center;">✅ Confirm</button>
+            <button class="btn btn-sm btn-teal w-full" style="justify-content:center;">🚚 Send Out</button>
+            <button class="btn btn-sm btn-green w-full" style="justify-content:center;">🎉 Delivered</button>
+            <button class="btn btn-sm btn-danger w-full" style="justify-content:center;">✗ Cancel</button>
+          </div>
+        </div>
+
+        <!-- Customer info -->
+        <div>
+          <div class="sp-section-title">Customer</div>
+          <div class="sp-detail-grid">
+            <div class="sp-detail-row"><div class="sp-dk">Name</div><div class="sp-dv">Daw Khin Myat</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Phone</div><div class="sp-dv" style="color:var(--teal);">09 7812 3456</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Address</div><div class="sp-dv" style="font-size:11px;color:var(--text-2);">No. 45, Bo Gyoke St, Sanchaung</div></div>
+          </div>
+          <div class="row gap-2" style="margin-top:7px;">
+            <button class="btn btn-sm btn-outline w-full" style="justify-content:center;flex:1;">📞 Call</button>
+            <button class="btn btn-sm btn-teal w-full" style="justify-content:center;flex:1;">💬 Message</button>
+          </div>
+        </div>
+
+        <!-- Product info -->
+        <div>
+          <div class="sp-section-title">Product & Payment</div>
+          <div class="sp-detail-grid">
+            <div class="sp-detail-row"><div class="sp-dk">Product</div><div class="sp-dv">Silk Longyi (Green, M) × 2</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Unit Price</div><div class="sp-dv">18,000 MMK</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Delivery</div><div class="sp-dv">3,000 MMK</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Total</div><div class="sp-dv" style="color:var(--orange);font-size:15px;">39,000 MMK</div></div>
+          </div>
+        </div>
+
+        <!-- Activity log -->
+        <div>
+          <div class="sp-section-title">Activity</div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-dot td-orange"></div><div class="tl-time">10:32 AM today</div><div class="tl-event">Order created</div><div class="tl-sub">Added from Messenger</div></div>
+            <div class="tl-item"><div class="tl-dot td-gray"></div><div class="tl-time">Waiting</div><div class="tl-event" style="color:var(--text-3);">Pending confirmation</div></div>
+          </div>
+        </div>
+
+        <div class="row gap-2">
+          <button class="btn btn-sm btn-danger" style="flex:1;justify-content:center;">🗑 Delete</button>
+          <button class="btn btn-sm btn-primary" style="flex:2;justify-content:center;">✓ Confirm Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ CUSTOMERS PAGE ══════════════════════════ -->
+  <div class="page" id="page-customers" style="flex-direction:row;">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div style="position:relative;flex:1;max-width:230px;">
+          <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input with-icon" placeholder="Search customers…">
+        </div>
+        <div class="ml-auto row gap-2">
+          <div class="row gap-2 fs-12 text-3" style="border:1.5px solid var(--border);padding:5px 12px;border-radius:9px;background:var(--surface);">
+            <div class="sdot sdot-orange"></div>89 total · <span style="color:var(--amber);">●</span> 12 VIP
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;">
+        <div class="fs-11 text-3 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;">A</div>
+        <div class="cust-card selected" onclick="selectCustomer(this)">
+          <div class="cust-avatar">👩<div class="vip-star">⭐</div></div>
+          <div style="flex:1;min-width:0;">
+            <div class="cust-name">Daw Aye Aye <span class="badge badge-pro" style="font-size:9px;padding:1px 6px;margin-left:4px;">VIP</span></div>
+            <div class="cust-meta">📞 09 9871 2345 · Hlaing</div>
+          </div>
+          <div>
+            <div class="cust-spent">312K MMK</div>
+            <div class="cust-orders">18 orders</div>
+          </div>
+        </div>
+        <div class="fs-11 text-3 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;margin-top:4px;">D</div>
+        <div class="cust-card" onclick="selectCustomer(this)">
+          <div class="cust-avatar">👩<div class="vip-star">⭐</div></div>
+          <div style="flex:1;min-width:0;">
+            <div class="cust-name">Daw Khin Myat <span class="badge badge-pro" style="font-size:9px;padding:1px 6px;margin-left:4px;">VIP</span></div>
+            <div class="cust-meta">📞 09 7812 3456 · Sanchaung</div>
+          </div>
+          <div>
+            <div class="cust-spent">245K MMK</div>
+            <div class="cust-orders">14 orders</div>
+          </div>
+        </div>
+        <div class="fs-11 text-3 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;margin-top:4px;">K</div>
+        <div class="cust-card" onclick="selectCustomer(this)">
+          <div class="cust-avatar" style="background:var(--teal-soft);">👩</div>
+          <div style="flex:1;min-width:0;">
+            <div class="cust-name">Khin Su Wai</div>
+            <div class="cust-meta">📞 09 6644 1234 · Bahan</div>
+          </div>
+          <div>
+            <div class="cust-spent">88K MMK</div>
+            <div class="cust-orders">5 orders</div>
+          </div>
+        </div>
+        <div class="cust-card" onclick="selectCustomer(this)">
+          <div class="cust-avatar" style="background:var(--violet-soft);">👨</div>
+          <div style="flex:1;min-width:0;">
+            <div class="cust-name">Ko Zaw Lin</div>
+            <div class="cust-meta">📞 09 4556 7890 · Tarmwe</div>
+          </div>
+          <div>
+            <div class="cust-spent">21K MMK</div>
+            <div class="cust-orders">1 order</div>
+          </div>
+        </div>
+        <div class="fs-11 text-3 fw-7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;margin-top:4px;">M</div>
+        <div class="cust-card" onclick="selectCustomer(this)">
+          <div class="cust-avatar" style="background:var(--green-soft);">👩</div>
+          <div style="flex:1;min-width:0;">
+            <div class="cust-name">Ma Thin Zar</div>
+            <div class="cust-meta">📞 09 2234 5678 · Hlaing</div>
+          </div>
+          <div>
+            <div class="cust-spent">185K MMK</div>
+            <div class="cust-orders">9 orders</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Detail Panel -->
+    <div class="side-panel" id="customer-detail-panel" style="width:320px;">
+      <!-- Dark header -->
+      <div style="background:linear-gradient(155deg,#1A1410,#2A2016);padding:20px 18px 18px;flex-shrink:0;">
+        <div class="row" style="margin-bottom:14px;">
+          <span class="fs-12 fw-7" style="color:rgba(255,255,255,0.4);">Customer Profile</span>
+          <button class="ml-auto btn btn-ghost btn-sm" style="color:rgba(255,255,255,0.4);" onclick="document.getElementById('customer-detail-panel').classList.add('closed')">✕</button>
+        </div>
+        <div class="row gap-3" style="margin-bottom:14px;">
+          <div style="width:50px;height:50px;border-radius:15px;background:var(--orange-soft);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">👩</div>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:white;letter-spacing:-0.01em;">Daw Aye Aye</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">📞 09 9871 2345 · Hlaing</div>
+            <div class="row gap-1" style="margin-top:5px;">
+              <span class="badge" style="background:rgba(255,107,53,0.25);color:#FFB088;border:none;font-size:10px;">⭐ VIP</span>
+              <span class="badge" style="background:rgba(42,168,160,0.25);color:#4DD9D2;border:none;font-size:10px;">🔁 Loyal</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0;background:rgba(255,255,255,0.07);border-radius:10px;padding:12px 0;">
+          <div style="flex:1;text-align:center;border-right:1px solid rgba(255,255,255,0.08);">
+            <div style="font-size:17px;font-weight:800;color:white;">18</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;margin-top:2px;">Orders</div>
+          </div>
+          <div style="flex:1;text-align:center;border-right:1px solid rgba(255,255,255,0.08);">
+            <div style="font-size:17px;font-weight:800;color:#FFB088;">312K</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;margin-top:2px;">MMK Spent</div>
+          </div>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:17px;font-weight:800;color:#4ADE80;">94%</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;margin-top:2px;">Delivered</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-body">
+        <div class="row gap-2">
+          <button class="btn btn-sm btn-outline" style="flex:1;justify-content:center;">📞 Call</button>
+          <button class="btn btn-sm btn-teal" style="flex:1;justify-content:center;">💬 Message</button>
+          <button class="btn btn-sm btn-primary" style="flex:1;justify-content:center;">+ Order</button>
+        </div>
+
+        <div>
+          <div class="sp-section-title">Contact Info</div>
+          <div class="sp-detail-grid">
+            <div class="sp-detail-row"><div class="sp-dk">Phone</div><div class="sp-dv" style="color:var(--teal);">09 9871 2345</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Township</div><div class="sp-dv">Hlaing, Yangon</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Customer since</div><div class="sp-dv">Jan 5, 2024</div></div>
+            <div class="sp-detail-row"><div class="sp-dk">Favourite</div><div class="sp-dv">👗 Silk Longyi</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sp-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+            Order History
+            <a href="#" class="fs-11" style="color:var(--orange);font-weight:700;">See all (18)</a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;">
+              <div class="row"><div class="td-mono">#ORD-0238</div><span class="badge badge-delivered ml-auto" style="font-size:9px;">✓ Delivered</span></div>
+              <div class="fs-12 fw-7 text-1" style="margin-top:3px;">Summer Dress × 3</div>
+              <div class="row" style="margin-top:2px;"><div class="fs-11 text-3">Apr 1, 4:22 PM</div><div class="ml-auto fs-12 fw-8 text-1">54,000 MMK</div></div>
+            </div>
+            <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;">
+              <div class="row"><div class="td-mono">#ORD-0221</div><span class="badge badge-delivered ml-auto" style="font-size:9px;">✓ Delivered</span></div>
+              <div class="fs-12 fw-7 text-1" style="margin-top:3px;">Silk Longyi Set × 2</div>
+              <div class="row" style="margin-top:2px;"><div class="fs-11 text-3">Mar 28, 10:05 AM</div><div class="ml-auto fs-12 fw-8 text-1">36,000 MMK</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ REPORTS PAGE ════════════════════════════ -->
+  <div class="page" id="page-reports">
+    <div class="page-content">
+
+      <!-- Date nav -->
+      <div class="row gap-3">
+        <div class="tabs">
+          <button class="tab" onclick="setReportPeriod(this)">Day</button>
+          <button class="tab active" onclick="setReportPeriod(this)">Week</button>
+          <button class="tab" onclick="setReportPeriod(this)">Month</button>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:5px 12px;display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-ghost btn-sm text-3 fs-14" style="padding:0 4px;">‹</button>
+          <span class="fs-12 fw-7 text-1">Mar 27 – Apr 2, 2025</span>
+          <button class="btn btn-ghost btn-sm text-3 fs-14" style="padding:0 4px;opacity:0.3;">›</button>
+        </div>
+        <div class="ml-auto row gap-2">
+          <button class="btn btn-sm btn-outline">📤 Export</button>
+          <button class="btn btn-sm btn-orange-soft">🖼 Share to Story</button>
+        </div>
+      </div>
+
+      <!-- Hero revenue card -->
+      <div class="summary-hero">
+        <div class="sh-glow1"></div>
+        <div class="sh-glow2"></div>
+        <div class="sh-content">
+          <div class="sh-label">This Week's Revenue — ဒီအပတ် ဝင်ငွေ</div>
+          <div class="sh-amount">2,840,000 <span>MMK</span></div>
+          <div class="sh-change">↑ +22% compared to last week</div>
+          <div class="sh-stats">
+            <div class="sh-stat"><div class="sh-stat-val">118</div><div class="sh-stat-lbl">Orders</div></div>
+            <div class="sh-stat"><div class="sh-stat-val">89</div><div class="sh-stat-lbl">Customers</div></div>
+            <div class="sh-stat"><div class="sh-stat-val">24K</div><div class="sh-stat-lbl">Avg Order</div></div>
+            <div class="sh-stat"><div class="sh-stat-val" style="color:#4ADE80;">91%</div><div class="sh-stat-lbl">Delivered</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+        <!-- Daily revenue bars -->
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Revenue by Day</div><div class="card-sub">Best: Wednesday · 520K MMK</div></div>
+          </div>
+          <div style="padding:18px 20px;">
+            <div class="bar-chart" style="height:110px;">
+              <div class="bc-col"><div class="bc-bar" style="height:61%;background:var(--orange-20);"></div><div class="bc-lbl">Mon</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:79%;background:var(--orange-20);"></div><div class="bc-lbl">Tue</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:100%;background:var(--orange-20);"></div><div class="bc-lbl">Wed</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:73%;background:var(--orange-20);"></div><div class="bc-lbl">Thu</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:88%;background:var(--orange-20);"></div><div class="bc-lbl">Fri</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:51%;background:var(--orange-20);"></div><div class="bc-lbl">Sat</div></div>
+              <div class="bc-col"><div class="bc-bar" style="height:93%;background:var(--orange);"></div><div class="bc-lbl today">Today</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order status breakdown -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Order Breakdown</div></div>
+          <div style="padding:14px 18px;">
+            <div class="bk-row"><div class="bk-dot" style="background:var(--orange);"></div><div class="bk-label">New / Pending</div><div class="bk-count" style="margin-right:8px;">18</div><div class="bk-amount">432K MMK</div></div>
+            <div class="bk-row"><div class="bk-dot" style="background:var(--teal);"></div><div class="bk-label">Confirmed</div><div class="bk-count" style="margin-right:8px;">24</div><div class="bk-amount">580K MMK</div></div>
+            <div class="bk-row"><div class="bk-dot" style="background:var(--amber);"></div><div class="bk-label">On the way</div><div class="bk-count" style="margin-right:8px;">8</div><div class="bk-amount">194K MMK</div></div>
+            <div class="bk-row"><div class="bk-dot" style="background:var(--green);"></div><div class="bk-label">Delivered</div><div class="bk-count" style="margin-right:8px;">68</div><div class="bk-amount">1,634K MMK</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top products -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Top Products This Week</div><div class="card-sub">Ranked by revenue</div></div>
+        </div>
+        <div style="padding:14px 18px;">
+          <div class="tp-row"><div class="tp-rank r1">1</div><div style="width:26px;height:26px;border-radius:8px;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">👗</div><span class="fs-12 fw-7 text-1" style="flex:1;">Silk Longyi Set</span><div style="text-align:right;"><div class="fs-12 fw-8 text-1">252K MMK</div><div class="fs-10 text-3">×14 sold</div></div></div>
+          <div class="tp-row"><div class="tp-rank r2">2</div><div style="width:26px;height:26px;border-radius:8px;background:var(--teal-soft);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">👜</div><span class="fs-12 fw-7 text-1" style="flex:1;">Handbag (Black)</span><div style="text-align:right;"><div class="fs-12 fw-8 text-1">192K MMK</div><div class="fs-10 text-3">×6 sold</div></div></div>
+          <div class="tp-row"><div class="tp-rank r3">3</div><div style="width:26px;height:26px;border-radius:8px;background:var(--amber-soft);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">👗</div><span class="fs-12 fw-7 text-1" style="flex:1;">Summer Dress</span><div style="text-align:right;"><div class="fs-12 fw-8 text-1">108K MMK</div><div class="fs-10 text-3">×4 sold</div></div></div>
+          <div class="tp-row"><div class="tp-rank rn">4</div><div style="width:26px;height:26px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">👔</div><span class="fs-12 fw-7 text-1" style="flex:1;">Men Shirt (L)</span><div style="text-align:right;"><div class="fs-12 fw-8 text-1">55K MMK</div><div class="fs-10 text-3">×3 sold</div></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ═══════════════ ADD ORDER MODAL ═══════════════════════════ -->
+<div class="modal-overlay" id="add-order-modal" onclick="if(event.target===this)closeAddOrder()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Add New Order</div>
+        <div class="modal-sub">အော်ဒါသစ် ထည့်မည်</div>
+      </div>
+      <button class="modal-close" onclick="closeAddOrder()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Paste helper -->
+      <div class="paste-helper">
+        <div class="paste-icon">📋</div>
+        <div class="paste-text">
+          <div class="pt-title">Paste from Messenger</div>
+          <div class="pt-sub">Copy customer's message → tap here to auto-fill fields</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+
+      <!-- Customer section -->
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-3);margin-bottom:-4px;">👤 Customer Info</div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Customer Name <span>*</span></label>
+          <input class="input" placeholder="Daw Khin Myat">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone <span>*</span></label>
+          <input class="input" placeholder="09xxxxxxxx" type="tel">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery Address</label>
+        <textarea class="input" rows="2" placeholder="No. 45, Bo Gyoke St, Sanchaung…"></textarea>
+      </div>
+
+      <!-- Product section -->
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-3);margin-bottom:-4px;">📦 Product & Price</div>
+
+      <div class="form-group">
+        <label class="form-label">Product Name <span>*</span></label>
+        <input class="input" placeholder="e.g. Silk Longyi Set (Green, Size M)">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Quantity <span>*</span></label>
+          <input class="input" type="number" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Price (MMK) <span>*</span></label>
+          <input class="input" type="number" placeholder="18,000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery Fee (MMK)</label>
+        <input class="input" type="number" placeholder="3,000" value="3000">
+      </div>
+
+      <!-- Status section -->
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-3);margin-bottom:-4px;">📌 Order Status</div>
+      <div class="status-selector">
+        <div class="status-opt sel-new" onclick="selectStatus(this,'sel-new')">
+          <div class="so-icon">🆕</div>
+          <div class="so-label">New</div>
+          <span class="so-mm">အသစ်</span>
+        </div>
+        <div class="status-opt" onclick="selectStatus(this,'sel-confirmed')">
+          <div class="so-icon">✅</div>
+          <div class="so-label">Confirmed</div>
+          <span class="so-mm">အတည်ပြု</span>
+        </div>
+        <div class="status-opt" onclick="selectStatus(this,'sel-out')">
+          <div class="so-icon">🚚</div>
+          <div class="so-label">On Way</div>
+          <span class="so-mm">သွားပြီ</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <textarea class="input" rows="2" placeholder="Special requests, colour, size…"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeAddOrder()">Save as Draft</button>
+      <button class="btn btn-primary btn-md" onclick="closeAddOrder()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Save Order — သိမ်းမည်
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────
+const ORDERS = [
+  {id:'O244',name:'Daw Khin Myat',phone:'09 7812 3456',township:'Sanchaung',product:'👗 Silk Longyi × 2',price:'39,000 MMK',status:'New',statusBadge:'badge-new',statusClass:'oc-new',emoji:'👩',time:'10:32 AM'},
+  {id:'O243',name:'Ko Zaw Lin',phone:'09 4556 7890',township:'Tarmwe',product:'👔 Men Shirt × 1',price:'21,500 MMK',status:'On the way',statusBadge:'badge-out',statusClass:'oc-out',emoji:'👨',time:'9:14 AM'},
+  {id:'O242',name:'Ma Thin Zar',phone:'09 2234 5678',township:'Hlaing',product:'👜 Handbag × 1',price:'35,000 MMK',status:'Confirmed',statusBadge:'badge-confirmed',statusClass:'oc-confirmed',emoji:'👩',time:'8:50 AM'},
+  {id:'O241',name:'U Kyaw Zin',phone:'09 5678 9012',township:'Tarmwe',product:'👔 Formal Shirt × 3',price:'54,000 MMK',status:'New',statusBadge:'badge-new',statusClass:'oc-new',emoji:'👨',time:'11:10 AM'},
+  {id:'O240',name:'Daw Aye Aye',phone:'09 9871 2345',township:'Hlaing',product:'👗 Summer Dress × 3',price:'54,000 MMK',status:'Delivered',statusBadge:'badge-delivered',statusClass:'oc-delivered',emoji:'👩',time:'Apr 2, 7:05 AM'},
+];
+
+let selectedOrderId = null;
+
+function renderOrders(data){
+  const c = document.getElementById('order-cards-container');
+  c.innerHTML = data.map(o => `
+    <div class="order-card ${o.statusClass}" style="margin-bottom:10px;" onclick="selectOrder('${o.id}')">
+      <div class="oc-top">
+        <div class="oc-customer">
+          <div class="oc-avatar">${o.emoji}</div>
+          <div><div class="oc-name">${o.name}</div><div class="oc-phone">📞 ${o.phone} · ${o.township}</div></div>
+        </div>
+        <span class="badge ${o.statusBadge}">${o.status}</span>
+      </div>
+      <div class="oc-bottom">
+        <div class="oc-product">${o.product}</div>
+        <div class="oc-price">${o.price}</div>
+      </div>
+      <div class="oc-divider"></div>
+      <div class="oc-footer"><div class="oc-id">#ORD-0${o.id.slice(1)}</div><div class="oc-time">${o.time}</div></div>
+      <div class="oc-actions">
+        ${o.status==='New' ? '<button class="qa-btn qa-primary" onclick="event.stopPropagation()">✓ Confirm</button>' : ''}
+        ${o.status==='Confirmed' ? '<button class="qa-btn qa-teal" onclick="event.stopPropagation()">🚚 Send Out</button>' : ''}
+        ${o.status==='On the way' ? '<button class="qa-btn qa-green" onclick="event.stopPropagation()">🎉 Mark Delivered</button>' : ''}
+        <button class="qa-btn" onclick="event.stopPropagation()">📞 Call</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectOrder(id){
+  selectedOrderId = id;
+  const panel = document.getElementById('order-detail-panel');
+  panel.classList.remove('closed');
+  document.querySelectorAll('#order-cards-container .order-card').forEach((c,i)=>{
+    c.style.border = ORDERS[i]?.id === id ? '1.5px solid var(--orange)' : '';
+  });
+}
+
+function filterOrders(val){
+  const filtered = ORDERS.filter(o => o.name.toLowerCase().includes(val.toLowerCase()) || o.product.toLowerCase().includes(val.toLowerCase()));
+  renderOrders(filtered);
+}
+
+function filterOrderStatus(status, btn){
+  if(btn){ document.querySelectorAll('#page-orders .pill').forEach(p=>p.classList.remove('active')); btn.classList.add('active'); }
+  const filtered = status ? ORDERS.filter(o=>o.status===status) : ORDERS;
+  renderOrders(filtered);
+}
+
+// ─── CUSTOMER SELECT ─────────────────────────────────────────
+function selectCustomer(el){
+  document.querySelectorAll('.cust-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('customer-detail-panel').classList.remove('closed');
+}
+
+// ─── STATUS OPT ──────────────────────────────────────────────
+function selectStatus(el,cls){
+  document.querySelectorAll('.status-opt').forEach(o=>{
+    o.classList.remove('sel-new','sel-confirmed','sel-out','sel-delivered');
+  });
+  el.classList.add(cls);
+}
+
+// ─── PAGE ROUTER ─────────────────────────────────────────────
+const PAGE_TITLES={dashboard:'Dashboard',orders:'Order Management',customers:'Customers',reports:'Daily Summary & Reports'};
+function go(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||id;
+}
+
+// ─── MODAL ───────────────────────────────────────────────────
+function openAddOrder(){ document.getElementById('add-order-modal').classList.add('open'); }
+function closeAddOrder(){ document.getElementById('add-order-modal').classList.remove('open'); }
+
+// ─── REPORT PERIOD ───────────────────────────────────────────
+function setReportPeriod(btn){
+  document.querySelectorAll('#page-reports .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+renderOrders(ORDERS);
+</script>
+</body>
+</html>
