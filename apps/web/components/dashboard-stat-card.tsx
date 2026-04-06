@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react"
 
-import { Badge } from "@workspace/ui/components/badge"
 import {
   Card,
   CardContent,
@@ -34,29 +33,29 @@ export function DashboardStatCard({
   className,
 }: DashboardStatCardProps) {
   return (
-    <Card className={cn("border border-black/5 bg-white/82", className)}>
-      <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex items-start justify-between gap-4">
+    <Card className={cn("border border-black/6 bg-white shadow-none", className)}>
+      <CardContent className="flex flex-col gap-3 p-4">
+        <div className="flex items-start justify-between gap-3">
           <span
             className={cn(
-              "inline-flex size-9 items-center justify-center rounded-[10px]",
+              "inline-flex size-8 items-center justify-center rounded-xl",
               accentClasses[accent]
             )}
           >
             <Icon className="size-4" />
           </span>
           {delta ? (
-            <span className="text-xs font-semibold text-muted-foreground">
+            <span className="text-[11px] font-semibold text-muted-foreground">
               {delta}
             </span>
           ) : null}
         </div>
-        <div className="flex flex-col gap-1">
-          <p className="text-[1.7rem] leading-none font-extrabold tracking-[-0.03em] text-foreground">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[1.9rem] leading-none font-extrabold tracking-[-0.04em] text-foreground">
             {value}
           </p>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-xs text-muted-foreground">{detail}</p>
+          <p className="text-[13px] font-medium text-muted-foreground">{title}</p>
+          <p className="text-[11px] leading-5 text-muted-foreground">{detail}</p>
         </div>
       </CardContent>
     </Card>

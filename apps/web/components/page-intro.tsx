@@ -14,17 +14,17 @@ export function PageIntro({
   actions,
 }: PageIntroProps) {
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div className="flex max-w-2xl flex-col gap-2">
+    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div className="flex max-w-3xl flex-col gap-1.5">
         {eyebrow ? (
-          <p className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground">
+          <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-muted-foreground">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground md:text-4xl">
+        <h1 className="text-[2rem] leading-tight font-semibold tracking-[-0.04em] text-foreground md:text-[2.35rem]">
           {title}
         </h1>
-        <p className="text-sm leading-7 text-muted-foreground md:text-base">
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           {description}
         </p>
       </div>
