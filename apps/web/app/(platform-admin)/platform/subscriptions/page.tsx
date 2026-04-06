@@ -12,14 +12,14 @@ import {
 
 export default function PlatformSubscriptionsPage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Subscriptions"
         title="Billing and plan health"
         description="This route gives the platform owner a dedicated place to manage plan mix, MRR, renewals, and overdue accounts."
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <DashboardStatCard
           title="MRR"
           value="260K"
@@ -43,18 +43,18 @@ export default function PlatformSubscriptionsPage() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-3 xl:grid-cols-3">
         {[
           ["Starter", "Best for early shops", "Up to 200 orders per month"],
           ["Pro", "Most popular", "Unlimited orders and advanced reporting"],
           ["Enterprise", "Large shops", "Multi-user and operator support"],
         ].map((plan) => (
-          <Card key={plan[0]}>
-            <CardHeader>
+          <Card key={plan[0]} className="border border-black/6 shadow-none">
+            <CardHeader className="pb-3">
               <CardDescription>{plan[1]}</CardDescription>
               <CardTitle>{plan[0]}</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm leading-7 text-muted-foreground">
+            <CardContent className="pt-0 text-sm leading-6 text-muted-foreground">
               {plan[2]}
             </CardContent>
           </Card>

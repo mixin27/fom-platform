@@ -24,15 +24,15 @@ const shops = [
 
 export default function PlatformShopsPage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Shops"
         title="Tenant management"
-        description="A dedicated tenant route makes more sense than trying to bury shop operations inside a single admin dashboard."
+        description="Scan tenant health, plan state, and activity from a dedicated shop operations route."
       />
 
-      <Card>
-        <CardHeader>
+      <Card className="border border-black/6 shadow-none">
+        <CardHeader className="pb-3">
           <CardDescription>Registered shops</CardDescription>
           <CardTitle>Shop list and health</CardTitle>
         </CardHeader>
@@ -40,7 +40,7 @@ export default function PlatformShopsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="px-4">Shop</TableHead>
+                <TableHead className="px-4 py-2.5">Shop</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Orders</TableHead>
@@ -51,12 +51,12 @@ export default function PlatformShopsPage() {
             <TableBody>
               {shops.map((shop) => (
                 <TableRow key={shop[0]}>
-                  <TableCell className="px-4 font-medium">{shop[0]}</TableCell>
-                  <TableCell>{shop[1]}</TableCell>
-                  <TableCell>{shop[2]}</TableCell>
-                  <TableCell>{shop[3]}</TableCell>
-                  <TableCell>{shop[4]}</TableCell>
-                  <TableCell>{shop[5]}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium">{shop[0]}</TableCell>
+                  <TableCell className="py-3">{shop[1]}</TableCell>
+                  <TableCell className="py-3">{shop[2]}</TableCell>
+                  <TableCell className="py-3">{shop[3]}</TableCell>
+                  <TableCell className="py-3">{shop[4]}</TableCell>
+                  <TableCell className="py-3">{shop[5]}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

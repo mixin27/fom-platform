@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { Bell, Search } from "lucide-react"
+import { Bell, Search, Shield } from "lucide-react"
 
 import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
@@ -17,23 +17,38 @@ export default async function PlatformLayout({
   const session = await requirePlatformAdmin()
 
   return (
-    <div className="fom-admin-canvas min-h-screen p-6">
-      <div className="fom-admin-shell mx-auto flex h-[calc(100vh-48px)] max-h-[860px] w-full max-w-[1340px] overflow-hidden rounded-[20px]">
-        <aside className="w-56 flex-shrink-0 border-r border-white/6 bg-[var(--fom-admin-sidebar)] text-white">
+    <div className="fom-admin-canvas min-h-screen">
+      <div className="fom-admin-shell flex h-screen w-full max-w-none max-h-none overflow-hidden rounded-none border-0 shadow-none">
+        <aside className="w-[232px] flex-shrink-0 border-r border-white/6 bg-[var(--fom-admin-sidebar)] text-white">
           <div className="flex h-full flex-col">
-            <div className="border-b border-white/6 px-4 py-4">
+            <div className="border-b border-white/6 px-4 py-3.5">
               <BrandMark tone="light" compact />
+              <div className="mt-3 rounded-2xl border border-white/8 bg-white/5 p-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex size-7 items-center justify-center rounded-xl bg-white/8 text-white/85">
+                    <Shield className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-white/45">
+                      Internal
+                    </p>
+                    <p className="truncate text-sm font-semibold text-white">
+                      Platform workspace
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-4">
+            <div className="flex-1 overflow-y-auto px-3 py-3">
               <AppSideNav items={platformPortalNav} tone="platform" />
             </div>
-            <div className="border-t border-white/6 px-4 py-4">
-              <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+            <div className="border-t border-white/6 px-4 py-3">
+              <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
                 <p className="text-sm font-semibold text-white">
                   {session.user.name}
                 </p>
                 <p className="mt-1 text-xs text-white/40">{session.user.email}</p>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-3 flex gap-2">
                   <Button
                     asChild
                     variant="outline"
@@ -58,10 +73,10 @@ export default async function PlatformLayout({
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-admin-surface)]">
-          <header className="flex h-[60px] items-center gap-4 border-b border-black/6 bg-white px-6">
+          <header className="flex h-14 items-center gap-4 border-b border-black/6 bg-white px-5">
             <div className="flex flex-col">
-              <span className="text-[15px] font-extrabold text-[var(--fom-ink)]">
-                Platform admin portal
+              <span className="text-[13px] font-semibold text-[var(--fom-ink)]">
+                Platform workspace
               </span>
               <span className="text-[11px] text-muted-foreground">
                 Tenants, subscriptions, and operational health
@@ -71,16 +86,16 @@ export default async function PlatformLayout({
               <div className="relative">
                 <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  className="h-[34px] w-[220px] rounded-[9px] border border-black/10 bg-[var(--fom-admin-surface)] pr-3 pl-9 text-sm outline-none focus:border-[var(--fom-orange)]"
+                  className="h-8 w-60 rounded-xl border border-black/8 bg-[var(--fom-admin-surface)] pr-3 pl-9 text-sm outline-none focus:border-[var(--fom-orange)]"
                   placeholder="Search shops or invoices..."
                 />
               </div>
-              <button className="flex size-[34px] items-center justify-center rounded-[9px] border border-black/10 bg-white text-muted-foreground">
+              <button className="flex size-8 items-center justify-center rounded-xl border border-black/8 bg-white text-muted-foreground">
                 <Bell className="size-4" />
               </button>
             </div>
           </header>
-          <main className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+          <main className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {children}
           </main>
         </div>

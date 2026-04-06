@@ -52,58 +52,56 @@ const tenantRows = [
 
 export default function PlatformHomePage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Dashboard"
-        title="Run the platform, not just a single admin page"
-        description="This portal is now structured as a real operator workspace with separate routes for tenant management, subscriptions, support, and settings."
+        title="Operate the platform from one dense workspace"
+        description="Monitor tenants, revenue, risk, and support load from an internal console built for daily operator use."
       />
 
-      <section id="overview" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <DashboardStatCard
-            title="Total registered shops"
-            value="89"
-            detail="vs 82 last month"
-            delta="+7 shops"
-            icon={Store}
-            accent="sunset"
-          />
-          <DashboardStatCard
-            title="MRR"
-            value="260K"
-            detail="52 Pro subscribers"
-            delta="+18%"
-            icon={DollarSign}
-            accent="teal"
-          />
-          <DashboardStatCard
-            title="Active today"
-            value="61"
-            detail="of 89 total shops"
-            delta="+12%"
-            icon={Users}
-            accent="ink"
-          />
-          <DashboardStatCard
-            title="Churn rate"
-            value="2.3%"
-            detail="Best month so far"
-            delta="-0.4%"
-            icon={TrendingUp}
-            accent="default"
-          />
-        </div>
+      <section id="overview" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <DashboardStatCard
+          title="Total registered shops"
+          value="89"
+          detail="vs 82 last month"
+          delta="+7 shops"
+          icon={Store}
+          accent="sunset"
+        />
+        <DashboardStatCard
+          title="MRR"
+          value="260K"
+          detail="52 Pro subscribers"
+          delta="+18%"
+          icon={DollarSign}
+          accent="teal"
+        />
+        <DashboardStatCard
+          title="Active today"
+          value="61"
+          detail="of 89 total shops"
+          delta="+12%"
+          icon={Users}
+          accent="ink"
+        />
+        <DashboardStatCard
+          title="Churn rate"
+          value="2.3%"
+          detail="Best month so far"
+          delta="-0.4%"
+          icon={TrendingUp}
+          accent="default"
+        />
       </section>
 
-      <section id="tenants" className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border border-black/6 bg-white xl:col-span-2">
-          <CardHeader>
+      <section id="tenants" className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
             <CardDescription>Revenue overview</CardDescription>
             <CardTitle>MMK collected by day this week</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="grid h-36 grid-cols-7 items-end gap-4">
+          <CardContent className="flex flex-col gap-3 pt-0">
+            <div className="grid h-32 grid-cols-7 items-end gap-3">
               {[52, 68, 58, 84, 78, 60, 100].map((height, index) => (
                 <div key={height} className="flex flex-col items-center gap-3">
                   <div
@@ -119,12 +117,14 @@ export default function PlatformHomePage() {
                       index === 6 ? "font-semibold text-[var(--fom-orange)]" : "text-muted-foreground"
                     }`}
                   >
-                    {index === 6 ? "Today" : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index]}
+                    {index === 6
+                      ? "Today"
+                      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index]}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-4 border-t border-black/6 pt-4">
+            <div className="flex items-center gap-4 border-t border-black/6 pt-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   This week
@@ -139,15 +139,37 @@ export default function PlatformHomePage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>What needs attention</CardDescription>
+            <CardTitle>Operator queue</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2.5 pt-0">
+            {[
+              "1 overdue Pro subscription needs payment follow-up.",
+              "3 trials are close to expiry this week.",
+              "2 new tenants still need onboarding assistance.",
+              "Parser support issue reported from one active shop.",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm leading-6 text-muted-foreground"
+              >
+                {item}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </section>
 
-      <section id="revenue" className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <Card className="border border-black/6 bg-white">
-          <CardHeader>
+      <section id="revenue" className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
             <CardDescription>Plan breakdown</CardDescription>
             <CardTitle>Subscription mix</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-3 pt-0">
             {[
               { label: "Pro Monthly", count: "52 shops · 58%", width: "58%", color: "bg-[var(--fom-orange)]" },
               { label: "Lifetime", count: "21 shops · 24%", width: "24%", color: "bg-[var(--fom-teal)]" },
@@ -165,12 +187,12 @@ export default function PlatformHomePage() {
             ))}
           </CardContent>
         </Card>
-        <Card className="border border-black/6 bg-white">
-          <CardHeader>
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
             <CardDescription>Platform health</CardDescription>
             <CardTitle>Operational summary</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+          <CardContent className="flex flex-col gap-2.5 pt-0">
             {[
               ["Active shops", "61 / 89"],
               ["Trials expiring", "3 this week"],
@@ -179,7 +201,7 @@ export default function PlatformHomePage() {
             ].map((row) => (
               <div
                 key={row[0]}
-                className="flex items-center justify-between rounded-2xl bg-[#f7f8fc] p-4"
+                className="flex items-center justify-between rounded-xl bg-[#f7f8fc] px-3.5 py-3"
               >
                 <span className="text-sm text-muted-foreground">{row[0]}</span>
                 <span className="text-sm font-semibold text-[var(--fom-ink)]">
@@ -191,39 +213,39 @@ export default function PlatformHomePage() {
         </Card>
       </section>
 
-      <section id="reliability" className="grid gap-4">
-        <Card className="border border-black/6 bg-white">
-          <CardHeader>
+      <section id="reliability" className="grid gap-3">
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
             <CardDescription>Recent clients</CardDescription>
-            <CardTitle>Latest sign-ups and activity</CardTitle>
+            <CardTitle>Latest sign-ups and tenant activity</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-[#fdfeff] text-left text-xs uppercase tracking-[0.06em] text-muted-foreground">
-                  <th className="px-5 py-3 font-semibold">Shop</th>
-                  <th className="px-5 py-3 font-semibold">Plan</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 font-semibold">Orders</th>
-                  <th className="px-5 py-3 font-semibold">MRR</th>
-                  <th className="px-5 py-3 font-semibold">Joined</th>
-                  <th className="px-5 py-3 font-semibold">Last active</th>
+                <tr className="bg-[#fdfeff] text-left text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+                  <th className="px-4 py-2.5 font-semibold">Shop</th>
+                  <th className="px-4 py-2.5 font-semibold">Plan</th>
+                  <th className="px-4 py-2.5 font-semibold">Status</th>
+                  <th className="px-4 py-2.5 font-semibold">Orders</th>
+                  <th className="px-4 py-2.5 font-semibold">MRR</th>
+                  <th className="px-4 py-2.5 font-semibold">Joined</th>
+                  <th className="px-4 py-2.5 font-semibold">Last active</th>
                 </tr>
               </thead>
               <tbody>
                 {tenantRows.map((tenant) => (
                   <tr key={tenant.shop} className="border-t border-black/6 text-sm">
-                    <td className="px-5 py-4 font-semibold text-[var(--fom-ink)]">
+                    <td className="px-4 py-3 font-semibold text-[var(--fom-ink)]">
                       {tenant.shop}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
                       <Badge variant="outline">{tenant.plan}</Badge>
                     </td>
-                    <td className="px-5 py-4">{tenant.status}</td>
-                    <td className="px-5 py-4">{tenant.orders}</td>
-                    <td className="px-5 py-4">{tenant.mrr}</td>
-                    <td className="px-5 py-4">{tenant.joined}</td>
-                    <td className="px-5 py-4">{tenant.active}</td>
+                    <td className="px-4 py-3">{tenant.status}</td>
+                    <td className="px-4 py-3">{tenant.orders}</td>
+                    <td className="px-4 py-3">{tenant.mrr}</td>
+                    <td className="px-4 py-3">{tenant.joined}</td>
+                    <td className="px-4 py-3">{tenant.active}</td>
                   </tr>
                 ))}
               </tbody>

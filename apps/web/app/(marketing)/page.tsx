@@ -2,12 +2,14 @@ import Link from "next/link"
 import {
   ArrowRight,
   Check,
+  LayoutDashboard,
   ScanSearch,
   Search,
   Store,
   Truck,
 } from "lucide-react"
 
+import { defaultPathForSession, getSession } from "@/lib/auth/session"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -148,7 +150,10 @@ const faqItems = [
   },
 ]
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await getSession()
+  const dashboardHref = session ? defaultPathForSession(session) : null
+
   return (
     <div className="bg-[#fafaf8]">
       <section className="fom-marketing-hero relative overflow-hidden text-white">
@@ -170,24 +175,39 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button
-                asChild
-                size="lg"
-                className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
-              >
-                <Link href="/register">
-                  Create shop account
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white/14 bg-transparent text-white hover:bg-white/6"
-              >
-                <Link href="/sign-in">Sign in</Link>
-              </Button>
+              {dashboardHref ? (
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
+                >
+                  <Link href={dashboardHref}>
+                    <LayoutDashboard data-icon="inline-start" />
+                    Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
+                  >
+                    <Link href="/register">
+                      Create shop account
+                      <ArrowRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="border-white/14 bg-transparent text-white hover:bg-white/6"
+                  >
+                    <Link href="/sign-in">Sign in</Link>
+                  </Button>
+                </>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-5 text-sm text-white/40">
               <span>Shop owner sign in</span>
@@ -501,14 +521,25 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="mx-auto flex flex-wrap justify-center gap-3">
-            <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-              <Link href="/sign-in">
-                Sign in
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/register">Register your shop</Link>
-            </Button>
+            {dashboardHref ? (
+              <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
+                <Link href={dashboardHref}>
+                  <LayoutDashboard data-icon="inline-start" />
+                  Dashboard
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
+                  <Link href="/sign-in">
+                    Sign in
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/register">Register your shop</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>

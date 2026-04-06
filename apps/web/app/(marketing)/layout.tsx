@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { LogIn } from "lucide-react"
+import { LayoutDashboard, LogIn } from "lucide-react"
 
 import { BrandMark } from "@/components/brand-mark"
+import { defaultPathForSession, getSession } from "@/lib/auth/session"
 import { Button } from "@workspace/ui/components/button"
 
 const marketingLinks = [
@@ -11,11 +12,14 @@ const marketingLinks = [
   { href: "#pricing", label: "Pricing" },
 ]
 
-export default function MarketingLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: ReactNode
 }) {
+  const session = await getSession()
+  const dashboardHref = session ? defaultPathForSession(session) : null
+
   return (
     <div className="fom-marketing-canvas min-h-screen">
       <header className="sticky top-0 z-20 border-b border-[var(--fom-marketing-border)] bg-[rgba(250,250,248,0.92)] backdrop-blur">
@@ -33,19 +37,30 @@ export default function MarketingLayout({
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="ghost"
-              asChild
-              className="text-[var(--fom-slate)] hover:bg-[var(--fom-marketing-border)]"
-            >
-              <Link href="/sign-in">
-                <LogIn data-icon="inline-start" />
-                Sign in
-              </Link>
-            </Button>
-            <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-              <Link href="/register">Start free trial</Link>
-            </Button>
+            {dashboardHref ? (
+              <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
+                <Link href={dashboardHref}>
+                  <LayoutDashboard data-icon="inline-start" />
+                  Dashboard
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  asChild
+                  className="text-[var(--fom-slate)] hover:bg-[var(--fom-marketing-border)]"
+                >
+                  <Link href="/sign-in">
+                    <LogIn data-icon="inline-start" />
+                    Sign in
+                  </Link>
+                </Button>
+                <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
+                  <Link href="/register">Start free trial</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -54,8 +69,14 @@ export default function MarketingLayout({
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 px-6 py-8 md:flex-row md:items-center md:justify-between">
           <BrandMark compact tone="light" />
           <div className="flex flex-wrap gap-5 text-xs text-white/38">
-            <Link href="/sign-in">Sign in</Link>
-            <Link href="/register">Register</Link>
+            {dashboardHref ? (
+              <Link href={dashboardHref}>Dashboard</Link>
+            ) : (
+              <>
+                <Link href="/sign-in">Sign in</Link>
+                <Link href="/register">Register</Link>
+              </>
+            )}
             <Link href="#features">Features</Link>
             <Link href="#pricing">Pricing</Link>
             <Link href="#faq">FAQ</Link>
