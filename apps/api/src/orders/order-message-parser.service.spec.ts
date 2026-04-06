@@ -111,11 +111,43 @@ describe('OrderMessageParserService', () => {
         'Name: Daw Khin Myat',
         'Phone: 09 7812 3456',
         'Product: Silk Longyi Set',
+        'Color: Green',
+        'Size: M',
         'Qty: 2',
         'Price: 18,000',
         'Product: Handbag',
+        'Color: Black',
         'Qty: 1',
         'Price: 25,000',
+        'Deli: 3,000',
+      ].join('\n'),
+    );
+
+    expect(result.suggested_order.items).toEqual([
+      expect.objectContaining({
+        product_name: 'Silk Longyi Set (Green, Size M)',
+        qty: 2,
+        unit_price: 18000,
+        line_total: 36000,
+      }),
+      expect.objectContaining({
+        product_name: 'Handbag (Black)',
+        qty: 1,
+        unit_price: 25000,
+        line_total: 25000,
+      }),
+    ]);
+    expect(result.suggested_order.subtotal).toBe(61000);
+    expect(result.suggested_order.total_price).toBe(64000);
+    expect(result.parse_meta.is_ready_to_create).toBe(true);
+  });
+
+  it('parses comma-separated mixed items on one line', () => {
+    const result = service.parseMessage(
+      [
+        'Name: Daw Khin Myat',
+        'Phone: 09 7812 3456',
+        'Product: Silk Longyi Set x2 18000, Handbag x1 25000, Shirt x3 12000',
         'Deli: 3,000',
       ].join('\n'),
     );
@@ -133,9 +165,15 @@ describe('OrderMessageParserService', () => {
         unit_price: 25000,
         line_total: 25000,
       }),
+      expect.objectContaining({
+        product_name: 'Shirt',
+        qty: 3,
+        unit_price: 12000,
+        line_total: 36000,
+      }),
     ]);
-    expect(result.suggested_order.subtotal).toBe(61000);
-    expect(result.suggested_order.total_price).toBe(64000);
+    expect(result.suggested_order.subtotal).toBe(97000);
+    expect(result.suggested_order.total_price).toBe(100000);
     expect(result.parse_meta.is_ready_to_create).toBe(true);
   });
 });

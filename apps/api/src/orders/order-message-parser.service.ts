@@ -87,6 +87,14 @@ const NOTE_LABEL_PATTERNS = [
   /^(?:note|remark|မှတ်ချက်)\s*[:\-]?\s*(.+)$/i,
 ] as const;
 
+const COLOR_LABEL_PATTERNS = [
+  /^(?:color|colour|အရောင်)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
+const SIZE_LABEL_PATTERNS = [
+  /^(?:size|ဆိုဒ်|အရွယ်|အရွယ်အစား)\s*[:\-]?\s*(.+)$/i,
+] as const;
+
 @Injectable()
 export class OrderMessageParserService {
   parseMessage(message: string): ParseResult {
@@ -206,6 +214,13 @@ export class OrderMessageParserService {
 
     for (const line of lines) {
       if (consumedLineIndexes.has(line.index)) {
+        continue;
+      }
+
+      const inlineItems = this.extractMultipleInlineItemsFromLine(line.raw);
+      if (inlineItems.length > 1) {
+        items.push(...inlineItems);
+        consumedLineIndexes.add(line.index);
         continue;
       }
 
@@ -441,6 +456,7 @@ export class OrderMessageParserService {
       product_name: string;
       qty: number | null;
       unit_price: number | null;
+      descriptors: string[];
     } | null = null;
 
     const flushCurrentItem = () => {
@@ -449,7 +465,10 @@ export class OrderMessageParserService {
       }
 
       items.push({
-        product_name: currentItem.product_name,
+        product_name: this.applyItemDescriptors(
+          currentItem.product_name,
+          currentItem.descriptors,
+        ),
         qty: currentItem.qty ?? 1,
         unit_price: currentItem.unit_price,
         line_total:
@@ -473,17 +492,10 @@ export class OrderMessageParserService {
         flushCurrentItem();
         consumedLineIndexes.add(line.index);
 
-        const inlineSegments = this.splitInlineItemSegments(productValue);
-        if (inlineSegments.length > 1) {
-          for (const segment of inlineSegments) {
-            const inlineItem =
-              this.tryParseItemLine(segment) ?? this.toInlineItemDraft(segment);
-            if (!inlineItem) {
-              continue;
-            }
-
-            items.push(inlineItem);
-          }
+        const multiInlineItems =
+          this.extractMultipleInlineItemsFromLine(productValue);
+        if (multiInlineItems.length > 1) {
+          items.push(...multiInlineItems);
           continue;
         }
 
@@ -496,11 +508,28 @@ export class OrderMessageParserService {
           product_name: productName,
           qty: this.extractQuantityFromText(productValue),
           unit_price: this.extractPriceFromText(productValue),
+          descriptors: [],
         };
         continue;
       }
 
       if (!currentItem) {
+        continue;
+      }
+
+      const colorValue = this.matchLabeledValue(line.raw, COLOR_LABEL_PATTERNS);
+      if (colorValue) {
+        currentItem.descriptors.push(colorValue);
+        consumedLineIndexes.add(line.index);
+        continue;
+      }
+
+      const sizeValue = this.matchLabeledValue(line.raw, SIZE_LABEL_PATTERNS);
+      if (sizeValue) {
+        currentItem.descriptors.push(
+          /^size\b/i.test(sizeValue) ? sizeValue : `Size ${sizeValue}`,
+        );
+        consumedLineIndexes.add(line.index);
         continue;
       }
 
@@ -660,6 +689,29 @@ export class OrderMessageParserService {
     }
 
     return null;
+  }
+
+  private extractMultipleInlineItemsFromLine(line: string): ParsedItemDraft[] {
+    const separators = [',', ';', '|'];
+    const segments = separators.includes(',')
+      ? line
+          .split(/\s*,\s*(?=[^\d,].*(?:x\s*\d+|\d{3,}))/i)
+          .flatMap((segment) => segment.split(/\s*(?:;|\|)\s*/g))
+      : [line];
+
+    const cleanedSegments = segments
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length > 0);
+
+    if (cleanedSegments.length < 2) {
+      return [];
+    }
+
+    const items = cleanedSegments
+      .map((segment) => this.tryParseItemLine(segment))
+      .filter((item): item is ParsedItemDraft => item !== null);
+
+    return items.length >= 2 ? items : [];
   }
 
   private splitInlineItemSegments(value: string): string[] {
@@ -921,5 +973,31 @@ export class OrderMessageParserService {
       .replace(/\s{2,}/g, ' ')
       .replace(/[-–—,\s]+$/g, '')
       .trim();
+  }
+
+  private applyItemDescriptors(
+    productName: string,
+    descriptors: string[],
+  ): string {
+    if (descriptors.length === 0) {
+      return productName;
+    }
+
+    const uniqueDescriptors = [
+      ...new Set(
+        descriptors
+          .map((descriptor) => descriptor.trim())
+          .filter((descriptor) => descriptor.length > 0),
+      ),
+    ].filter(
+      (descriptor) =>
+        !productName.toLowerCase().includes(descriptor.toLowerCase()),
+    );
+
+    if (uniqueDescriptors.length === 0) {
+      return productName;
+    }
+
+    return `${productName} (${uniqueDescriptors.join(', ')})`;
   }
 }
