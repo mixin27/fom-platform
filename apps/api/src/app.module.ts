@@ -18,6 +18,7 @@ import { AppExceptionFilter } from './common/http/exception.filter';
 import { RequestContextMiddleware } from './common/http/request-context';
 import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.interceptor';
 import { OrdersController } from './orders/orders.controller';
+import { OrderMessageParserService } from './orders/order-message-parser.service';
 import { OrdersService } from './orders/orders.service';
 import { PrismaService } from './common/prisma/prisma.service';
 import { ShopsController } from './shops/shops.controller';
@@ -54,6 +55,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     UsersService,
     ShopsService,
     CustomersService,
+    OrderMessageParserService,
     OrdersService,
     DeliveriesService,
     TemplatesService,

@@ -393,6 +393,63 @@ describe('Facebook Order Manager API (e2e)', () => {
     );
   });
 
+  dbIt('parses copied Messenger text into a suggested order draft', async () => {
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: 'maaye@example.com',
+        password: 'Password123!',
+      },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const loginBody = loginResponse.json();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/shops/shop_ma_aye/orders/parse-message',
+      headers: {
+        authorization: `Bearer ${loginBody.data.access_token}`,
+      },
+      payload: {
+        message: [
+          'Daw Aye Aye',
+          '09 9871 2345',
+          'Silk Longyi Set (Green, Size M) x2 18000',
+          'Deli 3000',
+        ].join('\n'),
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.objectContaining({
+        suggested_order: expect.objectContaining({
+          customer: expect.objectContaining({
+            name: 'Daw Aye Aye',
+            phone: '09 9871 2345',
+            address: 'No. 12, Shwe Taung Gyar St, Hlaing, Yangon',
+          }),
+          delivery_fee: 3000,
+          status: 'new',
+          source: 'messenger',
+        }),
+        customer_match: expect.objectContaining({
+          id: 'cus_daw_aye_aye',
+          phone: '09 9871 2345',
+        }),
+        parse_meta: expect.objectContaining({
+          is_ready_to_create: true,
+          confidence: expect.any(Number),
+          matched_fields: expect.arrayContaining(['customer.address']),
+        }),
+      }),
+    );
+  });
+
   dbIt('creates, lists, and updates message templates', async () => {
     const loginResponse = await app.inject({
       method: 'POST',

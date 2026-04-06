@@ -5,6 +5,7 @@ import {
   validationError,
 } from '../common/http/app-http.exception';
 import { paged } from '../common/http/api-result';
+import { permissions } from '../common/http/rbac.constants';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate } from '../common/utils/dates';
@@ -18,8 +19,10 @@ import {
   orderStatuses,
   type OrderStatusValue,
 } from './dto/order.constants';
+import { ParseOrderMessageDto } from './dto/parse-order-message.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
+import { OrderMessageParserService } from './order-message-parser.service';
 
 type DbClient = PrismaService | any;
 
@@ -37,6 +40,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly orderMessageParser: OrderMessageParserService,
   ) {}
 
   async listOrders(
@@ -161,6 +165,63 @@ export class OrdersService {
 
       return this.serializeOrderRecord(order, { includeHistory: true });
     });
+  }
+
+  async parseOrderMessage(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: ParseOrderMessageDto,
+  ) {
+    await this.shopsService.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.ordersWrite,
+    );
+
+    const result = this.orderMessageParser.parseMessage(body.message);
+    const parsedPhone = result.suggested_order.customer.phone;
+
+    if (parsedPhone) {
+      const normalizedPhone = this.normalizePhone(parsedPhone);
+      result.suggested_order.customer.phone = normalizedPhone;
+
+      const canonicalPhone = this.toCanonicalPhone(normalizedPhone);
+      const customerMatch = (
+        await this.prisma.customer.findMany({
+          where: { shopId },
+        })
+      ).find(
+        (customer) => this.toCanonicalPhone(customer.phone) === canonicalPhone,
+      );
+
+      if (customerMatch) {
+        this.orderMessageParser.backfillMissingCustomerFields(result, {
+          name: customerMatch.name,
+          phone: customerMatch.phone,
+          township: customerMatch.township,
+          address: customerMatch.address,
+        });
+
+        return {
+          ...result,
+          customer_match: {
+            id: customerMatch.id,
+            shop_id: customerMatch.shopId,
+            name: customerMatch.name,
+            phone: customerMatch.phone,
+            township: customerMatch.township,
+            address: customerMatch.address,
+            notes: customerMatch.notes,
+            created_at: customerMatch.createdAt.toISOString(),
+          },
+        };
+      }
+    }
+
+    return {
+      ...result,
+      customer_match: null,
+    };
   }
 
   async getOrder(
@@ -713,5 +774,9 @@ export class OrdersService {
 
   private normalizePhone(phone: string): string {
     return phone.replace(/\s+/g, ' ').trim();
+  }
+
+  private toCanonicalPhone(phone: string): string {
+    return phone.replace(/\+?959/, '09').replace(/\D/g, '');
   }
 }

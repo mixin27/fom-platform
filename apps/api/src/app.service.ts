@@ -42,6 +42,7 @@ export class AppService {
           'shop members',
           'customers',
           'orders',
+          'messenger order parsing',
           'order items',
           'order status updates',
           'deliveries',

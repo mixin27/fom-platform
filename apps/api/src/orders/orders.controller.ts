@@ -22,6 +22,7 @@ import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { ParseOrderMessageDto } from './dto/parse-order-message.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { OrdersService } from './orders.service';
@@ -53,6 +54,19 @@ export class OrdersController {
     @Body() body: CreateOrderDto,
   ) {
     return ok(this.ordersService.createOrder(currentUser, shopId, body));
+  }
+
+  @Post('parse-message')
+  @RequirePermissions(permissions.ordersWrite)
+  @ApiOperation({
+    summary: 'Parse copied Messenger text into a suggested order draft',
+  })
+  parseOrderMessage(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: ParseOrderMessageDto,
+  ) {
+    return ok(this.ordersService.parseOrderMessage(currentUser, shopId, body));
   }
 
   @Get(':orderId')

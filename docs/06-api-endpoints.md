@@ -80,6 +80,7 @@ Customer write notes:
 | ------ | --------------------------------------- | ------------------------ | ---------------- |
 | GET    | /shops/{shopId}/orders                  | List orders with filters | 200 List Order   |
 | POST   | /shops/{shopId}/orders                  | Create order             | 201 Single Order |
+| POST   | /shops/{shopId}/orders/parse-message    | Parse Messenger text into a suggested order draft | 200 Single ParsedOrderDraft |
 | GET    | /shops/{shopId}/orders/{orderId}        | Get order details        | 200 Single Order |
 | PATCH  | /shops/{shopId}/orders/{orderId}        | Update order             | 200 Single Order |
 | POST   | /shops/{shopId}/orders/{orderId}/status | Change status            | 200 Single Order |
@@ -94,6 +95,7 @@ Order list filters:
 Order write notes:
 
 - `POST /shops/{shopId}/orders` accepts either `customer_id` or inline customer details. The preferred request body uses `customer` plus `items`, while legacy inline customer and single-item fields are still accepted.
+- `POST /shops/{shopId}/orders/parse-message` does not create an order. It parses copied Messenger text and returns a `suggested_order`, parse warnings, confidence, and an optional `customer_match`.
 - `PATCH /shops/{shopId}/orders/{orderId}` requires at least one field and accepts `note: null` to clear the note.
 - `POST /shops/{shopId}/orders/{orderId}/status` expects `{ "status": "...", "note": "..." }`.
 
