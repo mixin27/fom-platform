@@ -49,6 +49,27 @@ function assertSessionAccess(session: AppSession, requiredAccess: RequiredAccess
   }
 }
 
+function assertSessionAccessForAction(
+  session: AppSession,
+  requiredAccess: RequiredAccess
+) {
+  if (requiredAccess === "platform" && !hasPlatformAccess(session)) {
+    throw new AuthApiError(
+      "You do not have permission to perform this action.",
+      "FORBIDDEN",
+      403
+    )
+  }
+
+  if (requiredAccess === "shop" && !hasShopAccess(session)) {
+    throw new AuthApiError(
+      "You do not have permission to perform this action.",
+      "FORBIDDEN",
+      403
+    )
+  }
+}
+
 export async function requestAuthenticatedApiEnvelope<T>({
   path,
   retryPath,
@@ -109,6 +130,84 @@ export async function requestAuthenticatedApiEnvelope<T>({
         }
 
         redirect(defaultPathForSession(refreshedSession))
+      }
+
+      throw retryError
+    }
+  }
+}
+
+export async function requestAuthenticatedActionApiEnvelope<T>({
+  path,
+  init,
+  requiredAccess = "any",
+}: Omit<AuthenticatedRequestOptions, "retryPath">): Promise<ApiSuccess<T>> {
+  const session = await getSession()
+
+  if (!session) {
+    throw new AuthApiError("Session expired. Please sign in again.", "UNAUTHORIZED", 401)
+  }
+
+  let activeSession = session
+  assertSessionAccessForAction(activeSession, requiredAccess)
+
+  const expiresInMs = Date.parse(activeSession.accessExpiresAt) - Date.now()
+  if (expiresInMs <= 30_000) {
+    const refreshedSession = await refreshSessionForRequest(activeSession)
+
+    if (!refreshedSession) {
+      await clearSessionIfPossible()
+      throw new AuthApiError("Session expired. Please sign in again.", "UNAUTHORIZED", 401)
+    }
+
+    activeSession = refreshedSession
+    assertSessionAccessForAction(activeSession, requiredAccess)
+  }
+
+  try {
+    return await requestAuthorizedApiEnvelope<T>(activeSession.accessToken, path, init)
+  } catch (error) {
+    if (
+      !(error instanceof AuthApiError) ||
+      (error.status !== 401 && error.status !== 403)
+    ) {
+      throw error
+    }
+
+    const refreshedSession = await refreshSessionForRequest(activeSession)
+
+    if (!refreshedSession) {
+      if (error.status === 401) {
+        await clearSessionIfPossible()
+        throw new AuthApiError(
+          "Session expired. Please sign in again.",
+          "UNAUTHORIZED",
+          401,
+          error.details
+        )
+      }
+
+      throw error
+    }
+
+    activeSession = refreshedSession
+    assertSessionAccessForAction(activeSession, requiredAccess)
+
+    try {
+      return await requestAuthorizedApiEnvelope<T>(
+        activeSession.accessToken,
+        path,
+        init
+      )
+    } catch (retryError) {
+      if (retryError instanceof AuthApiError && retryError.status === 401) {
+        await clearSessionIfPossible()
+        throw new AuthApiError(
+          "Session expired. Please sign in again.",
+          "UNAUTHORIZED",
+          401,
+          retryError.details
+        )
       }
 
       throw retryError

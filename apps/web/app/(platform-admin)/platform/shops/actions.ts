@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { AuthApiError } from "@/lib/auth/api"
-import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
+import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 
 export type PlatformShopFormInput = {
   name: string
@@ -55,9 +55,8 @@ export async function createPlatformShopAction(
   input: PlatformShopFormInput
 ): Promise<PlatformShopActionResult> {
   try {
-    await requestAuthenticatedApiEnvelope({
+    await requestAuthenticatedActionApiEnvelope({
       path: "/api/v1/platform/shops",
-      retryPath: "/platform/shops",
       requiredAccess: "platform",
       init: {
         method: "POST",
@@ -81,9 +80,8 @@ export async function updatePlatformShopAction(
   input: Partial<PlatformShopFormInput>
 ): Promise<PlatformShopActionResult> {
   try {
-    await requestAuthenticatedApiEnvelope({
+    await requestAuthenticatedActionApiEnvelope({
       path: `/api/v1/platform/shops/${shopId}`,
-      retryPath: "/platform/shops",
       requiredAccess: "platform",
       init: {
         method: "PATCH",
@@ -106,9 +104,8 @@ export async function deletePlatformShopAction(
   shopId: string
 ): Promise<PlatformShopActionResult> {
   try {
-    await requestAuthenticatedApiEnvelope({
+    await requestAuthenticatedActionApiEnvelope({
       path: `/api/v1/platform/shops/${shopId}`,
-      retryPath: "/platform/shops",
       requiredAccess: "platform",
       init: {
         method: "DELETE",
