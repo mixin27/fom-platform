@@ -37,6 +37,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const hasError = params?.error === "invalid_credentials"
   const noAccess = params?.error === "no_access"
   const authFailed = params?.error === "auth_failed"
+  const sessionExpired = params?.error === "session_expired"
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -100,6 +101,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           {authFailed ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               Sign-in could not be completed right now. Check the API connection and try again.
+            </div>
+          ) : null}
+          {sessionExpired ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Your session expired. Sign in again to continue.
             </div>
           ) : null}
           <form action={signInAction} className="flex flex-col gap-5">

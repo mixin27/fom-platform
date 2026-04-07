@@ -1,10 +1,7 @@
 import "server-only"
 
-import {
-  requestAuthorizedApiEnvelope,
-  type ApiSuccess,
-} from "@/lib/auth/api"
-import { requirePlatformAdmin } from "@/lib/auth/session"
+import { type ApiSuccess } from "@/lib/auth/api"
+import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
 
 type SearchParamsValue = string | string[] | undefined
 type SearchParamsRecord = Record<string, SearchParamsValue>
@@ -33,14 +30,14 @@ function buildQueryString(searchParams?: SearchParamsRecord) {
 
 async function platformRequest<T>(
   path: string,
-  searchParams?: SearchParamsRecord
+  searchParams?: SearchParamsRecord,
+  retryPath = "/platform"
 ): Promise<ApiSuccess<T>> {
-  const session = await requirePlatformAdmin()
-
-  return requestAuthorizedApiEnvelope<T>(
-    session.accessToken,
-    `${path}${buildQueryString(searchParams)}`
-  )
+  return requestAuthenticatedApiEnvelope<T>({
+    path: `${path}${buildQueryString(searchParams)}`,
+    retryPath,
+    requiredAccess: "platform",
+  })
 }
 
 export async function getPlatformDashboard() {
@@ -107,10 +104,12 @@ export async function getPlatformDashboard() {
       detail: string
       occurred_at: string
     }>
-  }>("/api/v1/platform/dashboard")
+  }>("/api/v1/platform/dashboard", undefined, "/platform")
 }
 
 export async function getPlatformShops(searchParams?: SearchParamsRecord) {
+  const retryPath = `/platform/shops${buildQueryString(searchParams)}`
+
   return platformRequest<
     Array<{
       id: string
@@ -142,10 +141,12 @@ export async function getPlatformShops(searchParams?: SearchParamsRecord) {
         paid_at: string | null
       } | null
     }>
-  >("/api/v1/platform/shops", searchParams)
+  >("/api/v1/platform/shops", searchParams, retryPath)
 }
 
 export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord) {
+  const retryPath = `/platform/subscriptions${buildQueryString(searchParams)}`
+
   return platformRequest<{
     overview: {
       monthly_recurring_revenue: number
@@ -211,7 +212,7 @@ export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord
       monthly_recurring_revenue: number
       collected_revenue: number
     }>
-  }>("/api/v1/platform/subscriptions", searchParams)
+  }>("/api/v1/platform/subscriptions", searchParams, retryPath)
 }
 
 export async function getPlatformSupport() {
@@ -245,7 +246,7 @@ export async function getPlatformSupport() {
       total_orders: number
       last_active_at: string | null
     }>
-  }>("/api/v1/platform/support")
+  }>("/api/v1/platform/support", undefined, "/platform/support")
 }
 
 export async function getPlatformSettings() {
@@ -278,5 +279,5 @@ export async function getPlatformSettings() {
       shop_count: number
       collected_revenue: number
     }>
-  }>("/api/v1/platform/settings")
+  }>("/api/v1/platform/settings", undefined, "/platform/settings")
 }

@@ -2,6 +2,7 @@ import "server-only"
 
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { Buffer } from "node:buffer"
+import { cache } from "react"
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
@@ -193,6 +194,10 @@ export function defaultPathForSession(session: AppSession) {
   return "/sign-in?error=no_access"
 }
 
+export function buildSessionRefreshPath(nextPath: string) {
+  return `/auth/refresh-session?next=${encodeURIComponent(nextPath)}`
+}
+
 export function getActiveShop(session: AppSession) {
   if (!session.activeShopId) {
     return session.shops[0] ?? null
@@ -212,7 +217,7 @@ export function hasShopAccess(session: AppSession) {
   return session.shops.length > 0
 }
 
-export async function getSession() {
+const readSession = cache(async () => {
   const cookieStore = await cookies()
   const session = decodeSession(cookieStore.get(AUTH_COOKIE_NAME)?.value)
 
@@ -225,29 +230,69 @@ export async function getSession() {
   }
 
   return session
+})
+
+export async function getSession() {
+  return readSession()
 }
 
-export async function getSessionWithRefresh() {
-  const session = await getSession()
+function isCookieMutationError(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.includes(
+      "Cookies can only be modified in a Server Action or Route Handler"
+    )
+  )
+}
 
-  if (!session) {
-    return null
-  }
-
-  const expiresInMs = Date.parse(session.accessExpiresAt) - Date.now()
-  if (expiresInMs > 60_000) {
-    return session
-  }
-
+export async function persistSessionIfPossible(session: AppSession) {
   try {
-    const refreshedAuth = await refreshAuthSession(session.refreshToken)
-    const refreshedSession = buildSessionFromAuth(refreshedAuth)
-    await persistSession(refreshedSession)
-    return refreshedSession
-  } catch {
+    await persistSession(session)
+    return true
+  } catch (error) {
+    if (isCookieMutationError(error)) {
+      return false
+    }
+
+    throw error
+  }
+}
+
+export async function clearSessionIfPossible() {
+  try {
     await clearSession()
+    return true
+  } catch (error) {
+    if (isCookieMutationError(error)) {
+      return false
+    }
+
+    throw error
+  }
+}
+
+const refreshSessionByToken = cache(async (refreshToken: string) => {
+  try {
+    const refreshedAuth = await refreshAuthSession(refreshToken)
+    return buildSessionFromAuth(refreshedAuth)
+  } catch {
     return null
   }
+})
+
+export async function refreshSessionForRequest(session: AppSession) {
+  if (Date.parse(session.refreshExpiresAt) <= Date.now()) {
+    return null
+  }
+
+  const refreshedSession = await refreshSessionByToken(session.refreshToken)
+
+  if (!refreshedSession) {
+    return null
+  }
+
+  await persistSessionIfPossible(refreshedSession)
+  return refreshedSession
 }
 
 export async function persistSession(session: AppSession) {
@@ -276,7 +321,7 @@ export async function redirectIfAuthenticated() {
 }
 
 export async function requirePlatformAdmin() {
-  const session = await getSessionWithRefresh()
+  const session = await getSession()
 
   if (!session) {
     redirect("/sign-in")
@@ -290,7 +335,7 @@ export async function requirePlatformAdmin() {
 }
 
 export async function requireShopAdmin() {
-  const session = await getSessionWithRefresh()
+  const session = await getSession()
 
   if (!session) {
     redirect("/sign-in")
