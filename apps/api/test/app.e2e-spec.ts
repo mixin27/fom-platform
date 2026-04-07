@@ -243,15 +243,125 @@ describe('Facebook Order Manager API (e2e)', () => {
       expect.objectContaining({
         role: 'platform_owner',
         roles: expect.arrayContaining(['platform_owner']),
-        permissions: expect.arrayContaining(['platform.dashboard.read']),
+        permissions: expect.arrayContaining([
+          'platform.dashboard.read',
+          'platform.shops.write',
+        ]),
       }),
     );
     expect(loginData.platform_access).toEqual(
       expect.objectContaining({
         role: 'platform_owner',
-        permissions: expect.arrayContaining(['platform.dashboard.read']),
+        permissions: expect.arrayContaining([
+          'platform.dashboard.read',
+          'platform.shops.write',
+        ]),
       }),
     );
+  });
+
+  dbIt('supports platform-side shop CRUD management', async () => {
+    const loginData = await loginWithPassword(
+      app,
+      platformOwnerEmail,
+      platformOwnerPassword,
+    );
+    const uniqueEmail = `platform-crud-${Date.now()}@example.com`;
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/platform/shops',
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        name: 'Platform CRUD Shop',
+        timezone: 'Asia/Yangon',
+        owner_name: 'Platform Managed Owner',
+        owner_email: uniqueEmail,
+        owner_phone: '09 7000 4321',
+        owner_password: 'Password123!',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    const createBody = createResponse.json();
+    expect(createBody.success).toBe(true);
+    expect(createBody.data).toEqual(
+      expect.objectContaining({
+        name: 'Platform CRUD Shop',
+        timezone: 'Asia/Yangon',
+        owner_name: 'Platform Managed Owner',
+        owner_email: uniqueEmail,
+      }),
+    );
+
+    const createdShopId = createBody.data.id as string;
+
+    const getResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/platform/shops/${createdShopId}`,
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+    });
+
+    expect(getResponse.statusCode).toBe(200);
+    const getBody = getResponse.json();
+    expect(getBody.success).toBe(true);
+    expect(getBody.data.id).toBe(createdShopId);
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/platform/shops/${createdShopId}`,
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        name: 'Platform CRUD Shop Updated',
+        timezone: 'Asia/Singapore',
+        owner_name: 'Updated Managed Owner',
+      },
+    });
+
+    expect(updateResponse.statusCode).toBe(200);
+    const updateBody = updateResponse.json();
+    expect(updateBody.success).toBe(true);
+    expect(updateBody.data).toEqual(
+      expect.objectContaining({
+        id: createdShopId,
+        name: 'Platform CRUD Shop Updated',
+        timezone: 'Asia/Singapore',
+        owner_name: 'Updated Managed Owner',
+      }),
+    );
+
+    const ownerLogin = await loginWithPassword(app, uniqueEmail, 'Password123!');
+    expect(ownerLogin.user.email).toBe(uniqueEmail);
+    expect(ownerLogin.shops).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createdShopId,
+        }),
+      ]),
+    );
+
+    const deleteResponse = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/platform/shops/${createdShopId}`,
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+    });
+
+    expect(deleteResponse.statusCode).toBe(204);
+
+    const prisma = app.get(PrismaService);
+    const deletedShop = await prisma.shop.findUnique({
+      where: { id: createdShopId },
+      select: { id: true },
+    });
+    expect(deletedShop).toBeNull();
   });
 
   dbIt('lists current user shops with membership access details', async () => {

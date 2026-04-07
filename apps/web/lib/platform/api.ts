@@ -25,6 +25,7 @@ export type PlatformInvoiceSummary = {
 export type PlatformShop = {
   id: string
   name: string
+  timezone: string
   owner_name: string
   owner_email: string | null
   owner_phone: string | null

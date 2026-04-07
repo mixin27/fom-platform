@@ -1,14 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { hashPassword } from '../common/auth/password';
+import {
+  conflictError,
+  notFoundError,
+  validationError,
+} from '../common/http/app-http.exception';
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import type { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
+import { DEFAULT_TRIAL_PLAN_CODE } from './platform-billing.constants';
 
 type TenantSnapshot = {
   id: string;
   name: string;
+  timezone: string;
   owner_name: string;
   owner_email: string | null;
   owner_phone: string | null;
@@ -167,6 +177,174 @@ export class PlatformService {
 
     const page = paginate(filtered, query.limit, query.cursor);
     return paged(page.items, page.pagination);
+  }
+
+  async getShop(shopId: string) {
+    return this.loadTenantSnapshotById(shopId, new Date());
+  }
+
+  async createShop(body: CreatePlatformShopDto) {
+    const timezone = body.timezone?.trim() || 'Asia/Yangon';
+    this.assertValidTimeZone(timezone);
+    const ownerRoles = await this.requireShopRoles(['owner']);
+
+    const shop = await this.prisma.$transaction(async (tx) => {
+      const owner = await this.resolveOwnerForPlatformShop(tx, {
+        owner_user_id: body.owner_user_id,
+        owner_name: body.owner_name,
+        owner_email: body.owner_email,
+        owner_phone: body.owner_phone,
+        owner_password: body.owner_password,
+      });
+
+      const defaultTrialPlan = await (tx as any).plan.findUnique({
+        where: { code: DEFAULT_TRIAL_PLAN_CODE },
+        select: { id: true },
+      });
+
+      const createdShop = await tx.shop.create({
+        data: {
+          ownerUserId: owner.id,
+          name: body.name.trim(),
+          timezone,
+        },
+      });
+
+      const member = await tx.shopMember.create({
+        data: {
+          shopId: createdShop.id,
+          userId: owner.id,
+          status: 'active',
+        },
+      });
+
+      await tx.shopMemberRoleAssignment.createMany({
+        data: ownerRoles.map((role) => ({
+          shopMemberId: member.id,
+          roleId: role.id,
+        })),
+      });
+
+      if (defaultTrialPlan) {
+        const startAt = new Date();
+        const endAt = new Date(startAt);
+        endAt.setDate(endAt.getDate() + 7);
+
+        await (tx as any).subscription.create({
+          data: {
+            shopId: createdShop.id,
+            planId: defaultTrialPlan.id,
+            status: 'trialing',
+            startAt,
+            endAt,
+            autoRenews: false,
+          },
+        });
+      }
+
+      return createdShop;
+    });
+
+    return this.loadTenantSnapshotById(shop.id, new Date());
+  }
+
+  async updateShop(shopId: string, body: UpdatePlatformShopDto) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        owner: {
+          include: {
+            passwordCredential: true,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    if (
+      !body.name &&
+      !body.timezone &&
+      !body.owner_name &&
+      !body.owner_email &&
+      !body.owner_phone &&
+      !body.owner_password
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    if (body.timezone) {
+      this.assertValidTimeZone(body.timezone);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (body.name || body.timezone) {
+        await tx.shop.update({
+          where: { id: shopId },
+          data: {
+            ...(body.name ? { name: body.name.trim() } : {}),
+            ...(body.timezone ? { timezone: body.timezone.trim() } : {}),
+          },
+        });
+      }
+
+      if (body.owner_name || body.owner_email || body.owner_phone) {
+        await this.assertOwnerUniqueIdentifiers(tx, shop.owner.id, {
+          owner_email: body.owner_email,
+          owner_phone: body.owner_phone,
+        });
+
+        await tx.user.update({
+          where: { id: shop.owner.id },
+          data: {
+            ...(body.owner_name ? { name: body.owner_name.trim() } : {}),
+            ...(body.owner_email ? { email: body.owner_email.trim().toLowerCase() } : {}),
+            ...(body.owner_phone
+              ? { phone: this.normalizePhone(body.owner_phone) }
+              : {}),
+          },
+        });
+      }
+
+      if (body.owner_password) {
+        await tx.passwordCredential.upsert({
+          where: {
+            userId: shop.owner.id,
+          },
+          update: {
+            passwordHash: await hashPassword(body.owner_password),
+          },
+          create: {
+            userId: shop.owner.id,
+            passwordHash: await hashPassword(body.owner_password),
+          },
+        });
+      }
+    });
+
+    return this.loadTenantSnapshotById(shopId, new Date());
+  }
+
+  async deleteShop(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { id: true },
+    });
+
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    await this.prisma.shop.delete({
+      where: { id: shopId },
+    });
   }
 
   async getSubscriptions(query: ListPlatformSubscriptionsQueryDto) {
@@ -371,8 +549,208 @@ export class PlatformService {
     };
   }
 
-  private async loadTenantSnapshots(now: Date): Promise<TenantSnapshot[]> {
+  private async loadTenantSnapshotById(
+    shopId: string,
+    now: Date,
+  ): Promise<TenantSnapshot> {
+    const [shop] = await this.loadTenantSnapshots(now, { id: shopId });
+
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    return shop;
+  }
+
+  private async requireShopRoles(roleCodes: string[]) {
+    const roles = await this.prisma.role.findMany({
+      where: {
+        code: {
+          in: [...new Set(roleCodes.map((roleCode) => roleCode.trim()))],
+        },
+        scope: 'shop',
+      },
+    });
+
+    const missingRoleCodes = roleCodes.filter(
+      (roleCode) => !roles.some((role) => role.code === roleCode),
+    );
+
+    if (missingRoleCodes.length > 0) {
+      throw notFoundError(
+        `Roles not found: ${missingRoleCodes.join(', ')}. Seed RBAC defaults first.`,
+      );
+    }
+
+    return roles;
+  }
+
+  private async resolveOwnerForPlatformShop(
+    tx: any,
+    input: {
+      owner_user_id?: string;
+      owner_name?: string;
+      owner_email?: string;
+      owner_phone?: string;
+      owner_password?: string;
+    },
+  ) {
+    const ownerUserId = input.owner_user_id?.trim() || null;
+    const ownerName = input.owner_name?.trim() || null;
+    const ownerEmail = input.owner_email?.trim().toLowerCase() || null;
+    const ownerPhone = this.normalizePhone(input.owner_phone);
+
+    const ownerMatches = [
+      ownerUserId
+        ? await tx.user.findUnique({
+            where: { id: ownerUserId },
+            include: { passwordCredential: true },
+          })
+        : null,
+      ownerEmail
+        ? await tx.user.findUnique({
+            where: { email: ownerEmail },
+            include: { passwordCredential: true },
+          })
+        : null,
+      ownerPhone
+        ? await tx.user.findUnique({
+            where: { phone: ownerPhone },
+            include: { passwordCredential: true },
+          })
+        : null,
+    ].filter(Boolean);
+
+    const uniqueOwners = ownerMatches.filter(
+      (owner, index, allOwners) =>
+        allOwners.findIndex((candidate) => candidate.id === owner.id) === index,
+    );
+
+    if (uniqueOwners.length > 1) {
+      throw conflictError(
+        'The provided owner identifiers match different users. Use one owner reference only.',
+      );
+    }
+
+    const existingOwner = uniqueOwners[0] ?? null;
+
+    if (existingOwner) {
+      await this.assertOwnerUniqueIdentifiers(tx, existingOwner.id, {
+        owner_email: ownerEmail,
+        owner_phone: ownerPhone,
+      });
+
+      const updatedOwner = await tx.user.update({
+        where: { id: existingOwner.id },
+        data: {
+          ...(ownerName ? { name: ownerName } : {}),
+          ...(ownerEmail ? { email: ownerEmail } : {}),
+          ...(ownerPhone ? { phone: ownerPhone } : {}),
+        },
+      });
+
+      if (input.owner_password && !existingOwner.passwordCredential) {
+        await tx.passwordCredential.create({
+          data: {
+            userId: existingOwner.id,
+            passwordHash: await hashPassword(input.owner_password),
+          },
+        });
+      }
+
+      return updatedOwner;
+    }
+
+    if (!ownerEmail) {
+      throw validationError([
+        {
+          field: 'owner_email',
+          errors: ['Owner email is required when creating a new owner account'],
+        },
+      ]);
+    }
+
+    if (!ownerName) {
+      throw validationError([
+        {
+          field: 'owner_name',
+          errors: ['Owner name is required when creating a new owner account'],
+        },
+      ]);
+    }
+
+    if (!input.owner_password) {
+      throw validationError([
+        {
+          field: 'owner_password',
+          errors: [
+            'Owner password is required when creating a new owner account',
+          ],
+        },
+      ]);
+    }
+
+    await this.assertOwnerUniqueIdentifiers(tx, null, {
+      owner_email: ownerEmail,
+      owner_phone: ownerPhone,
+    });
+
+    const owner = await tx.user.create({
+      data: {
+        name: ownerName,
+        email: ownerEmail,
+        phone: ownerPhone,
+        locale: 'my',
+      },
+    });
+
+    await tx.passwordCredential.create({
+      data: {
+        userId: owner.id,
+        passwordHash: await hashPassword(input.owner_password),
+      },
+    });
+
+    return owner;
+  }
+
+  private async assertOwnerUniqueIdentifiers(
+    tx: any,
+    currentUserId: string | null,
+    input: {
+      owner_email?: string | null;
+      owner_phone?: string | null;
+    },
+  ) {
+    if (input.owner_email) {
+      const ownerByEmail = await tx.user.findUnique({
+        where: { email: input.owner_email },
+        select: { id: true },
+      });
+
+      if (ownerByEmail && ownerByEmail.id !== currentUserId) {
+        throw conflictError('Owner email is already used by another account');
+      }
+    }
+
+    if (input.owner_phone) {
+      const ownerByPhone = await tx.user.findUnique({
+        where: { phone: input.owner_phone },
+        select: { id: true },
+      });
+
+      if (ownerByPhone && ownerByPhone.id !== currentUserId) {
+        throw conflictError('Owner phone is already used by another account');
+      }
+    }
+  }
+
+  private async loadTenantSnapshots(
+    now: Date,
+    where?: Record<string, unknown>,
+  ): Promise<TenantSnapshot[]> {
     const shops = (await (this.prisma as any).shop.findMany({
+      ...(where ? { where } : {}),
       orderBy: [{ createdAt: 'desc' }, { name: 'asc' }],
       include: {
         owner: {
@@ -458,6 +836,7 @@ export class PlatformService {
       return {
         id: shop.id,
         name: shop.name,
+        timezone: shop.timezone,
         owner_name: shop.owner.name,
         owner_email: shop.owner.email,
         owner_phone: shop.owner.phone,
@@ -762,5 +1141,27 @@ export class PlatformService {
     }
 
     return Date.parse(value);
+  }
+
+  private normalizePhone(value: string | undefined | null): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private assertValidTimeZone(timeZone: string) {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone });
+    } catch {
+      throw validationError([
+        {
+          field: 'timezone',
+          errors: ['Timezone must be a valid IANA timezone'],
+        },
+      ]);
+    }
   }
 }

@@ -17,12 +17,16 @@ import {
   ArrowUpRightIcon,
   Building2Icon,
   ChevronRightIcon,
+  CircleCheckBigIcon,
   CopyIcon,
   CreditCardIcon,
   MailIcon,
   MoreHorizontalIcon,
+  PencilLineIcon,
+  PlusIcon,
   RefreshCwIcon,
   SearchIcon,
+  Trash2Icon,
 } from "lucide-react"
 
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
@@ -40,6 +44,8 @@ import type {
   PlatformCursorPagination,
   PlatformShop,
 } from "@/lib/platform/api"
+import { DeletePlatformShopDialog } from "./delete-platform-shop-dialog"
+import { PlatformShopFormSheet } from "./platform-shop-form-sheet"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -193,9 +199,13 @@ function getEstimatedMonthlyRevenue(shop: PlatformShop) {
 function ShopActions({
   shop,
   onInspect,
+  onEdit,
+  onDelete,
 }: {
   shop: PlatformShop
   onInspect: (shop: PlatformShop) => void
+  onEdit: (shop: PlatformShop) => void
+  onDelete: (shop: PlatformShop) => void
 }) {
   async function copyShopId() {
     await navigator.clipboard.writeText(shop.id)
@@ -214,6 +224,10 @@ function ShopActions({
           <DropdownMenuItem onSelect={() => onInspect(shop)}>
             <Building2Icon />
             Inspect details
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onEdit(shop)}>
+            <PencilLineIcon />
+            Edit shop
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href={`/platform/subscriptions?search=${encodeURIComponent(shop.name)}`}>
@@ -242,6 +256,13 @@ function ShopActions({
             <CopyIcon />
             Copy shop ID
           </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => onDelete(shop)}
+          >
+            <Trash2Icon />
+            Delete shop
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -252,10 +273,12 @@ function ShopDetailsSheet({
   shop,
   open,
   onOpenChange,
+  onEdit,
 }: {
   shop: PlatformShop | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onEdit: (shop: PlatformShop) => void
 }) {
   if (!shop) {
     return null
@@ -350,6 +373,7 @@ function ShopDetailsSheet({
                   Workspace
                 </span>
                 <div className="rounded-xl border border-black/6 bg-muted/30 p-3 text-sm text-muted-foreground">
+                  <p>Timezone: {shop.timezone}</p>
                   <p>Township: {shop.township ?? "—"}</p>
                   <p>Joined: {formatDate(shop.joined_at)}</p>
                   <p>Last active: {formatRelativeDate(shop.last_active_at)}</p>
@@ -429,6 +453,14 @@ function ShopDetailsSheet({
 
         <SheetFooter className="border-t border-black/6 bg-muted/20">
           <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              className="sm:flex-1"
+              onClick={() => onEdit(shop)}
+            >
+              Edit shop
+              <PencilLineIcon data-icon="inline-end" />
+            </Button>
             <Button asChild variant="outline" className="sm:flex-1">
               <Link href={`/platform/subscriptions?search=${encodeURIComponent(shop.name)}`}>
                 View subscriptions
@@ -465,6 +497,10 @@ export function PlatformShopsTable({
   })
   const [rowSelection, setRowSelection] = useState({})
   const [selectedShop, setSelectedShop] = useState<PlatformShop | null>(null)
+  const [shopBeingEdited, setShopBeingEdited] = useState<PlatformShop | null>(null)
+  const [shopBeingDeleted, setShopBeingDeleted] = useState<PlatformShop | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
   const [search, setSearch] = useState(initialFilters.search)
   const [status, setStatus] = useState(initialFilters.status)
   const [plan, setPlan] = useState(initialFilters.plan)
@@ -478,6 +514,18 @@ export function PlatformShopsTable({
     0
   )
   const revenue = rows.reduce((sum, shop) => sum + shop.total_revenue, 0)
+
+  function handleMutationComplete(message: string) {
+    setFeedbackMessage(message)
+    setSelectedShop(null)
+    setShopBeingEdited(null)
+    setShopBeingDeleted(null)
+  }
+
+  function handleEdit(shop: PlatformShop) {
+    setSelectedShop(null)
+    setShopBeingEdited(shop)
+  }
 
   function navigateWithFilters(
     updates: Record<string, string | null | undefined>,
@@ -699,7 +747,12 @@ export function PlatformShopsTable({
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
           <div className="flex justify-end">
-            <ShopActions shop={row.original} onInspect={setSelectedShop} />
+            <ShopActions
+              shop={row.original}
+              onInspect={setSelectedShop}
+              onEdit={handleEdit}
+              onDelete={setShopBeingDeleted}
+            />
           </div>
         ),
         enableSorting: false,
@@ -750,6 +803,13 @@ export function PlatformShopsTable({
           caption={`Tracked revenue on this page: ${formatCurrency(revenue)}.`}
         />
       </div>
+
+      {feedbackMessage ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <CircleCheckBigIcon />
+          <span>{feedbackMessage}</span>
+        </div>
+      ) : null}
 
       <Card className="border border-black/6 bg-white shadow-none">
         <CardHeader className="flex flex-col gap-4 border-b border-black/6 pb-4">
@@ -819,6 +879,17 @@ export function PlatformShopsTable({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setFeedbackMessage(null)
+                  setIsCreateOpen(true)
+                }}
+              >
+                <PlusIcon data-icon="inline-start" />
+                New shop
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -963,11 +1034,42 @@ export function PlatformShopsTable({
       <ShopDetailsSheet
         shop={selectedShop}
         open={selectedShop !== null}
+        onEdit={handleEdit}
         onOpenChange={(open) => {
           if (!open) {
             setSelectedShop(null)
           }
         }}
+      />
+
+      <PlatformShopFormSheet
+        mode="create"
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onCompleted={handleMutationComplete}
+      />
+
+      <PlatformShopFormSheet
+        mode="edit"
+        shop={shopBeingEdited}
+        open={shopBeingEdited !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShopBeingEdited(null)
+          }
+        }}
+        onCompleted={handleMutationComplete}
+      />
+
+      <DeletePlatformShopDialog
+        shop={shopBeingDeleted}
+        open={shopBeingDeleted !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShopBeingDeleted(null)
+          }
+        }}
+        onCompleted={handleMutationComplete}
       />
     </div>
   )

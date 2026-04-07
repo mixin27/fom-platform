@@ -18,6 +18,7 @@ export const permissions = {
   summariesRead: 'summaries.read',
   platformDashboardRead: 'platform.dashboard.read',
   platformShopsRead: 'platform.shops.read',
+  platformShopsWrite: 'platform.shops.write',
   platformSubscriptionsRead: 'platform.subscriptions.read',
   platformSupportRead: 'platform.support.read',
   platformSettingsWrite: 'platform.settings.write',
@@ -134,6 +135,12 @@ export const permissionCatalog: ReadonlyArray<{
     description: 'View tenant shops and their operational state.',
   },
   {
+    code: permissions.platformShopsWrite,
+    scope: 'platform',
+    name: 'Manage platform shops',
+    description: 'Create, update, and delete tenant shops from the platform workspace.',
+  },
+  {
     code: permissions.platformSubscriptionsRead,
     scope: 'platform',
     name: 'Read subscriptions',
@@ -198,6 +205,7 @@ export const defaultRoleCatalog: ReadonlyArray<{
     permissionCodes: [
       permissions.platformDashboardRead,
       permissions.platformShopsRead,
+      permissions.platformShopsWrite,
       permissions.platformSubscriptionsRead,
       permissions.platformSupportRead,
       permissions.platformSettingsWrite,
