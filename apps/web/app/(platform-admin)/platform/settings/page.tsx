@@ -4,6 +4,7 @@ import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
+import { getSession } from "@/lib/auth/session"
 import { getPlatformSettings } from "@/lib/platform/api"
 import {
   formatCurrency,
@@ -17,9 +18,31 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card"
 
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "—"
+  }
+
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
 export default async function PlatformSettingsPage() {
-  const response = await getPlatformSettings()
+  const [response, session] = await Promise.all([getPlatformSettings(), getSession()])
   const data = response.data
+  const sessionPermissions = session?.platformAccess?.permissions ?? []
+  const effectivePermissions = data.access.permissions
+  const missingSessionPermissions = effectivePermissions.filter(
+    (permission) => !sessionPermissions.includes(permission)
+  )
+  const extraSessionPermissions = sessionPermissions.filter(
+    (permission) => !effectivePermissions.includes(permission)
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -120,6 +143,123 @@ export default async function PlatformSettingsPage() {
               <p className="text-sm text-muted-foreground">
                 No platform roles assigned.
               </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-2">
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>Diagnostics</CardDescription>
+            <CardTitle>Current web session</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 text-sm leading-6 text-muted-foreground">
+            {session ? (
+              <div className="flex flex-col gap-2">
+                <div>
+                  <span className="font-medium text-[var(--fom-ink)]">App role:</span>{" "}
+                  {session.role}
+                </div>
+                <div>
+                  <span className="font-medium text-[var(--fom-ink)]">
+                    Platform role:
+                  </span>{" "}
+                  {session.platformAccess?.role ?? "—"}
+                </div>
+                <div>
+                  <span className="font-medium text-[var(--fom-ink)]">
+                    Shop access count:
+                  </span>{" "}
+                  {session.shops.length}
+                </div>
+                <div>
+                  <span className="font-medium text-[var(--fom-ink)]">
+                    Access token expires:
+                  </span>{" "}
+                  {formatDateTime(session.accessExpiresAt)}
+                </div>
+                <div>
+                  <span className="font-medium text-[var(--fom-ink)]">
+                    Refresh token expires:
+                  </span>{" "}
+                  {formatDateTime(session.refreshExpiresAt)}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No web session cookie is currently available.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>Diagnostics</CardDescription>
+            <CardTitle>Cookie vs effective permissions</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 pt-0">
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Cookie session
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {sessionPermissions.length > 0 ? (
+                  sessionPermissions.map((permission) => (
+                    <PlatformStatusBadge
+                      key={`session-${permission}`}
+                      status="active"
+                      label={permission}
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No platform permissions stored in the current cookie session.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Backend effective access
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {effectivePermissions.length > 0 ? (
+                  effectivePermissions.map((permission) => (
+                    <PlatformStatusBadge
+                      key={`effective-${permission}`}
+                      status="active"
+                      label={permission}
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No effective platform permissions returned by the API.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {missingSessionPermissions.length > 0 || extraSessionPermissions.length > 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <p className="font-medium">Session mismatch detected.</p>
+                {missingSessionPermissions.length > 0 ? (
+                  <p>
+                    Missing in cookie session: {missingSessionPermissions.join(", ")}
+                  </p>
+                ) : null}
+                {extraSessionPermissions.length > 0 ? (
+                  <p>
+                    Extra in cookie session: {extraSessionPermissions.join(", ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                Cookie session permissions match the current backend access.
+              </div>
             )}
           </CardContent>
         </Card>

@@ -27,6 +27,7 @@ type AuthenticatedRequestOptions = {
     json?: unknown
   }
   requiredAccess?: RequiredAccess
+  preferFreshSession?: boolean
 }
 
 function redirectForMissingAccess(session: AppSession, requiredAccess: RequiredAccess) {
@@ -141,6 +142,7 @@ export async function requestAuthenticatedActionApiEnvelope<T>({
   path,
   init,
   requiredAccess = "any",
+  preferFreshSession = false,
 }: Omit<AuthenticatedRequestOptions, "retryPath">): Promise<ApiSuccess<T>> {
   const session = await getSession()
 
@@ -149,6 +151,15 @@ export async function requestAuthenticatedActionApiEnvelope<T>({
   }
 
   let activeSession = session
+
+  if (preferFreshSession) {
+    const refreshedSession = await refreshSessionForRequest(activeSession)
+
+    if (refreshedSession) {
+      activeSession = refreshedSession
+    }
+  }
+
   assertSessionAccessForAction(activeSession, requiredAccess)
 
   const expiresInMs = Date.parse(activeSession.accessExpiresAt) - Date.now()

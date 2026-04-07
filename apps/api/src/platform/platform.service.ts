@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { hashPassword } from '../common/auth/password';
 import {
-  conflictError,
   notFoundError,
   validationError,
+  type ErrorDetail,
 } from '../common/http/app-http.exception';
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
@@ -600,26 +600,37 @@ export class PlatformService {
     const ownerEmail = input.owner_email?.trim().toLowerCase() || null;
     const ownerPhone = this.normalizePhone(input.owner_phone);
 
-    const ownerMatches = [
-      ownerUserId
-        ? await tx.user.findUnique({
-            where: { id: ownerUserId },
-            include: { passwordCredential: true },
-          })
-        : null,
-      ownerEmail
-        ? await tx.user.findUnique({
-            where: { email: ownerEmail },
-            include: { passwordCredential: true },
-          })
-        : null,
-      ownerPhone
-        ? await tx.user.findUnique({
-            where: { phone: ownerPhone },
-            include: { passwordCredential: true },
-          })
-        : null,
-    ].filter(Boolean);
+    const ownerByUserId = ownerUserId
+      ? await tx.user.findUnique({
+          where: { id: ownerUserId },
+          include: { passwordCredential: true },
+        })
+      : null;
+    const ownerByEmail = ownerEmail
+      ? await tx.user.findUnique({
+          where: { email: ownerEmail },
+          include: { passwordCredential: true },
+        })
+      : null;
+    const ownerByPhone = ownerPhone
+      ? await tx.user.findUnique({
+          where: { phone: ownerPhone },
+          include: { passwordCredential: true },
+        })
+      : null;
+
+    if (ownerUserId && !ownerByUserId) {
+      throw validationError([
+        {
+          field: 'owner_user_id',
+          errors: ['The selected owner account was not found'],
+        },
+      ]);
+    }
+
+    const ownerMatches = [ownerByUserId, ownerByEmail, ownerByPhone].filter(
+      Boolean,
+    );
 
     const uniqueOwners = ownerMatches.filter(
       (owner, index, allOwners) =>
@@ -627,8 +638,38 @@ export class PlatformService {
     );
 
     if (uniqueOwners.length > 1) {
-      throw conflictError(
-        'The provided owner identifiers match different users. Use one owner reference only.',
+      const details: ErrorDetail[] = [];
+
+      if (ownerByUserId) {
+        details.push({
+          field: 'owner_user_id',
+          errors: [
+            'This owner account does not match the provided email or phone. Use one owner reference only.',
+          ],
+        });
+      }
+
+      if (ownerByEmail) {
+        details.push({
+          field: 'owner_email',
+          errors: [
+            'This email belongs to a different existing user than the other owner identifier.',
+          ],
+        });
+      }
+
+      if (ownerByPhone) {
+        details.push({
+          field: 'owner_phone',
+          errors: [
+            'This phone belongs to a different existing user than the other owner identifier.',
+          ],
+        });
+      }
+
+      throw validationError(
+        details,
+        'The provided owner identifiers refer to different existing users.',
       );
     }
 
@@ -729,7 +770,12 @@ export class PlatformService {
       });
 
       if (ownerByEmail && ownerByEmail.id !== currentUserId) {
-        throw conflictError('Owner email is already used by another account');
+        throw validationError([
+          {
+            field: 'owner_email',
+            errors: ['Owner email is already used by another account'],
+          },
+        ]);
       }
     }
 
@@ -740,7 +786,12 @@ export class PlatformService {
       });
 
       if (ownerByPhone && ownerByPhone.id !== currentUserId) {
-        throw conflictError('Owner phone is already used by another account');
+        throw validationError([
+          {
+            field: 'owner_phone',
+            errors: ['Owner phone is already used by another account'],
+          },
+        ]);
       }
     }
   }

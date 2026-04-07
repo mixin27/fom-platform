@@ -57,6 +57,7 @@ export async function createPlatformShopAction(
   try {
     await requestAuthenticatedActionApiEnvelope({
       path: "/api/v1/platform/shops",
+      preferFreshSession: true,
       requiredAccess: "platform",
       init: {
         method: "POST",
@@ -82,6 +83,7 @@ export async function updatePlatformShopAction(
   try {
     await requestAuthenticatedActionApiEnvelope({
       path: `/api/v1/platform/shops/${shopId}`,
+      preferFreshSession: true,
       requiredAccess: "platform",
       init: {
         method: "PATCH",
@@ -106,6 +108,7 @@ export async function deletePlatformShopAction(
   try {
     await requestAuthenticatedActionApiEnvelope({
       path: `/api/v1/platform/shops/${shopId}`,
+      preferFreshSession: true,
       requiredAccess: "platform",
       init: {
         method: "DELETE",
