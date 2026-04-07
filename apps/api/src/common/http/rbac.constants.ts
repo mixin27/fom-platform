@@ -20,6 +20,7 @@ export const permissions = {
   platformShopsRead: 'platform.shops.read',
   platformShopsWrite: 'platform.shops.write',
   platformSubscriptionsRead: 'platform.subscriptions.read',
+  platformSubscriptionsWrite: 'platform.subscriptions.write',
   platformSupportRead: 'platform.support.read',
   platformSettingsWrite: 'platform.settings.write',
 } as const;
@@ -147,6 +148,12 @@ export const permissionCatalog: ReadonlyArray<{
     description: 'View billing and subscription records for shops.',
   },
   {
+    code: permissions.platformSubscriptionsWrite,
+    scope: 'platform',
+    name: 'Manage subscriptions',
+    description: 'Update shop subscriptions and invoices from the platform workspace.',
+  },
+  {
     code: permissions.platformSupportRead,
     scope: 'platform',
     name: 'Read support workspace',
@@ -207,6 +214,7 @@ export const defaultRoleCatalog: ReadonlyArray<{
       permissions.platformShopsRead,
       permissions.platformShopsWrite,
       permissions.platformSubscriptionsRead,
+      permissions.platformSubscriptionsWrite,
       permissions.platformSupportRead,
       permissions.platformSettingsWrite,
     ],

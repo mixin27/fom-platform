@@ -52,6 +52,9 @@
 | PATCH  | /platform/shops/{shopId} | Update tenant shop and owner details     | 200 Single PlatformShop             |
 | DELETE | /platform/shops/{shopId} | Delete a tenant shop and shop-scoped data | 204 No Content                     |
 | GET    | /platform/subscriptions | List invoices and subscription summaries  | 200 Single PlatformSubscriptions    |
+| PATCH  | /platform/subscriptions/{subscriptionId} | Update a shop subscription plan and term | 200 Single PlatformSubscription |
+| POST   | /platform/subscriptions/{subscriptionId}/invoices | Create a subscription invoice | 200 Single PlatformInvoice |
+| PATCH  | /platform/invoices/{invoiceId} | Update a platform invoice         | 200 Single PlatformInvoice          |
 | GET    | /platform/support       | List operator issues and support queue    | 200 Single PlatformSupport          |
 | GET    | /platform/settings      | Platform owner profile and plan catalog   | 200 Single PlatformSettings         |
 
@@ -62,7 +65,11 @@ Platform notes:
 - `POST /platform/shops` creates a shop, assigns the owner role, and starts the default trial subscription when the trial plan exists.
 - `PATCH /platform/shops/{shopId}` can update shop name, timezone, owner name, owner email, owner phone, and optionally reset the owner password.
 - `DELETE /platform/shops/{shopId}` permanently deletes the shop and its shop-scoped orders, customers, templates, deliveries, sessions, and billing records.
-- `GET /platform/subscriptions` accepts `search`, `status`, `limit`, and `cursor`.
+- `platform.subscriptions.write` is required for subscription and invoice management actions.
+- `GET /platform/subscriptions` accepts `search`, `status`, `plan`, `subscription_status`, `limit`, and `cursor`.
+- `PATCH /platform/subscriptions/{subscriptionId}` can update plan, status, start and end dates, and auto-renew state.
+- `POST /platform/subscriptions/{subscriptionId}/invoices` creates a new invoice for the selected subscription.
+- `PATCH /platform/invoices/{invoiceId}` updates invoice amount, status, due dates, and payment references.
 - The current platform billing catalog uses `trial`, `pro_monthly`, and `pro_yearly`.
 
 ## Shops and Staff

@@ -22,6 +22,67 @@ export type PlatformInvoiceSummary = {
   paid_at: string | null
 }
 
+export type PlatformInvoice = {
+  id: string
+  subscription_id: string
+  invoice_no: string
+  shop_id: string
+  shop_name: string
+  plan_code: string
+  plan_name: string
+  amount: number
+  currency: string
+  payment_method: string | null
+  provider_ref: string | null
+  status: string
+  due_at: string | null
+  paid_at: string | null
+  created_at: string
+}
+
+export type PlatformSubscription = {
+  id: string
+  shop_id: string
+  shop_name: string
+  owner_name: string
+  owner_email: string | null
+  plan_id: string
+  plan_code: string
+  plan_name: string
+  plan_price: number
+  plan_currency: string
+  billing_period: string
+  status: string
+  auto_renews: boolean
+  start_at: string
+  end_at: string | null
+  created_at: string
+  updated_at: string
+  latest_invoice: PlatformInvoice | null
+  invoice_count: number
+}
+
+export type PlatformPlanOption = {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  billing_period: string
+  price: number
+  currency: string
+  is_active: boolean
+}
+
+export type PlatformPlanSummary = {
+  plan_code: string
+  plan_name: string
+  billing_period: string
+  shop_count: number
+  share: number
+  monthly_recurring_revenue: number
+  collected_revenue: number
+}
+
 export type PlatformShop = {
   id: string
   name: string
@@ -186,28 +247,15 @@ export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord
       paid_at: string | null
       created_at: string
     } | null
-    invoices: Array<{
-      id: string
-      invoice_no: string
-      shop_id: string
-      shop_name: string
-      plan_code: string
-      plan_name: string
-      amount: number
-      currency: string
-      payment_method: string | null
-      provider_ref: string | null
-      status: string
-      due_at: string | null
-      paid_at: string | null
-      created_at: string
-    }>
+    invoices: PlatformInvoice[]
     invoices_pagination: {
       limit: number
       cursor: string | null
       next_cursor: string | null
       total: number
     }
+    subscriptions: PlatformSubscription[]
+    available_plans: PlatformPlanOption[]
     upcoming_renewals: Array<{
       shop_id: string
       shop_name: string
@@ -218,15 +266,7 @@ export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord
       due_at: string | null
       status: string
     }>
-    plans: Array<{
-      plan_code: string
-      plan_name: string
-      billing_period: string
-      shop_count: number
-      share: number
-      monthly_recurring_revenue: number
-      collected_revenue: number
-    }>
+    plans: PlatformPlanSummary[]
   }>("/api/v1/platform/subscriptions", searchParams, retryPath)
 }
 

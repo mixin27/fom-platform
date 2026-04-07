@@ -6,12 +6,17 @@ const badgeClasses: Record<string, string> = {
     "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
   paid: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
   trial: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50",
+  trialing: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50",
   expiring:
     "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
   overdue: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
   pending:
     "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
   inactive:
+    "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  cancelled:
+    "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  expired:
     "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
   failed: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
   high: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",

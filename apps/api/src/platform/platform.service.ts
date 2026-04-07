@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { hashPassword } from '../common/auth/password';
 import {
@@ -10,10 +11,16 @@ import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
+import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import type { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import type { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
 import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
-import { DEFAULT_TRIAL_PLAN_CODE } from './platform-billing.constants';
+import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
+import {
+  DEFAULT_TRIAL_PLAN_CODE,
+  platformSubscriptionStatuses,
+} from './platform-billing.constants';
 
 type TenantSnapshot = {
   id: string;
@@ -50,6 +57,7 @@ type TenantSnapshot = {
 
 type PaymentRow = {
   id: string;
+  subscription_id: string;
   invoice_no: string;
   shop_id: string;
   shop_name: string;
@@ -63,6 +71,39 @@ type PaymentRow = {
   due_at: string | null;
   paid_at: string | null;
   created_at: string;
+};
+
+type SubscriptionRow = {
+  id: string;
+  shop_id: string;
+  shop_name: string;
+  owner_name: string;
+  owner_email: string | null;
+  plan_id: string;
+  plan_code: string;
+  plan_name: string;
+  plan_price: number;
+  plan_currency: string;
+  billing_period: string;
+  status: string;
+  auto_renews: boolean;
+  start_at: string;
+  end_at: string | null;
+  created_at: string;
+  updated_at: string;
+  latest_invoice: PaymentRow | null;
+  invoice_count: number;
+};
+
+type PlanOptionRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  billing_period: string;
+  price: number;
+  currency: string;
+  is_active: boolean;
 };
 
 type SupportIssue = {
@@ -350,11 +391,19 @@ export class PlatformService {
   async getSubscriptions(query: ListPlatformSubscriptionsQueryDto) {
     const normalizedSearch = query.search?.trim().toLowerCase() ?? '';
     const normalizedStatus = query.status ?? 'all';
+    const normalizedSubscriptionStatus = query.subscription_status ?? 'all';
+    const normalizedPlan = query.plan?.trim().toLowerCase() ?? '';
     const tenants = await this.loadTenantSnapshots(new Date());
     const payments = await this.loadPaymentRows();
+    const subscriptions = await this.loadSubscriptionRows();
+    const availablePlans = await this.loadPlanOptions();
 
     const filteredInvoices = payments.filter((payment) => {
       if (normalizedStatus !== 'all' && payment.status !== normalizedStatus) {
+        return false;
+      }
+
+      if (normalizedPlan && payment.plan_code.toLowerCase() !== normalizedPlan) {
         return false;
       }
 
@@ -367,6 +416,31 @@ export class PlatformService {
         payment.shop_name,
         payment.provider_ref ?? '',
         payment.plan_name,
+      ].some((value) => value.toLowerCase().includes(normalizedSearch));
+    });
+
+    const filteredSubscriptions = subscriptions.filter((subscription) => {
+      if (
+        normalizedSubscriptionStatus !== 'all' &&
+        subscription.status !== normalizedSubscriptionStatus
+      ) {
+        return false;
+      }
+
+      if (normalizedPlan && subscription.plan_code.toLowerCase() !== normalizedPlan) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        subscription.shop_name,
+        subscription.owner_name,
+        subscription.owner_email ?? '',
+        subscription.plan_name,
+        subscription.latest_invoice?.invoice_no ?? '',
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
 
@@ -413,8 +487,195 @@ export class PlatformService {
           due_at: tenant.current_period_end,
           status: tenant.status,
         })),
+      subscriptions: filteredSubscriptions,
+      available_plans: availablePlans,
       plans: planSummaries,
     };
+  }
+
+  async updateSubscription(
+    subscriptionId: string,
+    body: UpdatePlatformSubscriptionDto,
+  ) {
+    const subscription = await (this.prisma as any).subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        plan: true,
+      },
+    });
+
+    if (!subscription) {
+      throw notFoundError('Subscription not found');
+    }
+
+    if (
+      body.plan_code === undefined &&
+      body.plan_id === undefined &&
+      body.status === undefined &&
+      body.start_at === undefined &&
+      body.end_at === undefined &&
+      body.auto_renews === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    const resolvedPlan = await this.resolvePlanReference({
+      planId: body.plan_id,
+      planCode: body.plan_code,
+      currentPlanId: subscription.planId,
+    });
+    const nextStartAt =
+      body.start_at !== undefined ? new Date(body.start_at) : subscription.startAt;
+    const nextEndAt =
+      body.end_at !== undefined
+        ? body.end_at
+          ? new Date(body.end_at)
+          : null
+        : subscription.endAt;
+
+    if (nextEndAt && nextEndAt.getTime() < nextStartAt.getTime()) {
+      throw validationError([
+        {
+          field: 'end_at',
+          errors: ['End date must be on or after the start date'],
+        },
+      ]);
+    }
+
+    await (this.prisma as any).subscription.update({
+      where: { id: subscriptionId },
+      data: {
+        ...(resolvedPlan ? { planId: resolvedPlan.id } : {}),
+        ...(body.status !== undefined ? { status: body.status } : {}),
+        ...(body.start_at !== undefined ? { startAt: nextStartAt } : {}),
+        ...(body.end_at !== undefined ? { endAt: nextEndAt } : {}),
+        ...(body.auto_renews !== undefined ? { autoRenews: body.auto_renews } : {}),
+      },
+    });
+
+    return this.loadSubscriptionRowById(subscriptionId);
+  }
+
+  async createInvoice(
+    subscriptionId: string,
+    body: CreatePlatformInvoiceDto,
+  ) {
+    const subscription = await (this.prisma as any).subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        plan: true,
+      },
+    });
+
+    if (!subscription) {
+      throw notFoundError('Subscription not found');
+    }
+
+    const invoiceStatus = body.status ?? 'pending';
+    const paidAt = this.resolvePaidAtForCreate(invoiceStatus, body.paid_at);
+    const dueAt =
+      body.due_at !== undefined
+        ? body.due_at
+          ? new Date(body.due_at)
+          : null
+        : subscription.endAt ?? null;
+
+    const createdInvoiceId = await this.prisma.$transaction(async (tx) => {
+      const invoice = await (tx as any).payment.create({
+        data: {
+          subscriptionId,
+          invoiceNo: await this.generateInvoiceNo(tx),
+          amount: body.amount ?? subscription.plan.price,
+          currency: body.currency?.trim() || subscription.plan.currency,
+          status: invoiceStatus,
+          paymentMethod: body.payment_method?.trim() || null,
+          providerRef: body.provider_ref?.trim() || null,
+          dueAt,
+          paidAt,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await this.syncSubscriptionStatusFromInvoices(tx, subscriptionId);
+      return invoice.id;
+    });
+
+    return this.loadPaymentRowById(createdInvoiceId);
+  }
+
+  async updateInvoice(invoiceId: string, body: UpdatePlatformInvoiceDto) {
+    const invoice = await (this.prisma as any).payment.findUnique({
+      where: { id: invoiceId },
+      include: {
+        subscription: {
+          include: {
+            plan: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw notFoundError('Invoice not found');
+    }
+
+    if (
+      body.amount === undefined &&
+      body.currency === undefined &&
+      body.status === undefined &&
+      body.payment_method === undefined &&
+      body.provider_ref === undefined &&
+      body.due_at === undefined &&
+      body.paid_at === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    const nextStatus = body.status ?? invoice.status;
+    const nextPaidAt = this.resolvePaidAtForUpdate(invoice, nextStatus, body.paid_at);
+    const nextDueAt =
+      body.due_at !== undefined
+        ? body.due_at
+          ? new Date(body.due_at)
+          : null
+        : invoice.dueAt;
+
+    await this.prisma.$transaction(async (tx) => {
+      await (tx as any).payment.update({
+        where: { id: invoiceId },
+        data: {
+          ...(body.amount !== undefined ? { amount: body.amount } : {}),
+          ...(body.currency !== undefined ? { currency: body.currency.trim() } : {}),
+          ...(body.status !== undefined ? { status: body.status } : {}),
+          ...(body.payment_method !== undefined
+            ? { paymentMethod: body.payment_method?.trim() || null }
+            : {}),
+          ...(body.provider_ref !== undefined
+            ? { providerRef: body.provider_ref?.trim() || null }
+            : {}),
+          ...(body.due_at !== undefined ? { dueAt: nextDueAt } : {}),
+          ...(body.paid_at !== undefined || body.status !== undefined
+            ? { paidAt: nextPaidAt }
+            : {}),
+        },
+      });
+
+      await this.syncSubscriptionStatusFromInvoices(tx, invoice.subscriptionId);
+    });
+
+    return this.loadPaymentRowById(invoiceId);
   }
 
   async getSupport() {
@@ -940,6 +1201,7 @@ export class PlatformService {
 
     return payments.map((payment) => ({
       id: payment.id,
+      subscription_id: payment.subscriptionId,
       invoice_no: payment.invoiceNo,
       shop_id: payment.subscription.shopId,
       shop_name: payment.subscription.shop.name,
@@ -954,6 +1216,304 @@ export class PlatformService {
       paid_at: payment.paidAt?.toISOString() ?? null,
       created_at: payment.createdAt.toISOString(),
     }));
+  }
+
+  private async loadPaymentRowById(paymentId: string): Promise<PaymentRow> {
+    const payment = await (this.prisma as any).payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        subscription: {
+          include: {
+            shop: true,
+            plan: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    return {
+      id: payment.id,
+      subscription_id: payment.subscriptionId,
+      invoice_no: payment.invoiceNo,
+      shop_id: payment.subscription.shopId,
+      shop_name: payment.subscription.shop.name,
+      plan_code: payment.subscription.plan.code,
+      plan_name: payment.subscription.plan.name,
+      amount: payment.amount,
+      currency: payment.currency,
+      payment_method: payment.paymentMethod,
+      provider_ref: payment.providerRef,
+      status: payment.status,
+      due_at: payment.dueAt?.toISOString() ?? null,
+      paid_at: payment.paidAt?.toISOString() ?? null,
+      created_at: payment.createdAt.toISOString(),
+    };
+  }
+
+  private async loadSubscriptionRows(): Promise<SubscriptionRow[]> {
+    const subscriptions = (await (this.prisma as any).subscription.findMany({
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        shop: {
+          include: {
+            owner: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        plan: true,
+        payments: {
+          orderBy: [{ dueAt: 'desc' }, { createdAt: 'desc' }],
+          include: {
+            subscription: {
+              include: {
+                shop: true,
+                plan: true,
+              },
+            },
+          },
+        },
+      },
+    })) as any[];
+
+    return subscriptions.map((subscription) => {
+      const latestPayment =
+        subscription.payments.length > 0
+          ? {
+              id: subscription.payments[0].id,
+              subscription_id: subscription.payments[0].subscriptionId,
+              invoice_no: subscription.payments[0].invoiceNo,
+              shop_id: subscription.shopId,
+              shop_name: subscription.shop.name,
+              plan_code: subscription.plan.code,
+              plan_name: subscription.plan.name,
+              amount: subscription.payments[0].amount,
+              currency: subscription.payments[0].currency,
+              payment_method: subscription.payments[0].paymentMethod,
+              provider_ref: subscription.payments[0].providerRef,
+              status: subscription.payments[0].status,
+              due_at: subscription.payments[0].dueAt?.toISOString() ?? null,
+              paid_at: subscription.payments[0].paidAt?.toISOString() ?? null,
+              created_at: subscription.payments[0].createdAt.toISOString(),
+            }
+          : null;
+
+      return {
+        id: subscription.id,
+        shop_id: subscription.shopId,
+        shop_name: subscription.shop.name,
+        owner_name: subscription.shop.owner.name,
+        owner_email: subscription.shop.owner.email,
+        plan_id: subscription.planId,
+        plan_code: subscription.plan.code,
+        plan_name: subscription.plan.name,
+        plan_price: subscription.plan.price,
+        plan_currency: subscription.plan.currency,
+        billing_period: subscription.plan.billingPeriod,
+        status: subscription.status,
+        auto_renews: subscription.autoRenews,
+        start_at: subscription.startAt.toISOString(),
+        end_at: subscription.endAt?.toISOString() ?? null,
+        created_at: subscription.createdAt.toISOString(),
+        updated_at: subscription.updatedAt.toISOString(),
+        latest_invoice: latestPayment,
+        invoice_count: subscription.payments.length,
+      };
+    });
+  }
+
+  private async loadSubscriptionRowById(
+    subscriptionId: string,
+  ): Promise<SubscriptionRow> {
+    const subscriptions = await this.loadSubscriptionRows();
+    const subscription = subscriptions.find((row) => row.id === subscriptionId);
+
+    if (!subscription) {
+      throw notFoundError('Subscription not found');
+    }
+
+    return subscription;
+  }
+
+  private async loadPlanOptions(): Promise<PlanOptionRow[]> {
+    const plans = await (this.prisma as any).plan.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+
+    return plans.map((plan: any) => ({
+      id: plan.id,
+      code: plan.code,
+      name: plan.name,
+      description: plan.description,
+      billing_period: plan.billingPeriod,
+      price: plan.price,
+      currency: plan.currency,
+      is_active: plan.isActive,
+    }));
+  }
+
+  private async resolvePlanReference(input: {
+    planId?: string;
+    planCode?: string;
+    currentPlanId?: string;
+  }) {
+    const planId = input.planId?.trim() || null;
+    const planCode = input.planCode?.trim() || null;
+
+    if (!planId && !planCode) {
+      return null;
+    }
+
+    const [planById, planByCode] = await Promise.all([
+      planId
+        ? (this.prisma as any).plan.findUnique({
+            where: { id: planId },
+            select: { id: true, code: true },
+          })
+        : null,
+      planCode
+        ? (this.prisma as any).plan.findUnique({
+            where: { code: planCode },
+            select: { id: true, code: true },
+          })
+        : null,
+    ]);
+
+    if (planId && !planById) {
+      throw validationError([
+        {
+          field: 'plan_id',
+          errors: ['Plan not found'],
+        },
+      ]);
+    }
+
+    if (planCode && !planByCode) {
+      throw validationError([
+        {
+          field: 'plan_code',
+          errors: ['Plan not found'],
+        },
+      ]);
+    }
+
+    if (planById && planByCode && planById.id !== planByCode.id) {
+      throw validationError([
+        {
+          field: 'plan_id',
+          errors: ['Plan ID does not match the provided plan code'],
+        },
+        {
+          field: 'plan_code',
+          errors: ['Plan code does not match the provided plan ID'],
+        },
+      ]);
+    }
+
+    const resolvedPlan = planById ?? planByCode ?? null;
+
+    if (resolvedPlan && resolvedPlan.id === input.currentPlanId) {
+      return null;
+    }
+
+    return resolvedPlan;
+  }
+
+  private resolvePaidAtForCreate(status: string, paidAt?: string | null) {
+    if (status === 'paid') {
+      return paidAt ? new Date(paidAt) : new Date();
+    }
+
+    return paidAt ? new Date(paidAt) : null;
+  }
+
+  private resolvePaidAtForUpdate(
+    invoice: any,
+    nextStatus: string,
+    paidAt?: string | null,
+  ) {
+    if (paidAt !== undefined) {
+      return paidAt ? new Date(paidAt) : null;
+    }
+
+    if (nextStatus === 'paid') {
+      return invoice.paidAt ?? new Date();
+    }
+
+    if (invoice.status !== nextStatus) {
+      return null;
+    }
+
+    return invoice.paidAt;
+  }
+
+  private async generateInvoiceNo(tx: any) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const suffix = randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase();
+      const candidate = `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${suffix}`;
+      const existing = await (tx as any).payment.findUnique({
+        where: { invoiceNo: candidate },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    return `INV-${Date.now()}`;
+  }
+
+  private async syncSubscriptionStatusFromInvoices(tx: any, subscriptionId: string) {
+    const subscription = await (tx as any).subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        plan: true,
+        payments: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!subscription) {
+      return;
+    }
+
+    if (['cancelled', 'expired', 'inactive'].includes(subscription.status)) {
+      return;
+    }
+
+    const hasOverdueInvoice = subscription.payments.some(
+      (payment: { status: string }) => payment.status === 'overdue',
+    );
+    const nextStatus = hasOverdueInvoice
+      ? 'overdue'
+      : subscription.plan.billingPeriod === 'trial'
+        ? 'trialing'
+        : 'active';
+
+    if (
+      platformSubscriptionStatuses.includes(
+        nextStatus as (typeof platformSubscriptionStatuses)[number],
+      ) &&
+      subscription.status !== nextStatus
+    ) {
+      await (tx as any).subscription.update({
+        where: { id: subscriptionId },
+        data: {
+          status: nextStatus,
+        },
+      });
+    }
   }
 
   private buildRevenueSeries(now: Date, tenants: TenantSnapshot[]) {

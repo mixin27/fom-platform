@@ -19,9 +19,12 @@ import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
+import { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
 import { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
+import { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import { PlatformService } from './platform.service';
 
 @Controller('api/v1/platform')
@@ -89,6 +92,39 @@ export class PlatformController {
   @ApiOperation({ summary: 'Get subscription, invoice, and renewal data' })
   getSubscriptions(@Query() query: ListPlatformSubscriptionsQueryDto) {
     return ok(this.platformService.getSubscriptions(query));
+  }
+
+  @Patch('subscriptions/:subscriptionId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsWrite)
+  @ApiOperation({ summary: 'Update a shop subscription from the platform workspace' })
+  updateSubscription(
+    @Param('subscriptionId') subscriptionId: string,
+    @Body() body: UpdatePlatformSubscriptionDto,
+  ) {
+    return ok(this.platformService.updateSubscription(subscriptionId, body));
+  }
+
+  @Post('subscriptions/:subscriptionId/invoices')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsWrite)
+  @ApiOperation({ summary: 'Create an invoice for a subscription' })
+  createInvoice(
+    @Param('subscriptionId') subscriptionId: string,
+    @Body() body: CreatePlatformInvoiceDto,
+  ) {
+    return ok(this.platformService.createInvoice(subscriptionId, body));
+  }
+
+  @Patch('invoices/:invoiceId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsWrite)
+  @ApiOperation({ summary: 'Update an invoice from the platform workspace' })
+  updateInvoice(
+    @Param('invoiceId') invoiceId: string,
+    @Body() body: UpdatePlatformInvoiceDto,
+  ) {
+    return ok(this.platformService.updateInvoice(invoiceId, body));
   }
 
   @Get('support')

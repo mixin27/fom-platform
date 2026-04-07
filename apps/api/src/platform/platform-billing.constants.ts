@@ -1,5 +1,21 @@
 export const DEFAULT_TRIAL_PLAN_CODE = 'trial';
 
+export const platformSubscriptionStatuses = [
+  'trialing',
+  'active',
+  'overdue',
+  'expired',
+  'cancelled',
+  'inactive',
+] as const;
+
+export const platformInvoiceStatuses = [
+  'pending',
+  'paid',
+  'overdue',
+  'failed',
+] as const;
+
 export const defaultPlanCatalog = [
   {
     code: 'trial',

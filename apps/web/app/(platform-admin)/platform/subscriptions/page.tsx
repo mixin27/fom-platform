@@ -3,7 +3,6 @@ import { CreditCard, Receipt, TrendingUp, WalletCards } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import { getPlatformSubscriptions } from "@/lib/platform/api"
 import {
@@ -17,6 +16,8 @@ import {
   getSingleSearchParam,
   type PlatformSearchParams,
 } from "@/lib/platform/query"
+import { PlatformInvoiceHistoryTable } from "./_components/platform-invoice-history-table"
+import { PlatformSubscriptionsTable } from "./_components/platform-subscriptions-table"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -25,7 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
 
 type PlatformSubscriptionsPageProps = {
   searchParams?: Promise<PlatformSearchParams>
@@ -107,42 +107,17 @@ export default async function PlatformSubscriptionsPage({
         </div>
       ) : null}
 
+      <PlatformSubscriptionsTable
+        rows={data.subscriptions}
+        plans={data.available_plans}
+      />
+
       <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-        <PlatformDataTable
-          title="Invoice history"
-          description="All payment records"
+        <PlatformInvoiceHistoryTable
           rows={data.invoices}
-          emptyMessage="No invoices match the current filters."
-          toolbar={
-            <form
-              className="flex flex-col gap-2 sm:flex-row"
-              action="/platform/subscriptions"
-            >
-              <Input
-                name="search"
-                defaultValue={search}
-                placeholder="Search invoice or shop..."
-                className="h-9 w-full min-w-[220px] sm:w-[240px]"
-              />
-              <select
-                name="status"
-                defaultValue={status}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-              >
-                <option value="all">All statuses</option>
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="overdue">Overdue</option>
-                <option value="failed">Failed</option>
-              </select>
-              <input type="hidden" name="limit" value={String(limit)} />
-              <Button type="submit" size="sm">
-                Apply
-              </Button>
-            </form>
-          }
-          footer={`Showing ${data.invoices.length} of ${data.invoices_pagination.total} invoices`}
-          pagination={{
+          subscriptions={data.subscriptions}
+          pagination={data.invoices_pagination}
+          paginationLinks={{
             previousHref: previousCursor
               ? buildQueryHref("/platform/subscriptions", params, {
                   cursor: previousCursor,
@@ -158,54 +133,11 @@ export default async function PlatformSubscriptionsPage({
                 })
               : null,
           }}
-          columns={[
-            {
-              key: "invoice",
-              header: "Invoice",
-              render: (invoice) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-[var(--fom-ink)]">
-                    {invoice.invoice_no}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {invoice.provider_ref ?? invoice.shop_name}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "shop",
-              header: "Shop",
-              render: (invoice) => invoice.shop_name,
-            },
-            {
-              key: "plan",
-              header: "Plan",
-              render: (invoice) => invoice.plan_name,
-            },
-            {
-              key: "amount",
-              header: "Amount",
-              render: (invoice) =>
-                formatCurrency(invoice.amount, invoice.currency),
-            },
-            {
-              key: "method",
-              header: "Method",
-              render: (invoice) => invoice.payment_method ?? "—",
-            },
-            {
-              key: "date",
-              header: "Date",
-              render: (invoice) =>
-                formatDate(invoice.paid_at ?? invoice.due_at ?? invoice.created_at),
-            },
-            {
-              key: "status",
-              header: "Status",
-              render: (invoice) => <PlatformStatusBadge status={invoice.status} />,
-            },
-          ]}
+          initialFilters={{
+            search,
+            status,
+            limit,
+          }}
         />
 
         <div className="flex flex-col gap-3">
