@@ -6,6 +6,47 @@ import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
 type SearchParamsValue = string | string[] | undefined
 type SearchParamsRecord = Record<string, SearchParamsValue>
 
+export type PlatformCursorPagination = {
+  limit: number
+  cursor: string | null
+  next_cursor: string | null
+  total: number
+}
+
+export type PlatformInvoiceSummary = {
+  invoice_no: string
+  amount: number
+  currency: string
+  status: string
+  due_at: string | null
+  paid_at: string | null
+}
+
+export type PlatformShop = {
+  id: string
+  name: string
+  owner_name: string
+  owner_email: string | null
+  owner_phone: string | null
+  plan_code: string | null
+  plan_name: string | null
+  plan_price: number | null
+  plan_currency: string | null
+  billing_period: string | null
+  status: string
+  member_count: number
+  customer_count: number
+  total_orders: number
+  delivered_orders: number
+  total_revenue: number
+  township: string | null
+  joined_at: string
+  last_active_at: string | null
+  active_session_count: number
+  current_period_end: string | null
+  latest_invoice: PlatformInvoiceSummary | null
+}
+
 function buildQueryString(searchParams?: SearchParamsRecord) {
   const query = new URLSearchParams()
 
@@ -110,38 +151,11 @@ export async function getPlatformDashboard() {
 export async function getPlatformShops(searchParams?: SearchParamsRecord) {
   const retryPath = `/platform/shops${buildQueryString(searchParams)}`
 
-  return platformRequest<
-    Array<{
-      id: string
-      name: string
-      owner_name: string
-      owner_email: string | null
-      plan_code: string | null
-      plan_name: string | null
-      plan_price: number | null
-      plan_currency: string | null
-      billing_period: string | null
-      status: string
-      member_count: number
-      customer_count: number
-      total_orders: number
-      delivered_orders: number
-      total_revenue: number
-      township: string | null
-      joined_at: string
-      last_active_at: string | null
-      active_session_count: number
-      current_period_end: string | null
-      latest_invoice: {
-        invoice_no: string
-        amount: number
-        currency: string
-        status: string
-        due_at: string | null
-        paid_at: string | null
-      } | null
-    }>
-  >("/api/v1/platform/shops", searchParams, retryPath)
+  return platformRequest<Array<PlatformShop>>(
+    "/api/v1/platform/shops",
+    searchParams,
+    retryPath
+  )
 }
 
 export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord) {
