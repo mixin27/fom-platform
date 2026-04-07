@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   type ColumnDef,
   flexRender,
@@ -106,7 +106,7 @@ export function PlatformInvoiceHistoryTable({
     },
   ])
 
-  const columns: ColumnDef<PlatformInvoice>[] = [
+  const columns = useMemo<ColumnDef<PlatformInvoice>[]>(() => [
     {
       accessorKey: "invoice_no",
       id: "invoice_no",
@@ -172,7 +172,7 @@ export function PlatformInvoiceHistoryTable({
         </div>
       ),
     },
-  ]
+  ], [subscriptions])
 
   const table = useReactTable({
     data: rows,

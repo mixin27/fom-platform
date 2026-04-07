@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import {
   type ColumnDef,
@@ -150,14 +150,26 @@ function SubscriptionActions({
           <MoreHorizontalIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent
+        align="end"
+        className="w-56"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <DropdownMenuLabel>Manage subscription</DropdownMenuLabel>
         <DropdownMenuGroup>
-          <DropdownMenuItem onSelect={() => onEdit(subscription)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              onEdit(subscription)
+            }}
+          >
             <PencilLineIcon />
             Edit subscription
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onCreateInvoice(subscription)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              onCreateInvoice(subscription)
+            }}
+          >
             <CreditCardIcon />
             Create invoice
           </DropdownMenuItem>
@@ -195,164 +207,175 @@ export function PlatformSubscriptionsTable({
     useState<PlatformSubscription | null>(null)
   const [, startTransition] = useTransition()
 
-  const normalizedSearch = search.trim().toLowerCase()
-  const filteredRows = rows.filter((subscription) => {
-    if (status !== "all" && subscription.status !== status) {
-      return false
-    }
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase()
+    return rows.filter((subscription) => {
+      if (status !== "all" && subscription.status !== status) {
+        return false
+      }
 
-    if (plan !== "all" && subscription.plan_code !== plan) {
-      return false
-    }
+      if (plan !== "all" && subscription.plan_code !== plan) {
+        return false
+      }
 
-    if (!normalizedSearch) {
-      return true
-    }
+      if (!normalizedSearch) {
+        return true
+      }
 
-    return [
-      subscription.shop_name,
-      subscription.owner_name,
-      subscription.owner_email ?? "",
-      subscription.plan_name,
-      subscription.latest_invoice?.invoice_no ?? "",
-    ].some((value) => value.toLowerCase().includes(normalizedSearch))
-  })
+      return [
+        subscription.shop_name,
+        subscription.owner_name,
+        subscription.owner_email ?? "",
+        subscription.plan_name,
+        subscription.latest_invoice?.invoice_no ?? "",
+      ].some((value) => value.toLowerCase().includes(normalizedSearch))
+    })
+  }, [rows, search, status, plan])
 
-  const totalMrr = filteredRows.reduce((sum, subscription) => {
-    if (subscription.billing_period === "yearly") {
-      return sum + subscription.plan_price / 12
-    }
+  const totalMrr = useMemo(() => {
+    return filteredRows.reduce((sum, subscription) => {
+      if (subscription.billing_period === "yearly") {
+        return sum + subscription.plan_price / 12
+      }
 
-    if (subscription.billing_period === "monthly") {
-      return sum + subscription.plan_price
-    }
+      if (subscription.billing_period === "monthly") {
+        return sum + subscription.plan_price
+      }
 
-    return sum
-  }, 0)
+      return sum
+    }, 0)
+  }, [filteredRows])
 
-  const columns: ColumnDef<PlatformSubscription>[] = [
-    {
-      accessorKey: "shop_name",
-      id: "shop_name",
-      header: ({ column }) => <SortableHeader label="Shop" column={column} />,
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium text-[var(--fom-ink)]">
-            {row.original.shop_name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {row.original.owner_name}
-            {row.original.owner_email ? ` · ${row.original.owner_email}` : ""}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "plan_name",
-      id: "plan_name",
-      header: ({ column }) => <SortableHeader label="Plan" column={column} />,
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium text-[var(--fom-ink)]">
-            {row.original.plan_name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {formatCurrency(
-              row.original.plan_price,
-              row.original.plan_currency
-            )}{" "}
-            · {row.original.billing_period}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "status",
-      id: "status",
-      header: ({ column }) => <SortableHeader label="Status" column={column} />,
-      cell: ({ row }) => <PlatformStatusBadge status={row.original.status} />,
-    },
-    {
-      accessorKey: "end_at",
-      id: "end_at",
-      header: ({ column }) => (
-        <SortableHeader label="Renewal" column={column} />
-      ),
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium text-[var(--fom-ink)]">
-            {formatDate(row.original.end_at)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Started {formatDate(row.original.start_at)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "latest_invoice",
-      id: "latest_invoice",
-      header: "Latest invoice",
-      cell: ({ row }) =>
-        row.original.latest_invoice ? (
+  const columns = useMemo<ColumnDef<PlatformSubscription>[]>(
+    () => [
+      {
+        accessorKey: "shop_name",
+        id: "shop_name",
+        header: ({ column }) => <SortableHeader label="Shop" column={column} />,
+        cell: ({ row }) => (
           <div className="flex flex-col gap-1">
             <span className="font-medium text-[var(--fom-ink)]">
-              {row.original.latest_invoice.invoice_no}
+              {row.original.shop_name}
             </span>
-            <div className="flex items-center gap-2">
-              <PlatformStatusBadge
-                status={row.original.latest_invoice.status}
-              />
-              <span className="text-xs text-muted-foreground">
-                {formatCurrency(
-                  row.original.latest_invoice.amount,
-                  row.original.latest_invoice.currency
-                )}
-              </span>
-            </div>
+            <span className="text-xs text-muted-foreground">
+              {row.original.owner_name}
+              {row.original.owner_email ? ` · ${row.original.owner_email}` : ""}
+            </span>
           </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">No invoices yet</span>
         ),
-    },
-    {
-      accessorKey: "auto_renews",
-      id: "auto_renews",
-      header: "Auto renew",
-      cell: ({ row }) => (
-        <PlatformStatusBadge
-          status={row.original.auto_renews ? "active" : "inactive"}
-          label={row.original.auto_renews ? "Enabled" : "Manual"}
-        />
-      ),
-    },
-    {
-      id: "updated_at",
-      accessorFn: (row) => row.updated_at,
-      header: ({ column }) => (
-        <SortableHeader label="Updated" column={column} />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {formatRelativeDate(row.original.updated_at)}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="flex justify-end">
-          <SubscriptionActions
-            subscription={row.original}
-            onEdit={setEditingSubscription}
-            onCreateInvoice={setInvoiceTarget}
+      },
+      {
+        accessorKey: "plan_name",
+        id: "plan_name",
+        header: ({ column }) => <SortableHeader label="Plan" column={column} />,
+        cell: ({ row }) => (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-[var(--fom-ink)]">
+              {row.original.plan_name}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatCurrency(
+                row.original.plan_price,
+                row.original.plan_currency
+              )}{" "}
+              · {row.original.billing_period}
+            </span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "status",
+        id: "status",
+        header: ({ column }) => (
+          <SortableHeader label="Status" column={column} />
+        ),
+        cell: ({ row }) => <PlatformStatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: "end_at",
+        id: "end_at",
+        header: ({ column }) => (
+          <SortableHeader label="Renewal" column={column} />
+        ),
+        cell: ({ row }) => (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-[var(--fom-ink)]">
+              {formatDate(row.original.end_at)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Started {formatDate(row.original.start_at)}
+            </span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "latest_invoice",
+        id: "latest_invoice",
+        header: "Latest invoice",
+        cell: ({ row }) =>
+          row.original.latest_invoice ? (
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-[var(--fom-ink)]">
+                {row.original.latest_invoice.invoice_no}
+              </span>
+              <div className="flex items-center gap-2">
+                <PlatformStatusBadge
+                  status={row.original.latest_invoice.status}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {formatCurrency(
+                    row.original.latest_invoice.amount,
+                    row.original.latest_invoice.currency
+                  )}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              No invoices yet
+            </span>
+          ),
+      },
+      {
+        accessorKey: "auto_renews",
+        id: "auto_renews",
+        header: "Auto renew",
+        cell: ({ row }) => (
+          <PlatformStatusBadge
+            status={row.original.auto_renews ? "active" : "inactive"}
+            label={row.original.auto_renews ? "Enabled" : "Manual"}
           />
-        </div>
-      ),
-    },
-  ]
+        ),
+      },
+      {
+        id: "updated_at",
+        accessorFn: (row) => row.updated_at,
+        header: ({ column }) => (
+          <SortableHeader label="Updated" column={column} />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatRelativeDate(row.original.updated_at)}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        enableSorting: false,
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <SubscriptionActions
+              subscription={row.original}
+              onEdit={setEditingSubscription}
+              onCreateInvoice={setInvoiceTarget}
+            />
+          </div>
+        ),
+      },
+    ],
+    [setEditingSubscription, setInvoiceTarget]
+  )
 
   const table = useReactTable({
     data: filteredRows,
@@ -421,7 +444,7 @@ export function PlatformSubscriptionsTable({
               <SelectTrigger className="h-9 w-full md:w-[180px]">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
                 <SelectGroup>
                   <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="trialing">Trialing</SelectItem>
@@ -437,7 +460,7 @@ export function PlatformSubscriptionsTable({
               <SelectTrigger className="h-9 w-full md:w-[200px]">
                 <SelectValue placeholder="All plans" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
                 <SelectGroup>
                   <SelectItem value="all">All plans</SelectItem>
                   {plans.map((planOption) => (
@@ -468,35 +491,35 @@ export function PlatformSubscriptionsTable({
               {notice}
             </div>
           ) : null}
-          {filteredRows.length > 0 ? (
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow
-                    key={headerGroup.id}
-                    className="bg-[#fdfeff] hover:bg-[#fdfeff]"
-                  >
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className={cn(
-                          "px-4 py-2.5",
-                          header.id === "actions" ? "w-[80px] text-right" : ""
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="bg-[#fdfeff] hover:bg-[#fdfeff]"
+                >
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        "px-4 py-2.5",
+                        header.id === "actions" ? "w-[80px] text-right" : ""
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
@@ -513,27 +536,29 @@ export function PlatformSubscriptionsTable({
                       </TableCell>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="px-4 py-10">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <CreditCardIcon />
-                  </EmptyMedia>
-                  <EmptyTitle>
-                    No subscriptions match the current filters
-                  </EmptyTitle>
-                  <EmptyDescription>
-                    Try widening the search or resetting the plan and status
-                    filters.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            </div>
-          )}
+                ))
+              ) : (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="px-4 py-10">
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <CreditCardIcon />
+                        </EmptyMedia>
+                        <EmptyTitle>
+                          No subscriptions match the current filters
+                        </EmptyTitle>
+                        <EmptyDescription>
+                          Try widening the search or resetting the plan and
+                          status filters.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

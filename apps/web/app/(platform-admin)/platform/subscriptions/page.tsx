@@ -99,7 +99,10 @@ export default async function PlatformSubscriptionsPage({
           <span className="font-semibold">{data.overdue_notice.shop_name}</span>{" "}
           has an overdue invoice of{" "}
           <span className="font-semibold">
-            {formatCurrency(data.overdue_notice.amount, data.overdue_notice.currency)}
+            {formatCurrency(
+              data.overdue_notice.amount,
+              data.overdue_notice.currency
+            )}
           </span>
           {data.overdue_notice.due_at
             ? ` since ${formatDate(data.overdue_notice.due_at)}.`
@@ -190,7 +193,10 @@ export default async function PlatformSubscriptionsPage({
             </CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0">
               {data.plans.map((plan) => (
-                <div key={plan.plan_code} className="rounded-xl bg-[#f7f8fc] px-3.5 py-3">
+                <div
+                  key={plan.plan_code}
+                  className="rounded-xl bg-[#f7f8fc] px-3.5 py-3"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[var(--fom-ink)]">
                       {plan.plan_name}
