@@ -71,8 +71,65 @@ model Shop {
   customers        Customer[]
   orders           Order[]
   messageTemplates MessageTemplate[]
+  subscription     Subscription?
 
   @@index([ownerUserId])
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  description   String?
+  price         Int
+  currency      String         @default("MMK")
+  billingPeriod String
+  isActive      Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id         String    @id @default(cuid())
+  shopId     String    @unique
+  planId     String
+  status     String
+  startAt    DateTime
+  endAt      DateTime?
+  autoRenews Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  shop       Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan       Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments   Payment[]
+
+  @@index([planId, status, endAt])
+  @@index([status, endAt])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id            String       @id @default(cuid())
+  subscriptionId String
+  invoiceNo      String       @unique
+  amount         Int
+  currency       String       @default("MMK")
+  status         String
+  paymentMethod  String?
+  providerRef    String?
+  dueAt          DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, status])
+  @@index([status, dueAt])
+  @@map("payments")
 }
 
 model ShopMember {

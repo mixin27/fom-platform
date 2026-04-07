@@ -6,12 +6,16 @@ import {
   defaultRoleCatalog,
   permissionCatalog,
 } from '../src/common/http/rbac.constants';
+import {
+  DEFAULT_TRIAL_PLAN_CODE,
+  defaultPlanCatalog,
+} from '../src/platform/platform-billing.constants';
 
 const connectionString =
   process.env.DATABASE_URL ??
   'postgresql://postgres:postgres@localhost:5432/fom_platform_api?schema=public';
 
-const prisma = new PrismaClient({
+const prisma: any = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),
 });
 
@@ -35,6 +39,43 @@ function requireMapValue<T>(map: Map<string, T>, key: string): T {
   }
 
   return value;
+}
+
+async function seedPlanCatalog() {
+  const plansByCode = new Map<string, { id: string }>();
+
+  for (const plan of defaultPlanCatalog) {
+    const record = await prisma.plan.upsert({
+      where: { code: plan.code },
+      update: {
+        name: plan.name,
+        description: plan.description,
+        price: plan.price,
+        currency: plan.currency,
+        billingPeriod: plan.billingPeriod,
+        isActive: plan.isActive,
+        sortOrder: plan.sortOrder,
+      },
+      create: {
+        code: plan.code,
+        name: plan.name,
+        description: plan.description,
+        price: plan.price,
+        currency: plan.currency,
+        billingPeriod: plan.billingPeriod,
+        isActive: plan.isActive,
+        sortOrder: plan.sortOrder,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    plansByCode.set(record.code, record);
+  }
+
+  return { plansByCode };
 }
 
 async function seedRbacCatalog() {
@@ -118,6 +159,8 @@ function requireMappedId(
 }
 
 async function resetDemoData() {
+  await prisma.payment.deleteMany();
+  await prisma.subscription.deleteMany();
   await prisma.messageTemplate.deleteMany();
   await prisma.delivery.deleteMany();
   await prisma.orderStatusEvent.deleteMany();
@@ -268,6 +311,25 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     },
   });
 
+  const trialPlanId = (
+    await prisma.plan.findUnique({
+      where: { code: DEFAULT_TRIAL_PLAN_CODE },
+      select: { id: true },
+    })
+  )?.id;
+  const proPlanId = (
+    await prisma.plan.findUnique({
+      where: { code: 'pro_monthly' },
+      select: { id: true },
+    })
+  )?.id;
+  const yearlyPlanId = (
+    await prisma.plan.findUnique({
+      where: { code: 'pro_yearly' },
+      select: { id: true },
+    })
+  )?.id;
+
   const shop = await prisma.shop.create({
     data: {
       ownerUserId: maAye.id,
@@ -276,6 +338,37 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
       createdAt: new Date('2026-03-20T09:05:00.000Z'),
     },
   });
+
+  if (proPlanId) {
+    const subscription = await prisma.subscription.create({
+      data: {
+        shopId: shop.id,
+        planId: proPlanId,
+        status: 'active',
+        startAt: new Date('2026-03-20T09:05:00.000Z'),
+        endAt: new Date('2026-05-01T00:00:00.000Z'),
+        autoRenews: true,
+        createdAt: new Date('2026-03-20T09:05:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+    });
+
+    await prisma.payment.create({
+      data: {
+        subscriptionId: subscription.id,
+        invoiceNo: 'INV-0089',
+        amount: 5000,
+        currency: 'MMK',
+        status: 'paid',
+        paymentMethod: 'KBZ Pay',
+        providerRef: 'KBZ-INV-0089',
+        dueAt: new Date('2026-04-01T00:00:00.000Z'),
+        paidAt: new Date('2026-04-01T08:00:00.000Z'),
+        createdAt: new Date('2026-04-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T08:00:00.000Z'),
+      },
+    });
+  }
 
   const ownerMember = await prisma.shopMember.create({
     data: {
@@ -398,8 +491,8 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
       phone: true,
     },
   });
-  const customerIdByPhone = new Map(
-    customers.map((customer) => [customer.phone, customer.id]),
+  const customerIdByPhone = new Map<string, string>(
+    customers.map((customer: any) => [customer.phone, customer.id]),
   );
 
   await prisma.order.createMany({
@@ -524,7 +617,9 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
       orderNo: true,
     },
   });
-  const orderIdByNo = new Map(orders.map((order) => [order.orderNo, order.id]));
+  const orderIdByNo = new Map<string, string>(
+    orders.map((order: any) => [order.orderNo, order.id]),
+  );
 
   await prisma.orderItem.createMany({
     data: [
@@ -757,10 +852,247 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
       },
     ],
   });
+
+  const extraOwners = await prisma.user.createManyAndReturn({
+    data: [
+      {
+        name: 'Daw Thiri',
+        email: 'thiri@example.com',
+        phone: '09 7000 3333',
+        locale: 'my',
+        emailVerifiedAt: new Date('2026-01-15T09:00:00.000Z'),
+        createdAt: new Date('2026-01-15T09:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T06:00:00.000Z'),
+      },
+      {
+        name: 'Ko Zaw Electronics',
+        email: 'kozaw@example.com',
+        phone: '09 7000 4444',
+        locale: 'my',
+        emailVerifiedAt: new Date('2026-03-26T08:00:00.000Z'),
+        createdAt: new Date('2026-03-26T08:00:00.000Z'),
+        updatedAt: new Date('2026-04-03T05:00:00.000Z'),
+      },
+      {
+        name: 'Phyo Cosmetics Owner',
+        email: 'phyo@example.com',
+        phone: '09 7000 5555',
+        locale: 'my',
+        emailVerifiedAt: new Date('2026-02-10T08:30:00.000Z'),
+        createdAt: new Date('2026-02-10T08:30:00.000Z'),
+        updatedAt: new Date('2026-04-01T04:00:00.000Z'),
+      },
+      {
+        name: 'Thida',
+        email: 'thida@example.com',
+        phone: '09 7000 6666',
+        locale: 'my',
+        emailVerifiedAt: new Date('2026-02-01T09:30:00.000Z'),
+        createdAt: new Date('2026-02-01T09:30:00.000Z'),
+        updatedAt: new Date('2026-04-01T03:30:00.000Z'),
+      },
+    ],
+  });
+  const extraOwnerByEmail = new Map<string, any>(
+    extraOwners.map((user: any) => [user.email ?? '', user]),
+  );
+
+  const aungBeautyShop = await prisma.shop.create({
+    data: {
+      ownerUserId: requireMapValue(extraOwnerByEmail, 'thiri@example.com').id,
+      name: 'Aung Beauty Store',
+      timezone: 'Asia/Yangon',
+      createdAt: new Date('2025-12-20T09:00:00.000Z'),
+    },
+  });
+  const koZawShop = await prisma.shop.create({
+    data: {
+      ownerUserId: requireMapValue(extraOwnerByEmail, 'kozaw@example.com').id,
+      name: 'Ko Zaw Electronics',
+      timezone: 'Asia/Yangon',
+      createdAt: new Date('2026-03-26T08:30:00.000Z'),
+    },
+  });
+  const phyoShop = await prisma.shop.create({
+    data: {
+      ownerUserId: requireMapValue(extraOwnerByEmail, 'phyo@example.com').id,
+      name: 'Phyo Cosmetics',
+      timezone: 'Asia/Yangon',
+      createdAt: new Date('2026-02-10T08:45:00.000Z'),
+    },
+  });
+  const thidaShop = await prisma.shop.create({
+    data: {
+      ownerUserId: requireMapValue(extraOwnerByEmail, 'thida@example.com').id,
+      name: 'Thida Food Express',
+      timezone: 'Asia/Yangon',
+      createdAt: new Date('2026-02-01T10:00:00.000Z'),
+    },
+  });
+
+  const extraMemberships = await prisma.shopMember.createManyAndReturn({
+    data: [
+      {
+        shopId: aungBeautyShop.id,
+        userId: requireMapValue(extraOwnerByEmail, 'thiri@example.com').id,
+        status: 'active',
+        createdAt: new Date('2025-12-20T09:00:00.000Z'),
+      },
+      {
+        shopId: koZawShop.id,
+        userId: requireMapValue(extraOwnerByEmail, 'kozaw@example.com').id,
+        status: 'active',
+        createdAt: new Date('2026-03-26T08:30:00.000Z'),
+      },
+      {
+        shopId: phyoShop.id,
+        userId: requireMapValue(extraOwnerByEmail, 'phyo@example.com').id,
+        status: 'active',
+        createdAt: new Date('2026-02-10T08:45:00.000Z'),
+      },
+      {
+        shopId: thidaShop.id,
+        userId: requireMapValue(extraOwnerByEmail, 'thida@example.com').id,
+        status: 'active',
+        createdAt: new Date('2026-02-01T10:00:00.000Z'),
+      },
+    ],
+  });
+
+  await prisma.shopMemberRoleAssignment.createMany({
+    data: extraMemberships.map((membership) => ({
+      shopMemberId: membership.id,
+      roleId: requireMappedId(roleIds, 'owner'),
+      createdAt: membership.createdAt,
+    })),
+  });
+
+  const extraSubscriptions: any[] = [];
+
+  if (yearlyPlanId) {
+    extraSubscriptions.push({
+      shopId: aungBeautyShop.id,
+      planId: yearlyPlanId,
+      status: 'active',
+      startAt: new Date('2025-12-20T09:00:00.000Z'),
+      endAt: new Date('2026-12-20T00:00:00.000Z'),
+      autoRenews: true,
+      createdAt: new Date('2025-12-20T09:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T06:00:00.000Z'),
+    });
+  }
+
+  if (trialPlanId) {
+    extraSubscriptions.push({
+      shopId: koZawShop.id,
+      planId: trialPlanId,
+      status: 'trialing',
+      startAt: new Date('2026-03-26T08:30:00.000Z'),
+      endAt: new Date('2026-04-08T00:00:00.000Z'),
+      autoRenews: false,
+      createdAt: new Date('2026-03-26T08:30:00.000Z'),
+      updatedAt: new Date('2026-04-03T05:00:00.000Z'),
+    });
+  }
+
+  if (proPlanId) {
+    extraSubscriptions.push(
+      {
+        shopId: phyoShop.id,
+        planId: proPlanId,
+        status: 'active',
+        startAt: new Date('2026-02-10T08:45:00.000Z'),
+        endAt: new Date('2026-04-01T00:00:00.000Z'),
+        autoRenews: true,
+        createdAt: new Date('2026-02-10T08:45:00.000Z'),
+        updatedAt: new Date('2026-04-01T04:00:00.000Z'),
+      },
+      {
+        shopId: thidaShop.id,
+        planId: proPlanId,
+        status: 'active',
+        startAt: new Date('2026-02-01T10:00:00.000Z'),
+        endAt: new Date('2026-05-01T00:00:00.000Z'),
+        autoRenews: true,
+        createdAt: new Date('2026-02-01T10:00:00.000Z'),
+        updatedAt: new Date('2026-04-01T03:30:00.000Z'),
+      },
+    );
+  }
+
+  const createdSubscriptions = await prisma.subscription.createManyAndReturn({
+    data: extraSubscriptions,
+  });
+  const subscriptionIdByShopId = new Map<string, string>(
+    createdSubscriptions.map((subscription: any) => [
+      subscription.shopId,
+      subscription.id,
+    ]),
+  );
+
+  const paymentData: any[] = [];
+
+  const aungSubscriptionId = subscriptionIdByShopId.get(aungBeautyShop.id);
+  if (aungSubscriptionId) {
+    paymentData.push({
+      subscriptionId: aungSubscriptionId,
+      invoiceNo: 'INV-0084',
+      amount: 50000,
+      currency: 'MMK',
+      status: 'paid',
+      paymentMethod: 'KBZ Pay',
+      providerRef: 'KBZ-INV-0084',
+      dueAt: new Date('2025-12-20T00:00:00.000Z'),
+      paidAt: new Date('2025-12-20T10:00:00.000Z'),
+      createdAt: new Date('2025-12-20T00:00:00.000Z'),
+      updatedAt: new Date('2025-12-20T10:00:00.000Z'),
+    });
+  }
+
+  const phyoSubscriptionId = subscriptionIdByShopId.get(phyoShop.id);
+  if (phyoSubscriptionId) {
+    paymentData.push({
+      subscriptionId: phyoSubscriptionId,
+      invoiceNo: 'INV-0086',
+      amount: 5000,
+      currency: 'MMK',
+      status: 'overdue',
+      paymentMethod: null,
+      providerRef: null,
+      dueAt: new Date('2026-03-01T00:00:00.000Z'),
+      paidAt: null,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T04:00:00.000Z'),
+    });
+  }
+
+  const thidaSubscriptionId = subscriptionIdByShopId.get(thidaShop.id);
+  if (thidaSubscriptionId) {
+    paymentData.push({
+      subscriptionId: thidaSubscriptionId,
+      invoiceNo: 'INV-0088',
+      amount: 5000,
+      currency: 'MMK',
+      status: 'paid',
+      paymentMethod: 'Wave Money',
+      providerRef: 'WAVE-INV-0088',
+      dueAt: new Date('2026-04-01T00:00:00.000Z'),
+      paidAt: new Date('2026-04-01T09:00:00.000Z'),
+      createdAt: new Date('2026-04-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-01T09:00:00.000Z'),
+    });
+  }
+
+  if (paymentData.length > 0) {
+    await prisma.payment.createMany({
+      data: paymentData,
+    });
+  }
 }
 
 async function main() {
   const { rolesByCode } = await seedRbacCatalog();
+  await seedPlanCatalog();
 
   if (seedMode === 'demo') {
     await resetDemoData();

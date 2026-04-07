@@ -1,8 +1,19 @@
-import { DollarSign, Store, TrendingUp, Users } from "lucide-react"
+import Link from "next/link"
+import { CreditCard, ShieldAlert, Store, TrendingUp } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
-import { Badge } from "@workspace/ui/components/badge"
+import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
+import { getPlatformDashboard } from "@/lib/platform/api"
+import {
+  formatCompactNumber,
+  formatCurrency,
+  formatDate,
+  formatPercent,
+  formatRelativeDate,
+} from "@/lib/platform/format"
+import { Button } from "@workspace/ui/components/button"
 import {
   Card,
   CardContent,
@@ -11,130 +22,114 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card"
 
-const tenantRows = [
-  {
-    shop: "Ma Aye Shop",
-    plan: "Pro",
-    orders: "847",
-    mrr: "5,000 MMK",
-    joined: "Jan 5, 2025",
-    active: "2 min ago",
-    status: "Active",
-  },
-  {
-    shop: "Aung Beauty Store",
-    plan: "Lifetime",
-    orders: "1,243",
-    mrr: "Lifetime",
-    joined: "Dec 20, 2024",
-    active: "1 hr ago",
-    status: "Active",
-  },
-  {
-    shop: "Ko Zaw Electronics",
-    plan: "Trial",
-    orders: "34",
-    mrr: "Trial",
-    joined: "Mar 26, 2025",
-    active: "Yesterday",
-    status: "Trial",
-  },
-  {
-    shop: "Phyo Cosmetics",
-    plan: "Pro",
-    orders: "290",
-    mrr: "5,000 MMK",
-    joined: "Feb 10, 2025",
-    active: "2 days ago",
-    status: "Overdue",
-  },
-]
+export default async function PlatformHomePage() {
+  const response = await getPlatformDashboard()
+  const dashboard = response.data
+  const maxRevenueAmount = Math.max(
+    ...dashboard.revenue_series.map((entry) => entry.amount),
+    1
+  )
 
-export default function PlatformHomePage() {
   return (
     <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Dashboard"
         title="Operate the platform from one dense workspace"
-        description="Monitor tenants, revenue, risk, and support load from an internal console built for daily operator use."
+        description="Track tenant growth, recurring revenue, risk, and follow-up from one internal operator dashboard."
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/platform/shops">View shops</Link>
+          </Button>
+        }
       />
 
-      <section id="overview" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardStatCard
           title="Total registered shops"
-          value="89"
-          detail="vs 82 last month"
-          delta="+7 shops"
+          value={String(dashboard.overview.total_shops)}
+          detail={`${dashboard.overview.active_shops} active, ${dashboard.overview.trial_shops} trial or expiring`}
+          delta={`${dashboard.overview.overdue_invoices} overdue`}
           icon={Store}
           accent="sunset"
         />
         <DashboardStatCard
           title="MRR"
-          value="260K"
-          detail="52 Pro subscribers"
-          delta="+18%"
-          icon={DollarSign}
+          value={formatCompactNumber(dashboard.overview.monthly_recurring_revenue)}
+          detail="Current monthly recurring revenue from active plans."
+          delta={formatCurrency(dashboard.overview.monthly_recurring_revenue)}
+          icon={CreditCard}
           accent="teal"
         />
         <DashboardStatCard
-          title="Active today"
-          value="61"
-          detail="of 89 total shops"
-          delta="+12%"
-          icon={Users}
+          title="Projected ARR"
+          value={formatCompactNumber(dashboard.overview.projected_arr)}
+          detail="Annualized from current monthly subscriptions."
+          delta={formatCurrency(dashboard.overview.projected_arr)}
+          icon={TrendingUp}
           accent="ink"
         />
         <DashboardStatCard
-          title="Churn rate"
-          value="2.3%"
-          detail="Best month so far"
-          delta="-0.4%"
-          icon={TrendingUp}
+          title="Yearly plan revenue"
+          value={formatCompactNumber(dashboard.overview.yearly_plan_revenue)}
+          detail="Collected revenue from yearly contracts."
+          delta={`${dashboard.overview.total_orders} total orders`}
+          icon={ShieldAlert}
           accent="default"
         />
       </section>
 
-      <section id="tenants" className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
+      <section className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
         <Card className="border border-black/6 bg-white shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Revenue overview</CardDescription>
-            <CardTitle>MMK collected by day this week</CardTitle>
+            <CardTitle>Collected invoice revenue this week</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
-            <div className="grid h-32 grid-cols-7 items-end gap-3">
-              {[52, 68, 58, 84, 78, 60, 100].map((height, index) => (
-                <div key={height} className="flex flex-col items-center gap-3">
+            <div className="grid h-36 grid-cols-7 items-end gap-3">
+              {dashboard.revenue_series.map((entry) => (
+                <div key={entry.date} className="flex flex-col items-center gap-3">
                   <div
-                    className={`w-full rounded-t-[5px] ${
-                      index === 6
-                        ? "bg-[var(--fom-orange)]"
-                        : "bg-[rgba(255,107,53,0.2)]"
-                    }`}
-                    style={{ height: `${height}%` }}
+                    className="w-full rounded-t-[6px] bg-[rgba(244,98,42,0.2)]"
+                    style={{
+                      height: `${Math.max(
+                        8,
+                        (entry.amount / maxRevenueAmount) * 100
+                      )}%`,
+                    }}
                   />
-                  <span
-                    className={`text-xs ${
-                      index === 6 ? "font-semibold text-[var(--fom-orange)]" : "text-muted-foreground"
-                    }`}
-                  >
-                    {index === 6
-                      ? "Today"
-                      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index]}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{entry.label}</span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-4 border-t border-black/6 pt-3">
+            <div className="grid gap-3 border-t border-black/6 pt-3 md:grid-cols-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <p className="text-[11px] font-semibold tracking-[0.08em] uppercase text-muted-foreground">
                   This week
                 </p>
                 <p className="mt-1 text-2xl font-extrabold tracking-[-0.03em] text-[var(--fom-ink)]">
-                  260,000 <span className="text-sm font-medium text-muted-foreground">MMK</span>
+                  {formatCurrency(
+                    dashboard.revenue_series.reduce(
+                      (sum, entry) => sum + entry.amount,
+                      0
+                    )
+                  )}
                 </p>
               </div>
-              <div className="ml-auto text-sm font-semibold text-[#16A34A]">
-                +18% vs last week
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.08em] uppercase text-muted-foreground">
+                  Delivered revenue
+                </p>
+                <p className="mt-1 text-lg font-semibold text-[var(--fom-ink)]">
+                  {formatCurrency(dashboard.overview.total_revenue)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.08em] uppercase text-muted-foreground">
+                  Avg orders / shop
+                </p>
+                <p className="mt-1 text-lg font-semibold text-[var(--fom-ink)]">
+                  {dashboard.health.average_orders_per_shop}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -146,47 +141,63 @@ export default function PlatformHomePage() {
             <CardTitle>Operator queue</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2.5 pt-0">
-            {[
-              "1 overdue Pro subscription needs payment follow-up.",
-              "3 trials are close to expiry this week.",
-              "2 new tenants still need onboarding assistance.",
-              "Parser support issue reported from one active shop.",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm leading-6 text-muted-foreground"
-              >
-                {item}
+            {dashboard.attention_items.length > 0 ? (
+              dashboard.attention_items.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <PlatformStatusBadge status={item.severity} label={item.severity} />
+                    <p className="text-sm font-semibold text-[var(--fom-ink)]">
+                      {item.shop_name}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-[var(--fom-ink)]">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {item.detail}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm text-muted-foreground">
+                No urgent support items right now.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </section>
 
-      <section id="revenue" className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
         <Card className="border border-black/6 bg-white shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Plan breakdown</CardDescription>
             <CardTitle>Subscription mix</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
-            {[
-              { label: "Pro Monthly", count: "52 shops · 58%", width: "58%", color: "bg-[var(--fom-orange)]" },
-              { label: "Lifetime", count: "21 shops · 24%", width: "24%", color: "bg-[var(--fom-teal)]" },
-              { label: "Free Trial", count: "16 shops · 18%", width: "18%", color: "bg-[#F59E0B]" },
-            ].map((item) => (
-              <div key={item.label} className="flex flex-col gap-2">
+            {dashboard.subscription_mix.map((plan) => (
+              <div key={plan.plan_code} className="flex flex-col gap-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-[var(--fom-ink)]">{item.label}</span>
-                  <span className="text-muted-foreground">{item.count}</span>
+                  <span className="font-medium text-[var(--fom-ink)]">
+                    {plan.plan_name}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {plan.shop_count} shops · {formatPercent(plan.share)}
+                  </span>
                 </div>
-                <div className="h-[5px] rounded-full bg-[#eef0f4]">
-                  <div className={`h-full rounded-full ${item.color}`} style={{ width: item.width }} />
+                <div className="h-[6px] rounded-full bg-[#eef0f4]">
+                  <div
+                    className="h-full rounded-full bg-[var(--fom-orange)]"
+                    style={{ width: `${Math.max(8, plan.share * 100)}%` }}
+                  />
                 </div>
               </div>
             ))}
           </CardContent>
         </Card>
+
         <Card className="border border-black/6 bg-white shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Platform health</CardDescription>
@@ -194,18 +205,29 @@ export default function PlatformHomePage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2.5 pt-0">
             {[
-              ["Active shops", "61 / 89"],
-              ["Trials expiring", "3 this week"],
-              ["Overdue payments", "1 shop"],
-              ["Avg orders / shop", "34 / day"],
-            ].map((row) => (
+              ["Active shops", String(dashboard.health.active_shops)],
+              [
+                "Trials expiring",
+                `${dashboard.health.trials_expiring_this_week} this week`,
+              ],
+              [
+                "Overdue payments",
+                `${dashboard.health.overdue_payments} invoice${
+                  dashboard.health.overdue_payments === 1 ? "" : "s"
+                }`,
+              ],
+              [
+                "Avg orders / shop",
+                String(dashboard.health.average_orders_per_shop),
+              ],
+            ].map(([label, value]) => (
               <div
-                key={row[0]}
+                key={label}
                 className="flex items-center justify-between rounded-xl bg-[#f7f8fc] px-3.5 py-3"
               >
-                <span className="text-sm text-muted-foreground">{row[0]}</span>
+                <span className="text-sm text-muted-foreground">{label}</span>
                 <span className="text-sm font-semibold text-[var(--fom-ink)]">
-                  {row[1]}
+                  {value}
                 </span>
               </div>
             ))}
@@ -213,46 +235,60 @@ export default function PlatformHomePage() {
         </Card>
       </section>
 
-      <section id="reliability" className="grid gap-3">
-        <Card className="border border-black/6 bg-white shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Recent clients</CardDescription>
-            <CardTitle>Latest sign-ups and tenant activity</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-[#fdfeff] text-left text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
-                  <th className="px-4 py-2.5 font-semibold">Shop</th>
-                  <th className="px-4 py-2.5 font-semibold">Plan</th>
-                  <th className="px-4 py-2.5 font-semibold">Status</th>
-                  <th className="px-4 py-2.5 font-semibold">Orders</th>
-                  <th className="px-4 py-2.5 font-semibold">MRR</th>
-                  <th className="px-4 py-2.5 font-semibold">Joined</th>
-                  <th className="px-4 py-2.5 font-semibold">Last active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tenantRows.map((tenant) => (
-                  <tr key={tenant.shop} className="border-t border-black/6 text-sm">
-                    <td className="px-4 py-3 font-semibold text-[var(--fom-ink)]">
-                      {tenant.shop}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline">{tenant.plan}</Badge>
-                    </td>
-                    <td className="px-4 py-3">{tenant.status}</td>
-                    <td className="px-4 py-3">{tenant.orders}</td>
-                    <td className="px-4 py-3">{tenant.mrr}</td>
-                    <td className="px-4 py-3">{tenant.joined}</td>
-                    <td className="px-4 py-3">{tenant.active}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      </section>
+      <PlatformDataTable
+        title="Latest sign-ups and tenant activity"
+        description="Recent shops"
+        rows={dashboard.recent_shops}
+        emptyMessage="No shops found yet."
+        footer={`Showing ${dashboard.recent_shops.length} recent shops`}
+        columns={[
+          {
+            key: "shop",
+            header: "Shop",
+            render: (shop) => (
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-[var(--fom-ink)]">
+                  {shop.name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {shop.owner_name}
+                  {shop.township ? ` · ${shop.township}` : ""}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "plan",
+            header: "Plan",
+            render: (shop) => shop.plan_name ?? "—",
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (shop) => <PlatformStatusBadge status={shop.status} />,
+          },
+          {
+            key: "orders",
+            header: "Orders",
+            render: (shop) => shop.total_orders.toLocaleString(),
+          },
+          {
+            key: "revenue",
+            header: "Revenue",
+            render: (shop) => formatCurrency(shop.total_revenue),
+          },
+          {
+            key: "joined",
+            header: "Joined",
+            render: (shop) => formatDate(shop.joined_at),
+          },
+          {
+            key: "last_active",
+            header: "Last active",
+            render: (shop) => formatRelativeDate(shop.last_active_at),
+          },
+        ]}
+      />
     </div>
   )
 }

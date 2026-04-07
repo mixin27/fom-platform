@@ -20,6 +20,8 @@ import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.int
 import { OrdersController } from './orders/orders.controller';
 import { OrderMessageParserService } from './orders/order-message-parser.service';
 import { OrdersService } from './orders/orders.service';
+import { PlatformController } from './platform/platform.controller';
+import { PlatformService } from './platform/platform.service';
 import { PrismaService } from './common/prisma/prisma.service';
 import { ShopsController } from './shops/shops.controller';
 import { ReportsController } from './summaries/reports.controller';
@@ -41,6 +43,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     AuthController,
     UsersController,
     ShopsController,
+    PlatformController,
     CustomersController,
     OrdersController,
     DeliveriesController,
@@ -54,6 +57,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     AuthService,
     UsersService,
     ShopsService,
+    PlatformService,
     CustomersService,
     OrderMessageParserService,
     OrdersService,

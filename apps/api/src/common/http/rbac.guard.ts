@@ -1,6 +1,6 @@
 import { CanActivate, Injectable, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { forbiddenError, notFoundError } from './app-http.exception';
+import { forbiddenError } from './app-http.exception';
 import { PERMISSIONS_KEY } from './permissions.decorator';
 import type { Permission } from './rbac.constants';
 import type { RequestWithContext } from './request-context';
@@ -36,7 +36,18 @@ export class RbacGuard implements CanActivate {
     }
 
     if (!shopId) {
-      throw notFoundError('Shop context is missing for RBAC evaluation');
+      const currentPermissions = currentUser.platform?.permissions ?? [];
+      const missingPermissions = requiredPermissions.filter(
+        (permission) => !currentPermissions.includes(permission),
+      );
+
+      if (missingPermissions.length > 0) {
+        throw forbiddenError(
+          'You do not have platform permission to perform this action',
+        );
+      }
+
+      return true;
     }
 
     await this.shopsService.assertPermission(

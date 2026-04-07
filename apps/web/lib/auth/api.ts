@@ -7,6 +7,12 @@ export type ApiErrorDetail = {
   errors: string[]
 }
 
+export type ApiSuccess<T> = {
+  success: true
+  data: T
+  meta?: Record<string, unknown>
+}
+
 export class AuthApiError extends Error {
   constructor(
     message: string,
@@ -80,12 +86,8 @@ export type AuthResponse = {
   }>
 }
 
-type ApiEnvelope<T> =
-  | {
-      success: true
-      data: T
-      meta?: Record<string, unknown>
-    }
+export type ApiEnvelope<T> =
+  | ApiSuccess<T>
   | {
       success: false
       error: {
@@ -96,7 +98,7 @@ type ApiEnvelope<T> =
       meta?: Record<string, unknown>
     }
 
-function getApiBaseUrl() {
+export function getApiBaseUrl() {
   const baseUrl =
     process.env.API_BASE_URL?.trim() ??
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ??
@@ -105,7 +107,7 @@ function getApiBaseUrl() {
   return baseUrl.replace(/\/+$/, "")
 }
 
-async function buildForwardHeaders(extraHeaders?: HeadersInit) {
+export async function buildForwardHeaders(extraHeaders?: HeadersInit) {
   const incomingHeaders = await headers()
   const outgoingHeaders = new Headers(extraHeaders)
 
@@ -128,12 +130,12 @@ async function buildForwardHeaders(extraHeaders?: HeadersInit) {
   return outgoingHeaders
 }
 
-async function requestApi<T>(
+export async function requestApiEnvelope<T>(
   path: string,
   init?: RequestInit & {
     json?: unknown
   }
-) {
+): Promise<ApiSuccess<T>> {
   const requestHeaders = await buildForwardHeaders(init?.headers)
 
   if (init?.json !== undefined) {
@@ -149,7 +151,10 @@ async function requestApi<T>(
   })
 
   if (response.status === 204) {
-    return null as T
+    return {
+      success: true,
+      data: null as T,
+    }
   }
 
   const payload = (await response.json()) as ApiEnvelope<T>
@@ -171,6 +176,43 @@ async function requestApi<T>(
     )
   }
 
+  return payload
+}
+
+export async function requestApi<T>(
+  path: string,
+  init?: RequestInit & {
+    json?: unknown
+  }
+) {
+  const payload = await requestApiEnvelope<T>(path, init)
+  return payload.data
+}
+
+export async function requestAuthorizedApiEnvelope<T>(
+  accessToken: string,
+  path: string,
+  init?: RequestInit & {
+    json?: unknown
+  }
+) {
+  const headers = new Headers(init?.headers)
+  headers.set("authorization", `Bearer ${accessToken}`)
+
+  return requestApiEnvelope<T>(path, {
+    ...init,
+    headers,
+  })
+}
+
+export async function requestAuthorizedApi<T>(
+  accessToken: string,
+  path: string,
+  init?: RequestInit & {
+    json?: unknown
+  }
+) {
+  const payload = await requestAuthorizedApiEnvelope<T>(accessToken, path, init)
   return payload.data
 }
 

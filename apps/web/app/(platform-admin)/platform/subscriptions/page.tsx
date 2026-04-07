@@ -1,7 +1,23 @@
-import { CreditCard, TrendingUp, WalletCards } from "lucide-react"
+import Link from "next/link"
+import { CreditCard, Receipt, TrendingUp, WalletCards } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
+import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
+import { getPlatformSubscriptions } from "@/lib/platform/api"
+import {
+  formatCompactNumber,
+  formatCurrency,
+  formatDate,
+} from "@/lib/platform/format"
+import {
+  buildQueryHref,
+  getPreviousCursor,
+  getSingleSearchParam,
+  type PlatformSearchParams,
+} from "@/lib/platform/query"
+import { Button } from "@workspace/ui/components/button"
 import {
   Card,
   CardContent,
@@ -9,56 +25,259 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import { Input } from "@workspace/ui/components/input"
 
-export default function PlatformSubscriptionsPage() {
+type PlatformSubscriptionsPageProps = {
+  searchParams?: Promise<PlatformSearchParams>
+}
+
+export default async function PlatformSubscriptionsPage({
+  searchParams,
+}: PlatformSubscriptionsPageProps) {
+  const params = (await searchParams) ?? {}
+  const response = await getPlatformSubscriptions(params)
+  const data = response.data
+
+  const currentCursor = getSingleSearchParam(params.cursor)
+  const limit = Number(
+    getSingleSearchParam(params.limit) ?? data.invoices_pagination.limit ?? 20
+  )
+  const previousCursor = getPreviousCursor(currentCursor, limit)
+  const status = getSingleSearchParam(params.status) ?? "all"
+  const search = getSingleSearchParam(params.search) ?? ""
+
   return (
     <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Subscriptions"
         title="Billing and plan health"
-        description="This route gives the platform owner a dedicated place to manage plan mix, MRR, renewals, and overdue accounts."
+        description="Review recurring revenue, invoices, renewals, and the current plan mix from one route."
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/platform/shops">View shops</Link>
+          </Button>
+        }
       />
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardStatCard
           title="MRR"
-          value="260K"
-          detail="Monthly recurring revenue from active Pro shops."
+          value={formatCompactNumber(data.overview.monthly_recurring_revenue)}
+          detail="Current monthly recurring revenue from active subscriptions."
+          delta={formatCurrency(data.overview.monthly_recurring_revenue)}
           icon={WalletCards}
           accent="sunset"
         />
         <DashboardStatCard
-          title="Active paid shops"
-          value="52"
-          detail="Paying tenants with an active plan."
-          icon={CreditCard}
+          title="Projected ARR"
+          value={formatCompactNumber(data.overview.projected_arr)}
+          detail="Annualized from active monthly subscriptions."
+          delta={formatCurrency(data.overview.projected_arr)}
+          icon={TrendingUp}
           accent="teal"
         />
         <DashboardStatCard
-          title="Growth"
-          value="+18%"
-          detail="Recurring revenue change versus the previous window."
-          icon={TrendingUp}
+          title="Yearly plan revenue"
+          value={formatCompactNumber(data.overview.yearly_plan_revenue)}
+          detail="Collected revenue from yearly contracts."
+          delta={formatCurrency(data.overview.yearly_plan_revenue)}
+          icon={CreditCard}
           accent="ink"
+        />
+        <DashboardStatCard
+          title="Paid invoices"
+          value={String(data.overview.paid_invoices)}
+          detail={`${data.overview.overdue_invoices} overdue invoices need follow-up.`}
+          delta={`${data.invoices_pagination.total} total invoices`}
+          icon={Receipt}
+          accent="default"
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-3">
-        {[
-          ["Starter", "Best for early shops", "Up to 200 orders per month"],
-          ["Pro", "Most popular", "Unlimited orders and advanced reporting"],
-          ["Enterprise", "Large shops", "Multi-user and operator support"],
-        ].map((plan) => (
-          <Card key={plan[0]} className="border border-black/6 shadow-none">
+      {data.overdue_notice ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <span className="font-semibold">{data.overdue_notice.shop_name}</span>{" "}
+          has an overdue invoice of{" "}
+          <span className="font-semibold">
+            {formatCurrency(data.overdue_notice.amount, data.overdue_notice.currency)}
+          </span>
+          {data.overdue_notice.due_at
+            ? ` since ${formatDate(data.overdue_notice.due_at)}.`
+            : "."}
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+        <PlatformDataTable
+          title="Invoice history"
+          description="All payment records"
+          rows={data.invoices}
+          emptyMessage="No invoices match the current filters."
+          toolbar={
+            <form
+              className="flex flex-col gap-2 sm:flex-row"
+              action="/platform/subscriptions"
+            >
+              <Input
+                name="search"
+                defaultValue={search}
+                placeholder="Search invoice or shop..."
+                className="h-9 w-full min-w-[220px] sm:w-[240px]"
+              />
+              <select
+                name="status"
+                defaultValue={status}
+                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              >
+                <option value="all">All statuses</option>
+                <option value="paid">Paid</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+                <option value="failed">Failed</option>
+              </select>
+              <input type="hidden" name="limit" value={String(limit)} />
+              <Button type="submit" size="sm">
+                Apply
+              </Button>
+            </form>
+          }
+          footer={`Showing ${data.invoices.length} of ${data.invoices_pagination.total} invoices`}
+          pagination={{
+            previousHref: previousCursor
+              ? buildQueryHref("/platform/subscriptions", params, {
+                  cursor: previousCursor,
+                })
+              : currentCursor
+                ? buildQueryHref("/platform/subscriptions", params, {
+                    cursor: null,
+                  })
+                : null,
+            nextHref: data.invoices_pagination.next_cursor
+              ? buildQueryHref("/platform/subscriptions", params, {
+                  cursor: data.invoices_pagination.next_cursor,
+                })
+              : null,
+          }}
+          columns={[
+            {
+              key: "invoice",
+              header: "Invoice",
+              render: (invoice) => (
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-[var(--fom-ink)]">
+                    {invoice.invoice_no}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {invoice.provider_ref ?? invoice.shop_name}
+                  </span>
+                </div>
+              ),
+            },
+            {
+              key: "shop",
+              header: "Shop",
+              render: (invoice) => invoice.shop_name,
+            },
+            {
+              key: "plan",
+              header: "Plan",
+              render: (invoice) => invoice.plan_name,
+            },
+            {
+              key: "amount",
+              header: "Amount",
+              render: (invoice) =>
+                formatCurrency(invoice.amount, invoice.currency),
+            },
+            {
+              key: "method",
+              header: "Method",
+              render: (invoice) => invoice.payment_method ?? "—",
+            },
+            {
+              key: "date",
+              header: "Date",
+              render: (invoice) =>
+                formatDate(invoice.paid_at ?? invoice.due_at ?? invoice.created_at),
+            },
+            {
+              key: "status",
+              header: "Status",
+              render: (invoice) => <PlatformStatusBadge status={invoice.status} />,
+            },
+          ]}
+        />
+
+        <div className="flex flex-col gap-3">
+          <Card className="border border-black/6 bg-white shadow-none">
             <CardHeader className="pb-3">
-              <CardDescription>{plan[1]}</CardDescription>
-              <CardTitle>{plan[0]}</CardTitle>
+              <CardDescription>Upcoming renewals</CardDescription>
+              <CardTitle>What is due next</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 text-sm leading-6 text-muted-foreground">
-              {plan[2]}
+            <CardContent className="flex flex-col gap-2.5 pt-0">
+              {data.upcoming_renewals.length > 0 ? (
+                data.upcoming_renewals.map((renewal) => (
+                  <div
+                    key={renewal.shop_id}
+                    className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--fom-ink)]">
+                          {renewal.shop_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {renewal.plan_name ?? "Plan"} · due{" "}
+                          {formatDate(renewal.due_at)}
+                        </p>
+                      </div>
+                      <PlatformStatusBadge status={renewal.status} />
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {renewal.amount !== null
+                        ? formatCurrency(
+                            renewal.amount ?? undefined,
+                            renewal.currency ?? undefined
+                          )
+                        : "No charge"}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm text-muted-foreground">
+                  No renewals due in the next 30 days.
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
+
+          <Card className="border border-black/6 bg-white shadow-none">
+            <CardHeader className="pb-3">
+              <CardDescription>Plan mix</CardDescription>
+              <CardTitle>Current catalog usage</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 pt-0">
+              {data.plans.map((plan) => (
+                <div key={plan.plan_code} className="rounded-xl bg-[#f7f8fc] px-3.5 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--fom-ink)]">
+                      {plan.plan_name}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      {plan.shop_count} shops
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {plan.billing_period}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Collected {formatCurrency(plan.collected_revenue)}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

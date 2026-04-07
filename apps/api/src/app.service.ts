@@ -53,6 +53,11 @@ export class AppService {
         implemented: [
           'auth',
           'users.me',
+          'platform dashboard',
+          'platform shops',
+          'platform subscriptions',
+          'platform support',
+          'platform settings',
           'shops',
           'shop members',
           'customers',

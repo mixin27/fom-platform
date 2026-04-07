@@ -12,11 +12,15 @@
   --fom-portal-surface: #f7f4ef;
   --fom-portal-sidebar: #fffcf8;
   --font-sans:
-    "DM Sans", "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+    var(--font-web-sans), var(--font-web-myanmar), "Inter", "Segoe UI",
+    system-ui, -apple-system, BlinkMacSystemFont,
     sans-serif;
-  --font-heading: "DM Serif Display", "Iowan Old Style", Georgia, serif;
+  --font-heading:
+    var(--font-web-heading), var(--font-web-myanmar), "Iowan Old Style",
+    Georgia, serif;
   --font-admin:
-    "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system,
+    var(--font-web-admin), var(--font-web-myanmar), "Inter", "Segoe UI",
+    system-ui, -apple-system,
     BlinkMacSystemFont, sans-serif;
   --font-mono:
     "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",

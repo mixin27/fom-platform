@@ -11,6 +11,7 @@ import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { permissions, type Permission } from '../common/http/rbac.constants';
+import { DEFAULT_TRIAL_PLAN_CODE } from '../platform/platform-billing.constants';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
@@ -95,6 +96,10 @@ export class ShopsService {
     const ownerRole = await this.requireRolesByCodes(['owner']);
 
     const created = await this.prisma.$transaction(async (tx) => {
+      const defaultTrialPlan = await (tx as any).plan.findUnique({
+        where: { code: DEFAULT_TRIAL_PLAN_CODE },
+        select: { id: true },
+      });
       const shop = await tx.shop.create({
         data: {
           ownerUserId: currentUser.id,
@@ -117,6 +122,23 @@ export class ShopsService {
           roleId: role.id,
         })),
       });
+
+      if (defaultTrialPlan) {
+        const startAt = new Date();
+        const endAt = new Date(startAt);
+        endAt.setDate(endAt.getDate() + 7);
+
+        await (tx as any).subscription.create({
+          data: {
+            shopId: shop.id,
+            planId: defaultTrialPlan.id,
+            status: 'trialing',
+            startAt,
+            endAt,
+            autoRenews: false,
+          },
+        });
+      }
 
       return shop;
     });

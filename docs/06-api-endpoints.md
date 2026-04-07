@@ -41,6 +41,23 @@
 | GET    | /users/me          | Current user profile                                   | 200 Single User                                |
 | PATCH  | /users/me          | Update profile, locale, email, or phone                | 200 Single User                                |
 
+## Platform Workspace
+
+| Method | Path                    | Description                               | Response                            |
+| ------ | ----------------------- | ----------------------------------------- | ----------------------------------- |
+| GET    | /platform/dashboard     | Internal platform dashboard metrics       | 200 Single PlatformDashboard        |
+| GET    | /platform/shops         | List tenant shops with platform filters   | 200 List PlatformShop               |
+| GET    | /platform/subscriptions | List invoices and subscription summaries  | 200 Single PlatformSubscriptions    |
+| GET    | /platform/support       | List operator issues and support queue    | 200 Single PlatformSupport          |
+| GET    | /platform/settings      | Platform owner profile and plan catalog   | 200 Single PlatformSettings         |
+
+Platform notes:
+
+- Platform routes require platform-scoped permissions and are intended only for the internal owner account.
+- `GET /platform/shops` accepts `search`, `status`, `plan`, `limit`, and `cursor`.
+- `GET /platform/subscriptions` accepts `search`, `status`, `limit`, and `cursor`.
+- The current platform billing catalog uses `trial`, `pro_monthly`, and `pro_yearly`.
+
 ## Shops and Staff
 
 | Method | Path                               | Description                 | Response          |

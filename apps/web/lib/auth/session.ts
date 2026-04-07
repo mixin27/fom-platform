@@ -6,7 +6,7 @@ import { Buffer } from "node:buffer"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
-import type { AuthResponse } from "@/lib/auth/api"
+import { refreshAuthSession, type AuthResponse } from "@/lib/auth/api"
 
 export const AUTH_COOKIE_NAME = "fom_web_session"
 
@@ -227,6 +227,29 @@ export async function getSession() {
   return session
 }
 
+export async function getSessionWithRefresh() {
+  const session = await getSession()
+
+  if (!session) {
+    return null
+  }
+
+  const expiresInMs = Date.parse(session.accessExpiresAt) - Date.now()
+  if (expiresInMs > 60_000) {
+    return session
+  }
+
+  try {
+    const refreshedAuth = await refreshAuthSession(session.refreshToken)
+    const refreshedSession = buildSessionFromAuth(refreshedAuth)
+    await persistSession(refreshedSession)
+    return refreshedSession
+  } catch {
+    await clearSession()
+    return null
+  }
+}
+
 export async function persistSession(session: AppSession) {
   const cookieStore = await cookies()
 
@@ -253,7 +276,7 @@ export async function redirectIfAuthenticated() {
 }
 
 export async function requirePlatformAdmin() {
-  const session = await getSession()
+  const session = await getSessionWithRefresh()
 
   if (!session) {
     redirect("/sign-in")
@@ -267,7 +290,7 @@ export async function requirePlatformAdmin() {
 }
 
 export async function requireShopAdmin() {
-  const session = await getSession()
+  const session = await getSessionWithRefresh()
 
   if (!session) {
     redirect("/sign-in")

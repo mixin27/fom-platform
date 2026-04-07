@@ -122,11 +122,11 @@
 | Field | Type | Notes |
 | --- | --- | --- |
 | id | string | Primary key |
-| code | string | e.g. trial, monthly |
+| code | string | e.g. trial, pro_monthly, pro_yearly |
 | name | string | Display name |
 | price | number | Plan price |
 | currency | string | MMK by default |
-| billing_period | string | monthly, yearly, lifetime |
+| billing_period | string | trial, monthly, yearly |
 
 ## Subscriptions
 | Field | Type | Notes |
@@ -134,7 +134,7 @@
 | id | string | Primary key |
 | shop_id | string | References shops.id |
 | plan_id | string | References plans.id |
-| status | string | trialing, active, expired |
+| status | string | trialing, active, expired, cancelled |
 | start_at | datetime | Start time |
 | end_at | datetime | End time |
 
@@ -143,10 +143,13 @@
 | --- | --- | --- |
 | id | string | Primary key |
 | subscription_id | string | References subscriptions.id |
+| invoice_no | string | Invoice identifier |
 | amount | number | Paid amount |
 | currency | string | MMK by default |
-| status | string | pending, paid, failed |
+| status | string | pending, paid, overdue, failed |
+| payment_method | string | KBZ Pay, Wave Money, etc |
 | provider_ref | string | Payment reference |
+| due_at | datetime | Invoice due date |
 | paid_at | datetime | Payment time |
 
 ## Audit Logs
