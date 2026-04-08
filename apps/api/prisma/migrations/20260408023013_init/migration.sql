@@ -1,6 +1,3 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "LocaleCode" AS ENUM ('en', 'my');
 
@@ -12,6 +9,9 @@ CREATE TYPE "OrderStatus" AS ENUM ('new', 'confirmed', 'out_for_delivery', 'deli
 
 -- CreateEnum
 CREATE TYPE "OrderSource" AS ENUM ('messenger', 'manual');
+
+-- CreateEnum
+CREATE TYPE "DeliveryStatus" AS ENUM ('scheduled', 'out_for_delivery', 'delivered');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -37,6 +37,56 @@ CREATE TABLE "Shop" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Shop_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "plans" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "price" INTEGER NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'MMK',
+    "billingPeriod" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "plans_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "subscriptions" (
+    "id" TEXT NOT NULL,
+    "shopId" TEXT NOT NULL,
+    "planId" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "startAt" TIMESTAMP(3) NOT NULL,
+    "endAt" TIMESTAMP(3),
+    "autoRenews" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payments" (
+    "id" TEXT NOT NULL,
+    "subscriptionId" TEXT NOT NULL,
+    "invoiceNo" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'MMK',
+    "status" TEXT NOT NULL,
+    "paymentMethod" TEXT,
+    "providerRef" TEXT,
+    "dueAt" TIMESTAMP(3),
+    "paidAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -81,6 +131,7 @@ CREATE TABLE "auth_identities" (
 CREATE TABLE "roles" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
+    "scope" TEXT NOT NULL DEFAULT 'shop',
     "name" TEXT NOT NULL,
     "description" TEXT,
     "isSystem" BOOLEAN NOT NULL DEFAULT true,
@@ -94,6 +145,7 @@ CREATE TABLE "roles" (
 CREATE TABLE "permissions" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
+    "scope" TEXT NOT NULL DEFAULT 'shop',
     "name" TEXT NOT NULL,
     "description" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -123,6 +175,16 @@ CREATE TABLE "shop_member_role_assignments" (
 );
 
 -- CreateTable
+CREATE TABLE "user_role_assignments" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "roleId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_role_assignments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Customer" (
     "id" TEXT NOT NULL,
     "shopId" TEXT NOT NULL,
@@ -134,6 +196,20 @@ CREATE TABLE "Customer" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "message_templates" (
+    "id" TEXT NOT NULL,
+    "shopId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "shortcut" TEXT,
+    "body" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "message_templates_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -152,6 +228,22 @@ CREATE TABLE "Order" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "deliveries" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "driverUserId" TEXT NOT NULL,
+    "status" "DeliveryStatus" NOT NULL DEFAULT 'scheduled',
+    "deliveryFee" INTEGER,
+    "addressSnapshot" TEXT NOT NULL,
+    "scheduledAt" TIMESTAMP(3),
+    "deliveredAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "deliveries_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -202,9 +294,13 @@ CREATE TABLE "sessions" (
     "refreshToken" TEXT NOT NULL,
     "accessExpiresAt" TIMESTAMP(3) NOT NULL,
     "refreshExpiresAt" TIMESTAMP(3) NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
     "revokedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastUsedAt" TIMESTAMP(3),
+    "lastUsedIpAddress" TEXT,
+    "lastUsedUserAgent" TEXT,
 
     CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
@@ -217,6 +313,27 @@ CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
 
 -- CreateIndex
 CREATE INDEX "Shop_ownerUserId_idx" ON "Shop"("ownerUserId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "plans_code_key" ON "plans"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_shopId_key" ON "subscriptions"("shopId");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_planId_status_endAt_idx" ON "subscriptions"("planId", "status", "endAt");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_status_endAt_idx" ON "subscriptions"("status", "endAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payments_invoiceNo_key" ON "payments"("invoiceNo");
+
+-- CreateIndex
+CREATE INDEX "payments_subscriptionId_status_idx" ON "payments"("subscriptionId", "status");
+
+-- CreateIndex
+CREATE INDEX "payments_status_dueAt_idx" ON "payments"("status", "dueAt");
 
 -- CreateIndex
 CREATE INDEX "ShopMember_userId_status_idx" ON "ShopMember"("userId", "status");
@@ -249,10 +366,25 @@ CREATE INDEX "shop_member_role_assignments_roleId_idx" ON "shop_member_role_assi
 CREATE UNIQUE INDEX "shop_member_role_assignments_shopMemberId_roleId_key" ON "shop_member_role_assignments"("shopMemberId", "roleId");
 
 -- CreateIndex
+CREATE INDEX "user_role_assignments_roleId_idx" ON "user_role_assignments"("roleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_role_assignments_userId_roleId_key" ON "user_role_assignments"("userId", "roleId");
+
+-- CreateIndex
 CREATE INDEX "Customer_shopId_name_idx" ON "Customer"("shopId", "name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Customer_shopId_phone_key" ON "Customer"("shopId", "phone");
+
+-- CreateIndex
+CREATE INDEX "message_templates_shopId_isActive_updatedAt_idx" ON "message_templates"("shopId", "isActive", "updatedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "message_templates_shopId_title_key" ON "message_templates"("shopId", "title");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "message_templates_shopId_shortcut_key" ON "message_templates"("shopId", "shortcut");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Order_orderNo_key" ON "Order"("orderNo");
@@ -262,6 +394,15 @@ CREATE INDEX "Order_shopId_status_createdAt_idx" ON "Order"("shopId", "status", 
 
 -- CreateIndex
 CREATE INDEX "Order_customerId_createdAt_idx" ON "Order"("customerId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "deliveries_orderId_key" ON "deliveries"("orderId");
+
+-- CreateIndex
+CREATE INDEX "deliveries_driverUserId_status_idx" ON "deliveries"("driverUserId", "status");
+
+-- CreateIndex
+CREATE INDEX "deliveries_status_scheduledAt_idx" ON "deliveries"("status", "scheduledAt");
 
 -- CreateIndex
 CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem"("orderId");
@@ -291,6 +432,15 @@ CREATE INDEX "sessions_refreshExpiresAt_idx" ON "sessions"("refreshExpiresAt");
 ALTER TABLE "Shop" ADD CONSTRAINT "Shop_ownerUserId_fkey" FOREIGN KEY ("ownerUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_planId_fkey" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "subscriptions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ShopMember" ADD CONSTRAINT "ShopMember_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -315,13 +465,28 @@ ALTER TABLE "shop_member_role_assignments" ADD CONSTRAINT "shop_member_role_assi
 ALTER TABLE "shop_member_role_assignments" ADD CONSTRAINT "shop_member_role_assignments_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "user_role_assignments" ADD CONSTRAINT "user_role_assignments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_role_assignments" ADD CONSTRAINT "user_role_assignments_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Customer" ADD CONSTRAINT "Customer_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "message_templates" ADD CONSTRAINT "message_templates_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_driverUserId_fkey" FOREIGN KEY ("driverUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
