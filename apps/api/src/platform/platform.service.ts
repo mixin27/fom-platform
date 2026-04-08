@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { hashPassword } from '../common/auth/password';
 import {
+  conflictError,
   notFoundError,
   validationError,
   type ErrorDetail,
@@ -12,15 +13,25 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
+import type { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
 import type { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
 import type { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
+import type { UpdatePlatformPlanDto } from './dto/update-platform-plan.dto';
+import type { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings-profile.dto';
 import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
+import type { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
 import {
   DEFAULT_TRIAL_PLAN_CODE,
   platformSubscriptionStatuses,
 } from './platform-billing.constants';
+import {
+  platformSupportIssueKinds,
+  platformSupportIssueSeverities,
+  platformSupportIssueSources,
+  platformSupportIssueStatuses,
+} from './platform-support.constants';
 
 type TenantSnapshot = {
   id: string;
@@ -108,8 +119,27 @@ type PlanOptionRow = {
 
 type SupportIssue = {
   id: string;
-  kind: 'billing' | 'renewal' | 'onboarding' | 'adoption';
-  severity: 'high' | 'medium' | 'low';
+  kind: (typeof platformSupportIssueKinds)[number];
+  severity: (typeof platformSupportIssueSeverities)[number];
+  status: (typeof platformSupportIssueStatuses)[number];
+  source: (typeof platformSupportIssueSources)[number];
+  shop_id: string | null;
+  shop_name: string;
+  title: string;
+  detail: string;
+  occurred_at: string;
+  assigned_to_user_id: string | null;
+  assigned_to_user_name: string | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+};
+
+type DetectedSupportIssue = {
+  issue_key: string;
+  source: 'system';
+  kind: (typeof platformSupportIssueKinds)[number];
+  severity: (typeof platformSupportIssueSeverities)[number];
+  status: 'open';
   shop_id: string;
   shop_name: string;
   title: string;
@@ -130,7 +160,11 @@ export class PlatformService {
     const now = new Date();
     const tenants = await this.loadTenantSnapshots(now);
     const payments = await this.loadPaymentRows();
-    const supportIssues = this.buildSupportIssues(tenants, payments, now);
+    const supportIssues = await this.syncAndLoadSupportIssues(
+      tenants,
+      payments,
+      now,
+    );
     const planSummaries = this.buildPlanSummaries(tenants, payments);
 
     const recentShops = tenants.slice(0, 6);
@@ -682,7 +716,7 @@ export class PlatformService {
     const now = new Date();
     const tenants = await this.loadTenantSnapshots(now);
     const payments = await this.loadPaymentRows();
-    const issues = this.buildSupportIssues(tenants, payments, now);
+    const issues = await this.syncAndLoadSupportIssues(tenants, payments, now);
 
     return {
       overview: {
@@ -713,7 +747,256 @@ export class PlatformService {
     };
   }
 
+  async createSupportIssue(
+    currentUser: AuthenticatedUser,
+    body: CreatePlatformSupportIssueDto,
+  ) {
+    const shopId = body.shop_id ?? null;
+    const shop = await this.resolveSupportShop(shopId);
+    const assignee = await this.resolveSupportAssignee(body.assigned_to_user_id);
+    const status = body.status ?? 'open';
+    const isClosed = this.isSupportIssueClosed(status);
+    const now = new Date();
+
+    const issue = await (this.prisma as any).platformSupportIssue.create({
+      data: {
+        source: 'manual',
+        kind: body.kind,
+        severity: body.severity ?? 'medium',
+        status,
+        shopId: shop?.id ?? null,
+        shopNameSnapshot: shop?.name ?? null,
+        title: body.title,
+        detail: body.detail,
+        occurredAt: body.occurred_at ? new Date(body.occurred_at) : now,
+        isActive: !isClosed,
+        assignedToUserId: assignee?.id ?? null,
+        resolutionNote: body.resolution_note ?? null,
+        resolvedAt: isClosed ? now : null,
+        createdByUserId: currentUser.id,
+      },
+    });
+
+    return this.loadSupportIssueById(issue.id);
+  }
+
+  async updateSupportIssue(issueId: string, body: UpdatePlatformSupportIssueDto) {
+    const issue = await (this.prisma as any).platformSupportIssue.findUnique({
+      where: { id: issueId },
+    });
+
+    if (!issue) {
+      throw notFoundError('Support issue not found');
+    }
+
+    if (
+      body.kind === undefined &&
+      body.severity === undefined &&
+      body.status === undefined &&
+      body.title === undefined &&
+      body.detail === undefined &&
+      body.shop_id === undefined &&
+      body.assigned_to_user_id === undefined &&
+      body.resolution_note === undefined &&
+      body.occurred_at === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    const shop = await this.resolveSupportShop(body.shop_id);
+    const assignee = await this.resolveSupportAssignee(body.assigned_to_user_id);
+    const nextStatus = body.status ?? issue.status;
+    const nextIsClosed = this.isSupportIssueClosed(nextStatus);
+
+    await (this.prisma as any).platformSupportIssue.update({
+      where: { id: issueId },
+      data: {
+        ...(body.kind !== undefined ? { kind: body.kind } : {}),
+        ...(body.severity !== undefined ? { severity: body.severity } : {}),
+        ...(body.status !== undefined ? { status: body.status } : {}),
+        ...(body.title !== undefined ? { title: body.title } : {}),
+        ...(body.detail !== undefined ? { detail: body.detail } : {}),
+        ...(body.shop_id !== undefined
+          ? {
+              shopId: shop?.id ?? null,
+              shopNameSnapshot: shop?.name ?? null,
+            }
+          : {}),
+        ...(body.assigned_to_user_id !== undefined
+          ? { assignedToUserId: assignee?.id ?? null }
+          : {}),
+        ...(body.resolution_note !== undefined
+          ? { resolutionNote: body.resolution_note }
+          : {}),
+        ...(body.occurred_at !== undefined
+          ? {
+              occurredAt: body.occurred_at ? new Date(body.occurred_at) : issue.occurredAt,
+            }
+          : {}),
+        ...(body.status !== undefined
+          ? {
+              isActive: !nextIsClosed,
+              resolvedAt: nextIsClosed
+                ? issue.resolvedAt ?? new Date()
+                : null,
+            }
+          : {}),
+      },
+    });
+
+    return this.loadSupportIssueById(issueId);
+  }
+
   async getSettings(currentUser: AuthenticatedUser) {
+    return this.buildSettingsPayload(currentUser);
+  }
+
+  async updateSettingsProfile(
+    currentUser: AuthenticatedUser,
+    body: UpdatePlatformSettingsProfileDto,
+  ) {
+    if (
+      body.name === undefined &&
+      body.email === undefined &&
+      body.phone === undefined &&
+      body.locale === undefined &&
+      body.password === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.id },
+    });
+
+    if (!user) {
+      throw notFoundError('User not found');
+    }
+
+    const normalizedEmail = body.email?.trim().toLowerCase();
+    const normalizedPhone = body.phone?.replace(/\s+/g, ' ').trim();
+
+    if (normalizedEmail && normalizedEmail !== user.email) {
+      const existingEmail = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      });
+
+      if (existingEmail) {
+        throw conflictError('Email is already registered');
+      }
+    }
+
+    if (normalizedPhone && normalizedPhone !== user.phone) {
+      const existingPhone = await this.prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+        select: { id: true },
+      });
+
+      if (existingPhone) {
+        throw conflictError('Phone number is already registered');
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.locale !== undefined ? { locale: body.locale } : {}),
+          ...(normalizedEmail !== undefined ? { email: normalizedEmail } : {}),
+          ...(normalizedPhone !== undefined ? { phone: normalizedPhone } : {}),
+        },
+      });
+
+      if (body.password !== undefined) {
+        await tx.passwordCredential.upsert({
+          where: { userId: user.id },
+          update: {
+            passwordHash: await hashPassword(body.password),
+          },
+          create: {
+            userId: user.id,
+            passwordHash: await hashPassword(body.password),
+          },
+        });
+      }
+    });
+
+    return this.buildSettingsPayload(currentUser);
+  }
+
+  async updateSettingsPlan(planId: string, body: UpdatePlatformPlanDto) {
+    const plan = await (this.prisma as any).plan.findUnique({
+      where: { id: planId },
+      select: { id: true, code: true },
+    });
+
+    if (!plan) {
+      throw notFoundError('Plan not found');
+    }
+
+    if (
+      body.code === undefined &&
+      body.name === undefined &&
+      body.description === undefined &&
+      body.price === undefined &&
+      body.currency === undefined &&
+      body.billing_period === undefined &&
+      body.is_active === undefined &&
+      body.sort_order === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    if (body.code && body.code !== plan.code) {
+      const existingPlanCode = await (this.prisma as any).plan.findUnique({
+        where: { code: body.code },
+        select: { id: true },
+      });
+
+      if (existingPlanCode) {
+        throw conflictError('Plan code is already in use');
+      }
+    }
+
+    await (this.prisma as any).plan.update({
+      where: { id: planId },
+      data: {
+        ...(body.code !== undefined ? { code: body.code } : {}),
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.price !== undefined ? { price: body.price } : {}),
+        ...(body.currency !== undefined
+          ? { currency: body.currency.trim().toUpperCase() }
+          : {}),
+        ...(body.billing_period !== undefined
+          ? { billingPeriod: body.billing_period.trim() }
+          : {}),
+        ...(body.is_active !== undefined ? { isActive: body.is_active } : {}),
+        ...(body.sort_order !== undefined ? { sortOrder: body.sort_order } : {}),
+      },
+    });
+
+    return this.loadPlanSettingsRowById(planId);
+  }
+
+  private async buildSettingsPayload(currentUser: AuthenticatedUser) {
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.id },
       include: {
@@ -741,16 +1024,8 @@ export class PlatformService {
         },
       },
     });
-    const plans = await (this.prisma as any).plan.findMany({
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: {
-        subscriptions: {
-          include: {
-            payments: true,
-          },
-        },
-      },
-    });
+
+    const plans = await this.loadPlanSettingsRows();
 
     return {
       profile: {
@@ -784,29 +1059,377 @@ export class PlatformService {
           ),
         ].length,
       },
-      plans: plans.map((plan) => {
-        const paidRevenue = plan.subscriptions.reduce(
-          (sum, subscription) =>
-            sum +
-            subscription.payments
-              .filter((payment) => payment.status === 'paid')
-              .reduce((total, payment) => total + payment.amount, 0),
-          0,
-        );
+      plans,
+    };
+  }
 
-        return {
-          id: plan.id,
-          code: plan.code,
-          name: plan.name,
-          description: plan.description,
-          billing_period: plan.billingPeriod,
-          price: plan.price,
-          currency: plan.currency,
-          is_active: plan.isActive,
-          shop_count: plan.subscriptions.length,
-          collected_revenue: paidRevenue,
-        };
-      }),
+  private async loadPlanSettingsRows() {
+    const plans = await (this.prisma as any).plan.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        subscriptions: {
+          include: {
+            payments: true,
+          },
+        },
+      },
+    });
+
+    return plans.map((plan: any) => this.serializeSettingsPlan(plan));
+  }
+
+  private async loadPlanSettingsRowById(planId: string) {
+    const plan = await (this.prisma as any).plan.findUnique({
+      where: { id: planId },
+      include: {
+        subscriptions: {
+          include: {
+            payments: true,
+          },
+        },
+      },
+    });
+
+    if (!plan) {
+      throw notFoundError('Plan not found');
+    }
+
+    return this.serializeSettingsPlan(plan);
+  }
+
+  private serializeSettingsPlan(plan: any) {
+    const paidRevenue = plan.subscriptions.reduce(
+      (sum: number, subscription: any) =>
+        sum +
+        subscription.payments
+          .filter((payment: any) => payment.status === 'paid')
+          .reduce((total: number, payment: any) => total + payment.amount, 0),
+      0,
+    );
+
+    return {
+      id: plan.id,
+      code: plan.code,
+      name: plan.name,
+      description: plan.description,
+      billing_period: plan.billingPeriod,
+      price: plan.price,
+      currency: plan.currency,
+      is_active: plan.isActive,
+      sort_order: plan.sortOrder,
+      shop_count: plan.subscriptions.length,
+      collected_revenue: paidRevenue,
+    };
+  }
+
+  private async resolveSupportShop(shopId: string | null | undefined) {
+    if (shopId === undefined) {
+      return undefined;
+    }
+
+    const normalizedShopId = shopId?.trim() || null;
+    if (!normalizedShopId) {
+      return null;
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: normalizedShopId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!shop) {
+      throw validationError([
+        {
+          field: 'shop_id',
+          errors: ['Shop not found'],
+        },
+      ]);
+    }
+
+    return shop;
+  }
+
+  private async resolveSupportAssignee(userId: string | null | undefined) {
+    if (userId === undefined) {
+      return undefined;
+    }
+
+    const normalizedUserId = userId?.trim() || null;
+    if (!normalizedUserId) {
+      return null;
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: normalizedUserId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!user) {
+      throw validationError([
+        {
+          field: 'assigned_to_user_id',
+          errors: ['Assignee user not found'],
+        },
+      ]);
+    }
+
+    return user;
+  }
+
+  private isSupportIssueClosed(status: string) {
+    return status === 'resolved' || status === 'dismissed';
+  }
+
+  private isSupportIssueOpen(status: string) {
+    return status === 'open' || status === 'in_progress';
+  }
+
+  private async loadSupportIssueById(issueId: string): Promise<SupportIssue> {
+    const issue = await (this.prisma as any).platformSupportIssue.findUnique({
+      where: { id: issueId },
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        assignedToUser: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!issue) {
+      throw notFoundError('Support issue not found');
+    }
+
+    return this.serializeSupportIssue(issue);
+  }
+
+  private async syncAndLoadSupportIssues(
+    tenants: TenantSnapshot[],
+    payments: PaymentRow[],
+    now: Date,
+  ) {
+    const detectedIssues = this.buildSupportIssues(tenants, payments, now);
+    await this.syncDetectedSupportIssues(detectedIssues, now);
+    return this.loadSupportIssueQueue();
+  }
+
+  private async syncDetectedSupportIssues(
+    detectedIssues: DetectedSupportIssue[],
+    now: Date,
+  ) {
+    const existingSystemIssues = (await (this.prisma as any).platformSupportIssue.findMany(
+      {
+        where: {
+          source: 'system',
+        },
+        select: {
+          id: true,
+          issueKey: true,
+          status: true,
+        },
+      },
+    )) as Array<{ id: string; issueKey: string | null; status: string }>;
+
+    const existingByKey = new Map<
+      string,
+      { id: string; issueKey: string | null; status: string }
+    >(
+      existingSystemIssues
+        .filter((issue) => issue.issueKey !== null)
+        .map((issue) => [issue.issueKey as string, issue]),
+    );
+
+    for (const detectedIssue of detectedIssues) {
+      const existingIssue = existingByKey.get(detectedIssue.issue_key);
+
+      if (!existingIssue) {
+        await (this.prisma as any).platformSupportIssue.create({
+          data: {
+            issueKey: detectedIssue.issue_key,
+            source: detectedIssue.source,
+            kind: detectedIssue.kind,
+            severity: detectedIssue.severity,
+            status: detectedIssue.status,
+            shopId: detectedIssue.shop_id,
+            shopNameSnapshot: detectedIssue.shop_name,
+            title: detectedIssue.title,
+            detail: detectedIssue.detail,
+            occurredAt: new Date(detectedIssue.occurred_at),
+            isActive: true,
+            lastDetectedAt: now,
+          },
+        });
+        continue;
+      }
+
+      const shouldReopenIssue = this.isSupportIssueClosed(existingIssue.status);
+
+      await (this.prisma as any).platformSupportIssue.update({
+        where: { id: existingIssue.id },
+        data: {
+          source: detectedIssue.source,
+          kind: detectedIssue.kind,
+          severity: detectedIssue.severity,
+          shopId: detectedIssue.shop_id,
+          shopNameSnapshot: detectedIssue.shop_name,
+          title: detectedIssue.title,
+          detail: detectedIssue.detail,
+          occurredAt: new Date(detectedIssue.occurred_at),
+          isActive: true,
+          lastDetectedAt: now,
+          ...(shouldReopenIssue
+            ? {
+                status: 'open',
+                resolvedAt: null,
+              }
+            : {}),
+        },
+      });
+    }
+
+    const detectedIssueKeys = new Set(
+      detectedIssues.map((issue) => issue.issue_key),
+    );
+    const staleIssueIds = existingSystemIssues
+      .filter(
+        (issue) =>
+          issue.issueKey &&
+          !detectedIssueKeys.has(issue.issueKey) &&
+          this.isSupportIssueOpen(issue.status),
+      )
+      .map((issue) => issue.id);
+
+    if (staleIssueIds.length > 0) {
+      await (this.prisma as any).platformSupportIssue.updateMany({
+        where: {
+          id: {
+            in: staleIssueIds,
+          },
+        },
+        data: {
+          isActive: false,
+        },
+      });
+    }
+  }
+
+  private async loadSupportIssueQueue(): Promise<SupportIssue[]> {
+    const issues = await (this.prisma as any).platformSupportIssue.findMany({
+      where: {
+        OR: [
+          {
+            source: 'manual',
+            status: {
+              in: ['open', 'in_progress'],
+            },
+          },
+          {
+            source: 'system',
+            isActive: true,
+            status: {
+              in: ['open', 'in_progress'],
+            },
+          },
+        ],
+      },
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        assignedToUser: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const severityWeight: Record<
+      (typeof platformSupportIssueSeverities)[number],
+      number
+    > = {
+      high: 3,
+      medium: 2,
+      low: 1,
+    };
+
+    const statusWeight: Record<(typeof platformSupportIssueStatuses)[number], number> =
+      {
+        open: 2,
+        in_progress: 1,
+        resolved: 0,
+        dismissed: 0,
+      };
+
+    return issues
+      .map((issue: any) => this.serializeSupportIssue(issue))
+      .sort((left, right) => {
+        const severityDiff =
+          (severityWeight[right.severity] ?? 0) -
+          (severityWeight[left.severity] ?? 0);
+
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+
+        const statusDiff =
+          (statusWeight[right.status] ?? 0) - (statusWeight[left.status] ?? 0);
+        if (statusDiff !== 0) {
+          return statusDiff;
+        }
+
+        return this.sortByDateDesc(left.occurred_at, right.occurred_at);
+      });
+  }
+
+  private serializeSupportIssue(issue: any): SupportIssue {
+    const normalizedKind = platformSupportIssueKinds.includes(issue.kind)
+      ? issue.kind
+      : 'other';
+    const normalizedSeverity = platformSupportIssueSeverities.includes(
+      issue.severity,
+    )
+      ? issue.severity
+      : 'medium';
+    const normalizedStatus = platformSupportIssueStatuses.includes(issue.status)
+      ? issue.status
+      : 'open';
+    const normalizedSource = platformSupportIssueSources.includes(issue.source)
+      ? issue.source
+      : 'manual';
+
+    return {
+      id: issue.id,
+      kind: normalizedKind,
+      severity: normalizedSeverity,
+      status: normalizedStatus,
+      source: normalizedSource,
+      shop_id: issue.shopId ?? issue.shop?.id ?? null,
+      shop_name: issue.shop?.name ?? issue.shopNameSnapshot ?? 'Unknown shop',
+      title: issue.title,
+      detail: issue.detail,
+      occurred_at: issue.occurredAt.toISOString(),
+      assigned_to_user_id: issue.assignedToUserId ?? issue.assignedToUser?.id ?? null,
+      assigned_to_user_name: issue.assignedToUser?.name ?? null,
+      resolution_note: issue.resolutionNote ?? null,
+      resolved_at: issue.resolvedAt?.toISOString() ?? null,
     };
   }
 
@@ -1604,14 +2227,16 @@ export class PlatformService {
     tenants: TenantSnapshot[],
     payments: PaymentRow[],
     now: Date,
-  ): SupportIssue[] {
-    const issues: SupportIssue[] = [];
+  ): DetectedSupportIssue[] {
+    const issues: DetectedSupportIssue[] = [];
 
     for (const payment of payments.filter((row) => row.status === 'overdue')) {
       issues.push({
-        id: `billing:${payment.id}`,
+        issue_key: `billing:${payment.id}`,
+        source: 'system',
         kind: 'billing',
         severity: 'high',
+        status: 'open',
         shop_id: payment.shop_id,
         shop_name: payment.shop_name,
         title: `Overdue invoice ${payment.invoice_no}`,
@@ -1627,9 +2252,11 @@ export class PlatformService {
         Date.parse(tenant.current_period_end) - now.getTime() <= THREE_DAYS_MS
       ) {
         issues.push({
-          id: `renewal:${tenant.id}`,
+          issue_key: `renewal:${tenant.id}`,
+          source: 'system',
           kind: 'renewal',
           severity: 'medium',
+          status: 'open',
           shop_id: tenant.id,
           shop_name: tenant.name,
           title: 'Trial expires soon',
@@ -1646,9 +2273,11 @@ export class PlatformService {
         tenant.total_orders === 0
       ) {
         issues.push({
-          id: `onboarding:${tenant.id}`,
+          issue_key: `onboarding:${tenant.id}`,
+          source: 'system',
           kind: 'onboarding',
           severity: 'medium',
+          status: 'open',
           shop_id: tenant.id,
           shop_name: tenant.name,
           title: 'New shop has no orders yet',
@@ -1663,9 +2292,11 @@ export class PlatformService {
         tenant.status === 'active'
       ) {
         issues.push({
-          id: `adoption:${tenant.id}`,
+          issue_key: `adoption:${tenant.id}`,
+          source: 'system',
           kind: 'adoption',
           severity: 'low',
+          status: 'open',
           shop_id: tenant.id,
           shop_name: tenant.name,
           title: 'Active subscription with low recent activity',

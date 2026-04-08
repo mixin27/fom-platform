@@ -22,6 +22,7 @@ export const permissions = {
   platformSubscriptionsRead: 'platform.subscriptions.read',
   platformSubscriptionsWrite: 'platform.subscriptions.write',
   platformSupportRead: 'platform.support.read',
+  platformSupportWrite: 'platform.support.write',
   platformSettingsWrite: 'platform.settings.write',
 } as const;
 
@@ -160,6 +161,12 @@ export const permissionCatalog: ReadonlyArray<{
     description: 'View platform support queues and account issues.',
   },
   {
+    code: permissions.platformSupportWrite,
+    scope: 'platform',
+    name: 'Manage support workspace',
+    description: 'Create and triage support issues in the platform workspace.',
+  },
+  {
     code: permissions.platformSettingsWrite,
     scope: 'platform',
     name: 'Manage platform settings',
@@ -216,6 +223,7 @@ export const defaultRoleCatalog: ReadonlyArray<{
       permissions.platformSubscriptionsRead,
       permissions.platformSubscriptionsWrite,
       permissions.platformSupportRead,
+      permissions.platformSupportWrite,
       permissions.platformSettingsWrite,
     ],
   },

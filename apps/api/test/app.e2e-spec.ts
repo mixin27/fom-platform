@@ -364,6 +364,162 @@ describe('Facebook Order Manager API (e2e)', () => {
     expect(deletedShop).toBeNull();
   });
 
+  dbIt('supports platform support issue workflow actions', async () => {
+    const loginData = await loginWithPassword(
+      app,
+      platformOwnerEmail,
+      platformOwnerPassword,
+    );
+    const seedRefs = await getSeedReferences(app);
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/platform/support/issues',
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        shop_id: seedRefs.shopId,
+        kind: 'operations',
+        severity: 'medium',
+        title: 'Follow up onboarding task',
+        detail: 'Owner needs help setting first delivery workflow.',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    const createBody = createResponse.json();
+    expect(createBody.success).toBe(true);
+    expect(createBody.data).toEqual(
+      expect.objectContaining({
+        kind: 'operations',
+        severity: 'medium',
+        status: 'open',
+        source: 'manual',
+      }),
+    );
+
+    const createdIssueId = createBody.data.id as string;
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/platform/support/issues/${createdIssueId}`,
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        status: 'in_progress',
+        assigned_to_user_id: seedRefs.staffUserId,
+      },
+    });
+
+    expect(updateResponse.statusCode).toBe(200);
+    const updateBody = updateResponse.json();
+    expect(updateBody.success).toBe(true);
+    expect(updateBody.data).toEqual(
+      expect.objectContaining({
+        id: createdIssueId,
+        status: 'in_progress',
+        assigned_to_user_id: seedRefs.staffUserId,
+      }),
+    );
+
+    const supportResponse = await app.inject({
+      method: 'GET',
+      url: '/api/v1/platform/support',
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+    });
+    expect(supportResponse.statusCode).toBe(200);
+    const supportBody = supportResponse.json();
+    expect(supportBody.success).toBe(true);
+    expect(supportBody.data.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createdIssueId,
+          status: 'in_progress',
+        }),
+      ]),
+    );
+
+    const resolveResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/platform/support/issues/${createdIssueId}`,
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        status: 'resolved',
+        resolution_note: 'Owner onboarded and confirmed workflow setup.',
+      },
+    });
+    expect(resolveResponse.statusCode).toBe(200);
+    const resolveBody = resolveResponse.json();
+    expect(resolveBody.success).toBe(true);
+    expect(resolveBody.data.status).toBe('resolved');
+  });
+
+  dbIt('supports platform settings profile and plan edit actions', async () => {
+    const loginData = await loginWithPassword(
+      app,
+      platformOwnerEmail,
+      platformOwnerPassword,
+    );
+    const prisma = app.get(PrismaService);
+    const trialPlan = await prisma.plan.findUnique({
+      where: { code: 'trial' },
+      select: { id: true, description: true },
+    });
+
+    expect(trialPlan?.id).toBeDefined();
+
+    const profileResponse = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/platform/settings/profile',
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        name: 'Platform Owner Updated',
+        locale: 'en',
+      },
+    });
+    expect(profileResponse.statusCode).toBe(200);
+    const profileBody = profileResponse.json();
+    expect(profileBody.success).toBe(true);
+    expect(profileBody.data.profile.name).toBe('Platform Owner Updated');
+
+    const nextDescription = `Trial plan updated ${Date.now()}`;
+    const planResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/platform/settings/plans/${trialPlan!.id}`,
+      headers: {
+        authorization: `Bearer ${loginData.access_token}`,
+      },
+      payload: {
+        description: nextDescription,
+      },
+    });
+    expect(planResponse.statusCode).toBe(200);
+    const planBody = planResponse.json();
+    expect(planBody.success).toBe(true);
+    expect(planBody.data).toEqual(
+      expect.objectContaining({
+        id: trialPlan!.id,
+        code: 'trial',
+        description: nextDescription,
+      }),
+    );
+
+    await prisma.plan.update({
+      where: { id: trialPlan!.id },
+      data: {
+        description: trialPlan!.description,
+      },
+    });
+  });
+
   dbIt('lists current user shops with membership access details', async () => {
     const loginData = await loginWithPassword(
       app,

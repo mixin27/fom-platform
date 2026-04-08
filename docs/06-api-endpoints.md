@@ -56,7 +56,11 @@
 | POST   | /platform/subscriptions/{subscriptionId}/invoices | Create a subscription invoice | 200 Single PlatformInvoice |
 | PATCH  | /platform/invoices/{invoiceId} | Update a platform invoice         | 200 Single PlatformInvoice          |
 | GET    | /platform/support       | List operator issues and support queue    | 200 Single PlatformSupport          |
+| POST   | /platform/support/issues | Create a manual support issue             | 200 Single PlatformSupportIssue     |
+| PATCH  | /platform/support/issues/{issueId} | Update support issue workflow state | 200 Single PlatformSupportIssue |
 | GET    | /platform/settings      | Platform owner profile and plan catalog   | 200 Single PlatformSettings         |
+| PATCH  | /platform/settings/profile | Update platform owner profile settings | 200 Single PlatformSettings      |
+| PATCH  | /platform/settings/plans/{planId} | Update plan catalog details        | 200 Single PlatformPlan            |
 
 Platform notes:
 
@@ -70,6 +74,11 @@ Platform notes:
 - `PATCH /platform/subscriptions/{subscriptionId}` can update plan, status, start and end dates, and auto-renew state.
 - `POST /platform/subscriptions/{subscriptionId}/invoices` creates a new invoice for the selected subscription.
 - `PATCH /platform/invoices/{invoiceId}` updates invoice amount, status, due dates, and payment references.
+- `platform.support.write` is required for support issue workflow mutations (`POST/PATCH /platform/support/issues/*`).
+- `POST /platform/support/issues` creates a manual issue with `kind`, `severity`, `title`, and `detail`; optional `shop_id`, `assigned_to_user_id`, and `occurred_at` are supported.
+- `PATCH /platform/support/issues/{issueId}` updates issue status (`open`, `in_progress`, `resolved`, `dismissed`), assignee, severity, and resolution note.
+- `PATCH /platform/settings/profile` updates platform owner profile (`name`, `email`, `phone`, `locale`) and optional password credential reset.
+- `PATCH /platform/settings/plans/{planId}` updates plan catalog metadata (code, name, description, price, billing period, active flag, sort order).
 - The current platform billing catalog uses `trial`, `pro_monthly`, and `pro_yearly`.
 
 ## Shops and Staff

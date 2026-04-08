@@ -166,6 +166,7 @@ async function resetDemoData() {
   await prisma.orderStatusEvent.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.platformSupportIssue.deleteMany();
   await prisma.session.deleteMany();
   await prisma.authChallenge.deleteMany();
   await prisma.shopMemberRoleAssignment.deleteMany();

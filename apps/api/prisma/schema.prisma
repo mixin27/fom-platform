@@ -58,6 +58,8 @@ model User {
   roleAssignments    UserRoleAssignment[]
   statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
   assignedDeliveries Delivery[]          @relation("DeliveryDriver")
+  assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
+  createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
 }
 
 model Shop {
@@ -72,8 +74,39 @@ model Shop {
   orders           Order[]
   messageTemplates MessageTemplate[]
   subscription     Subscription?
+  supportIssues    PlatformSupportIssue[]
 
   @@index([ownerUserId])
+}
+
+model PlatformSupportIssue {
+  id               String    @id @default(cuid())
+  issueKey         String?   @unique
+  source           String    @default("manual")
+  kind             String
+  severity         String
+  status           String    @default("open")
+  shopId           String?
+  shopNameSnapshot String?
+  title            String
+  detail           String
+  occurredAt       DateTime
+  isActive         Boolean   @default(true)
+  assignedToUserId String?
+  resolvedAt       DateTime?
+  resolutionNote   String?
+  createdByUserId  String?
+  lastDetectedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  shop             Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  assignedToUser   User?     @relation("SupportIssueAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdByUser    User?     @relation("SupportIssueCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, severity, occurredAt])
+  @@index([source, isActive, lastDetectedAt])
+  @@index([shopId, status])
+  @@map("platform_support_issues")
 }
 
 model Plan {

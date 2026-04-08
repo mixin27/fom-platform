@@ -20,11 +20,15 @@ import { RbacGuard } from '../common/http/rbac.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
+import { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
 import { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
 import { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
+import { UpdatePlatformPlanDto } from './dto/update-platform-plan.dto';
+import { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings-profile.dto';
 import { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
+import { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
 import { PlatformService } from './platform.service';
 
 @Controller('api/v1/platform')
@@ -135,11 +139,55 @@ export class PlatformController {
     return ok(this.platformService.getSupport());
   }
 
+  @Post('support/issues')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportWrite)
+  @ApiOperation({ summary: 'Create a support issue in the platform workspace' })
+  createSupportIssue(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body() body: CreatePlatformSupportIssueDto,
+  ) {
+    return ok(this.platformService.createSupportIssue(currentUser, body));
+  }
+
+  @Patch('support/issues/:issueId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportWrite)
+  @ApiOperation({ summary: 'Update support issue workflow state' })
+  updateSupportIssue(
+    @Param('issueId') issueId: string,
+    @Body() body: UpdatePlatformSupportIssueDto,
+  ) {
+    return ok(this.platformService.updateSupportIssue(issueId, body));
+  }
+
   @Get('settings')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSettingsWrite)
   @ApiOperation({ summary: 'Get platform admin settings data' })
   getSettings(@CurrentUser() currentUser: AuthenticatedUser) {
     return ok(this.platformService.getSettings(currentUser));
+  }
+
+  @Patch('settings/profile')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Update platform owner profile settings' })
+  updateSettingsProfile(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body() body: UpdatePlatformSettingsProfileDto,
+  ) {
+    return ok(this.platformService.updateSettingsProfile(currentUser, body));
+  }
+
+  @Patch('settings/plans/:planId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Update a billing plan from platform settings' })
+  updateSettingsPlan(
+    @Param('planId') planId: string,
+    @Body() body: UpdatePlatformPlanDto,
+  ) {
+    return ok(this.platformService.updateSettingsPlan(planId, body));
   }
 }
