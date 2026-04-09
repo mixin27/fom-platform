@@ -610,9 +610,9 @@ if [[ ${with_tests} -eq 1 ]]; then
   cat > "${test_root}/domain/usecases/get_${feature_name}_use_case_test.dart" <<EOF
 import 'package:app_core/app_core.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexxus_app/features/${feature_name}/domain/entities/${feature_name}.dart';
-import 'package:nexxus_app/features/${feature_name}/domain/repositories/${feature_name}_repository.dart';
-import 'package:nexxus_app/features/${feature_name}/domain/usecases/get_${feature_name}_use_case.dart';
+import 'package:fom_mobile/features/${feature_name}/domain/entities/${feature_name}.dart';
+import 'package:fom_mobile/features/${feature_name}/domain/repositories/${feature_name}_repository.dart';
+import 'package:fom_mobile/features/${feature_name}/domain/usecases/get_${feature_name}_use_case.dart';
 
 void main() {
   test('returns repository result', () async {
@@ -640,10 +640,10 @@ EOF
 
   cat > "${test_root}/data/repositories/${feature_name}_repository_impl_test.dart" <<EOF
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexxus_app/features/${feature_name}/data/datasources/${feature_name}_local_data_source.dart';
-import 'package:nexxus_app/features/${feature_name}/data/datasources/${feature_name}_remote_data_source.dart';
-import 'package:nexxus_app/features/${feature_name}/data/models/${feature_name}_model.dart';
-import 'package:nexxus_app/features/${feature_name}/data/repositories/${feature_name}_repository_impl.dart';
+import 'package:fom_mobile/features/${feature_name}/data/datasources/${feature_name}_local_data_source.dart';
+import 'package:fom_mobile/features/${feature_name}/data/datasources/${feature_name}_remote_data_source.dart';
+import 'package:fom_mobile/features/${feature_name}/data/models/${feature_name}_model.dart';
+import 'package:fom_mobile/features/${feature_name}/data/repositories/${feature_name}_repository_impl.dart';
 
 void main() {
   test('returns local data when remote sync fails', () async {
@@ -724,12 +724,12 @@ EOF
   cat > "${test_root}/presentation/bloc/${feature_name}_list_bloc_test.dart" <<EOF
 import 'package:app_core/app_core.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexxus_app/features/${feature_name}/domain/entities/${feature_name}.dart';
-import 'package:nexxus_app/features/${feature_name}/domain/repositories/${feature_name}_repository.dart';
-import 'package:nexxus_app/features/${feature_name}/domain/usecases/get_${feature_name}_use_case.dart';
-import 'package:nexxus_app/features/${feature_name}/presentation/bloc/${feature_name}_list_bloc.dart';
-import 'package:nexxus_app/features/${feature_name}/presentation/bloc/${feature_name}_list_event.dart';
-import 'package:nexxus_app/features/${feature_name}/presentation/bloc/${feature_name}_list_state.dart';
+import 'package:fom_mobile/features/${feature_name}/domain/entities/${feature_name}.dart';
+import 'package:fom_mobile/features/${feature_name}/domain/repositories/${feature_name}_repository.dart';
+import 'package:fom_mobile/features/${feature_name}/domain/usecases/get_${feature_name}_use_case.dart';
+import 'package:fom_mobile/features/${feature_name}/presentation/bloc/${feature_name}_list_bloc.dart';
+import 'package:fom_mobile/features/${feature_name}/presentation/bloc/${feature_name}_list_event.dart';
+import 'package:fom_mobile/features/${feature_name}/presentation/bloc/${feature_name}_list_state.dart';
 
 void main() {
   test('${feature_pascal}ListRequested emits loading then success', () async {
