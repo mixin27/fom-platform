@@ -10,6 +10,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # env_file:
+    #   - ./apps/api/.env.docker
     environment:
       NODE_ENV: production
       PORT: 4000
