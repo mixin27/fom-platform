@@ -14,6 +14,8 @@ dependencies:
   app_storage:
     path: ../app_storage
   dio: ^5.9.2
+  connectivity_plus: ^7.1.0
+  internet_connection_checker: ^3.0.1
 
 dev_dependencies:
   flutter_test:
