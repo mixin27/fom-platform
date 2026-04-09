@@ -2,6 +2,7 @@ import "package:app_logger/app_logger.dart";
 import "package:app_storage/app_storage.dart";
 import "package:get_it/get_it.dart";
 
+import "../../features/auth/feature_auth.dart";
 import "../config/app_config.dart";
 import "../router/app_router.dart";
 import "modules/app_core_module.dart";
@@ -29,6 +30,7 @@ Future<void> configureDependencies({
       appLogger: appLogger,
       sharedPreferencesService: sharedPreferencesService,
     ),
+    const AuthModule(),
     const RouterModule(),
     // more module registration here
   ];
@@ -37,14 +39,9 @@ Future<void> configureDependencies({
     await module.register(getIt);
   }
 
-  // final authService = getIt<AuthService>();
-  // final apiService = getIt<APIService>();
-
-  // await authService.init();
-
-  // apiService.addInterceptor(
-  //   AuthInterceptor(authService: authService, apiService: apiService),
-  // );
+  if (getIt.isRegistered<AuthBloc>()) {
+    getIt<AuthBloc>().add(const AuthStarted());
+  }
 }
 
 /// Seed local sample data when enabled via [AppConfig].

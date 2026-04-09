@@ -1,5 +1,6 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/app/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 
 class SplashPage extends StatelessWidget {
@@ -146,14 +147,14 @@ class SplashPage extends StatelessWidget {
                   // Buttons
                   ElevatedButton(
                     onPressed: () {
-                      context.push('/onboarding');
+                      context.push(AppRouter.onboardingPath);
                     },
                     child: const Text('စတင်မည် — Get Started'),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton(
                     onPressed: () {
-                      context.push('/auth');
+                      context.push(AppRouter.authPath);
                     },
                     child: const Text('Login to Existing Account'),
                   ),

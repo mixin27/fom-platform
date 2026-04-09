@@ -1,258 +1,289 @@
+import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-class RegisterPage extends StatefulWidget {
+import '../../../../app/di/injection_container.dart';
+import '../../../../app/router/app_router.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
+import '../bloc/auth_state.dart';
+import '../widgets/auth_page_header.dart';
+
+class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
-}
-
-class _RegisterPageState extends State<RegisterPage> {
-  String _selectedCategory = 'Fashion';
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Step indicator
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.softOrange,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.softOrangeMid,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-
-              // Back button equivalent or header text
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back),
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerLeft,
-                ),
-              ),
-
-              // Header
-              Text(
-                'STEP 2 of 3',
-                style: TextTheme.of(context).labelMedium?.copyWith(
-                  color: AppColors.softOrange,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.84, // 0.06em approx
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Set up your\nShop',
-                style: TextTheme.of(context).headlineMedium?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w900,
-                  height: 1.2,
-                  fontSize: 28,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Form
-              Text(
-                'Shop Name',
-                style: TextTheme.of(context).labelSmall?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  letterSpacing: 0.72,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.storefront, size: 18),
-                  hintText: 'e.g. Ma Aye Fashion Shop',
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppSpacing.borderRadiusMd,
-                    ),
-                    borderSide: const BorderSide(
-                      color: AppColors.softOrange,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              Text(
-                'SHOP CATEGORY — ကဏ္ဍ',
-                style: TextTheme.of(context).labelSmall?.copyWith(
-                  color: AppColors.textLight,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.5,
-                children: [
-                  _CategoryCard(
-                    emoji: '👗',
-                    name: 'Fashion',
-                    nameMm: 'အဝတ်အစားများ',
-                    isSelected: _selectedCategory == 'Fashion',
-                    onTap: () => setState(() => _selectedCategory = 'Fashion'),
-                  ),
-                  _CategoryCard(
-                    emoji: '💄',
-                    name: 'Beauty',
-                    nameMm: 'အလှကုန်များ',
-                    isSelected: _selectedCategory == 'Beauty',
-                    onTap: () => setState(() => _selectedCategory = 'Beauty'),
-                  ),
-                  _CategoryCard(
-                    emoji: '🍔',
-                    name: 'Food',
-                    nameMm: 'စားစရာများ',
-                    isSelected: _selectedCategory == 'Food',
-                    onTap: () => setState(() => _selectedCategory = 'Food'),
-                  ),
-                  _CategoryCard(
-                    emoji: '📱',
-                    name: 'Electronics',
-                    nameMm: 'အီလက်ထရောနစ်',
-                    isSelected: _selectedCategory == 'Electronics',
-                    onTap: () =>
-                        setState(() => _selectedCategory = 'Electronics'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              Text(
-                'Facebook Page Link (Optional)',
-                style: TextTheme.of(context).labelSmall?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  letterSpacing: 0.72,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const TextField(
-                decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.link, size: 18),
-                  hintText: 'facebook.com/yourshop',
-                ),
-              ),
-              const SizedBox(height: 26),
-
-              ElevatedButton(
-                onPressed: () {},
-                child: const Text('Continue — ဆက်လက်မည်'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return BlocProvider<AuthBloc>.value(
+      value: getIt<AuthBloc>(),
+      child: const _RegisterView(),
     );
   }
 }
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    required this.emoji,
-    required this.name,
-    required this.nameMm,
-    required this.isSelected,
-    required this.onTap,
-  });
+class _RegisterView extends StatefulWidget {
+  const _RegisterView();
 
-  final String emoji;
-  final String name;
-  final String nameMm;
-  final bool isSelected;
-  final VoidCallback onTap;
+  @override
+  State<_RegisterView> createState() => _RegisterViewState();
+}
+
+class _RegisterViewState extends State<_RegisterView> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.softOrangeLight : Colors.white,
-          border: Border.all(
-            color: isSelected ? AppColors.softOrange : AppColors.border,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(height: 6),
-            Text(
-              name,
-              style: TextTheme.of(context).labelSmall?.copyWith(
-                color: AppColors.textDark,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
+    final connectionService = getIt<NetworkConnectionService>();
+
+    return BlocConsumer<AuthBloc, AuthState>(
+      listenWhen: (previous, current) =>
+          previous.errorMessage != current.errorMessage &&
+          current.errorMessage != null,
+      listener: (context, state) {
+        final message = state.errorMessage;
+        if (message == null || message.isEmpty) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+      },
+      builder: (context, state) {
+        return StreamBuilder<NetworkConnectionStatus>(
+          stream: connectionService.statusStream,
+          initialData: connectionService.currentStatus,
+          builder: (context, snapshot) {
+            final networkStatus =
+                snapshot.data ?? NetworkConnectionStatus.unknown();
+            final canSubmit = !state.isSubmitting && networkStatus.isOnline;
+
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 28,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: () => context.pop(),
+                            icon: const Icon(Icons.arrow_back),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const AuthPageHeader(
+                          badge: 'CREATE ACCOUNT',
+                          title: 'Set up your seller account',
+                          subtitle: 'Registration uses the backend auth API.',
+                        ),
+                        const SizedBox(height: 16),
+                        AppConnectionBanner(
+                          isOnline: networkStatus.isOnline,
+                          transportLabel: networkStatus.primaryTransportLabel,
+                        ),
+                        const SizedBox(height: 20),
+                        AppTextField(
+                          controller: _nameController,
+                          label: 'Full Name',
+                          hintText: 'Ma Aye',
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            size: 18,
+                          ),
+                          validator: _validateName,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hintText: 'maaye@example.com',
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: const Icon(
+                            Icons.alternate_email,
+                            size: 18,
+                          ),
+                          validator: _validateEmail,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _phoneController,
+                          label: 'Phone (Optional)',
+                          hintText: '09 7800 1111',
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: const Icon(
+                            Icons.phone_outlined,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          hintText: 'At least 8 chars, A-z, 0-9',
+                          obscureText: true,
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                          validator: _validatePassword,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _confirmPasswordController,
+                          label: 'Confirm Password',
+                          hintText: 'Re-enter password',
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          prefixIcon: const Icon(
+                            Icons.lock_person_outlined,
+                            size: 18,
+                          ),
+                          validator: _validateConfirmPassword,
+                        ),
+                        const SizedBox(height: 20),
+                        AppButton(
+                          text: 'Create Account',
+                          isLoading: state.isSubmitting,
+                          onPressed: canSubmit ? _onRegisterPressed : null,
+                        ),
+                        const SizedBox(height: 20),
+                        GestureDetector(
+                          onTap: () => context.go(AppRouter.authPath),
+                          child: Text.rich(
+                            TextSpan(
+                              text: 'Already have an account? ',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: AppColors.textMid,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Sign in',
+                                  style: TextStyle(
+                                    color: AppColors.softOrange,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-            Text(
-              nameMm,
-              style: TextTheme.of(
-                context,
-              ).bodySmall?.copyWith(color: AppColors.textMid, fontSize: 10),
-            ),
-          ],
-        ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _onRegisterPressed() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    context.read<AuthBloc>().add(
+      AuthRegisterSubmitted(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        locale: 'my',
       ),
     );
+  }
+
+  String? _validateName(String? value) {
+    final normalized = (value ?? '').trim();
+    if (normalized.isEmpty) {
+      return 'Name is required';
+    }
+
+    if (normalized.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    final normalized = (value ?? '').trim();
+    if (normalized.isEmpty) {
+      return 'Email is required';
+    }
+
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(normalized)) {
+      return 'Enter a valid email';
+    }
+
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final raw = value ?? '';
+    if (raw.isEmpty) {
+      return 'Password is required';
+    }
+
+    if (raw.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+
+    final hasUppercase = raw.contains(RegExp(r'[A-Z]'));
+    final hasLowercase = raw.contains(RegExp(r'[a-z]'));
+    final hasDigit = raw.contains(RegExp(r'\d'));
+
+    if (!hasUppercase || !hasLowercase || !hasDigit) {
+      return 'Use uppercase, lowercase, and numbers';
+    }
+
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if ((value ?? '').isEmpty) {
+      return 'Confirm your password';
+    }
+
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+
+    return null;
   }
 }

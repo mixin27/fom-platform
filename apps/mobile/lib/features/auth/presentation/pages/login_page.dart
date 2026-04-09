@@ -1,231 +1,216 @@
+import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
-import 'package:fom_mobile/app/router/app_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../../app/di/injection_container.dart';
+import '../../../../app/router/app_router.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
+import '../bloc/auth_state.dart';
+import '../widgets/auth_page_header.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Back Button
-              Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: () => context.pop(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: AppColors.border, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.textDark,
-                      size: 18,
-                    ),
+    return BlocProvider<AuthBloc>.value(
+      value: getIt<AuthBloc>(),
+      child: const _LoginView(),
+    );
+  }
+}
+
+class _LoginView extends StatefulWidget {
+  const _LoginView();
+
+  @override
+  State<_LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<_LoginView> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final connectionService = getIt<NetworkConnectionService>();
+
+    return BlocConsumer<AuthBloc, AuthState>(
+      listenWhen: (previous, current) =>
+          previous.errorMessage != current.errorMessage &&
+          current.errorMessage != null,
+      listener: (context, state) {
+        final message = state.errorMessage;
+        if (message == null || message.isEmpty) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+      },
+      builder: (context, state) {
+        return StreamBuilder<NetworkConnectionStatus>(
+          stream: connectionService.statusStream,
+          initialData: connectionService.currentStatus,
+          builder: (context, snapshot) {
+            final networkStatus =
+                snapshot.data ?? NetworkConnectionStatus.unknown();
+            final canSubmit = !state.isSubmitting && networkStatus.isOnline;
+
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 28,
                   ),
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Header
-              Text(
-                '👋 Welcome back',
-                style: TextTheme.of(context).labelMedium?.copyWith(
-                  color: AppColors.softOrange,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.84, // 0.06em approx
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Sign in to\nyour shop',
-                style: TextTheme.of(context).headlineMedium?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w900,
-                  height: 1.2,
-                  fontSize: 28,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Form
-              Text(
-                'Phone / Email',
-                style: TextTheme.of(context).labelSmall?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  letterSpacing: 0.72,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const TextField(
-                decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.phone_android, size: 18),
-                  hintText: '09xxxxxxxxx or email',
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              Text(
-                'Password',
-                style: TextTheme.of(context).labelSmall?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  letterSpacing: 0.72,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const TextField(
-                obscureText: true,
-                decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.lock_outline, size: 18),
-                  hintText: 'Enter password',
-                ),
-              ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Forgot password?',
-                  style: TextTheme.of(context).labelSmall?.copyWith(
-                    color: AppColors.softOrange,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              ElevatedButton(
-                onPressed: () {
-                  context.go(AppRouter.ordersPath);
-                },
-                child: const Text('Sign In — ဝင်ရောက်မည်'),
-              ),
-
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'OR',
-                    style: TextTheme.of(context).labelSmall?.copyWith(
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-
-              // Facebook Button
-              ElevatedButton.icon(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.facebookBlue,
-                  shadowColor: Colors.transparent,
-                ),
-                icon: const Icon(Icons.facebook, color: Colors.white),
-                label: const Text('Continue with Facebook'),
-              ),
-
-              const SizedBox(height: 20),
-              // Trial Badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.tealLight,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    const Text('🎉', style: TextStyle(fontSize: 22)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '7-Day Free Trial',
-                            style: TextTheme.of(context).labelLarge?.copyWith(
-                              color: AppColors.teal,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                            ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: context.canPop()
+                                ? () => context.pop()
+                                : null,
+                            icon: const Icon(Icons.arrow_back),
                           ),
-                          Text(
-                            'No credit card needed — just sign up and start',
-                            style: TextTheme.of(context).bodySmall?.copyWith(
-                              color: AppColors.teal,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 22),
-              GestureDetector(
-                onTap: () {
-                  context.push('/register');
-                },
-                child: Text.rich(
-                  TextSpan(
-                    text: 'Don\'t have an account? ',
-                    style: TextTheme.of(context).bodyMedium?.copyWith(
-                      color: AppColors.textMid,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                    children: const [
-                      TextSpan(
-                        text: 'Sign up free',
-                        style: TextStyle(
-                          color: AppColors.softOrange,
-                          fontWeight: FontWeight.w800,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        const AuthPageHeader(
+                          badge: 'WELCOME BACK',
+                          title: 'Sign in to your shop',
+                          subtitle: 'Use your account to continue to orders.',
+                        ),
+                        const SizedBox(height: 16),
+                        AppConnectionBanner(
+                          isOnline: networkStatus.isOnline,
+                          transportLabel: networkStatus.primaryTransportLabel,
+                        ),
+                        const SizedBox(height: 20),
+                        AppTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hintText: 'maaye@example.com',
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: const Icon(
+                            Icons.alternate_email,
+                            size: 18,
+                          ),
+                          validator: _validateEmail,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          hintText: 'Enter password',
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                          validator: _validatePassword,
+                        ),
+                        const SizedBox(height: 20),
+                        AppButton(
+                          text: 'Sign In',
+                          isLoading: state.isSubmitting,
+                          onPressed: canSubmit ? _onSignInPressed : null,
+                        ),
+                        const SizedBox(height: 16),
+                        const AppButton(
+                          text: 'Continue with Facebook',
+                          variant: AppButtonVariant.facebook,
+                          icon: Icon(Icons.facebook, color: Colors.white),
+                          onPressed: null,
+                        ),
+                        const SizedBox(height: 20),
+                        GestureDetector(
+                          onTap: () => context.push(AppRouter.registerPath),
+                          child: Text.rich(
+                            TextSpan(
+                              text: 'Don\'t have an account? ',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: AppColors.textMid,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Create one',
+                                  style: TextStyle(
+                                    color: AppColors.softOrange,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ),
-            ],
-          ),
-        ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _onSignInPressed() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    context.read<AuthBloc>().add(
+      AuthLoginSubmitted(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       ),
     );
+  }
+
+  String? _validateEmail(String? value) {
+    final normalized = (value ?? '').trim();
+    if (normalized.isEmpty) {
+      return 'Email is required';
+    }
+
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(normalized)) {
+      return 'Enter a valid email';
+    }
+
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final raw = value ?? '';
+    if (raw.isEmpty) {
+      return 'Password is required';
+    }
+
+    if (raw.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+
+    return null;
   }
 }

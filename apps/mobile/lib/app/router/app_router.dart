@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app_logger/app_logger.dart';
+import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
@@ -17,10 +18,16 @@ import 'package:go_router/go_router.dart';
 import 'app_route_paths.dart';
 
 class AppRouter {
-  AppRouter({required AppLogger appLogger, required bool enableLogDevTools})
-    : _appLogger = appLogger,
-      _enableLogDevTools = enableLogDevTools,
-      _refreshNotifier = _RouterRefreshNotifier(Stream.value(true));
+  AppRouter({
+    required AppLogger appLogger,
+    required AuthBloc authBloc,
+    required NetworkConnectionService networkConnectionService,
+    required bool enableLogDevTools,
+  }) : _appLogger = appLogger,
+       _authBloc = authBloc,
+       _networkConnectionService = networkConnectionService,
+       _enableLogDevTools = enableLogDevTools,
+       _refreshNotifier = _RouterRefreshNotifier(authBloc.stream);
 
   static const splashPath = AppRoutePaths.splash;
   static const onboardingPath = AppRoutePaths.onboarding;
@@ -36,6 +43,8 @@ class AppRouter {
   static const searchPath = AppRoutePaths.search;
 
   final AppLogger _appLogger;
+  final AuthBloc _authBloc;
+  final NetworkConnectionService _networkConnectionService;
   final bool _enableLogDevTools;
   final _RouterRefreshNotifier _refreshNotifier;
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -105,7 +114,10 @@ class AppRouter {
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return AppShell(navigationShell: navigationShell);
+          return AppShell(
+            navigationShell: navigationShell,
+            networkConnectionService: _networkConnectionService,
+          );
         },
         branches: [
           StatefulShellBranch(
@@ -148,11 +160,39 @@ class AppRouter {
   GoRouter get config => _router;
 
   String? _redirect(BuildContext context, GoRouterState state) {
+    final path = state.uri.path;
+    final status = _authBloc.state.status;
+    final isSplash = path == splashPath;
+    final isPublicRoute = _isPublicRoute(path);
+
+    if (status == AuthStatus.unknown) {
+      return isSplash ? null : splashPath;
+    }
+
+    if (status == AuthStatus.unauthenticated) {
+      if (isSplash) {
+        return onboardingPath;
+      }
+
+      if (isPublicRoute) {
+        return null;
+      }
+
+      return authRedirectPath(from: state.uri.toString());
+    }
+
+    if (isSplash || path == onboardingPath || isAuthPath(path)) {
+      final from = readFrom(state.uri);
+      return from ?? ordersPath;
+    }
+
     return null;
   }
 
   bool isAuthPath(String path) {
-    return path == authPath || path.startsWith('$authPath/');
+    return path == authPath ||
+        path.startsWith('$authPath/') ||
+        path == registerPath;
   }
 
   String authRedirectPath({required String from}) {
@@ -170,17 +210,56 @@ class AppRouter {
 
     return from;
   }
+
+  bool _isPublicRoute(String path) {
+    return path == splashPath ||
+        path == onboardingPath ||
+        path == authPath ||
+        path == registerPath ||
+        path == authEmailPath ||
+        path == authOtpPath;
+  }
 }
 
 class AppShell extends StatelessWidget {
-  const AppShell({required this.navigationShell, super.key});
+  const AppShell({
+    required this.navigationShell,
+    required this.networkConnectionService,
+    super.key,
+  });
 
   final StatefulNavigationShell navigationShell;
+  final NetworkConnectionService networkConnectionService;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: StreamBuilder<NetworkConnectionStatus>(
+          stream: networkConnectionService.statusStream,
+          initialData: networkConnectionService.currentStatus,
+          builder: (context, snapshot) {
+            final networkStatus =
+                snapshot.data ?? NetworkConnectionStatus.unknown();
+
+            return Column(
+              children: [
+                if (networkStatus.isOffline)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                    child: AppConnectionBanner(
+                      isOnline: networkStatus.isOnline,
+                      transportLabel: networkStatus.primaryTransportLabel,
+                    ),
+                  ),
+                Expanded(child: navigationShell),
+              ],
+            );
+          },
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {

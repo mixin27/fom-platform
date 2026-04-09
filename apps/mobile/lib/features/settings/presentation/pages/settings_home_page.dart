@@ -2,7 +2,9 @@ import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/di/injection_container.dart';
 import '../../../../app/router/app_route_paths.dart';
+import '../../../auth/feature_auth.dart';
 
 class SettingsHomePage extends StatefulWidget {
   const SettingsHomePage({super.key});
@@ -159,7 +161,9 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
                     AppSettingTile(
                       title: '🚪 Log Out',
                       titleColor: const Color(0xFFEF4444), // Red color
-                      onTap: () {},
+                      onTap: () {
+                        getIt<AuthBloc>().add(const AuthLogoutRequested());
+                      },
                     ),
                   ],
                 ),

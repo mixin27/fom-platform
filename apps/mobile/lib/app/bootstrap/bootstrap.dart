@@ -2,6 +2,7 @@ import "dart:async";
 
 import "package:app_device/app_device.dart";
 import "package:app_logger/app_logger.dart";
+import "package:app_network/app_network.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter/widgets.dart";
 
@@ -63,6 +64,16 @@ List<StartupTask> _buildStartupTasks(AppConfig config, AppLogger appLogger) {
       name: "configure_dependencies",
       operation: () =>
           configureDependencies(appConfig: config, appLogger: appLogger),
+    ),
+    StartupTask(
+      name: "bootstrap_network_connection_monitoring",
+      operation: () async {
+        if (!getIt.isRegistered<NetworkConnectionService>()) {
+          return;
+        }
+
+        await getIt<NetworkConnectionService>().start();
+      },
     ),
     StartupTask(
       name: "bootstrap_device_metadata",

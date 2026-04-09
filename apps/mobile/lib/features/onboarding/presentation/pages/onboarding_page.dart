@@ -1,5 +1,6 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/app/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -281,7 +282,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       _currentIndex++;
                     });
                   } else {
-                    context.push('/auth');
+                    context.push(AppRouter.authPath);
                   }
                 },
                 child: Text(_currentIndex < 2 ? 'Next →' : 'Let\'s Go →'),
@@ -289,7 +290,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               const SizedBox(height: 14),
               GestureDetector(
                 onTap: () {
-                  context.push('/auth');
+                  context.push(AppRouter.authPath);
                 },
                 child: Text(
                   'Skip intro',
