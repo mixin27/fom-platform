@@ -235,7 +235,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        top: false,
+        top: true,
         bottom: false,
         child: StreamBuilder<NetworkConnectionStatus>(
           stream: networkConnectionService.statusStream,
