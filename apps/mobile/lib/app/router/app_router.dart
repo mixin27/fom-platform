@@ -21,13 +21,18 @@ class AppRouter {
   AppRouter({
     required AppLogger appLogger,
     required AuthBloc authBloc,
+    required OnboardingBloc onboardingBloc,
     required NetworkConnectionService networkConnectionService,
     required bool enableLogDevTools,
   }) : _appLogger = appLogger,
        _authBloc = authBloc,
+       _onboardingBloc = onboardingBloc,
        _networkConnectionService = networkConnectionService,
        _enableLogDevTools = enableLogDevTools,
-       _refreshNotifier = _RouterRefreshNotifier(authBloc.stream);
+       _refreshNotifier = _RouterRefreshNotifier(<Stream<dynamic>>[
+         authBloc.stream,
+         onboardingBloc.stream,
+       ]);
 
   static const splashPath = AppRoutePaths.splash;
   static const onboardingPath = AppRoutePaths.onboarding;
@@ -44,6 +49,7 @@ class AppRouter {
 
   final AppLogger _appLogger;
   final AuthBloc _authBloc;
+  final OnboardingBloc _onboardingBloc;
   final NetworkConnectionService _networkConnectionService;
   final bool _enableLogDevTools;
   final _RouterRefreshNotifier _refreshNotifier;
@@ -161,17 +167,26 @@ class AppRouter {
 
   String? _redirect(BuildContext context, GoRouterState state) {
     final path = state.uri.path;
-    final status = _authBloc.state.status;
+    final authStatus = _authBloc.state.status;
+    final onboardingStatus = _onboardingBloc.state.status;
     final isSplash = path == splashPath;
     final isPublicRoute = _isPublicRoute(path);
+    final hasCompletedOnboarding =
+        onboardingStatus == OnboardingStatus.completed;
 
-    if (status == AuthStatus.unknown) {
+    if (authStatus == AuthStatus.unknown ||
+        onboardingStatus == OnboardingStatus.unknown ||
+        onboardingStatus == OnboardingStatus.loading) {
       return isSplash ? null : splashPath;
     }
 
-    if (status == AuthStatus.unauthenticated) {
+    if (authStatus == AuthStatus.unauthenticated) {
+      if (path == onboardingPath && hasCompletedOnboarding) {
+        return authPath;
+      }
+
       if (isSplash) {
-        return onboardingPath;
+        return null;
       }
 
       if (isPublicRoute) {
@@ -296,15 +311,19 @@ class AppShell extends StatelessWidget {
 }
 
 class _RouterRefreshNotifier extends ChangeNotifier {
-  _RouterRefreshNotifier(Stream<dynamic> stream) {
-    _subscription = stream.listen((_) => notifyListeners());
+  _RouterRefreshNotifier(Iterable<Stream<dynamic>> streams) {
+    _subscriptions = streams
+        .map((stream) => stream.listen((_) => notifyListeners()))
+        .toList(growable: false);
   }
 
-  late final StreamSubscription _subscription;
+  late final List<StreamSubscription<dynamic>> _subscriptions;
 
   @override
   void dispose() {
-    _subscription.cancel();
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
     super.dispose();
   }
 }

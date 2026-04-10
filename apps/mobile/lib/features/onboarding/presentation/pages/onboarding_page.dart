@@ -1,310 +1,183 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
-import 'package:fom_mobile/app/router/app_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-class OnboardingPage extends StatefulWidget {
+import '../../../../app/di/injection_container.dart';
+import '../../../../app/router/app_router.dart';
+import '../bloc/onboarding_bloc.dart';
+import '../bloc/onboarding_event.dart';
+import '../bloc/onboarding_state.dart';
+import '../widgets/onboarding_slide_content.dart';
+
+class OnboardingPage extends StatelessWidget {
   const OnboardingPage({super.key});
 
   @override
-  State<OnboardingPage> createState() => _OnboardingPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider<OnboardingBloc>.value(
+      value: getIt<OnboardingBloc>(),
+      child: const _OnboardingView(),
+    );
+  }
 }
 
-class _OnboardingPageState extends State<OnboardingPage> {
-  int _currentIndex = 0;
+class _OnboardingView extends StatefulWidget {
+  const _OnboardingView();
+
+  @override
+  State<_OnboardingView> createState() => _OnboardingViewState();
+}
+
+class _OnboardingViewState extends State<_OnboardingView> {
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+
+    final onboardingBloc = context.read<OnboardingBloc>();
+    if (onboardingBloc.state.status == OnboardingStatus.unknown) {
+      onboardingBloc.add(const OnboardingStarted());
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.xxl),
-              // Progress dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (index) {
-                  final isActive = index == _currentIndex;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    height: 6,
-                    width: isActive ? 24 : 6,
-                    decoration: BoxDecoration(
-                      color: isActive ? AppColors.softOrange : AppColors.border,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
+    return BlocConsumer<OnboardingBloc, OnboardingState>(
+      listenWhen: (previous, current) {
+        return previous.status != current.status ||
+            previous.errorMessage != current.errorMessage;
+      },
+      listener: (context, state) {
+        final errorMessage = state.errorMessage;
+        if (errorMessage != null && errorMessage.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          context.read<OnboardingBloc>().add(const OnboardingErrorDismissed());
+        }
 
-              // Illustration Mockup
-              Expanded(
-                child: Center(
-                  child: Container(
-                    width: 240,
-                    height: 200,
-                    alignment: Alignment.center,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // Main Card
-                        Positioned(
-                          left: 20,
-                          top: 20,
-                          child: Container(
-                            width: 200,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  children: [
-                                    const CircleAvatar(
-                                      radius: 14,
-                                      backgroundColor: AppColors.softOrangeMid,
-                                      child: Text(
-                                        '👤',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            height: 6,
-                                            width: 90,
-                                            color: AppColors.textDark,
-                                            margin: const EdgeInsets.only(
-                                              bottom: 4,
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 6,
-                                            width: 60,
-                                            color: AppColors.border,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.softOrange,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        'New',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    const CircleAvatar(
-                                      radius: 14,
-                                      backgroundColor: AppColors.softOrangeMid,
-                                      child: Text(
-                                        '📦',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            height: 6,
-                                            width: 100,
-                                            color: AppColors.textDark,
-                                            margin: const EdgeInsets.only(
-                                              bottom: 4,
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 6,
-                                            width: 45,
-                                            color: AppColors.border,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Mini Card
-                        Positioned(
-                          right: -10,
-                          top: 120,
-                          child: Container(
-                            width: 130,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.14),
-                                  blurRadius: 32,
-                                  offset: const Offset(0, 12),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'TODAY',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.softOrange,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Container(
-                                  height: 6,
-                                  width: double.infinity,
-                                  color: AppColors.textDark,
-                                  margin: const EdgeInsets.only(bottom: 6),
-                                ),
-                                Container(
-                                  height: 6,
-                                  width: 80,
-                                  color: AppColors.border,
-                                  margin: const EdgeInsets.only(bottom: 4),
-                                ),
-                                Container(
-                                  height: 6,
-                                  width: 60,
-                                  color: AppColors.border,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+        if (state.status == OnboardingStatus.completed) {
+          context.go(AppRouter.authPath);
+        }
+      },
+      builder: (context, state) {
+        final totalSlides = state.slides.isEmpty ? 3 : state.slides.length;
+        final currentStep = state.currentIndex.clamp(0, totalSlides - 1);
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  AppProgressBarDots(
+                    totalSteps: totalSlides,
+                    currentStep: currentStep,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Expanded(child: _buildBody(state)),
+                  const SizedBox(height: AppSpacing.xl),
+                  AppButton(
+                    text: state.isLastSlide ? 'Let\'s Go →' : 'Next →',
+                    isLoading: state.isSubmitting,
+                    onPressed: state.status == OnboardingStatus.ready
+                        ? () => _onPrimaryAction(context, state)
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: state.status == OnboardingStatus.ready
+                        ? () {
+                            context.read<OnboardingBloc>().add(
+                              const OnboardingSkipRequested(),
+                            );
+                          }
+                        : null,
+                    child: Text(
+                      'Skip intro',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: state.status == OnboardingStatus.ready
+                            ? AppColors.textLight
+                            : AppColors.textLight.withValues(alpha: 0.4),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-              const SizedBox(height: AppSpacing.xxl),
+  Widget _buildBody(OnboardingState state) {
+    if (state.status == OnboardingStatus.loading ||
+        state.status == OnboardingStatus.unknown) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-              // Texts
-              Text.rich(
-                TextSpan(
-                  children: const [
-                    TextSpan(text: 'Track Every '),
-                    TextSpan(
-                      text: 'Order',
-                      style: TextStyle(color: AppColors.softOrange),
-                    ),
-                    TextSpan(text: ' Instantly'),
-                  ],
-                  style: TextTheme.of(context).headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textDark,
-                    fontSize: 24,
-                    height: 1.25,
-                  ),
-                ),
-                textAlign: TextAlign.center,
-                textScaler: TextScaler.noScaling,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'No more messy notes or forgotten orders. Add orders in seconds, right from Messenger.',
-                textAlign: TextAlign.center,
-                style: TextTheme.of(context).bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMid,
-                  height: 1.6,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'မက်ဆင်ဂျာမှ အော်ဒါများကို လျင်မြန်စွာ ထည့်သွင်းပါ',
-                textAlign: TextAlign.center,
-                style: TextTheme.of(context).bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.teal,
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.xxl),
-
-              // Actions
-              ElevatedButton(
-                onPressed: () {
-                  if (_currentIndex < 2) {
-                    setState(() {
-                      _currentIndex++;
-                    });
-                  } else {
-                    context.push(AppRouter.authPath);
-                  }
-                },
-                child: Text(_currentIndex < 2 ? 'Next →' : 'Let\'s Go →'),
-              ),
-              const SizedBox(height: 14),
-              GestureDetector(
-                onTap: () {
-                  context.push(AppRouter.authPath);
-                },
-                child: Text(
-                  'Skip intro',
-                  textAlign: TextAlign.center,
-                  style: TextTheme.of(context).labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textLight,
-                  ),
-                ),
-              ),
-            ],
+    if (state.slides.isEmpty) {
+      return Center(
+        child: Text(
+          'Unable to load onboarding slides right now.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textMid,
+            fontWeight: FontWeight.w600,
           ),
         ),
-      ),
+      );
+    }
+
+    return PageView.builder(
+      controller: _pageController,
+      itemCount: state.slides.length,
+      onPageChanged: (index) {
+        context.read<OnboardingBloc>().add(OnboardingPageChanged(index));
+      },
+      itemBuilder: (context, index) {
+        final slide = state.slides[index];
+        return OnboardingSlideContent(slide: slide);
+      },
+    );
+  }
+
+  Future<void> _onPrimaryAction(
+    BuildContext context,
+    OnboardingState state,
+  ) async {
+    if (state.isLastSlide) {
+      context.read<OnboardingBloc>().add(const OnboardingCompletionRequested());
+      return;
+    }
+
+    final nextIndex = state.currentIndex + 1;
+    await _pageController.animateToPage(
+      nextIndex,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
     );
   }
 }
