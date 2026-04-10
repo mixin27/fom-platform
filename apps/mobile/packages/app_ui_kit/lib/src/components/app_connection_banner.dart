@@ -60,6 +60,8 @@ class AppConnectionBanner extends StatelessWidget {
           Expanded(
             child: Text(
               isOnline ? resolvedOnlineMessage : resolvedOfflineMessage,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: textColor,
                 fontWeight: FontWeight.w700,

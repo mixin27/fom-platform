@@ -10,6 +10,8 @@ class AppSummaryCard extends StatelessWidget {
     super.key,
     this.changeText,
     this.isPositiveChange = true,
+    this.valueColor,
+    this.changeColor,
   });
 
   /// The label for the summary (e.g., "Today Orders").
@@ -23,6 +25,8 @@ class AppSummaryCard extends StatelessWidget {
 
   /// Whether the change is positive (green) or neutral/negative (light color).
   final bool isPositiveChange;
+  final Color? valueColor;
+  final Color? changeColor;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +56,7 @@ class AppSummaryCard extends StatelessWidget {
           Text(
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
-              color: AppColors.textDark,
+              color: valueColor ?? AppColors.textDark,
               fontWeight: FontWeight.w900,
               fontSize: 20,
             ),
@@ -62,9 +66,11 @@ class AppSummaryCard extends StatelessWidget {
             Text(
               changeText!,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: isPositiveChange
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFFF59E0B),
+                color:
+                    changeColor ??
+                    (isPositiveChange
+                        ? const Color(0xFF22C55E)
+                        : const Color(0xFFF59E0B)),
                 fontWeight: FontWeight.w700,
                 fontSize: 10,
               ),

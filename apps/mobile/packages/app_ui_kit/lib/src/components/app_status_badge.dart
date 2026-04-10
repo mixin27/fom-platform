@@ -39,7 +39,7 @@ class AppStatusBadge extends StatelessWidget {
       case AppStatusVariant.delivered:
         backgroundColor = const Color(0xFFDCFCE7);
         foregroundColor = const Color(0xFF22C55E);
-        text = 'DELIVERED ✓';
+        text = 'DELIVERED';
         break;
       case AppStatusVariant.cancelled:
         backgroundColor = const Color(0xFFFEE2E2);

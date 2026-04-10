@@ -130,7 +130,10 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: ordersPath,
-                builder: (context, state) => const OrdersHomePage(),
+                builder: (context, state) => OrdersHomePage(
+                  initialShopId: _resolveCurrentShopId(),
+                  initialShopName: _resolveCurrentShopName(),
+                ),
               ),
             ],
           ),
@@ -234,6 +237,28 @@ class AppRouter {
         path == authEmailPath ||
         path == authOtpPath;
   }
+
+  String _resolveCurrentShopId() {
+    final user = _authBloc.state.user;
+    if (user == null || user.shopAccesses.isEmpty) {
+      return "";
+    }
+
+    return user.shopAccesses.first.shopId;
+  }
+
+  String _resolveCurrentShopName() {
+    final rawName = _authBloc.state.user?.name.trim() ?? "";
+    if (rawName.isEmpty) {
+      return "My Shop";
+    }
+
+    if (rawName.toLowerCase().endsWith("shop")) {
+      return rawName;
+    }
+
+    return "$rawName Shop";
+  }
 }
 
 class AppShell extends StatelessWidget {
@@ -249,31 +274,31 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: StreamBuilder<NetworkConnectionStatus>(
-          stream: networkConnectionService.statusStream,
-          initialData: networkConnectionService.currentStatus,
-          builder: (context, snapshot) {
-            final networkStatus =
-                snapshot.data ?? NetworkConnectionStatus.unknown();
+      body: StreamBuilder<NetworkConnectionStatus>(
+        stream: networkConnectionService.statusStream,
+        initialData: networkConnectionService.currentStatus,
+        builder: (context, snapshot) {
+          final networkStatus =
+              snapshot.data ?? NetworkConnectionStatus.unknown();
 
-            return Column(
-              children: [
-                if (networkStatus.isOffline)
-                  Padding(
+          return Column(
+            children: [
+              if (networkStatus.isOffline)
+                SafeArea(
+                  top: true,
+                  bottom: false,
+                  child: Padding(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                     child: AppConnectionBanner(
                       isOnline: networkStatus.isOnline,
                       transportLabel: networkStatus.primaryTransportLabel,
                     ),
                   ),
-                Expanded(child: navigationShell),
-              ],
-            );
-          },
-        ),
+                ),
+              Expanded(child: navigationShell),
+            ],
+          );
+        },
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,

@@ -4,6 +4,7 @@ import "package:get_it/get_it.dart";
 
 import "../../features/auth/feature_auth.dart";
 import "../../features/onboarding/feature_onboarding.dart";
+import "../../features/orders/feature_orders.dart";
 import "../config/app_config.dart";
 import "../router/app_router.dart";
 import "modules/app_core_module.dart";
@@ -33,6 +34,7 @@ Future<void> configureDependencies({
     ),
     const AuthModule(),
     const OnboardingModule(),
+    const OrdersModule(),
     const RouterModule(),
     // more module registration here
   ];

@@ -11,6 +11,8 @@ export 'src/components/app_filter_tabs.dart';
 export 'src/components/app_icon_button.dart';
 export 'src/components/app_nav_bar.dart';
 export 'src/components/app_order_card.dart';
+export 'src/components/app_orders_home_header.dart';
+export 'src/components/app_orders_section_label.dart';
 export 'src/components/app_paste_helper.dart';
 export 'src/components/app_progress_bar_dots.dart';
 export 'src/components/app_search_bar.dart';
