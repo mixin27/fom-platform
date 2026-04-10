@@ -87,7 +87,11 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return CustomerProfilePage(customerId: id);
+          return CustomerProfilePage(
+            customerId: id,
+            shopId: _resolveCurrentShopId(),
+            shopName: _resolveCurrentShopName(),
+          );
         },
       ),
       GoRoute(
@@ -141,7 +145,10 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: AppRoutePaths.customers,
-                builder: (context, state) => const CustomersHomePage(),
+                builder: (context, state) => CustomersHomePage(
+                  initialShopId: _resolveCurrentShopId(),
+                  initialShopName: _resolveCurrentShopName(),
+                ),
               ),
             ],
           ),

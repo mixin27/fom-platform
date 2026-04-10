@@ -1,40 +1,45 @@
-import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 
-class CustomerProfileInfoRow {
-  const CustomerProfileInfoRow({
+import '../tokens/app_colors.dart';
+
+class AppInfoRowItem {
+  const AppInfoRowItem({
     required this.keyLabel,
     required this.valueLabel,
     this.valueColor = AppColors.textDark,
     this.valueFontSize = 13,
+    this.valueFontWeight = FontWeight.w800,
   });
 
   final String keyLabel;
   final String valueLabel;
   final Color valueColor;
   final double valueFontSize;
+  final FontWeight valueFontWeight;
 }
 
-class CustomerProfileInfoCard extends StatelessWidget {
-  const CustomerProfileInfoCard({
-    super.key,
+class AppInfoRowsCard extends StatelessWidget {
+  const AppInfoRowsCard({
     required this.icon,
-    required this.iconBgColor,
+    required this.iconBackgroundColor,
     required this.title,
     required this.rows,
+    super.key,
     this.actionLabel,
     this.onActionTap,
   });
 
-  final String icon;
-  final Color iconBgColor;
+  final IconData icon;
+  final Color iconBackgroundColor;
   final String title;
-  final List<CustomerProfileInfoRow> rows;
+  final List<AppInfoRowItem> rows;
   final String? actionLabel;
   final VoidCallback? onActionTap;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -51,18 +56,18 @@ class CustomerProfileInfoCard extends StatelessWidget {
               Container(
                 width: 28,
                 height: 28,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: iconBgColor,
+                  color: iconBackgroundColor,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                alignment: Alignment.center,
-                child: Text(icon, style: const TextStyle(fontSize: 14)),
+                child: Icon(icon, size: 16, color: AppColors.textDark),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
-                  style: TextTheme.of(context).bodyLarge?.copyWith(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: AppColors.textDark,
                     fontSize: 13,
@@ -74,7 +79,7 @@ class CustomerProfileInfoCard extends StatelessWidget {
                   onTap: onActionTap,
                   child: Text(
                     actionLabel!,
-                    style: TextTheme.of(context).labelSmall?.copyWith(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.softOrange,
                       fontSize: 11,
@@ -85,11 +90,12 @@ class CustomerProfileInfoCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           ...rows.asMap().entries.map((entry) {
-            final isLast = entry.key == rows.length - 1;
-            final rowData = entry.value;
+            final index = entry.key;
+            final item = entry.value;
+            final isLast = index == rows.length - 1;
 
             return Container(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 8, top: 4),
+              padding: EdgeInsets.only(top: 4, bottom: isLast ? 0 : 8),
               margin: EdgeInsets.only(bottom: isLast ? 0 : 8),
               decoration: BoxDecoration(
                 border: isLast
@@ -102,8 +108,8 @@ class CustomerProfileInfoCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    rowData.keyLabel.toUpperCase(),
-                    style: TextTheme.of(context).labelSmall?.copyWith(
+                    item.keyLabel.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.textLight,
                       fontSize: 11,
@@ -113,13 +119,13 @@ class CustomerProfileInfoCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
-                      rowData.valueLabel,
-                      style: TextTheme.of(context).bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: rowData.valueColor,
-                        fontSize: rowData.valueFontSize,
-                      ),
+                      item.valueLabel,
                       textAlign: TextAlign.right,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: item.valueFontWeight,
+                        color: item.valueColor,
+                        fontSize: item.valueFontSize,
+                      ),
                     ),
                   ),
                 ],
