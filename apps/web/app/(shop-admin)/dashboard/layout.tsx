@@ -6,7 +6,7 @@ import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
 import { shopPortalNav } from "@/lib/navigation"
-import { getActiveShop, requireShopAdmin } from "@/lib/auth/session"
+import { getShopDetails, getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 
@@ -15,8 +15,13 @@ export default async function ShopAppLayout({
 }: {
   children: ReactNode
 }) {
-  const session = await requireShopAdmin()
-  const activeShop = getActiveShop(session)
+  const [{ session, activeShop }, shopResponse, profileResponse] = await Promise.all([
+    getShopPortalContext(),
+    getShopDetails("/dashboard"),
+    getCurrentUserProfile("/dashboard"),
+  ])
+  const shop = shopResponse.data
+  const profile = profileResponse.data
   const primaryRole =
     activeShop?.membership.role === "owner"
       ? "Owner"
@@ -36,7 +41,7 @@ export default async function ShopAppLayout({
                   Shop portal
                 </p>
                 <p className="mt-1.5 text-sm font-semibold text-foreground">
-                  {activeShop?.name ?? "Shop workspace"}
+                  {shop.name}
                 </p>
                 <div className="mt-2.5 flex items-center gap-2">
                   <Badge variant="outline">
@@ -47,9 +52,14 @@ export default async function ShopAppLayout({
                   </span>
                 </div>
               </div>
-              <Button className="mt-3 w-full bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-                <Plus data-icon="inline-start" />
-                Add order
+              <Button
+                asChild
+                className="mt-3 w-full bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
+              >
+                <Link href="/dashboard/orders">
+                  <Plus data-icon="inline-start" />
+                  Add order
+                </Link>
               </Button>
             </div>
 
@@ -60,10 +70,10 @@ export default async function ShopAppLayout({
             <div className="border-t border-black/6 px-4 py-3">
               <div className="rounded-2xl border border-black/6 bg-white p-3.5">
                 <p className="text-sm font-semibold text-foreground">
-                  {session.user.name}
+                  {profile.name}
                 </p>
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  {session.user.email}
+                  {profile.email ?? session.user.email ?? "No email"}
                 </p>
                 <div className="mt-3 flex gap-2">
                   <Button asChild variant="outline" size="sm" className="flex-1">
