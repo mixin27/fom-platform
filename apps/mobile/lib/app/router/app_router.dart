@@ -1,39 +1,79 @@
 import 'dart:async';
 
 import 'package:app_logger/app_logger.dart';
+import 'package:app_network/app_network.dart';
+import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:fom_mobile/features/auth/feature_auth.dart';
+import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
+import 'package:fom_mobile/features/notifications/feature_notifications.dart';
+import 'package:fom_mobile/features/onboarding/feature_onboarding.dart';
 import 'package:fom_mobile/features/orders/feature_orders.dart';
+import 'package:fom_mobile/features/reports/feature_reports.dart';
+import 'package:fom_mobile/features/search/feature_search.dart';
+import 'package:fom_mobile/features/settings/feature_settings.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app_route_paths.dart';
 
 class AppRouter {
-  AppRouter({required AppLogger appLogger, required bool enableLogDevTools})
-    : _appLogger = appLogger,
-      _enableLogDevTools = enableLogDevTools,
-      _refreshNotifier = _RouterRefreshNotifier(Stream.value(true));
+  AppRouter({
+    required AppLogger appLogger,
+    required AuthBloc authBloc,
+    required OnboardingBloc onboardingBloc,
+    required NetworkConnectionService networkConnectionService,
+    required bool enableLogDevTools,
+  }) : _appLogger = appLogger,
+       _authBloc = authBloc,
+       _onboardingBloc = onboardingBloc,
+       _networkConnectionService = networkConnectionService,
+       _enableLogDevTools = enableLogDevTools,
+       _refreshNotifier = _RouterRefreshNotifier(<Stream<dynamic>>[
+         authBloc.stream,
+         onboardingBloc.stream,
+       ]);
 
+  static const splashPath = AppRoutePaths.splash;
+  static const onboardingPath = AppRoutePaths.onboarding;
   static const authPath = AppRoutePaths.auth;
+  static const registerPath = AppRoutePaths.register;
   static const authEmailPath = AppRoutePaths.authEmail;
   static const authOtpPath = AppRoutePaths.authOtp;
   static const devtoolsLogsPath = AppRoutePaths.devtoolsLogs;
   static const ordersPath = AppRoutePaths.orders;
+  static const reportsPath = AppRoutePaths.reports;
+  static const settingsPath = AppRoutePaths.settings;
+  static const notificationsPath = AppRoutePaths.notifications;
+  static const searchPath = AppRoutePaths.search;
 
   final AppLogger _appLogger;
+  final AuthBloc _authBloc;
+  final OnboardingBloc _onboardingBloc;
+  final NetworkConnectionService _networkConnectionService;
   final bool _enableLogDevTools;
   final _RouterRefreshNotifier _refreshNotifier;
+  static final GlobalKey<NavigatorState> _rootNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   late final GoRouter _router = GoRouter(
-    initialLocation: ordersPath,
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: splashPath,
     refreshListenable: _refreshNotifier,
     redirect: _redirect,
     routes: [
       GoRoute(
-        path: authPath,
-        builder: (context, state) {
-          return const Scaffold();
-        },
+        path: splashPath,
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: onboardingPath,
+        builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(path: authPath, builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: registerPath,
+        builder: (context, state) => const RegisterPage(),
       ),
       if (_enableLogDevTools)
         GoRoute(
@@ -42,43 +82,95 @@ class AppRouter {
             return LogsDevtoolsPage(logger: _appLogger);
           },
         ),
+      GoRoute(
+        path: AppRoutePaths.customerProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return CustomerProfilePage(
+            customerId: id,
+            shopId: _resolveCurrentShopId(),
+            shopName: _resolveCurrentShopName(),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutePaths.addOrder,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => AddOrderPage(
+          initialShopId: _resolveCurrentShopId(),
+          initialShopName: _resolveCurrentShopName(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutePaths.orderDetails,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return OrderDetailsPage(
+            orderId: id,
+            initialShopId: _resolveCurrentShopId(),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutePaths.editProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditShopProfilePage(),
+      ),
+      GoRoute(
+        path: notificationsPath,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationsHomePage(),
+      ),
+      GoRoute(
+        path: searchPath,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SearchHomePage(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return AppShell(navigationShell: navigationShell);
+          return AppShell(
+            navigationShell: navigationShell,
+            networkConnectionService: _networkConnectionService,
+          );
         },
         branches: [
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: ordersPath,
-                builder: (context, state) => const OrdersHomePage(),
+                builder: (context, state) => OrdersHomePage(
+                  initialShopId: _resolveCurrentShopId(),
+                  initialShopName: _resolveCurrentShopName(),
+                ),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/two',
-                builder: (context, state) =>
-                    const _DetailUnavailablePage(title: 'Two'),
+                path: AppRoutePaths.customers,
+                builder: (context, state) => CustomersHomePage(
+                  initialShopId: _resolveCurrentShopId(),
+                  initialShopName: _resolveCurrentShopName(),
+                ),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/three',
-                builder: (context, state) =>
-                    const _DetailUnavailablePage(title: 'Three'),
+                path: reportsPath,
+                builder: (context, state) => const ReportsHomePage(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/four',
-                builder: (context, state) =>
-                    const _DetailUnavailablePage(title: 'Four'),
+                path: settingsPath,
+                builder: (context, state) => const SettingsHomePage(),
               ),
             ],
           ),
@@ -90,11 +182,48 @@ class AppRouter {
   GoRouter get config => _router;
 
   String? _redirect(BuildContext context, GoRouterState state) {
+    final path = state.uri.path;
+    final authStatus = _authBloc.state.status;
+    final onboardingStatus = _onboardingBloc.state.status;
+    final isSplash = path == splashPath;
+    final isPublicRoute = _isPublicRoute(path);
+    final hasCompletedOnboarding =
+        onboardingStatus == OnboardingStatus.completed;
+
+    if (authStatus == AuthStatus.unknown ||
+        onboardingStatus == OnboardingStatus.unknown ||
+        onboardingStatus == OnboardingStatus.loading) {
+      return isSplash ? null : splashPath;
+    }
+
+    if (authStatus == AuthStatus.unauthenticated) {
+      if (path == onboardingPath && hasCompletedOnboarding) {
+        return authPath;
+      }
+
+      if (isSplash) {
+        return null;
+      }
+
+      if (isPublicRoute) {
+        return null;
+      }
+
+      return authRedirectPath(from: state.uri.toString());
+    }
+
+    if (isSplash || path == onboardingPath || isAuthPath(path)) {
+      final from = readFrom(state.uri);
+      return from ?? ordersPath;
+    }
+
     return null;
   }
 
   bool isAuthPath(String path) {
-    return path == authPath || path.startsWith('$authPath/');
+    return path == authPath ||
+        path.startsWith('$authPath/') ||
+        path == registerPath;
   }
 
   String authRedirectPath({required String from}) {
@@ -112,17 +241,78 @@ class AppRouter {
 
     return from;
   }
+
+  bool _isPublicRoute(String path) {
+    return path == splashPath ||
+        path == onboardingPath ||
+        path == authPath ||
+        path == registerPath ||
+        path == authEmailPath ||
+        path == authOtpPath;
+  }
+
+  String _resolveCurrentShopId() {
+    final user = _authBloc.state.user;
+    if (user == null || user.shopAccesses.isEmpty) {
+      return "";
+    }
+
+    return user.shopAccesses.first.shopId;
+  }
+
+  String _resolveCurrentShopName() {
+    final rawName = _authBloc.state.user?.name.trim() ?? "";
+    if (rawName.isEmpty) {
+      return "My Shop";
+    }
+
+    if (rawName.toLowerCase().endsWith("shop")) {
+      return rawName;
+    }
+
+    return "$rawName Shop";
+  }
 }
 
 class AppShell extends StatelessWidget {
-  const AppShell({required this.navigationShell, super.key});
+  const AppShell({
+    required this.navigationShell,
+    required this.networkConnectionService,
+    super.key,
+  });
 
   final StatefulNavigationShell navigationShell;
+  final NetworkConnectionService networkConnectionService;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: StreamBuilder<NetworkConnectionStatus>(
+        stream: networkConnectionService.statusStream,
+        initialData: networkConnectionService.currentStatus,
+        builder: (context, snapshot) {
+          final networkStatus =
+              snapshot.data ?? NetworkConnectionStatus.unknown();
+
+          return Column(
+            children: [
+              if (networkStatus.isOffline)
+                SafeArea(
+                  top: true,
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                    child: AppConnectionBanner(
+                      isOnline: networkStatus.isOnline,
+                      transportLabel: networkStatus.primaryTransportLabel,
+                    ),
+                  ),
+                ),
+              Expanded(child: navigationShell),
+            ],
+          );
+        },
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {
@@ -133,20 +323,24 @@ class AppShell extends StatelessWidget {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.campaign_outlined),
-            label: 'One',
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long, color: AppColors.softOrange),
+            label: 'Orders',
           ),
           NavigationDestination(
-            icon: Icon(Icons.confirmation_num_outlined),
-            label: 'Two',
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people, color: AppColors.softOrange),
+            label: 'Customers',
           ),
           NavigationDestination(
-            icon: Icon(Icons.loyalty_outlined),
-            label: 'Three',
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart, color: AppColors.softOrange),
+            label: 'Reports',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            label: 'Four',
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings, color: AppColors.softOrange),
+            label: 'Settings',
           ),
         ],
       ),
@@ -154,30 +348,20 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _DetailUnavailablePage extends StatelessWidget {
-  const _DetailUnavailablePage({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Unavailable')),
-      body: Center(child: Text(title)),
-    );
-  }
-}
-
 class _RouterRefreshNotifier extends ChangeNotifier {
-  _RouterRefreshNotifier(Stream<dynamic> stream) {
-    _subscription = stream.listen((_) => notifyListeners());
+  _RouterRefreshNotifier(Iterable<Stream<dynamic>> streams) {
+    _subscriptions = streams
+        .map((stream) => stream.listen((_) => notifyListeners()))
+        .toList(growable: false);
   }
 
-  late final StreamSubscription _subscription;
+  late final List<StreamSubscription<dynamic>> _subscriptions;
 
   @override
   void dispose() {
-    _subscription.cancel();
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
     super.dispose();
   }
 }

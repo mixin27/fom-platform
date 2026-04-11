@@ -79,11 +79,11 @@ class AppConfig extends Equatable {
   static String _defaultBaseUrlFor(AppEnvironment environment) {
     switch (environment) {
       case AppEnvironment.development:
-        return "http://localhost:3000/api/mobile";
+        return "http://localhost:4000/api/v1";
       case AppEnvironment.staging:
-        return "http://localhost:3000/api/mobile";
+        return "http://localhost:4000/api/v1";
       case AppEnvironment.production:
-        return "http://localhost:3000/api/mobile";
+        return "http://localhost:4000/api/v1";
     }
   }
 

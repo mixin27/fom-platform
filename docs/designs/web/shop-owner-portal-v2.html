@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma Aye Shop — Order Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Noto+Sans+Myanmar:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#EDE8E2;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;-webkit-font-smoothing:antialiased;}
+
+:root{
+  --orange:#FF6B35;--orange-d:#E85820;--orange-10:rgba(255,107,53,0.10);
+  --orange-15:rgba(255,107,53,0.15);--orange-20:rgba(255,107,53,0.20);
+  --orange-soft:#FFF3EE;--orange-mid:#FFD4C2;
+  --teal:#2AA8A0;--teal-soft:#E8F7F6;--teal-mid:#A8DDD9;
+  --green:#22C55E;--green-soft:#F0FDF4;
+  --amber:#F59E0B;--amber-soft:#FFFBEB;
+  --red:#EF4444;--red-soft:#FEF2F2;
+  --violet:#8B5CF6;--violet-soft:#F5F3FF;
+  --blue:#3B82F6;--blue-soft:#EFF6FF;
+  --bg:#F7F4EF;--surface:#FFFFFF;--surface-2:#FDFAF7;
+  --border:#EAE5DE;--border-2:#D8D0C6;
+  --text-1:#1A1410;--text-2:#4A4540;--text-3:#8A8580;
+  --dark:#1A1410;--dark-2:#252018;
+  --sb-bg:#FFFCF8;--radius:12px;--radius-lg:18px;
+  --shadow-sm:0 1px 3px rgba(26,20,16,0.06),0 1px 2px rgba(26,20,16,0.04);
+  --shadow:0 4px 16px rgba(26,20,16,0.08);
+  --shadow-lg:0 16px 48px rgba(26,20,16,0.14);
+}
+
+.shell{width:100%;max-width:1400px;height:calc(100vh - 40px);max-height:900px;display:flex;border-radius:22px;overflow:hidden;box-shadow:0 32px 80px rgba(26,20,16,0.22),0 0 0 1px rgba(26,20,16,0.08);}
+
+/* ── SIDEBAR ── */
+.sb{width:224px;flex-shrink:0;background:var(--sb-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;}
+.sb-header{padding:16px 14px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sb-shop-row{display:flex;align-items:center;gap:10px;}
+.sb-shop-av{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--orange),#FF8C5A);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 4px 12px rgba(255,107,53,0.28);}
+.sb-shop-name{font-size:14px;font-weight:700;color:var(--text-1);line-height:1.2;}
+.sb-shop-plan{font-size:10px;font-weight:600;color:var(--orange);background:var(--orange-soft);padding:2px 8px;border-radius:99px;margin-top:3px;width:fit-content;}
+.sb-today{margin-top:11px;background:var(--bg);border-radius:10px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;}
+.sb-today-lbl{font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;}
+.sb-today-val{font-size:17px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;line-height:1.1;}
+.sb-today-mmk{font-size:9px;color:var(--text-3);font-weight:500;}
+
+.sb-nav{flex:1;padding:10px;overflow-y:auto;}
+.sb-nav::-webkit-scrollbar{display:none;}
+.sb-sec{font-size:9px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-3);padding:10px 8px 4px;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600;transition:all 0.14s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif;position:relative;}
+.sb-item:hover{background:var(--bg);color:var(--text-2);}
+.sb-item.active{background:var(--orange-soft);color:var(--orange);}
+.sb-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--orange);border-radius:0 3px 3px 0;}
+.sb-item svg{width:15px;height:15px;flex-shrink:0;opacity:0.7;}
+.sb-item.active svg{opacity:1;}
+.sb-lbl{flex:1;}
+.sb-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--bg);color:var(--text-3);}
+.sb-item.active .sb-badge{background:var(--orange-15);color:var(--orange);}
+.sb-badge.alert{background:var(--red-soft);color:var(--red);}
+.sb-badge.success{background:var(--green-soft);color:var(--green);}
+.sb-footer{padding:10px 10px 14px;border-top:1px solid var(--border);flex-shrink:0;}
+.sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.14s;}
+.sb-user:hover{background:var(--bg);}
+.sb-user-av{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--teal),#3DC8BF);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0;}
+.sb-user-name{font-size:12px;font-weight:700;color:var(--text-2);}
+.sb-user-role{font-size:10px;color:var(--text-3);}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 22px;flex-shrink:0;}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-1);flex:1;}
+.tb-search{position:relative;}
+.tb-search input{height:33px;width:200px;padding:0 12px 0 32px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);font-size:13px;font-family:inherit;color:var(--text-1);outline:none;transition:border-color 0.15s;}
+.tb-search input:focus{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.tb-search input::placeholder{color:var(--text-3);}
+.tb-si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);}
+.tb-icon{width:33px;height:33px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);position:relative;transition:background 0.14s;}
+.tb-icon:hover{background:var(--bg);}
+.ndot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--orange);border:1.5px solid white;}
+.tb-av{width:33px;height:33px;border-radius:9px;background:linear-gradient(135deg,var(--orange),#FF8C5A);display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:800;cursor:pointer;}
+.tb-div{width:1px;height:20px;background:var(--border);}
+
+/* ── PAGE ── */
+.page{display:none;flex:1;overflow-y:auto;}
+.page.active{display:flex;flex-direction:column;}
+.page::-webkit-scrollbar{width:4px;}
+.page::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:99px;}
+.pc{padding:22px;display:flex;flex-direction:column;gap:18px;min-height:100%;}
+
+/* ── COMMON ── */
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.ct{font-size:13px;font-weight:700;color:var(--text-1);}
+.cs{font-size:11px;color:var(--text-3);margin-top:1px;}
+.row{display:flex;align-items:center;}
+.col{display:flex;flex-direction:column;}
+.gap-2{gap:8px;}.gap-3{gap:12px;}.gap-4{gap:16px;}
+.ml{margin-left:auto;}
+.fw7{font-weight:700;}.fw8{font-weight:800;}
+.fs11{font-size:11px;}.fs12{font-size:12px;}.fs13{font-size:13px;}.fs14{font-size:14px;}
+.t1{color:var(--text-1);}.t2{color:var(--text-2);}.t3{color:var(--text-3);}
+.wfull{width:100%;}
+.mm{font-family:'Noto Sans Myanmar',sans-serif;}
+
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;border-radius:9px;cursor:pointer;border:none;transition:all 0.15s;white-space:nowrap;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-md{padding:9px 18px;}
+.btn-lg{padding:11px 22px;font-size:14px;}
+.btn-primary{background:var(--orange);color:#fff;box-shadow:0 2px 8px rgba(255,107,53,0.26);}
+.btn-primary:hover{background:var(--orange-d);transform:translateY(-1px);}
+.btn-outline{background:var(--surface);color:var(--text-2);border:1.5px solid var(--border);}
+.btn-outline:hover{background:var(--bg);}
+.btn-ghost{background:transparent;color:var(--text-2);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-soft-orange{background:var(--orange-soft);color:var(--orange);}
+.btn-soft-orange:hover{background:var(--orange-mid);}
+.btn-soft-teal{background:var(--teal-soft);color:var(--teal);}
+.btn-soft-teal:hover{background:var(--teal-mid);}
+.btn-soft-green{background:var(--green-soft);color:var(--green);}
+.btn-soft-red{background:var(--red-soft);color:var(--red);border:1.5px solid #FECACA;}
+.btn-soft-red:hover{background:#FEE2E2;}
+
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;}
+.b-new{background:var(--orange-soft);color:var(--orange);border:1px solid var(--orange-mid);}
+.b-confirmed{background:var(--teal-soft);color:var(--teal);border:1px solid var(--teal-mid);}
+.b-out{background:var(--amber-soft);color:var(--amber);border:1px solid #FDE68A;}
+.b-delivered{background:var(--green-soft);color:var(--green);border:1px solid #BBF7D0;}
+.b-cancelled{background:var(--red-soft);color:var(--red);border:1px solid #FECACA;}
+
+.input{width:100%;height:38px;padding:0 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-1);outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.input:focus{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.input::placeholder{color:var(--text-3);}
+textarea.input{height:auto;padding:10px 12px;resize:none;line-height:1.55;}
+select.input{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8580' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
+.flbl{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;display:block;}
+.flbl span{color:var(--orange);}
+.fgroup{display:flex;flex-direction:column;gap:5px;}
+
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sd-orange{background:var(--orange);box-shadow:0 0 0 2px var(--orange-20);}
+.sd-teal{background:var(--teal);box-shadow:0 0 0 2px rgba(42,168,160,0.2);}
+.sd-amber{background:var(--amber);box-shadow:0 0 0 2px rgba(245,158,11,0.2);}
+.sd-green{background:var(--green);box-shadow:0 0 0 2px rgba(34,197,94,0.2);}
+.sd-red{background:var(--red);}
+.sd-gray{background:var(--border-2);}
+
+.tabs{display:flex;gap:2px;padding:3px;background:var(--bg);border-radius:10px;width:fit-content;}
+.tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-3);border:none;background:none;transition:all 0.14s;font-family:'DM Sans',sans-serif;}
+.tab.active{background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-sm);}
+
+.pill{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--text-3);transition:all 0.14s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.pill.active{background:var(--orange);border-color:var(--orange);color:#fff;}
+.pn{font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:var(--bg);color:var(--text-3);}
+.pill.active .pn{background:rgba(255,255,255,0.25);color:white;}
+
+/* modal */
+.mo{position:fixed;inset:0;background:rgba(26,20,16,0.42);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+.mo.open{display:flex;}
+.modal{background:var(--surface);border-radius:20px;border:1.5px solid var(--border);box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.mt{font-size:15px;font-weight:800;color:var(--text-1);}
+.ms{font-size:11px;color:var(--text-3);margin-top:2px;}
+.mb{padding:22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;}
+.mb::-webkit-scrollbar{width:3px;}
+.mb::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+.mf{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--border);flex-shrink:0;}
+.mclose{border:none;background:none;cursor:pointer;color:var(--text-3);padding:4px;border-radius:6px;display:flex;transition:color 0.14s;}
+.mclose:hover{color:var(--text-1);}
+
+/* bar */
+.bar-track{height:5px;border-radius:99px;background:var(--bg);overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;}
+
+/* kpi */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.kpi{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-sm);}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.kpi-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.kpi-ch{font-size:11px;font-weight:700;}
+.kpi-ch.up{color:#16A34A;}.kpi-ch.warn{color:var(--amber);}
+.kpi-val{font-size:24px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;line-height:1;}
+.kpi-lbl{font-size:11px;color:var(--text-3);margin-top:3px;font-weight:500;}
+
+/* ─────────────────────────────────────────────────────────────
+   MESSAGE TEMPLATES PAGE
+───────────────────────────────────────────────────────────── */
+.tpl-grid{display:grid;grid-template-columns:300px 1fr;gap:0;height:100%;overflow:hidden;}
+.tpl-left{border-right:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
+.tpl-right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+
+.tpl-search{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tpl-list{flex:1;overflow-y:auto;padding:8px;}
+.tpl-list::-webkit-scrollbar{width:3px;}
+.tpl-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+
+.tpl-cat-label{font-size:9px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:var(--text-3);padding:8px 8px 4px;}
+
+.tpl-item{padding:12px 14px;border-radius:11px;cursor:pointer;margin-bottom:4px;transition:all 0.14s;border:1.5px solid transparent;}
+.tpl-item:hover{background:var(--bg);}
+.tpl-item.active{background:var(--orange-soft);border-color:var(--orange-mid);}
+.tpl-item-name{font-size:13px;font-weight:700;color:var(--text-1);margin-bottom:3px;display:flex;align-items:center;gap:6px;}
+.tpl-item.active .tpl-item-name{color:var(--orange);}
+.tpl-item-preview{font-size:11px;color:var(--text-3);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tpl-item-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;}
+
+/* editor */
+.tpl-editor-header{padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.tpl-editor-body{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:16px;}
+.tpl-editor-footer{padding:14px 22px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+
+/* preview bubble */
+.tpl-preview-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:20px;}
+.tpl-bubble-label{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;}
+.tpl-preview-phone{background:#1C1C24;border-radius:20px;padding:16px;max-width:300px;margin:0 auto;}
+.tpl-preview-top{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.tpl-preview-avatar{width:32px;height:32px;border-radius:50%;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.tpl-preview-name{font-size:12px;font-weight:700;color:white;}
+.tpl-preview-status{font-size:10px;color:rgba(255,255,255,0.35);}
+.tpl-bubble{background:rgba(255,255,255,0.08);border-radius:4px 14px 14px 14px;padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.82);line-height:1.65;word-break:break-word;margin-bottom:6px;}
+.tpl-bubble-mm{font-family:'Noto Sans Myanmar',sans-serif;font-size:11px;color:rgba(255,255,255,0.5);padding:6px 14px;}
+.tpl-bubble-time{font-size:9px;color:rgba(255,255,255,0.25);text-align:right;margin-top:4px;}
+
+/* variables chips */
+.var-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.var-chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--violet-soft);color:var(--violet);cursor:pointer;border:1px solid #DDD6FE;transition:all 0.14s;}
+.var-chip:hover{background:#EDE9FE;}
+
+/* ─────────────────────────────────────────────────────────────
+   DELIVERY TRACKING PAGE
+───────────────────────────────────────────────────────────── */
+.del-layout{display:grid;grid-template-columns:1fr 320px;gap:0;height:100%;overflow:hidden;}
+.del-left{display:flex;flex-direction:column;overflow:hidden;}
+.del-right{border-left:1.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
+
+.del-toolbar{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.del-filters{padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.del-list{flex:1;overflow-y:auto;padding:14px 16px;}
+.del-list::-webkit-scrollbar{width:4px;}
+.del-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+
+/* delivery card */
+.del-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:0;margin-bottom:10px;cursor:pointer;transition:all 0.18s;overflow:hidden;position:relative;}
+.del-card:hover{box-shadow:var(--shadow);border-color:var(--border-2);}
+.del-card.selected{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.del-card-stripe{height:3px;width:100%;}
+.del-card-body{padding:14px 16px;}
+.del-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.del-card-customer{display:flex;align-items:center;gap:9px;}
+.del-avatar{width:36px;height:36px;border-radius:11px;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.del-name{font-size:13px;font-weight:700;color:var(--text-1);}
+.del-addr{font-size:11px;color:var(--text-3);margin-top:1px;}
+.del-card-mid{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.del-product{font-size:12px;color:var(--text-2);font-weight:600;}
+.del-price{font-size:14px;font-weight:800;color:var(--text-1);}
+
+/* stepper horizontal */
+.del-stepper{display:flex;align-items:center;gap:0;padding:10px 16px;background:var(--bg);border-top:1px solid var(--border);}
+.del-step{display:flex;align-items:center;gap:0;flex:1;}
+.del-step-node{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+.del-step-circle{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;border:1.5px solid var(--border);background:var(--surface);transition:all 0.3s;}
+.del-step-circle.done{background:var(--orange);border-color:var(--orange);color:white;}
+.del-step-circle.active{background:white;border-color:var(--orange);color:var(--orange);box-shadow:0 0 0 3px var(--orange-10);}
+.del-step-circle.pending{color:var(--text-3);}
+.del-step-lbl{font-size:8px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;}
+.del-step-lbl.active{color:var(--orange);}
+.del-step-lbl.done{color:var(--text-2);}
+.del-step-line{flex:1;height:1.5px;background:var(--border);margin:0 4px;margin-bottom:16px;}
+.del-step-line.done{background:var(--orange);}
+
+/* quick actions on card */
+.del-actions{display:flex;gap:6px;padding:10px 16px 12px;}
+.del-qa{flex:1;padding:7px 6px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid var(--border);cursor:pointer;background:var(--surface);color:var(--text-2);transition:all 0.14s;text-align:center;font-family:'DM Sans',sans-serif;}
+.del-qa.qa-orange{background:var(--orange);color:white;border-color:var(--orange);}
+.del-qa.qa-green{background:var(--green-soft);color:var(--green);border-color:var(--green-soft);}
+.del-qa.qa-teal{background:var(--teal-soft);color:var(--teal);border-color:var(--teal-soft);}
+.del-qa.qa-amber{background:var(--amber-soft);color:var(--amber);border-color:var(--amber-soft);}
+
+/* detail panel right */
+.del-detail-header{padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.del-detail-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
+.del-detail-body::-webkit-scrollbar{width:3px;}
+.del-detail-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+.del-detail-footer{padding:12px 18px;border-top:1px solid var(--border);flex-shrink:0;}
+
+/* big status stepper in panel */
+.big-stepper{display:flex;flex-direction:column;gap:0;position:relative;}
+.big-step{display:flex;gap:12px;position:relative;}
+.big-step:not(:last-child)::before{content:'';position:absolute;left:15px;top:32px;bottom:-4px;width:2px;background:var(--border);z-index:0;}
+.big-step.bs-done:not(:last-child)::before{background:var(--orange);}
+.big-step{margin-bottom:8px;}
+.bs-circle{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;border:2px solid var(--border);background:var(--surface);flex-shrink:0;position:relative;z-index:1;transition:all 0.3s;}
+.bs-circle.bs-done{background:var(--orange);border-color:var(--orange);color:white;}
+.bs-circle.bs-active{background:white;border-color:var(--orange);color:var(--orange);box-shadow:0 0 0 4px var(--orange-10);}
+.bs-circle.bs-pending{color:var(--text-3);}
+.bs-content{padding-top:4px;flex:1;}
+.bs-title{font-size:12px;font-weight:700;color:var(--text-1);}
+.bs-title.pending{color:var(--text-3);}
+.bs-time{font-size:10px;color:var(--text-3);margin-top:1px;}
+
+/* map placeholder */
+.map-placeholder{background:linear-gradient(145deg,#E8F4E8,#D4EBDA);border-radius:12px;height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1.5px solid #BBD9C0;position:relative;overflow:hidden;}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.04) 1px,transparent 1px);background-size:20px 20px;}
+.map-pin{font-size:28px;position:relative;z-index:1;animation:bounce 2s ease-in-out infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.map-addr{font-size:11px;font-weight:700;color:#2D6A3F;position:relative;z-index:1;text-align:center;padding:0 10px;}
+
+/* detail row */
+.dp-grid{border:1.5px solid var(--border);border-radius:10px;overflow:hidden;}
+.dp-row{display:flex;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);gap:10px;}
+.dp-row:last-child{border-bottom:none;}
+.dp-k{font-size:11px;color:var(--text-3);font-weight:600;min-width:72px;flex-shrink:0;}
+.dp-v{font-size:12px;font-weight:700;color:var(--text-1);}
+
+/* section title */
+.st{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-3);margin-bottom:7px;}
+
+/* stats row for delivery */
+.del-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.del-stat{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-sm);}
+.del-stat-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px;}
+.del-stat-val{font-size:22px;font-weight:800;color:var(--text-1);letter-spacing:-0.03em;line-height:1;}
+.del-stat-lbl{font-size:11px;color:var(--text-3);margin-top:2px;}
+
+/* notice */
+.notice{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;}
+.n-amber{background:var(--amber-soft);border:1px solid #FDE68A;color:#92400E;}
+.n-green{background:var(--green-soft);border:1px solid #BBF7D0;color:#14532D;}
+.n-red{background:var(--red-soft);border:1px solid #FECACA;color:#991B1B;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════ -->
+<aside class="sb">
+  <div class="sb-header">
+    <div class="sb-shop-row">
+      <div class="sb-shop-av">👗</div>
+      <div>
+        <div class="sb-shop-name">Ma Aye Shop</div>
+        <div class="sb-shop-plan">Pro Plan</div>
+      </div>
+    </div>
+    <div class="sb-today">
+      <div><div class="sb-today-lbl">Revenue</div><div class="sb-today-val">485K <span class="sb-today-mmk">MMK</span></div></div>
+      <div style="text-align:right;"><div class="sb-today-lbl">Orders</div><div class="sb-today-val" style="color:var(--orange);">23</div></div>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-sec">Main</div>
+    <button class="sb-item" onclick="go('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span class="sb-lbl">Dashboard</span>
+    </button>
+    <button class="sb-item" onclick="go('orders',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <span class="sb-lbl">Orders</span>
+      <span class="sb-badge alert">8</span>
+    </button>
+    <button class="sb-item active" onclick="go('delivery',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <span class="sb-lbl">Deliveries</span>
+      <span class="sb-badge alert">3</span>
+    </button>
+    <button class="sb-item" onclick="go('customers',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <span class="sb-lbl">Customers</span>
+      <span class="sb-badge">89</span>
+    </button>
+    <button class="sb-item" onclick="go('reports',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="sb-lbl">Reports</span>
+    </button>
+
+    <div class="sb-sec" style="margin-top:8px;">Tools</div>
+    <button class="sb-item" onclick="go('templates',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span class="sb-lbl">Message Templates</span>
+      <span class="sb-badge success">12</span>
+    </button>
+    <button class="sb-item" onclick="go('addorder',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span class="sb-lbl">Add Order</span>
+    </button>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-user-av">M</div>
+      <div><div class="sb-user-name">Ma Aye</div><div class="sb-user-role">Shop Owner</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════ -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title" id="topbar-title">Delivery Tracking</div>
+    <div class="tb-search">
+      <svg class="tb-si" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search orders, customers…">
+    </div>
+    <div class="tb-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="ndot"></div></div>
+    <div class="tb-div"></div>
+    <div class="tb-av">M</div>
+    <button class="btn btn-sm btn-primary" onclick="go('addorder',document.querySelector('[onclick*=addorder]'))">+ New Order</button>
+  </header>
+
+  <!-- ══ PLACEHOLDER PAGES (Dashboard / Orders / Customers / Reports) ══ -->
+  <div class="page" id="page-dashboard"><div class="pc" style="align-items:center;justify-content:center;text-align:center;flex:1;"><div style="font-size:48px;margin-bottom:14px;">📊</div><div class="fs14 fw7 t2">Dashboard — see previous file</div></div></div>
+  <div class="page" id="page-orders"><div class="pc" style="align-items:center;justify-content:center;text-align:center;flex:1;"><div style="font-size:48px;margin-bottom:14px;">📦</div><div class="fs14 fw7 t2">Orders — see previous file</div></div></div>
+  <div class="page" id="page-customers"><div class="pc" style="align-items:center;justify-content:center;text-align:center;flex:1;"><div style="font-size:48px;margin-bottom:14px;">👥</div><div class="fs14 fw7 t2">Customers — see previous file</div></div></div>
+  <div class="page" id="page-reports"><div class="pc" style="align-items:center;justify-content:center;text-align:center;flex:1;"><div style="font-size:48px;margin-bottom:14px;">📈</div><div class="fs14 fw7 t2">Reports — see previous file</div></div></div>
+  <div class="page" id="page-addorder"><div class="pc" style="align-items:center;justify-content:center;text-align:center;flex:1;"><div style="font-size:48px;margin-bottom:14px;">➕</div><div class="fs14 fw7 t2">Add Order — see previous file</div></div></div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       DELIVERY TRACKING PAGE
+  ══════════════════════════════════════════════════════════ -->
+  <div class="page active" id="page-delivery" style="flex-direction:column;overflow:hidden;">
+
+    <!-- Stats bar -->
+    <div style="padding:16px 20px 0;background:var(--bg);flex-shrink:0;">
+      <div class="del-stats-row">
+        <div class="del-stat">
+          <div class="del-stat-icon" style="background:var(--orange-soft);">🚚</div>
+          <div class="del-stat-val" style="color:var(--orange);">8</div>
+          <div class="del-stat-lbl">Active Deliveries</div>
+        </div>
+        <div class="del-stat">
+          <div class="del-stat-icon" style="background:var(--amber-soft);">⏳</div>
+          <div class="del-stat-val" style="color:var(--amber);">3</div>
+          <div class="del-stat-lbl">Pending Dispatch</div>
+        </div>
+        <div class="del-stat">
+          <div class="del-stat-icon" style="background:var(--green-soft);">✅</div>
+          <div class="del-stat-val" style="color:var(--green);">11</div>
+          <div class="del-stat-lbl">Delivered Today</div>
+        </div>
+        <div class="del-stat">
+          <div class="del-stat-icon" style="background:var(--red-soft);">❌</div>
+          <div class="del-stat-val" style="color:var(--red);">1</div>
+          <div class="del-stat-lbl">Failed / Returned</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="del-layout" style="flex:1;margin-top:14px;">
+
+      <!-- Left: delivery list -->
+      <div class="del-left">
+        <div class="del-toolbar">
+          <div style="position:relative;flex:1;max-width:220px;">
+            <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input" style="padding-left:32px;" placeholder="Search deliveries…">
+          </div>
+          <select class="input" style="width:140px;">
+            <option>All Status</option>
+            <option>Pending Dispatch</option>
+            <option>On the Way</option>
+            <option>Delivered</option>
+            <option>Failed</option>
+          </select>
+          <div class="ml row gap-2">
+            <button class="btn btn-sm btn-outline">Export</button>
+            <button class="btn btn-sm btn-primary" onclick="openMarkModal()">+ Mark Delivered</button>
+          </div>
+        </div>
+        <div class="del-filters">
+          <div class="row gap-2">
+            <button class="pill active" onclick="filterDel('all',this)">All <span class="pn">23</span></button>
+            <button class="pill" onclick="filterDel('pending',this)" style="border-color:#FDE68A;color:var(--amber);background:var(--amber-soft);">Pending <span class="pn" style="background:rgba(245,158,11,0.15);color:var(--amber);">3</span></button>
+            <button class="pill" onclick="filterDel('onway',this)">On Way <span class="pn">5</span></button>
+            <button class="pill" onclick="filterDel('delivered',this)">Delivered <span class="pn">11</span></button>
+            <button class="pill" onclick="filterDel('failed',this)" style="border-color:#FECACA;color:var(--red);background:var(--red-soft);">Failed <span class="pn" style="background:rgba(239,68,68,0.1);color:var(--red);">1</span></button>
+          </div>
+        </div>
+
+        <div class="del-list" id="del-list">
+          <div class="fs11 t3 fw7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:9px;">🚚 On the Way — 5 orders</div>
+
+          <!-- Card: On the Way (selected) -->
+          <div class="del-card selected" id="del-O243" onclick="selectDel('O243',this)">
+            <div class="del-card-stripe" style="background:linear-gradient(90deg,var(--amber),#FCD34D);"></div>
+            <div class="del-card-body">
+              <div class="del-card-top">
+                <div class="del-card-customer">
+                  <div class="del-avatar">👨</div>
+                  <div><div class="del-name">Ko Zaw Lin</div><div class="del-addr">📍 12/B Thitsar Rd, Tarmwe</div></div>
+                </div>
+                <span class="badge b-out">ON WAY</span>
+              </div>
+              <div class="del-card-mid">
+                <div class="del-product">👔 Men Shirt × 1</div>
+                <div class="del-price">21,500 MMK</div>
+              </div>
+            </div>
+            <div class="del-stepper">
+              <div class="del-step">
+                <div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Received</div></div>
+                <div class="del-step-line done"></div>
+              </div>
+              <div class="del-step">
+                <div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Confirmed</div></div>
+                <div class="del-step-line done"></div>
+              </div>
+              <div class="del-step">
+                <div class="del-step-node"><div class="del-step-circle active">3</div><div class="del-step-lbl active">On Way</div></div>
+                <div class="del-step-line"></div>
+              </div>
+              <div class="del-step-node"><div class="del-step-circle pending">4</div><div class="del-step-lbl">Delivered</div></div>
+            </div>
+            <div class="del-actions">
+              <button class="del-qa" onclick="event.stopPropagation()">📞 Call</button>
+              <button class="del-qa" onclick="event.stopPropagation()">💬 Message</button>
+              <button class="del-qa qa-green" onclick="event.stopPropagation()">🎉 Mark Delivered</button>
+            </div>
+          </div>
+
+          <!-- Card: On the Way -->
+          <div class="del-card" onclick="selectDel('O242',this)">
+            <div class="del-card-stripe" style="background:linear-gradient(90deg,var(--amber),#FCD34D);"></div>
+            <div class="del-card-body">
+              <div class="del-card-top">
+                <div class="del-card-customer">
+                  <div class="del-avatar">👩</div>
+                  <div><div class="del-name">Ma Thin Zar</div><div class="del-addr">📍 No. 8, Hlawga Rd, Hlaing</div></div>
+                </div>
+                <span class="badge b-out">ON WAY</span>
+              </div>
+              <div class="del-card-mid">
+                <div class="del-product">👜 Handbag (Black) × 1</div>
+                <div class="del-price">35,000 MMK</div>
+              </div>
+            </div>
+            <div class="del-stepper">
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Received</div></div><div class="del-step-line done"></div></div>
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Confirmed</div></div><div class="del-step-line done"></div></div>
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle active">3</div><div class="del-step-lbl active">On Way</div></div><div class="del-step-line"></div></div>
+              <div class="del-step-node"><div class="del-step-circle pending">4</div><div class="del-step-lbl">Delivered</div></div>
+            </div>
+            <div class="del-actions">
+              <button class="del-qa" onclick="event.stopPropagation()">📞 Call</button>
+              <button class="del-qa qa-green" onclick="event.stopPropagation()">🎉 Mark Delivered</button>
+            </div>
+          </div>
+
+          <div class="fs11 t3 fw7" style="text-transform:uppercase;letter-spacing:0.08em;margin:14px 0 9px;">⏳ Pending Dispatch — 3 orders</div>
+
+          <!-- Card: Pending -->
+          <div class="del-card" onclick="selectDel('O244',this)">
+            <div class="del-card-stripe" style="background:linear-gradient(90deg,var(--orange),#FF8C5A);"></div>
+            <div class="del-card-body">
+              <div class="del-card-top">
+                <div class="del-card-customer">
+                  <div class="del-avatar">👩</div>
+                  <div><div class="del-name">Daw Khin Myat</div><div class="del-addr">📍 No. 45, Bo Gyoke St, Sanchaung</div></div>
+                </div>
+                <span class="badge b-confirmed">CONFIRMED</span>
+              </div>
+              <div class="del-card-mid">
+                <div class="del-product">👗 Silk Longyi × 2</div>
+                <div class="del-price">39,000 MMK</div>
+              </div>
+            </div>
+            <div class="del-stepper">
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Received</div></div><div class="del-step-line done"></div></div>
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Confirmed</div></div><div class="del-step-line"></div></div>
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle pending">3</div><div class="del-step-lbl">On Way</div></div><div class="del-step-line"></div></div>
+              <div class="del-step-node"><div class="del-step-circle pending">4</div><div class="del-step-lbl">Delivered</div></div>
+            </div>
+            <div class="del-actions">
+              <button class="del-qa" onclick="event.stopPropagation()">📞 Call</button>
+              <button class="del-qa qa-amber" onclick="event.stopPropagation()">🚚 Send Out</button>
+              <button class="del-qa" onclick="event.stopPropagation()">💬 Message</button>
+            </div>
+          </div>
+
+          <div class="fs11 t3 fw7" style="text-transform:uppercase;letter-spacing:0.08em;margin:14px 0 9px;">✅ Delivered Today — 11 orders</div>
+
+          <!-- Card: Delivered -->
+          <div class="del-card" onclick="selectDel('O238',this)">
+            <div class="del-card-stripe" style="background:linear-gradient(90deg,var(--green),#4ADE80);"></div>
+            <div class="del-card-body">
+              <div class="del-card-top">
+                <div class="del-card-customer">
+                  <div class="del-avatar">👩</div>
+                  <div><div class="del-name">Daw Aye Aye</div><div class="del-addr">📍 No. 12, Shwe Taung Gyar, Hlaing</div></div>
+                </div>
+                <span class="badge b-delivered">DELIVERED ✓</span>
+              </div>
+              <div class="del-card-mid">
+                <div class="del-product">👗 Summer Dress × 3</div>
+                <div class="del-price">54,000 MMK</div>
+              </div>
+            </div>
+            <div class="del-stepper">
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Received</div></div><div class="del-step-line done"></div></div>
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Confirmed</div></div><div class="del-step-line done"></div></div>
+              <div class="del-step"><div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">On Way</div></div><div class="del-step-line done"></div></div>
+              <div class="del-step-node"><div class="del-step-circle done">✓</div><div class="del-step-lbl done">Delivered</div></div>
+            </div>
+          </div>
+
+          <!-- Failed -->
+          <div class="fs11 t3 fw7" style="text-transform:uppercase;letter-spacing:0.08em;margin:14px 0 9px;">❌ Failed / Returned — 1</div>
+          <div class="del-card" onclick="selectDel('O230',this)">
+            <div class="del-card-stripe" style="background:linear-gradient(90deg,var(--red),#F87171);"></div>
+            <div class="del-card-body">
+              <div class="del-card-top">
+                <div class="del-card-customer">
+                  <div class="del-avatar" style="background:var(--red-soft);">👩</div>
+                  <div><div class="del-name">Ma Thida</div><div class="del-addr">📍 Address unclear — Botahtaung</div></div>
+                </div>
+                <span class="badge b-cancelled">FAILED</span>
+              </div>
+              <div class="del-card-mid">
+                <div class="del-product">💄 Lipstick Set × 2</div>
+                <div class="del-price">18,000 MMK</div>
+              </div>
+            </div>
+            <div class="del-actions">
+              <button class="del-qa" onclick="event.stopPropagation()">📞 Call Customer</button>
+              <button class="del-qa qa-amber" onclick="event.stopPropagation()">🔄 Retry</button>
+            </div>
+          </div>
+
+          <div style="height:20px;"></div>
+        </div>
+      </div>
+
+      <!-- Right: detail panel -->
+      <div class="del-right">
+        <div class="del-detail-header">
+          <div class="row gap-2">
+            <div><div class="fs13 fw7 t1">Delivery Detail</div><div class="fs11 t3" style="margin-top:1px;">#ORD-0243 · Ko Zaw Lin</div></div>
+            <button class="btn btn-ghost btn-sm t3 ml" onclick="">⋯</button>
+          </div>
+        </div>
+
+        <div class="del-detail-body">
+
+          <!-- Map -->
+          <div>
+            <div class="st">Delivery Location</div>
+            <div class="map-placeholder">
+              <div class="map-grid"></div>
+              <div class="map-pin">📍</div>
+              <div class="map-addr">12/B Thitsar Rd, Tarmwe Tsp, Yangon</div>
+            </div>
+          </div>
+
+          <!-- Status timeline -->
+          <div>
+            <div class="st">Delivery Progress</div>
+            <div class="big-stepper">
+              <div class="big-step bs-done">
+                <div class="bs-circle bs-done">✓</div>
+                <div class="bs-content"><div class="bs-title">Order Received</div><div class="bs-time">9:14 AM · Apr 2</div></div>
+              </div>
+              <div class="big-step bs-done">
+                <div class="bs-circle bs-done">✓</div>
+                <div class="bs-content"><div class="bs-title">Confirmed by shop</div><div class="bs-time">9:28 AM · Apr 2</div></div>
+              </div>
+              <div class="big-step">
+                <div class="bs-circle bs-active">3</div>
+                <div class="bs-content"><div class="bs-title" style="color:var(--orange);">Out for Delivery 🚚</div><div class="bs-time">11:05 AM · En route to Tarmwe</div></div>
+              </div>
+              <div class="big-step">
+                <div class="bs-circle bs-pending">4</div>
+                <div class="bs-content"><div class="bs-title pending">Delivered to customer</div><div class="bs-time" style="color:var(--text-3);">Waiting…</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer -->
+          <div>
+            <div class="st">Customer</div>
+            <div class="dp-grid">
+              <div class="dp-row"><div class="dp-k">Name</div><div class="dp-v">Ko Zaw Lin</div></div>
+              <div class="dp-row"><div class="dp-k">Phone</div><div class="dp-v" style="color:var(--teal);">09 4556 7890</div></div>
+              <div class="dp-row"><div class="dp-k">Address</div><div class="dp-v" style="font-size:11px;color:var(--text-2);">12/B Thitsar Rd, Tarmwe Tsp, Yangon</div></div>
+            </div>
+            <div class="row gap-2" style="margin-top:8px;">
+              <button class="btn btn-sm btn-outline" style="flex:1;justify-content:center;">📞 Call</button>
+              <button class="btn btn-sm btn-soft-teal" style="flex:1;justify-content:center;">💬 Message</button>
+            </div>
+          </div>
+
+          <!-- Order summary -->
+          <div>
+            <div class="st">Order</div>
+            <div class="dp-grid">
+              <div class="dp-row"><div class="dp-k">Product</div><div class="dp-v">Men Shirt (L) × 1</div></div>
+              <div class="dp-row"><div class="dp-k">Amount</div><div class="dp-v" style="color:var(--orange);font-size:15px;">21,500 MMK</div></div>
+              <div class="dp-row"><div class="dp-k">Payment</div><div class="dp-v"><span class="badge b-confirmed" style="font-size:9px;">Cash on Delivery</span></div></div>
+            </div>
+          </div>
+
+          <!-- Delivery note -->
+          <div>
+            <div class="st">Delivery Note</div>
+            <div style="background:var(--amber-soft);border:1px solid #FDE68A;border-radius:10px;padding:10px 13px;font-size:12px;color:#92400E;line-height:1.6;">
+              🔔 Customer requested delivery before 2:00 PM. Call before arriving.
+            </div>
+          </div>
+
+        </div>
+
+        <div class="del-detail-footer">
+          <button class="btn btn-sm btn-soft-red" style="flex:1;justify-content:center;">✗ Mark Failed</button>
+          <button class="btn btn-sm btn-primary" style="flex:2;justify-content:center;" onclick="openMarkModal()">🎉 Mark as Delivered</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MESSAGE TEMPLATES PAGE
+  ══════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-templates" style="flex-direction:column;overflow:hidden;">
+    <div class="tpl-grid" style="flex:1;">
+
+      <!-- Left: template list -->
+      <div class="tpl-left">
+        <div style="padding:14px 14px 0;border-bottom:1px solid var(--border);flex-shrink:0;">
+          <div class="row gap-2" style="margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text-1);flex:1;">Templates</div>
+            <button class="btn btn-sm btn-primary" onclick="openNewTemplate()">+ New</button>
+          </div>
+          <div style="position:relative;margin-bottom:14px;">
+            <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input" style="padding-left:32px;" placeholder="Search templates…" oninput="filterTemplates(this.value)">
+          </div>
+        </div>
+
+        <div class="tpl-list" id="tpl-list">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Right: editor -->
+      <div class="tpl-right">
+        <div class="tpl-editor-header">
+          <div class="row gap-3">
+            <div>
+              <div class="fs14 fw7 t1" id="tpl-editor-title">Order Confirmation</div>
+              <div class="fs11 t3" id="tpl-editor-cat">Category: Confirmation · Used 34×</div>
+            </div>
+            <div class="ml row gap-2">
+              <button class="btn btn-sm btn-outline" onclick="openSendTestModal()">📤 Test Send</button>
+              <button class="btn btn-sm btn-primary" onclick="copyTemplate()">📋 Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tpl-editor-body">
+
+          <!-- Two columns: editor + preview -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;">
+
+            <!-- Editor -->
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="fgroup">
+                <label class="flbl">Template Name</label>
+                <input class="input" id="tpl-name-input" value="Order Confirmation">
+              </div>
+              <div class="fgroup">
+                <label class="flbl">Category</label>
+                <select class="input" id="tpl-cat-input">
+                  <option>Confirmation</option>
+                  <option>Delivery Update</option>
+                  <option>Payment Request</option>
+                  <option>Follow-up</option>
+                  <option>Promotion</option>
+                  <option>Apology</option>
+                </select>
+              </div>
+              <div class="fgroup" style="flex:1;">
+                <div class="row" style="margin-bottom:5px;">
+                  <label class="flbl" style="margin-bottom:0;">Message Body</label>
+                  <div class="ml fs11 t3" id="tpl-char-count">0 / 500</div>
+                </div>
+                <textarea class="input" id="tpl-body" rows="10" oninput="updatePreview()" style="flex:1;resize:none;">မင်္ဂလာပါ {{customer_name}} 🙏
+
+သင်၏ order အား အတည်ပြုပြီးပါပြီ။
+
+📦 ပစ္စည်း: {{product_name}}
+🔢 အရေအတွက်: {{quantity}}
+💰 စုစုပေါင်း: {{total_amount}} MMK
+📍 လိပ်စာ: {{address}}
+
+မကြာမီ {{delivery_time}} အတွင်း ပေးပို့ပါမည်။ မေးခွန်းများရှိပါက ဆက်သွယ်နိုင်ပါသည်။
+
+Ma Aye Shop 👗</textarea>
+              </div>
+              <div class="fgroup">
+                <label class="flbl">Insert Variable</label>
+                <div class="var-chips">
+                  <div class="var-chip" onclick="insertVar('{{customer_name}}')">{{customer_name}}</div>
+                  <div class="var-chip" onclick="insertVar('{{product_name}}')">{{product_name}}</div>
+                  <div class="var-chip" onclick="insertVar('{{quantity}}')">{{quantity}}</div>
+                  <div class="var-chip" onclick="insertVar('{{total_amount}}')">{{total_amount}}</div>
+                  <div class="var-chip" onclick="insertVar('{{address}}')">{{address}}</div>
+                  <div class="var-chip" onclick="insertVar('{{order_id}}')">{{order_id}}</div>
+                  <div class="var-chip" onclick="insertVar('{{delivery_time}}')">{{delivery_time}}</div>
+                  <div class="var-chip" onclick="insertVar('{{shop_name}}')">{{shop_name}}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview -->
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="tpl-preview-wrap" style="flex:1;">
+                <div class="tpl-bubble-label">Preview — as it appears in Messenger</div>
+                <div class="tpl-preview-phone">
+                  <div class="tpl-preview-top">
+                    <div class="tpl-preview-avatar">👩</div>
+                    <div>
+                      <div class="tpl-preview-name">Ma Aye Shop</div>
+                      <div class="tpl-preview-status">Active now</div>
+                    </div>
+                  </div>
+                  <div class="tpl-bubble" id="tpl-preview-text">မင်္ဂလာပါ Daw Khin Myat 🙏
+
+သင်၏ order အား အတည်ပြုပြီးပါပြီ။
+
+📦 ပစ္စည်း: Silk Longyi Set
+🔢 အရေအတွက်: 2
+💰 စုစုပေါင်း: 39,000 MMK
+📍 လိပ်စာ: No. 45, Bo Gyoke St
+
+မကြာမီ 2-3 နာရီ အတွင်း ပေးပို့ပါမည်။ မေးခွန်းများရှိပါက ဆက်သွယ်နိုင်ပါသည်။
+
+Ma Aye Shop 👗</div>
+                  <div class="tpl-bubble-time">Seen · 10:32 AM</div>
+                </div>
+              </div>
+
+              <!-- Usage stats -->
+              <div class="card" style="padding:14px 16px;">
+                <div class="fs11 t3 fw7" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Template Stats</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div style="background:var(--bg);border-radius:9px;padding:10px 12px;"><div class="fs11 t3">Times Used</div><div class="fw8 t1" style="font-size:18px;margin-top:2px;">34×</div></div>
+                  <div style="background:var(--bg);border-radius:9px;padding:10px 12px;"><div class="fs11 t3">Last Used</div><div class="fw7 t1" style="font-size:12px;margin-top:2px;">Today 10:32 AM</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="tpl-editor-footer">
+          <button class="btn btn-sm btn-soft-red" onclick="deleteTemplate()">🗑 Delete</button>
+          <button class="btn btn-sm btn-outline" onclick="">Duplicate</button>
+          <div class="ml row gap-2">
+            <button class="btn btn-sm btn-outline">Discard</button>
+            <button class="btn btn-sm btn-primary" onclick="">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ═══ MARK DELIVERED MODAL ══════════════════════════════════ -->
+<div class="mo" id="mark-modal" onclick="if(event.target===this)closeMarkModal()">
+  <div class="modal">
+    <div class="mh">
+      <div><div class="mt">Mark as Delivered</div><div class="ms">Confirm delivery for Ko Zaw Lin · #ORD-0243</div></div>
+      <button class="mclose" onclick="closeMarkModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="mb">
+      <div class="notice n-green">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Once marked delivered, the customer will be notified automatically.
+      </div>
+
+      <!-- Order summary -->
+      <div class="dp-grid">
+        <div class="dp-row"><div class="dp-k">Customer</div><div class="dp-v">Ko Zaw Lin</div></div>
+        <div class="dp-row"><div class="dp-k">Product</div><div class="dp-v">Men Shirt (L) × 1</div></div>
+        <div class="dp-row"><div class="dp-k">Amount</div><div class="dp-v" style="color:var(--orange);font-size:15px;">21,500 MMK</div></div>
+        <div class="dp-row"><div class="dp-k">Address</div><div class="dp-v" style="font-size:11px;">12/B Thitsar Rd, Tarmwe</div></div>
+      </div>
+
+      <div class="fgroup">
+        <label class="flbl">Delivery Note (optional)</label>
+        <textarea class="input" rows="2" placeholder="e.g. Left with security guard, neighbor, etc."></textarea>
+      </div>
+
+      <div class="fgroup">
+        <label class="flbl">Delivered At</label>
+        <input class="input" type="time" value="13:45">
+      </div>
+
+      <div style="background:var(--orange-soft);border:1.5px solid var(--orange-mid);border-radius:12px;padding:13px 16px;">
+        <div class="fs12 fw7" style="color:var(--orange);margin-bottom:4px;">📤 Send confirmation to customer?</div>
+        <div class="fs11 t2">A Messenger message will be sent using your "Delivery Confirmation" template.</div>
+        <div class="row gap-2" style="margin-top:10px;">
+          <button class="btn btn-sm btn-primary" style="flex:1;justify-content:center;">✓ Yes, send message</button>
+          <button class="btn btn-sm btn-outline" style="flex:1;justify-content:center;">Skip</button>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline btn-sm" onclick="closeMarkModal()">Cancel</button>
+      <button class="btn btn-primary btn-md" onclick="closeMarkModal()">🎉 Confirm Delivery</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NEW TEMPLATE MODAL ════════════════════════════════════ -->
+<div class="mo" id="new-tpl-modal" onclick="if(event.target===this)closeNewTemplate()">
+  <div class="modal">
+    <div class="mh">
+      <div><div class="mt">New Message Template</div><div class="ms">Create a reusable message</div></div>
+      <button class="mclose" onclick="closeNewTemplate()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="mb">
+      <div class="fgroup"><label class="flbl">Template Name <span>*</span></label><input class="input" placeholder="e.g. Payment Reminder"></div>
+      <div class="fgroup"><label class="flbl">Category</label>
+        <select class="input"><option>Confirmation</option><option>Delivery Update</option><option>Payment Request</option><option>Follow-up</option><option>Promotion</option><option>Apology</option></select>
+      </div>
+      <div class="fgroup"><label class="flbl">Message Body <span>*</span></label>
+        <textarea class="input" rows="6" placeholder="Write your template here. Use {{variable}} for dynamic content like {{customer_name}}, {{product_name}}, {{total_amount}}…"></textarea>
+      </div>
+      <div class="fgroup">
+        <label class="flbl">Quick Insert Variables</label>
+        <div class="var-chips">
+          <div class="var-chip">{{customer_name}}</div>
+          <div class="var-chip">{{product_name}}</div>
+          <div class="var-chip">{{total_amount}}</div>
+          <div class="var-chip">{{order_id}}</div>
+          <div class="var-chip">{{delivery_time}}</div>
+          <div class="var-chip">{{shop_name}}</div>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline btn-sm" onclick="closeNewTemplate()">Cancel</button>
+      <button class="btn btn-primary btn-md" onclick="closeNewTemplate()">Save Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SEND TEST MODAL ═══════════════════════════════════════ -->
+<div class="mo" id="send-test-modal" onclick="if(event.target===this)closeSendTestModal()">
+  <div class="modal" style="max-width:400px;">
+    <div class="mh">
+      <div><div class="mt">Test Send</div><div class="ms">Preview with real order data</div></div>
+      <button class="mclose" onclick="closeSendTestModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="mb">
+      <div class="fgroup"><label class="flbl">Select Order to Test With</label>
+        <select class="input"><option>#ORD-0244 — Daw Khin Myat</option><option>#ORD-0243 — Ko Zaw Lin</option><option>#ORD-0242 — Ma Thin Zar</option></select>
+      </div>
+      <div class="notice n-amber"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>This will send a real message to the customer. Only use for testing with yourself.</div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline btn-sm" onclick="closeSendTestModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="closeSendTestModal()">📤 Send Test</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────
+const TEMPLATES = [
+  {id:'T01', name:'Order Confirmation',      cat:'Confirmation',    icon:'✅', used:34, color:'teal',
+   body:'မင်္ဂလာပါ {{customer_name}} 🙏\n\nသင်၏ order အား အတည်ပြုပြီးပါပြီ။\n\n📦 ပစ္စည်း: {{product_name}}\n🔢 အရေအတွက်: {{quantity}}\n💰 စုစုပေါင်း: {{total_amount}} MMK\n📍 လိပ်စာ: {{address}}\n\nမကြာမီ {{delivery_time}} အတွင်း ပေးပို့ပါမည်။ မေးခွန်းများရှိပါက ဆက်သွယ်နိုင်ပါသည်။\n\nMa Aye Shop 👗'},
+  {id:'T02', name:'Out for Delivery',         cat:'Delivery Update', icon:'🚚', used:28, color:'amber',
+   body:'မင်္ဂလာပါ {{customer_name}} 👋\n\nသင်၏ order #{{order_id}} ကို ယခုပင် ပေးပို့နေပါသည် 🚚\n\n📦 {{product_name}}\n📍 {{address}}\n\nနီးမကြာမီ ရောက်ရှိပါမည်။ ဆက်သွယ်ရမည်ဆိုပါက 📞 ဖုန်းဆက်ပါ။\n\nMa Aye Shop 👗'},
+  {id:'T03', name:'Delivery Confirmed ✓',     cat:'Delivery Update', icon:'🎉', used:22, color:'green',
+   body:'မင်္ဂလာပါ {{customer_name}} 🎉\n\nသင်၏ order ကို အောင်မြင်စွာ လက်ခံရရှိပြီဟု သတင်းပို့ပါသည်!\n\n✅ {{product_name}} — Delivered\n\nကျေးဇူးတင်ပါသည်။ နောက်တစ်ကြိမ်လည်း ဆက်ဆက်ဝယ်ယူပေးပါ 🙏\n\nMa Aye Shop 👗'},
+  {id:'T04', name:'Payment Request',           cat:'Payment Request',  icon:'💰', used:19, color:'orange',
+   body:'မင်္ဂလာပါ {{customer_name}} 🙏\n\n{{product_name}} အတွက် ငွေပေးချေမှု အောက်ပါ account သို့ ပေးချေနိုင်ပါသည်:\n\nKBZ Pay: 09 7812 3456\nWave: 09 7812 3456\n\nစုစုပေါင်း: {{total_amount}} MMK\n\nပေးချေပြီးပါက screenshot ပို့ပေးပါ 📸\n\nကျေးဇူးတင်ပါသည် 🙏'},
+  {id:'T05', name:'Address Confirmation',      cat:'Confirmation',    icon:'📍', used:15, color:'violet',
+   body:'မင်္ဂလာပါ {{customer_name}} 👋\n\nသင်၏ order ကိုပေးပို့ရန် လိပ်စာ အတည်ပြုချင်ပါသည်:\n\n📍 {{address}}\n\nဤလိပ်စာမှန်ကန်ပါသလား? မမှန်ပါက မှန်ကန်သောလိပ်စာ ပြောင်းပေးပါ 🙏'},
+  {id:'T06', name:'Out of Stock Apology',      cat:'Apology',         icon:'😔', used:8,  color:'red',
+   body:'မင်္ဂလာပါ {{customer_name}} 🙏\n\nဝမ်းနည်းပါသည်၊ {{product_name}} ကို ယခုအချိန် stock မရှိသောကြောင့် order ကို မဖြည့်ဆည်းနိုင်ပါ။\n\nပြန်လည် stock ရောက်ရှိသောအခါ သတင်းပို့ပါမည်। ဆက်ဆက်ကိုလည်း ထည့်ထားနိုင်ပါသည်။\n\nကျေးဇူးတင်ပါသည် 🙏\nMa Aye Shop 👗'},
+  {id:'T07', name:'Follow-up After Delivery',  cat:'Follow-up',       icon:'⭐', used:12, color:'amber',
+   body:'မင်္ဂလာပါ {{customer_name}} 🙏\n\n{{product_name}} ကို ကျေနပ်စွာ လက်ခံရရှိပါသလား?\n\nဝန်ဆောင်မှုနှင့် ပစ္စည်း ကျေနပ်မှုကို ၅ ★ ပေးနိုင်ရင် ကျေးဇူးတင်ပါမည် 😊\n\nနောက်တစ်ကြိမ်လည်း ဆက်ဆက် ဝိုင်းဝန်းပေးပါ 🙏\nMa Aye Shop 👗'},
+  {id:'T08', name:'Special Promotion',         cat:'Promotion',       icon:'🎁', used:6,  color:'violet',
+   body:'မင်္ဂလာပါ {{customer_name}} 🎉\n\nMa Aye Shop မှ ဤလ special offer!\n\n🏷️ ဝယ်ယူမှု 30,000 MMK ကျော်လျှင် 10% လျှော့စျေး\n⏰ Apr 30 ထိသာ\n\nကြည့်ရှုဝယ်ယူလိုပါက inbox ကိုဆက်သွယ်ပါ 😊\n\nMa Aye Shop 👗'},
+];
+
+const catColors = {
+  'Confirmation':  {bg:'var(--teal-soft)',   fg:'var(--teal)'},
+  'Delivery Update':{bg:'var(--amber-soft)', fg:'var(--amber)'},
+  'Payment Request':{bg:'var(--orange-soft)',fg:'var(--orange)'},
+  'Follow-up':     {bg:'var(--green-soft)', fg:'var(--green)'},
+  'Promotion':     {bg:'var(--violet-soft)',fg:'var(--violet)'},
+  'Apology':       {bg:'var(--red-soft)',   fg:'var(--red)'},
+};
+
+let selectedTplId = 'T01';
+
+// ─── RENDER TEMPLATES ─────────────────────────────────────────
+function renderTemplates(filter='') {
+  const cats = {};
+  TEMPLATES.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()) || t.cat.toLowerCase().includes(filter.toLowerCase()))
+    .forEach(t => { (cats[t.cat] = cats[t.cat]||[]).push(t); });
+
+  const list = document.getElementById('tpl-list');
+  list.innerHTML = '';
+  Object.entries(cats).forEach(([cat, items]) => {
+    const lbl = document.createElement('div');
+    lbl.className = 'tpl-cat-label';
+    lbl.textContent = cat;
+    list.appendChild(lbl);
+    items.forEach(t => {
+      const cc = catColors[t.cat] || {bg:'var(--bg)',fg:'var(--text-3)'};
+      const div = document.createElement('div');
+      div.className = 'tpl-item' + (t.id === selectedTplId ? ' active' : '');
+      div.onclick = () => selectTemplate(t.id);
+      div.innerHTML = `
+        <div class="tpl-item-name">
+          <span>${t.icon}</span> ${t.name}
+          <span class="tpl-item-tag" style="background:${cc.bg};color:${cc.fg};margin-left:auto;">${t.used}×</span>
+        </div>
+        <div class="tpl-item-preview">${t.body.substring(0,70).replace(/\n/g,' ')}…</div>`;
+      list.appendChild(div);
+    });
+  });
+}
+
+function selectTemplate(id) {
+  selectedTplId = id;
+  const t = TEMPLATES.find(x => x.id === id);
+  if(!t) return;
+  document.getElementById('tpl-editor-title').textContent = t.name;
+  document.getElementById('tpl-editor-cat').textContent = `Category: ${t.cat} · Used ${t.used}×`;
+  document.getElementById('tpl-name-input').value = t.name;
+  document.getElementById('tpl-body').value = t.body;
+  updatePreview();
+  renderTemplates(document.querySelector('#tpl-list').previousElementSibling?.querySelector('input')?.value || '');
+}
+
+function updatePreview() {
+  const body = document.getElementById('tpl-body').value;
+  const preview = body
+    .replace(/\{\{customer_name\}\}/g, 'Daw Khin Myat')
+    .replace(/\{\{product_name\}\}/g, 'Silk Longyi Set')
+    .replace(/\{\{quantity\}\}/g, '2')
+    .replace(/\{\{total_amount\}\}/g, '39,000')
+    .replace(/\{\{address\}\}/g, 'No. 45, Bo Gyoke St')
+    .replace(/\{\{order_id\}\}/g, '0244')
+    .replace(/\{\{delivery_time\}\}/g, '2-3 နာရီ')
+    .replace(/\{\{shop_name\}\}/g, 'Ma Aye Shop');
+  document.getElementById('tpl-preview-text').textContent = preview;
+  document.getElementById('tpl-char-count').textContent = `${body.length} / 500`;
+}
+
+function filterTemplates(val) { renderTemplates(val); }
+
+function insertVar(v) {
+  const ta = document.getElementById('tpl-body');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.substring(0,s) + v + ta.value.substring(e);
+  ta.selectionStart = ta.selectionEnd = s + v.length;
+  ta.focus();
+  updatePreview();
+}
+
+function copyTemplate() {
+  const body = document.getElementById('tpl-body').value;
+  navigator.clipboard?.writeText(body).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1800);
+  });
+}
+
+function deleteTemplate() {
+  if(confirm('Delete this template?')) {}
+}
+
+// ─── PAGE ROUTER ─────────────────────────────────────────────
+const META = {
+  dashboard:'Dashboard', orders:'Order Management', delivery:'Delivery Tracking',
+  customers:'Customers', reports:'Reports', templates:'Message Templates', addorder:'Add Order'
+};
+function go(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('topbar-title').textContent = META[id] || id;
+}
+
+// ─── DELIVERY ─────────────────────────────────────────────────
+function selectDel(id, el) {
+  document.querySelectorAll('.del-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function filterDel(f, btn) {
+  document.querySelectorAll('#page-delivery .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── MODALS ───────────────────────────────────────────────────
+function openMarkModal()    { document.getElementById('mark-modal').classList.add('open'); }
+function closeMarkModal()   { document.getElementById('mark-modal').classList.remove('open'); }
+function openNewTemplate()  { document.getElementById('new-tpl-modal').classList.add('open'); }
+function closeNewTemplate() { document.getElementById('new-tpl-modal').classList.remove('open'); }
+function openSendTestModal(){ document.getElementById('send-test-modal').classList.add('open'); }
+function closeSendTestModal(){ document.getElementById('send-test-modal').classList.remove('open'); }
+
+// ─── INIT ─────────────────────────────────────────────────────
+renderTemplates();
+updatePreview();
+</script>
+</body>
+</html>

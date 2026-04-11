@@ -1,12 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 
-@Controller()
+@Controller('api/v1')
+@ApiTags('Meta')
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  @ApiOperation({ summary: 'Get API overview and feature metadata' })
+  overview() {
+    return this.appService.getOverview();
   }
 }

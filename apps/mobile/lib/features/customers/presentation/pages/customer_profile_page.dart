@@ -1,0 +1,519 @@
+import "package:app_ui_kit/app_ui_kit.dart";
+import "package:flutter/material.dart";
+import "package:flutter_bloc/flutter_bloc.dart";
+import "package:fom_mobile/app/di/injection_container.dart";
+import "package:intl/intl.dart";
+
+import "../../domain/entities/customer_list_item.dart";
+import "../../domain/entities/customer_recent_order.dart";
+import "../bloc/customer_profile_bloc.dart";
+import "../bloc/customer_profile_event.dart";
+import "../bloc/customer_profile_state.dart";
+
+class CustomerProfilePage extends StatelessWidget {
+  const CustomerProfilePage({
+    super.key,
+    required this.customerId,
+    required this.shopId,
+    required this.shopName,
+  });
+
+  final String customerId;
+  final String shopId;
+  final String shopName;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<CustomerProfileBloc>(
+      create: (_) => getIt<CustomerProfileBloc>()
+        ..add(
+          CustomerProfileStarted(
+            shopId: shopId,
+            shopName: shopName,
+            customerId: customerId,
+          ),
+        ),
+      child: const _CustomerProfileView(),
+    );
+  }
+}
+
+class _CustomerProfileView extends StatelessWidget {
+  const _CustomerProfileView();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<CustomerProfileBloc, CustomerProfileState>(
+      listenWhen: (previous, current) {
+        return previous.errorMessage != current.errorMessage &&
+            current.errorMessage != null;
+      },
+      listener: (context, state) {
+        final message = state.errorMessage;
+        if (message == null || message.isEmpty) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+        context.read<CustomerProfileBloc>().add(
+          const CustomerProfileErrorDismissed(),
+        );
+      },
+      builder: (context, state) {
+        final customer = state.customer;
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: RefreshIndicator(
+            color: AppColors.softOrange,
+            onRefresh: () => _onRefresh(context),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _buildHeader(context: context, customer: customer),
+                ),
+                if (state.status == CustomerProfileStatus.loading &&
+                    customer == null)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (customer == null)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icon(Icons.person_off_outlined),
+                      title: "Customer not found",
+                      message: "This customer profile is unavailable.",
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildQuickActions(context, customer),
+                        _buildContactInfo(customer),
+                        _buildSpendingSummary(customer),
+                        _OrderHistoryCard(customer: customer),
+                        const SizedBox(height: 40),
+                      ]),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader({
+    required BuildContext context,
+    required CustomerListItem? customer,
+  }) {
+    final normalized = customer ?? _fallbackCustomer();
+    final average = normalized.totalOrders == 0
+        ? 0
+        : (normalized.totalSpent / normalized.totalOrders).round();
+
+    return AppCustomerProfileHeader(
+      name: normalized.name,
+      phone: normalized.phone,
+      township: normalized.township,
+      avatarUrl: normalized.avatarUrl,
+      isVip: normalized.isVip,
+      isLoyal: normalized.isLoyal,
+      totalOrdersText: "${normalized.totalOrders}",
+      totalSpentText: _formatCompactAmount(normalized.totalSpent),
+      averageOrderText: _formatCompactAmount(average),
+      deliveredRateText: "${normalized.deliveredRate}%",
+      onBackPressed: () => Navigator.of(context).pop(),
+      onMorePressed: () {},
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, CustomerListItem customer) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: _QuickActionChip(
+              icon: Icons.call_outlined,
+              label: "Call",
+              onTap: () {},
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickActionChip(
+              icon: Icons.message_outlined,
+              label: "Message",
+              onTap: () {},
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickActionChip(
+              icon: Icons.add_box_outlined,
+              label: "New Order",
+              borderColor: AppColors.softOrange,
+              backgroundColor: AppColors.softOrangeLight,
+              foregroundColor: AppColors.softOrange,
+              onTap: () {},
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickActionChip(
+              icon: Icons.map_outlined,
+              label: "Map",
+              onTap: () {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactInfo(CustomerListItem customer) {
+    return AppInfoRowsCard(
+      icon: Icons.person_outline_rounded,
+      iconBackgroundColor: AppColors.softOrangeLight,
+      title: "Contact Info",
+      rows: [
+        AppInfoRowItem(
+          keyLabel: "Phone",
+          valueLabel: customer.phone,
+          valueColor: AppColors.teal,
+        ),
+        AppInfoRowItem(
+          keyLabel: "Township",
+          valueLabel: customer.township?.trim().isNotEmpty == true
+              ? customer.township!
+              : "-",
+        ),
+        AppInfoRowItem(
+          keyLabel: "Address",
+          valueLabel: customer.address?.trim().isNotEmpty == true
+              ? customer.address!
+              : "-",
+          valueColor: AppColors.textMid,
+          valueFontSize: 11,
+          valueFontWeight: FontWeight.w600,
+        ),
+        AppInfoRowItem(
+          keyLabel: "Customer Since",
+          valueLabel: DateFormat("MMM d, y").format(customer.createdAt),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSpendingSummary(CustomerListItem customer) {
+    return AppInfoRowsCard(
+      icon: Icons.paid_outlined,
+      iconBackgroundColor: AppColors.tealLight,
+      title: "Spending Summary",
+      rows: [
+        AppInfoRowItem(
+          keyLabel: "Total Spent",
+          valueLabel:
+              "${NumberFormat.decimalPattern().format(customer.totalSpent)} MMK",
+          valueColor: AppColors.softOrange,
+          valueFontSize: 15,
+        ),
+        AppInfoRowItem(
+          keyLabel: "Largest Order",
+          valueLabel:
+              "${NumberFormat.decimalPattern().format(customer.largestOrderTotal)} MMK",
+        ),
+        AppInfoRowItem(
+          keyLabel: "Favourite Item",
+          valueLabel: customer.favouriteItem?.trim().isNotEmpty == true
+              ? customer.favouriteItem!
+              : "-",
+        ),
+        AppInfoRowItem(
+          keyLabel: "Last Order",
+          valueLabel: customer.lastOrderAt == null
+              ? "-"
+              : DateFormat("MMM d, y").format(customer.lastOrderAt!),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _onRefresh(BuildContext context) async {
+    context.read<CustomerProfileBloc>().add(
+      const CustomerProfileRefreshRequested(),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+  }
+
+  CustomerListItem _fallbackCustomer() {
+    return CustomerListItem(
+      id: "",
+      shopId: "",
+      name: "Customer",
+      phone: "-",
+      township: null,
+      address: null,
+      notes: null,
+      avatarUrl: null,
+      createdAt: DateTime.now(),
+      totalOrders: 0,
+      totalSpent: 0,
+      lastOrderAt: null,
+      deliveredRate: 0,
+      isVip: false,
+      isNewThisWeek: false,
+      largestOrderTotal: 0,
+      favouriteItem: null,
+      recentOrders: const <CustomerRecentOrder>[],
+      hasRecentOrders: false,
+    );
+  }
+
+  String _formatCompactAmount(int amount) {
+    if (amount.abs() >= 1000) {
+      final compact = amount / 1000;
+      final hasFraction = compact.truncateToDouble() != compact;
+      return "${compact.toStringAsFixed(hasFraction ? 1 : 0)}K";
+    }
+
+    return NumberFormat.decimalPattern().format(amount);
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  const _QuickActionChip({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.borderColor = AppColors.border,
+    this.backgroundColor = Colors.white,
+    this.foregroundColor = AppColors.textMid,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final Color borderColor;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: 2),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: foregroundColor, size: 20),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: foregroundColor,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderHistoryCard extends StatelessWidget {
+  const _OrderHistoryCard({required this.customer});
+
+  final CustomerListItem customer;
+
+  @override
+  Widget build(BuildContext context) {
+    final orders = customer.recentOrders;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.purpleLight,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.receipt_long_outlined,
+                  size: 16,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Order History",
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textDark,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Text(
+                "See all (${customer.totalOrders})",
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.softOrange,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (orders.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                "No recent orders available.",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textLight,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          else
+            ...orders.asMap().entries.map((entry) {
+              final index = entry.key;
+              final order = entry.value;
+              final isLast = index == orders.length - 1;
+              return _MiniOrderRow(order: order, isLast: isLast);
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniOrderRow extends StatelessWidget {
+  const _MiniOrderRow({required this.order, required this.isLast});
+
+  final CustomerRecentOrder order;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(top: 10, bottom: isLast ? 0 : 10),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : const Border(
+                bottom: BorderSide(color: AppColors.border, width: 1),
+              ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "#${order.orderNo}",
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textLight,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: "Courier",
+                    fontSize: 10,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  order.productName,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textDark,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  DateFormat("MMM d, h:mm a").format(order.createdAt),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textLight,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                NumberFormat.decimalPattern().format(order.totalPrice),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              AppStatusBadge(
+                variant: _variantForStatus(order.status),
+                label: order.statusLabel,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  AppStatusVariant _variantForStatus(String status) {
+    final normalized = status.trim().toLowerCase();
+    switch (normalized) {
+      case "new_order":
+        return AppStatusVariant.newOrder;
+      case "confirmed":
+        return AppStatusVariant.confirmed;
+      case "out_for_delivery":
+        return AppStatusVariant.shipping;
+      case "delivered":
+        return AppStatusVariant.delivered;
+      case "cancelled":
+        return AppStatusVariant.cancelled;
+      default:
+        return AppStatusVariant.newOrder;
+    }
+  }
+}

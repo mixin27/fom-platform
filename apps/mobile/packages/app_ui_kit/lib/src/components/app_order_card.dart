@@ -16,11 +16,15 @@ class AppOrderCard extends StatelessWidget {
     this.township,
     this.time,
     this.customerAvatar,
-    this.productIcon = '🛍️',
+    this.productIcon,
+    this.productIconWidget,
     this.onPrimaryAction,
     this.primaryActionLabel,
+    this.primaryActionIcon,
     this.onSecondaryAction,
     this.secondaryActionLabel,
+    this.secondaryActionIcon,
+    this.isActionLoading = false,
   });
 
   /// The customer's name.
@@ -53,20 +57,26 @@ class AppOrderCard extends StatelessWidget {
   /// Optional widget for the customer's avatar.
   final Widget? customerAvatar;
 
-  /// Icon or emoji for the product.
-  final String productIcon;
+  /// Optional legacy text icon for the product.
+  final String? productIcon;
+
+  /// Optional icon widget for product summary.
+  final Widget? productIconWidget;
 
   /// Optional callback for a primary action button (e.g., "Confirm").
   final VoidCallback? onPrimaryAction;
 
   /// Optional label for the primary action button.
   final String? primaryActionLabel;
+  final IconData? primaryActionIcon;
 
   /// Optional callback for a secondary action button (e.g., "Call").
   final VoidCallback? onSecondaryAction;
 
   /// Optional label for the secondary action button.
   final String? secondaryActionLabel;
+  final IconData? secondaryActionIcon;
+  final bool isActionLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -142,17 +152,30 @@ class AppOrderCard extends StatelessWidget {
                                 ),
                               ),
                               if (phone != null || township != null)
-                                Text(
-                                  [
-                                    if (phone != null) '📞 $phone',
-                                    if (township != null) township,
-                                  ].join(' · '),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: AppColors.textLight,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.call_outlined,
+                                      size: 12,
+                                      color: AppColors.textLight,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        [
+                                          if (phone != null) phone,
+                                          if (township != null) township,
+                                        ].join(' · '),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color: AppColors.textLight,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                             ],
                           ),
@@ -165,22 +188,29 @@ class AppOrderCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              productIcon,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              productName,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textMid,
-                                fontWeight: FontWeight.w700,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              _ProductIcon(
+                                iconText: productIcon,
+                                iconWidget: productIconWidget,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  productName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textMid,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Text.rich(
                           TextSpan(
                             children: [
@@ -235,7 +265,13 @@ class AppOrderCard extends StatelessWidget {
                               ),
                           ],
                         ),
-                        if (onPrimaryAction != null ||
+                        if (isActionLoading)
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else if (onPrimaryAction != null ||
                             onSecondaryAction != null)
                           Row(
                             children: [
@@ -246,6 +282,7 @@ class AppOrderCard extends StatelessWidget {
                                     label: secondaryActionLabel ?? 'Call',
                                     onPressed: onSecondaryAction!,
                                     isPrimary: false,
+                                    icon: secondaryActionIcon,
                                   ),
                                 ),
                               if (onPrimaryAction != null)
@@ -253,6 +290,7 @@ class AppOrderCard extends StatelessWidget {
                                   label: primaryActionLabel ?? 'Confirm',
                                   onPressed: onPrimaryAction!,
                                   isPrimary: true,
+                                  icon: primaryActionIcon,
                                 ),
                             ],
                           ),
@@ -274,6 +312,7 @@ class AppOrderCard extends StatelessWidget {
       AppStatusVariant.confirmed => AppColors.teal,
       AppStatusVariant.shipping => AppColors.yellow,
       AppStatusVariant.delivered => AppColors.green,
+      AppStatusVariant.cancelled => const Color(0xFFEF4444),
     };
   }
 }
@@ -283,11 +322,13 @@ class _ActionBtn extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.isPrimary = true,
+    this.icon,
   });
 
   final String label;
   final VoidCallback onPressed;
   final bool isPrimary;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -305,16 +346,57 @@ class _ActionBtn extends StatelessWidget {
                 : Border.all(color: AppColors.border, width: 1.5),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isPrimary ? Colors.white : AppColors.textMid,
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 12,
+                  color: isPrimary ? Colors.white : AppColors.textMid,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: isPrimary ? Colors.white : AppColors.textMid,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProductIcon extends StatelessWidget {
+  const _ProductIcon({required this.iconText, required this.iconWidget});
+
+  final String? iconText;
+  final Widget? iconWidget;
+
+  @override
+  Widget build(BuildContext context) {
+    if (iconWidget != null) {
+      return IconTheme(
+        data: const IconThemeData(size: 14, color: AppColors.textMid),
+        child: iconWidget!,
+      );
+    }
+
+    final legacyText = iconText?.trim() ?? '';
+    if (legacyText.isNotEmpty) {
+      return Text(legacyText, style: const TextStyle(fontSize: 14));
+    }
+
+    return const Icon(
+      Icons.inventory_2_outlined,
+      size: 14,
+      color: AppColors.textMid,
     );
   }
 }

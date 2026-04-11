@@ -1,4 +1,4 @@
-.PHONY: help pub-get analyze test check format format-check format-changed codegen clean workspace-list install-hooks env-init env-check setup-dev secret-scan deps-outdated deps-upgrade deps-upgrade-major prepare-firebase create-package create-feature create-feature-api
+.PHONY: help pub-get analyze test check format format-check format-changed codegen clean workspace-list install-hooks env-init env-check setup-dev secret-scan deps-outdated deps-upgrade deps-upgrade-major create-package create-feature create-feature-api
 
 help:
 	@echo "Available targets:"
@@ -23,7 +23,6 @@ help:
 	@echo "  make deps-upgrade   - Upgrade dependencies across root + workspace packages"
 	@echo "                        Options: MAJOR=1 DRY_RUN=1 TIGHTEN=1 SKIP_ROOT=1 SKIP_PACKAGES=1"
 	@echo "  make deps-upgrade-major - Shortcut for major upgrades across workspace"
-	@echo "  make prepare-firebase - Prepare Firebase native config for a flavor (FLAVOR required)"
 	@echo "  make create-package - Create a new workspace package (NAME required)"
 	@echo "  make create-feature - Create a feature scaffold (NAME required, supports ENTITY/PRINT_DI/PRINT_ROUTER/NO_TESTS)"
 	@echo "  make create-feature-api - Create a feature scaffold (NAME required, uses APIService + Bloc)"
@@ -81,10 +80,6 @@ deps-upgrade:
 
 deps-upgrade-major:
 	./scripts/deps_upgrade.sh --major $(if $(DRY_RUN),--dry-run,) $(if $(TIGHTEN),--tighten,) $(if $(SKIP_ROOT),--skip-root,) $(if $(SKIP_PACKAGES),--skip-packages,)
-
-prepare-firebase:
-	@test -n "$(FLAVOR)" || (echo "Usage: make prepare-firebase FLAVOR=development|staging|production [PLATFORM=all|android|ios] [REQUIRED=1]" && exit 1)
-	./scripts/prepare_firebase.sh --flavor $(FLAVOR) $(if $(PLATFORM),--platform $(PLATFORM),) $(if $(REQUIRED),--required,)
 
 create-package:
 	@test -n "$(NAME)" || (echo "Usage: make create-package NAME=app_feature [KIND=dart|flutter]" && exit 1)

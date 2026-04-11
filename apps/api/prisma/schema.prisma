@@ -1,0 +1,416 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LocaleCode {
+  en
+  my
+}
+
+enum ShopMemberStatus {
+  active
+  invited
+  disabled
+}
+
+enum OrderStatus {
+  new
+  confirmed
+  out_for_delivery
+  delivered
+  cancelled
+}
+
+enum OrderSource {
+  messenger
+  manual
+}
+
+enum DeliveryStatus {
+  scheduled
+  out_for_delivery
+  delivered
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  name               String
+  email              String?             @unique
+  phone              String?             @unique
+  locale             LocaleCode          @default(my)
+  emailVerifiedAt    DateTime?
+  phoneVerifiedAt    DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  ownedShops         Shop[]              @relation("ShopOwner")
+  memberships        ShopMember[]
+  passwordCredential PasswordCredential?
+  authIdentities     AuthIdentity[]
+  sessions           Session[]
+  authChallenges     AuthChallenge[]
+  roleAssignments    UserRoleAssignment[]
+  statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
+  assignedDeliveries Delivery[]          @relation("DeliveryDriver")
+  assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
+  createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
+}
+
+model Shop {
+  id               String            @id @default(cuid())
+  ownerUserId      String
+  name             String
+  timezone         String
+  createdAt        DateTime          @default(now())
+  owner            User              @relation("ShopOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  members          ShopMember[]
+  customers        Customer[]
+  orders           Order[]
+  messageTemplates MessageTemplate[]
+  subscription     Subscription?
+  supportIssues    PlatformSupportIssue[]
+
+  @@index([ownerUserId])
+}
+
+model PlatformSupportIssue {
+  id               String    @id @default(cuid())
+  issueKey         String?   @unique
+  source           String    @default("manual")
+  kind             String
+  severity         String
+  status           String    @default("open")
+  shopId           String?
+  shopNameSnapshot String?
+  title            String
+  detail           String
+  occurredAt       DateTime
+  isActive         Boolean   @default(true)
+  assignedToUserId String?
+  resolvedAt       DateTime?
+  resolutionNote   String?
+  createdByUserId  String?
+  lastDetectedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  shop             Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  assignedToUser   User?     @relation("SupportIssueAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdByUser    User?     @relation("SupportIssueCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, severity, occurredAt])
+  @@index([source, isActive, lastDetectedAt])
+  @@index([shopId, status])
+  @@map("platform_support_issues")
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  description   String?
+  price         Int
+  currency      String         @default("MMK")
+  billingPeriod String
+  isActive      Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id         String    @id @default(cuid())
+  shopId     String    @unique
+  planId     String
+  status     String
+  startAt    DateTime
+  endAt      DateTime?
+  autoRenews Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  shop       Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan       Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments   Payment[]
+
+  @@index([planId, status, endAt])
+  @@index([status, endAt])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id            String       @id @default(cuid())
+  subscriptionId String
+  invoiceNo      String       @unique
+  amount         Int
+  currency       String       @default("MMK")
+  status         String
+  paymentMethod  String?
+  providerRef    String?
+  dueAt          DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, status])
+  @@index([status, dueAt])
+  @@map("payments")
+}
+
+model ShopMember {
+  id              String                     @id @default(cuid())
+  shopId          String
+  userId          String
+  status          ShopMemberStatus           @default(active)
+  createdAt       DateTime                   @default(now())
+  shop            Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleAssignments ShopMemberRoleAssignment[]
+
+  @@unique([shopId, userId])
+  @@index([userId, status])
+}
+
+model PasswordCredential {
+  userId       String   @id
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_credentials")
+}
+
+model AuthIdentity {
+  id              String    @id @default(cuid())
+  userId          String
+  provider        String
+  providerUserId  String
+  email           String?
+  phone           String?
+  displayName     String?
+  profileImageUrl String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId, provider])
+  @@map("auth_identities")
+}
+
+model Role {
+  id                    String                     @id @default(cuid())
+  code                  String                     @unique
+  scope                 String                     @default("shop")
+  name                  String
+  description           String?
+  isSystem              Boolean                    @default(true)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  permissionAssignments RolePermissionAssignment[]
+  memberAssignments     ShopMemberRoleAssignment[]
+  userAssignments       UserRoleAssignment[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String                     @id @default(cuid())
+  code            String                     @unique
+  scope           String                     @default("shop")
+  name            String
+  description     String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  roleAssignments RolePermissionAssignment[]
+
+  @@map("permissions")
+}
+
+model RolePermissionAssignment {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("roles_permissions_assignment")
+}
+
+model ShopMemberRoleAssignment {
+  id           String     @id @default(cuid())
+  shopMemberId String
+  roleId       String
+  createdAt    DateTime   @default(now())
+  shopMember   ShopMember @relation(fields: [shopMemberId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([shopMemberId, roleId])
+  @@index([roleId])
+  @@map("shop_member_role_assignments")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("user_role_assignments")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  shopId    String
+  name      String
+  phone     String
+  township  String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orders    Order[]
+
+  @@unique([shopId, phone])
+  @@index([shopId, name])
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  shopId    String
+  title     String
+  shortcut  String?
+  body      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, title])
+  @@unique([shopId, shortcut])
+  @@index([shopId, isActive, updatedAt])
+  @@map("message_templates")
+}
+
+model Order {
+  id           String             @id @default(cuid())
+  shopId       String
+  customerId   String
+  orderNo      String             @unique
+  status       OrderStatus
+  totalPrice   Int
+  currency     String             @default("MMK")
+  deliveryFee  Int                @default(0)
+  note         String?
+  source       OrderSource        @default(manual)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  shop         Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items        OrderItem[]
+  statusEvents OrderStatusEvent[]
+  delivery     Delivery?
+
+  @@index([shopId, status, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model Delivery {
+  id              String         @id @default(cuid())
+  orderId         String         @unique
+  driverUserId    String
+  status          DeliveryStatus @default(scheduled)
+  deliveryFee     Int?
+  addressSnapshot String
+  scheduledAt     DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driverUser      User           @relation("DeliveryDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
+
+  @@index([driverUserId, status])
+  @@index([status, scheduledAt])
+  @@map("deliveries")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String?
+  productName String
+  qty         Int
+  unitPrice   Int
+  lineTotal   Int
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model OrderStatusEvent {
+  id              String       @id @default(cuid())
+  orderId         String
+  fromStatus      OrderStatus?
+  toStatus        OrderStatus
+  changedByUserId String
+  changedAt       DateTime     @default(now())
+  note            String?
+  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser   User         @relation("ChangedByUser", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, changedAt])
+}
+
+model AuthChallenge {
+  id         String    @id @default(cuid())
+  phone      String
+  otpCode    String
+  purpose    String    @default("login")
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone, purpose, expiresAt])
+  @@map("auth_challenges")
+}
+
+model Session {
+  id                String    @id @default(cuid())
+  userId            String
+  accessToken       String    @unique
+  refreshToken      String    @unique
+  accessExpiresAt   DateTime
+  refreshExpiresAt  DateTime
+  ipAddress         String?
+  userAgent         String?
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  lastUsedAt        DateTime?
+  lastUsedIpAddress String?
+  lastUsedUserAgent String?
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([accessExpiresAt])
+  @@index([refreshExpiresAt])
+  @@map("sessions")
+}

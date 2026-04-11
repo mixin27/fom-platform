@@ -1,0 +1,98 @@
+.theme-fom-web {
+  --fom-orange: #f4622a;
+  --fom-orange-dark: #e0521c;
+  --fom-teal: #1e9e96;
+  --fom-ink: #1c1c1e;
+  --fom-slate: #555558;
+  --fom-marketing-border: #e8e8e4;
+  --fom-admin-bg: #f0edf8;
+  --fom-admin-surface: #f7f8fc;
+  --fom-admin-sidebar: #0c0c18;
+  --fom-portal-bg: #f0ede8;
+  --fom-portal-surface: #f7f4ef;
+  --fom-portal-sidebar: #fffcf8;
+  --font-sans:
+    var(--font-web-sans), var(--font-web-myanmar), "Inter", "Segoe UI",
+    system-ui, -apple-system, BlinkMacSystemFont,
+    sans-serif;
+  --font-heading:
+    var(--font-web-heading), var(--font-web-myanmar), "Iowan Old Style",
+    Georgia, serif;
+  --font-admin:
+    var(--font-web-admin), var(--font-web-myanmar), "Inter", "Segoe UI",
+    system-ui, -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-mono:
+    "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.fom-display {
+  font-family: var(--font-heading), var(--font-sans), sans-serif;
+}
+
+.fom-marketing-canvas {
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
+  background: #fafaf8;
+  color: var(--fom-ink);
+}
+
+.fom-admin-canvas {
+  --font-sans: var(--font-admin);
+  --font-heading: var(--font-admin);
+  background: var(--fom-admin-bg);
+}
+
+.fom-portal-canvas {
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  background: var(--fom-portal-bg);
+}
+
+.fom-admin-shell {
+  background: var(--fom-admin-surface);
+  box-shadow:
+    0 32px 80px rgba(14, 15, 26, 0.22),
+    0 0 0 1px rgba(14, 15, 26, 0.1);
+}
+
+.fom-portal-shell {
+  background: var(--fom-portal-surface);
+  box-shadow:
+    0 32px 80px rgba(26, 20, 16, 0.22),
+    0 0 0 1px rgba(26, 20, 16, 0.08);
+}
+
+.fom-marketing-hero {
+  background: #0f0f0f;
+}
+
+.fom-marketing-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.fom-marketing-glow {
+  background:
+    radial-gradient(
+      ellipse 55% 65% at 75% -10%,
+      rgba(244, 98, 42, 0.22),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 40% 50% at 5% 90%,
+      rgba(30, 158, 150, 0.14),
+      transparent 60%
+    );
+}
+
+.fom-shadow-lift {
+  box-shadow: 0 24px 64px rgba(19, 26, 34, 0.14);
+}

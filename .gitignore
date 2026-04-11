@@ -11,6 +11,7 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.env.docker
 
 # Testing
 coverage
@@ -34,3 +35,4 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
+/internal/

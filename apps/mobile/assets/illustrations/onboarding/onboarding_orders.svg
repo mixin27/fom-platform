@@ -1,0 +1,45 @@
+<svg width="360" height="260" viewBox="0 0 360 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgOrders" x1="32" y1="12" x2="330" y2="248" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF6F1"/>
+      <stop offset="1" stop-color="#F7FBFA"/>
+    </linearGradient>
+    <filter id="shadow1" x="20" y="30" width="236" height="160" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#241F33" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadow2" x="188" y="94" width="152" height="138" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#241F33" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect x="24" y="12" width="312" height="236" rx="30" fill="url(#bgOrders)"/>
+  <circle cx="78" cy="42" r="26" fill="#FFD4C2" fill-opacity="0.55"/>
+  <circle cx="286" cy="220" r="24" fill="#C8EDEA" fill-opacity="0.52"/>
+
+  <g filter="url(#shadow1)">
+    <rect x="38" y="46" width="200" height="124" rx="20" fill="white"/>
+  </g>
+
+  <circle cx="66" cy="82" r="15" fill="#FFD4C2"/>
+  <rect x="88" y="73" width="78" height="8" rx="4" fill="#1A1A2E" fill-opacity="0.93"/>
+  <rect x="88" y="86" width="58" height="7" rx="3.5" fill="#EDE8E0"/>
+  <rect x="175" y="75" width="48" height="20" rx="10" fill="#FF6B35"/>
+  <text x="186" y="89" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="white">NEW</text>
+
+  <circle cx="66" cy="127" r="15" fill="#FFE7DC"/>
+  <rect x="88" y="117" width="90" height="8" rx="4" fill="#1A1A2E" fill-opacity="0.88"/>
+  <rect x="88" y="130" width="54" height="7" rx="3.5" fill="#EDE8E0"/>
+  <rect x="38" y="148" width="200" height="1.2" fill="#F1ECE5"/>
+
+  <g filter="url(#shadow2)">
+    <rect x="204" y="108" width="120" height="106" rx="18" fill="white"/>
+  </g>
+  <text x="220" y="129" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#FF6B35">TODAY</text>
+  <rect x="220" y="140" width="86" height="8" rx="4" fill="#1A1A2E" fill-opacity="0.9"/>
+  <rect x="220" y="154" width="72" height="7" rx="3.5" fill="#EDE8E0"/>
+  <rect x="220" y="166" width="58" height="7" rx="3.5" fill="#EDE8E0"/>
+  <rect x="220" y="178" width="44" height="7" rx="3.5" fill="#EDE8E0"/>
+
+  <circle cx="120" cy="205" r="20" fill="#FF6B35" fill-opacity="0.14"/>
+  <path d="M110 205L117 212L131 198" stroke="#FF6B35" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

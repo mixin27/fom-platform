@@ -1,0 +1,51 @@
+<svg width="360" height="260" viewBox="0 0 360 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgReports" x1="20" y1="18" x2="336" y2="244" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7F2"/>
+      <stop offset="1" stop-color="#EFF8F7"/>
+    </linearGradient>
+    <filter id="shadowReport" x="22" y="24" width="316" height="210" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1E182E" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect x="24" y="12" width="312" height="236" rx="30" fill="url(#bgReports)"/>
+  <circle cx="302" cy="54" r="22" fill="#FFD4C2" fill-opacity="0.58"/>
+  <circle cx="62" cy="214" r="22" fill="#C8EDEA" fill-opacity="0.58"/>
+
+  <g filter="url(#shadowReport)">
+    <rect x="34" y="36" width="292" height="184" rx="24" fill="white"/>
+  </g>
+
+  <rect x="56" y="58" width="74" height="56" rx="14" fill="#FFF0EB"/>
+  <text x="68" y="77" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#5A5A7A">Today</text>
+  <text x="68" y="99" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1A1A2E">23</text>
+
+  <rect x="140" y="58" width="84" height="56" rx="14" fill="#E8F7F6"/>
+  <text x="152" y="77" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#5A5A7A">Revenue</text>
+  <text x="152" y="99" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#1A1A2E">485K</text>
+
+  <rect x="234" y="58" width="70" height="56" rx="14" fill="#FEF3C7"/>
+  <text x="246" y="77" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#5A5A7A">Pending</text>
+  <text x="246" y="99" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#1A1A2E">8</text>
+
+  <path d="M58 196V136" stroke="#F3EEE7" stroke-width="2"/>
+  <path d="M96 196V128" stroke="#F3EEE7" stroke-width="2"/>
+  <path d="M134 196V140" stroke="#F3EEE7" stroke-width="2"/>
+  <path d="M172 196V122" stroke="#F3EEE7" stroke-width="2"/>
+  <path d="M210 196V148" stroke="#F3EEE7" stroke-width="2"/>
+  <path d="M248 196V132" stroke="#F3EEE7" stroke-width="2"/>
+  <path d="M286 196V144" stroke="#F3EEE7" stroke-width="2"/>
+
+  <rect x="50" y="164" width="16" height="32" rx="8" fill="#FFD4C2"/>
+  <rect x="88" y="150" width="16" height="46" rx="8" fill="#FFB79A"/>
+  <rect x="126" y="170" width="16" height="26" rx="8" fill="#FFD4C2"/>
+  <rect x="164" y="142" width="16" height="54" rx="8" fill="#FF6B35"/>
+  <rect x="202" y="174" width="16" height="22" rx="8" fill="#FFD4C2"/>
+  <rect x="240" y="156" width="16" height="40" rx="8" fill="#FFB79A"/>
+  <rect x="278" y="166" width="16" height="30" rx="8" fill="#FFD4C2"/>
+
+  <path d="M58 175C80 162 99 166 118 154C138 141 161 144 176 132C196 117 220 123 246 108C262 99 276 102 292 92" stroke="#2AA8A0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="292" cy="92" r="7" fill="#2AA8A0"/>
+  <path d="M284 92L289 97L300 86" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

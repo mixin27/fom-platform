@@ -1,4 +1,8 @@
+import "package:app_database/src/daos/order_cache_dao.dart";
 import "package:app_database/src/daos/store_dao.dart";
+import "package:app_database/src/daos/customer_cache_dao.dart";
+import "package:app_database/src/tables/customer_cache_records.dart";
+import "package:app_database/src/tables/order_cache_records.dart";
 import "package:app_database/src/tables/store_records.dart";
 import "package:drift/drift.dart";
 import "package:drift_flutter/drift_flutter.dart";
@@ -7,12 +11,32 @@ import "package:path_provider/path_provider.dart";
 part "app_database.g.dart";
 
 /// Represents App Database.
-@DriftDatabase(tables: [StoreRecords], daos: [StoreDao])
+@DriftDatabase(
+  tables: [StoreRecords, OrderCacheRecords, CustomerCacheRecords],
+  daos: [StoreDao, OrderCacheDao, CustomerCacheDao],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator migrator) async {
+        await migrator.createAll();
+      },
+      onUpgrade: (Migrator migrator, int from, int to) async {
+        if (from < 2) {
+          await migrator.createTable(orderCacheRecords);
+        }
+        if (from < 3) {
+          await migrator.createTable(customerCacheRecords);
+        }
+      },
+    );
+  }
 }
 
 // `.sqlite` extension will be added by drift_flutter

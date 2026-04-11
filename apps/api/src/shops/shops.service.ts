@@ -1,0 +1,648 @@
+import { Injectable } from '@nestjs/common';
+import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
+import type { AuthenticatedUser } from '../common/http/request-context';
+import {
+  conflictError,
+  forbiddenError,
+  notFoundError,
+  validationError,
+} from '../common/http/app-http.exception';
+import { paged } from '../common/http/api-result';
+import { paginate } from '../common/utils/pagination';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { permissions, type Permission } from '../common/http/rbac.constants';
+import { DEFAULT_TRIAL_PLAN_CODE } from '../platform/platform-billing.constants';
+import { AddShopMemberDto } from './dto/add-shop-member.dto';
+import { CreateShopDto } from './dto/create-shop.dto';
+import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
+import { UpdateShopDto } from './dto/update-shop.dto';
+
+type ShopWithCount = any & {
+  _count: {
+    members: number;
+  };
+};
+
+type MemberWithAccess = any;
+
+@Injectable()
+export class ShopsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async listUserShops(userId: string) {
+    const memberships = await this.prisma.shopMember.findMany({
+      where: {
+        userId,
+        status: 'active',
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      include: {
+        shop: {
+          include: {
+            _count: {
+              select: {
+                members: true,
+              },
+            },
+          },
+        },
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return memberships.map((member) => {
+      const access = this.extractMemberAccess(member);
+
+      return {
+        ...this.serializeShopRecord(member.shop),
+        membership: {
+          id: member.id,
+          role: access.primaryRole,
+          roles: access.roles,
+          status: member.status,
+          permissions: access.permissions,
+        },
+      };
+    });
+  }
+
+  async listShops(
+    currentUser: AuthenticatedUser,
+    query: CursorPaginationQueryDto,
+  ) {
+    const shops = await this.listUserShops(currentUser.id);
+    const page = paginate(shops, query.limit, query.cursor);
+    return paged(page.items, page.pagination);
+  }
+
+  async createShop(currentUser: AuthenticatedUser, body: CreateShopDto) {
+    const timezone = body.timezone ?? 'Asia/Yangon';
+    this.assertValidTimeZone(timezone);
+
+    const ownerRole = await this.requireRolesByCodes(['owner']);
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const defaultTrialPlan = await (tx as any).plan.findUnique({
+        where: { code: DEFAULT_TRIAL_PLAN_CODE },
+        select: { id: true },
+      });
+      const shop = await tx.shop.create({
+        data: {
+          ownerUserId: currentUser.id,
+          name: body.name,
+          timezone,
+        },
+      });
+
+      const member = await tx.shopMember.create({
+        data: {
+          shopId: shop.id,
+          userId: currentUser.id,
+          status: 'active',
+        },
+      });
+
+      await tx.shopMemberRoleAssignment.createMany({
+        data: ownerRole.map((role) => ({
+          shopMemberId: member.id,
+          roleId: role.id,
+        })),
+      });
+
+      if (defaultTrialPlan) {
+        const startAt = new Date();
+        const endAt = new Date(startAt);
+        endAt.setDate(endAt.getDate() + 7);
+
+        await (tx as any).subscription.create({
+          data: {
+            shopId: shop.id,
+            planId: defaultTrialPlan.id,
+            status: 'trialing',
+            startAt,
+            endAt,
+            autoRenews: false,
+          },
+        });
+      }
+
+      return shop;
+    });
+
+    return this.serializeShop(created.id);
+  }
+
+  async getShop(currentUser: AuthenticatedUser, shopId: string) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+    return this.serializeShop(shopId);
+  }
+
+  async updateShop(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: UpdateShopDto,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
+    if (!body.name && !body.timezone) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide at least one field to update'],
+        },
+      ]);
+    }
+
+    if (body.timezone) {
+      this.assertValidTimeZone(body.timezone);
+    }
+
+    await this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        ...(body.name ? { name: body.name } : {}),
+        ...(body.timezone ? { timezone: body.timezone } : {}),
+      },
+    });
+
+    return this.serializeShop(shopId);
+  }
+
+  async listMembers(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    query: CursorPaginationQueryDto,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersRead,
+    );
+    const members = (
+      await this.prisma.shopMember.findMany({
+        where: { shopId },
+        include: {
+          user: true,
+          roleAssignments: {
+            include: {
+              role: {
+                include: {
+                  permissionAssignments: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+    ).map((member) => this.serializeMemberRecord(member));
+
+    const page = paginate(members, query.limit, query.cursor);
+    return paged(page.items, page.pagination);
+  }
+
+  async addMember(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: AddShopMemberDto,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+
+    const userId = body.user_id ?? null;
+    const phone = this.normalizePhone(body.phone);
+    const email = body.email ?? null;
+    const name = body.name ?? null;
+    const roleCodes = body.role_codes ?? ['staff'];
+
+    if (!userId && !email && !phone) {
+      throw validationError([
+        {
+          field: 'user_id',
+          errors: ['Provide user_id, email, or phone to identify the member'],
+        },
+      ]);
+    }
+
+    let targetUser =
+      (userId &&
+        (await this.prisma.user.findUnique({
+          where: { id: userId },
+        }))) ||
+      (email &&
+        (await this.prisma.user.findUnique({
+          where: { email: email.trim().toLowerCase() },
+        }))) ||
+      (phone &&
+        (await this.prisma.user.findUnique({
+          where: { phone: phone.replace(/\s+/g, ' ').trim() },
+        })));
+
+    if (!targetUser) {
+      if (!name || (!email && !phone)) {
+        throw validationError([
+          {
+            field: 'name',
+            errors: [
+              'Provide name with email or phone when creating a new shop member',
+            ],
+          },
+        ]);
+      }
+
+      targetUser = await this.prisma.user.create({
+        data: {
+          name,
+          email: email?.trim().toLowerCase() ?? null,
+          phone: phone?.replace(/\s+/g, ' ').trim() ?? null,
+        },
+      });
+    }
+
+    const existingMember = await this.prisma.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId,
+          userId: targetUser.id,
+        },
+      },
+    });
+    if (existingMember) {
+      throw conflictError('User is already a member of this shop');
+    }
+
+    const roles = await this.requireRolesByCodes(roleCodes);
+    const member = await this.prisma.$transaction(async (tx) => {
+      const createdMember = await tx.shopMember.create({
+        data: {
+          shopId,
+          userId: targetUser.id,
+          status: 'active',
+        },
+      });
+
+      await tx.shopMemberRoleAssignment.createMany({
+        data: roles.map((role) => ({
+          shopMemberId: createdMember.id,
+          roleId: role.id,
+        })),
+      });
+
+      return tx.shopMember.findUnique({
+        where: { id: createdMember.id },
+        include: {
+          user: true,
+          roleAssignments: {
+            include: {
+              role: {
+                include: {
+                  permissionAssignments: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    return this.serializeMemberRecord(member);
+  }
+
+  async updateMember(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    memberId: string,
+    body: UpdateShopMemberDto,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+    const member = await this.prisma.shopMember.findFirst({
+      where: {
+        id: memberId,
+        shopId,
+      },
+      include: {
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    if (!body.status && !body.role_codes) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide status or role_codes to update the shop member'],
+        },
+      ]);
+    }
+
+    const roles = body.role_codes
+      ? await this.requireRolesByCodes(body.role_codes)
+      : null;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (body.status) {
+        await tx.shopMember.update({
+          where: { id: member.id },
+          data: {
+            status: body.status,
+          },
+        });
+      }
+
+      if (roles) {
+        await tx.shopMemberRoleAssignment.deleteMany({
+          where: { shopMemberId: member.id },
+        });
+        await tx.shopMemberRoleAssignment.createMany({
+          data: roles.map((role) => ({
+            shopMemberId: member.id,
+            roleId: role.id,
+          })),
+        });
+      }
+
+      return tx.shopMember.findUnique({
+        where: { id: member.id },
+        include: {
+          user: true,
+          roleAssignments: {
+            include: {
+              role: {
+                include: {
+                  permissionAssignments: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    return this.serializeMemberRecord(updated);
+  }
+
+  async assertShopAccess(userId: string, shopId: string) {
+    const member = await this.prisma.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId,
+          userId,
+        },
+      },
+      include: {
+        shop: true,
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!member || member.status !== 'active') {
+      throw forbiddenError();
+    }
+
+    return {
+      shop: member.shop,
+      member,
+      access: this.extractMemberAccess(member),
+    };
+  }
+
+  async assertPermission(
+    userId: string,
+    shopId: string,
+    requiredPermissions: Permission | Permission[],
+  ) {
+    const result = await this.assertShopAccess(userId, shopId);
+    const required = Array.isArray(requiredPermissions)
+      ? requiredPermissions
+      : [requiredPermissions];
+
+    const missing = required.filter(
+      (permission) => !result.access.permissions.includes(permission),
+    );
+    if (missing.length > 0) {
+      throw forbiddenError('You do not have permission to perform this action');
+    }
+
+    return result;
+  }
+
+  async serializeShop(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        _count: {
+          select: {
+            members: true,
+          },
+        },
+      },
+    });
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    return this.serializeShopRecord(shop);
+  }
+
+  async serializeMember(memberId: string) {
+    const member = await this.prisma.shopMember.findUnique({
+      where: { id: memberId },
+      include: {
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    return this.serializeMemberRecord(member);
+  }
+
+  private async requireRolesByCodes(roleCodes: string[]) {
+    const uniqueRoleCodes = [
+      ...new Set(roleCodes.map((role) => role.trim())),
+    ].sort();
+    const roles = await this.prisma.role.findMany({
+      where: {
+        code: {
+          in: uniqueRoleCodes,
+        },
+        scope: 'shop',
+      },
+    });
+
+    const missingRoleCodes = uniqueRoleCodes.filter(
+      (code) => !roles.some((role) => role.code === code),
+    );
+    if (missingRoleCodes.length > 0) {
+      throw notFoundError(
+        `Roles not found: ${missingRoleCodes.join(', ')}. Seed RBAC defaults first.`,
+      );
+    }
+
+    return roles.sort((left, right) => left.code.localeCompare(right.code));
+  }
+
+  private extractMemberAccess(member: MemberWithAccess) {
+    const shopScopedAssignments = member.roleAssignments.filter(
+      (assignment: { role: { scope: string } }) => assignment.role.scope === 'shop',
+    );
+
+    const roles = [...shopScopedAssignments]
+      .map((assignment) => assignment.role)
+      .sort((left, right) => left.code.localeCompare(right.code))
+      .map((role) => ({
+        id: role.id,
+        code: role.code,
+        name: role.name,
+        description: role.description,
+      }));
+
+    const permissionCodes = [
+      ...new Set(
+        shopScopedAssignments.flatMap((assignment) =>
+          assignment.role.permissionAssignments.map(
+            (permissionAssignment) => permissionAssignment.permission.code,
+          ),
+        ),
+      ),
+    ].sort();
+
+    return {
+      primaryRole: roles[0]?.code ?? null,
+      roles,
+      permissions: permissionCodes,
+    };
+  }
+
+  private serializeShopRecord(shop: ShopWithCount) {
+    return {
+      id: shop.id,
+      owner_user_id: shop.ownerUserId,
+      name: shop.name,
+      timezone: shop.timezone,
+      member_count: shop._count.members,
+      created_at: shop.createdAt.toISOString(),
+    };
+  }
+
+  private serializeMemberRecord(member: MemberWithAccess | null) {
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    const access = this.extractMemberAccess(member);
+
+    return {
+      id: member.id,
+      shop_id: member.shopId,
+      user_id: member.userId,
+      role: access.primaryRole,
+      roles: access.roles,
+      status: member.status,
+      created_at: member.createdAt.toISOString(),
+      user: {
+        id: member.user.id,
+        name: member.user.name,
+        email: member.user.email,
+        phone: member.user.phone,
+        locale: member.user.locale,
+      },
+      permissions: access.permissions,
+    };
+  }
+
+  private normalizePhone(value: string | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private assertValidTimeZone(timeZone: string) {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone });
+    } catch {
+      throw validationError([
+        {
+          field: 'timezone',
+          errors: ['Timezone must be a valid IANA timezone'],
+        },
+      ]);
+    }
+  }
+}

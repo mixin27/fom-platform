@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../tokens/app_colors.dart';
 import '../tokens/app_spacing.dart';
@@ -39,7 +40,10 @@ class AppAvatar extends StatelessWidget {
           borderRadius ?? AppSpacing.borderRadiusMd,
         ),
         image: imageUrl != null
-            ? DecorationImage(image: NetworkImage(imageUrl!), fit: BoxFit.cover)
+            ? DecorationImage(
+                image: CachedNetworkImageProvider(imageUrl!),
+                fit: BoxFit.cover,
+              )
             : null,
       ),
       child: imageUrl == null

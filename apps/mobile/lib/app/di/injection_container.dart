@@ -2,6 +2,10 @@ import "package:app_logger/app_logger.dart";
 import "package:app_storage/app_storage.dart";
 import "package:get_it/get_it.dart";
 
+import "../../features/auth/feature_auth.dart";
+import "../../features/customers/feature_customers.dart";
+import "../../features/onboarding/feature_onboarding.dart";
+import "../../features/orders/feature_orders.dart";
 import "../config/app_config.dart";
 import "../router/app_router.dart";
 import "modules/app_core_module.dart";
@@ -29,6 +33,10 @@ Future<void> configureDependencies({
       appLogger: appLogger,
       sharedPreferencesService: sharedPreferencesService,
     ),
+    const AuthModule(),
+    const OnboardingModule(),
+    const OrdersModule(),
+    const CustomersModule(),
     const RouterModule(),
     // more module registration here
   ];
@@ -37,14 +45,13 @@ Future<void> configureDependencies({
     await module.register(getIt);
   }
 
-  // final authService = getIt<AuthService>();
-  // final apiService = getIt<APIService>();
+  if (getIt.isRegistered<AuthBloc>()) {
+    getIt<AuthBloc>().add(const AuthStarted());
+  }
 
-  // await authService.init();
-
-  // apiService.addInterceptor(
-  //   AuthInterceptor(authService: authService, apiService: apiService),
-  // );
+  if (getIt.isRegistered<OnboardingBloc>()) {
+    getIt<OnboardingBloc>().add(const OnboardingStarted());
+  }
 }
 
 /// Seed local sample data when enabled via [AppConfig].

@@ -12,6 +12,8 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.keyboardType,
+    this.maxLines = 1,
+    this.textInputAction,
     this.onChanged,
     this.validator,
     super.key,
@@ -37,6 +39,12 @@ class AppTextField extends StatelessWidget {
 
   /// The keyboard type for input.
   final TextInputType? keyboardType;
+
+  /// The maximum number of lines.
+  final int? maxLines;
+
+  /// The text input action.
+  final TextInputAction? textInputAction;
 
   /// Callback when the text changes.
   final ValueChanged<String>? onChanged;
@@ -69,6 +77,8 @@ class AppTextField extends StatelessWidget {
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          maxLines: maxLines,
+          textInputAction: textInputAction,
           onChanged: onChanged,
           validator: validator,
           style: theme.textTheme.bodyLarge?.copyWith(
