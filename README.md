@@ -2,6 +2,10 @@
 
 Monorepo for the Facebook Order Manager project.
 
+[![CI (Flutter)](https://github.com/mixin27/fom-platform/actions/workflows/flutter.yaml/badge.svg)](https://github.com/mixin27/fom-platform/actions/workflows/flutter.yaml)
+[![CI (Web)](https://github.com/mixin27/fom-platform/actions/workflows/ci.yaml/badge.svg)](https://github.com/mixin27/fom-platform/actions/workflows/ci.yaml)
+[![Secret Scan](https://github.com/mixin27/fom-platform/actions/workflows/secret_scan.yaml/badge.svg)](https://github.com/mixin27/fom-platform/actions/workflows/secret_scan.yaml)
+
 ## Apps
 
 - `apps/api`: NestJS + Prisma backend
