@@ -42,9 +42,6 @@ jobs:
         # --frozen-lockfile ensures CI fails if the lockfile is out of sync
         run: pnpm install --ignore-scripts --frozen-lockfile
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Build and Test
         # Assumes you have a 'build' script in root package.json
         # that handles monorepo tasks (e.g., using turbo or pnpm -r)
