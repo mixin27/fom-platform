@@ -6,6 +6,7 @@ import "../../features/auth/feature_auth.dart";
 import "../../features/customers/feature_customers.dart";
 import "../../features/onboarding/feature_onboarding.dart";
 import "../../features/orders/feature_orders.dart";
+import "../../features/reports/feature_reports.dart";
 import "../config/app_config.dart";
 import "../router/app_router.dart";
 import "modules/app_core_module.dart";
@@ -37,6 +38,7 @@ Future<void> configureDependencies({
     const OnboardingModule(),
     const OrdersModule(),
     const CustomersModule(),
+    const ReportsModule(),
     const RouterModule(),
     // more module registration here
   ];

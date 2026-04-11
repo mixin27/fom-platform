@@ -71,6 +71,8 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
       return;
     }
 
+    log.info("Starting customers home for shop=$normalizedShopId");
+
     final shouldRestartCustomersStream =
         state.shopId != normalizedShopId || _customersSubscription == null;
 
@@ -118,6 +120,10 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
       return;
     }
 
+    if (!event.silent) {
+      log.info("Refreshing customers for shop=$shopId");
+    }
+
     _isRefreshingInFlight = true;
 
     if (!event.silent) {
@@ -159,6 +165,7 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
         );
       },
       (_) {
+        log.info("Customers refreshed successfully for shop=$shopId");
         emit(
           state.copyWith(
             status: CustomersHomeStatus.ready,
@@ -199,6 +206,7 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
     CustomersHomeCustomersStreamUpdated event,
     Emitter<CustomersHomeState> emit,
   ) {
+    log.debug("Customers stream update: ${event.customers.length} records");
     emit(
       state.copyWith(
         status: CustomersHomeStatus.ready,
@@ -212,6 +220,7 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
     Emitter<CustomersHomeState> emit,
   ) {
     if (event.isOnline && !_wasOnline && state.hasShop) {
+      log.info("Network restored. Triggering silent customers refresh.");
       add(const CustomersHomeRefreshRequested(silent: true));
     }
 

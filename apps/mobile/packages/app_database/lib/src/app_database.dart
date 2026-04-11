@@ -1,8 +1,10 @@
 import "package:app_database/src/daos/order_cache_dao.dart";
+import "package:app_database/src/daos/report_cache_dao.dart";
 import "package:app_database/src/daos/store_dao.dart";
 import "package:app_database/src/daos/customer_cache_dao.dart";
 import "package:app_database/src/tables/customer_cache_records.dart";
 import "package:app_database/src/tables/order_cache_records.dart";
+import "package:app_database/src/tables/report_cache_records.dart";
 import "package:app_database/src/tables/store_records.dart";
 import "package:drift/drift.dart";
 import "package:drift_flutter/drift_flutter.dart";
@@ -12,14 +14,19 @@ part "app_database.g.dart";
 
 /// Represents App Database.
 @DriftDatabase(
-  tables: [StoreRecords, OrderCacheRecords, CustomerCacheRecords],
-  daos: [StoreDao, OrderCacheDao, CustomerCacheDao],
+  tables: [
+    StoreRecords,
+    OrderCacheRecords,
+    CustomerCacheRecords,
+    ReportCacheRecords,
+  ],
+  daos: [StoreDao, OrderCacheDao, CustomerCacheDao, ReportCacheDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -33,6 +40,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           await migrator.createTable(customerCacheRecords);
+        }
+        if (from < 4) {
+          await migrator.createTable(reportCacheRecords);
         }
       },
     );

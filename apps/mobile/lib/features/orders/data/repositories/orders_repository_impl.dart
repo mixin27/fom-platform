@@ -38,6 +38,9 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         syncedAt: DateTime.now(),
       );
 
+      log.info(
+        "Orders cache refreshed: shop=$shopId, count=${remoteOrders.length}",
+      );
       return Result<void>.success(null);
     } catch (error, stackTrace) {
       log.error(
@@ -65,6 +68,7 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         syncedAt: DateTime.now(),
       );
 
+      log.info("Order details refreshed: shop=$shopId, order=$orderId");
       return Result<OrderDetails>.success(details);
     } catch (error, stackTrace) {
       log.error(
@@ -92,6 +96,7 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         syncedAt: DateTime.now(),
       );
 
+      log.info("Order created: shop=$shopId, order=${created.id}");
       return Result<OrderListItem>.success(created);
     } catch (error, stackTrace) {
       log.error("Failed to create order", error: error, stackTrace: stackTrace);
@@ -110,6 +115,7 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         message: message,
       );
 
+      log.info("Order message parsed for shop=$shopId");
       return Result<ParsedOrderMessage>.success(parsed);
     } catch (error, stackTrace) {
       log.error(
@@ -141,6 +147,7 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         syncedAt: DateTime.now(),
       );
 
+      log.info("Order status updated: shop=$shopId, order=$orderId");
       return Result<void>.success(null);
     } catch (error, stackTrace) {
       log.error(

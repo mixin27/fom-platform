@@ -47,10 +47,17 @@ class AppBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) return const SizedBox.shrink();
+    if (data.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     // Determine the max Y value for scaling the chart effectively
     final maxY = data.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final isDenseChart = data.length > 10;
+    final titleStep = isDenseChart ? (data.length / 8).ceil() : 1;
+    final barWidth = isDenseChart
+        ? (220 / data.length).clamp(5, 10).toDouble()
+        : 16.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -75,7 +82,9 @@ class AppBarChart extends StatelessWidget {
             height: 100,
             child: BarChart(
               BarChartData(
-                alignment: BarChartAlignment.spaceEvenly,
+                alignment: isDenseChart
+                    ? BarChartAlignment.spaceBetween
+                    : BarChartAlignment.spaceEvenly,
                 maxY: maxY * 1.2, // Give space for top labels
                 barTouchData: BarTouchData(
                   enabled: true,
@@ -109,21 +118,35 @@ class AppBarChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        final item = data[value.toInt()];
+                        final index = value.toInt();
+                        if (!_isValidChartIndex(index, data.length)) {
+                          return const SizedBox.shrink();
+                        }
+
+                        if (!_shouldShowTitle(
+                          index: index,
+                          count: data.length,
+                          step: titleStep,
+                          isDense: isDenseChart,
+                        )) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final item = data[index];
                         return SideTitleWidget(
                           meta: meta,
                           space: 4,
                           child: Text(
                             item.valueLabel ?? item.value.toStringAsFixed(0),
                             style: const TextStyle(
-                              fontSize: 9,
+                              fontSize: 8,
                               fontWeight: FontWeight.w900,
                               color: AppColors.textMid,
                             ),
                           ),
                         );
                       },
-                      reservedSize: 20,
+                      reservedSize: isDenseChart ? 14 : 20,
                     ),
                   ),
 
@@ -132,7 +155,21 @@ class AppBarChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        final item = data[value.toInt()];
+                        final index = value.toInt();
+                        if (!_isValidChartIndex(index, data.length)) {
+                          return const SizedBox.shrink();
+                        }
+
+                        if (!_shouldShowTitle(
+                          index: index,
+                          count: data.length,
+                          step: titleStep,
+                          isDense: isDenseChart,
+                        )) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final item = data[index];
                         return SideTitleWidget(
                           meta: meta,
                           space: 4,
@@ -140,7 +177,7 @@ class AppBarChart extends StatelessWidget {
                             item.label,
                             maxLines: 1,
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 8,
                               fontWeight: item.isHighlighted
                                   ? FontWeight.w900
                                   : FontWeight.w800,
@@ -151,7 +188,7 @@ class AppBarChart extends StatelessWidget {
                           ),
                         );
                       },
-                      reservedSize: 22,
+                      reservedSize: isDenseChart ? 18 : 22,
                     ),
                   ),
                 ),
@@ -167,7 +204,7 @@ class AppBarChart extends StatelessWidget {
                       BarChartRodData(
                         toY: item.value,
                         color: item.color,
-                        width: 16,
+                        width: barWidth,
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(6),
                         ),
@@ -190,5 +227,28 @@ class AppBarChart extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _isValidChartIndex(int index, int count) {
+    return index >= 0 && index < count;
+  }
+
+  bool _shouldShowTitle({
+    required int index,
+    required int count,
+    required int step,
+    required bool isDense,
+  }) {
+    if (!isDense) {
+      return true;
+    }
+
+    final isFirst = index == 0;
+    final isLast = index == count - 1;
+    if (isFirst || isLast) {
+      return true;
+    }
+
+    return index % step == 0;
   }
 }
