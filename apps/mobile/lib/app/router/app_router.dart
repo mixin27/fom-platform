@@ -107,7 +107,10 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return OrderDetailsPage(orderId: id);
+          return OrderDetailsPage(
+            orderId: id,
+            initialShopId: _resolveCurrentShopId(),
+          );
         },
       ),
       GoRoute(

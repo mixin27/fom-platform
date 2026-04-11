@@ -1,24 +1,28 @@
-import 'package:app_ui_kit/app_ui_kit.dart';
-import 'package:flutter/material.dart';
+import "package:app_ui_kit/app_ui_kit.dart";
+import "package:flutter/material.dart";
+import "package:intl/intl.dart";
 
-class StatusHero extends StatelessWidget {
-  const StatusHero({
-    required this.status,
-    required this.badgeLabel,
-    required this.badgeVariant,
-    required this.currentStep,
+import "../../domain/entities/order_details.dart";
+import "../../domain/entities/order_list_item.dart";
+import "../../domain/entities/order_source.dart";
+import "../../domain/entities/order_status.dart";
+import "../../domain/entities/order_status_history_event.dart";
+
+class OrderDetailsStatusHero extends StatelessWidget {
+  const OrderDetailsStatusHero({
     super.key,
+    required this.status,
+    required this.currentStep,
   });
 
-  final String status;
-  final String badgeLabel;
-  final AppStatusVariant badgeVariant;
+  final OrderStatus status;
   final int currentStep;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      showShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -28,36 +32,38 @@ class StatusHero extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Current Status',
-                    style: TextStyle(
-                      fontSize: 10,
+                  Text(
+                    "Current Status",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.textLight,
-                      letterSpacing: 0.1,
+                      letterSpacing: 0.2,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    status,
-                    style: const TextStyle(
-                      fontSize: 20,
+                    _statusHeading(status),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: AppColors.textDark,
+                      fontSize: 22,
                     ),
                   ),
                 ],
               ),
-              // Using AppStatusBadge instead of AppBadge if available,
-              // but I'll use a local version or the available one.
-              _StatusBadge(label: badgeLabel, status: status),
+              AppStatusBadge(variant: _toBadgeVariant(status)),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           AppStepper(
             totalSteps: 4,
             currentStep: currentStep,
-            stepLabels: const ['Received', 'Confirm', 'Shipping', 'Done'],
+            stepLabels: const <String>[
+              "Received",
+              "Confirm",
+              "Shipping",
+              "Done",
+            ],
           ),
         ],
       ),
@@ -65,36 +71,15 @@ class StatusHero extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.label, required this.status});
-  final String label;
-  final String status;
+class OrderDetailsShippingBanner extends StatelessWidget {
+  const OrderDetailsShippingBanner({
+    super.key,
+    required this.onMarkDelivered,
+    this.isLoading = false,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    final isShipping = status.contains('🚚');
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: isShipping ? const Color(0xFFFEF3C7) : AppColors.softOrangeLight,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: isShipping ? const Color(0xFFF59E0B) : AppColors.softOrange,
-        ),
-      ),
-    );
-  }
-}
-
-class ShippingBanner extends StatelessWidget {
-  const ShippingBanner({this.onDone, super.key});
-
-  final VoidCallback? onDone;
+  final VoidCallback onMarkDelivered;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -102,42 +87,55 @@ class ShippingBanner extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFDCFCE7), Color(0xFFBBF7D0)],
+          colors: <Color>[Color(0xFFDCFCE7), Color(0xFFBBF7D0)],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF86EFAC), width: 2),
       ),
       child: Row(
         children: [
-          const Text('🎉', style: TextStyle(fontSize: 32)),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.local_shipping_rounded,
+              color: AppColors.green,
+              size: 22,
+            ),
+          ),
           const SizedBox(width: AppSpacing.md),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Package delivered?',
-                  style: TextStyle(
-                    fontSize: 13,
+                  "Package delivered?",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF15803D),
+                    color: const Color(0xFF15803D),
                   ),
                 ),
                 Text(
-                  'Tap to mark as complete',
-                  style: TextStyle(
-                    fontSize: 11,
+                  "Tap to mark as complete",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF16A34A),
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF16A34A),
                   ),
                 ),
               ],
             ),
           ),
-          AppButton(
-            text: 'Done ✓',
-            onPressed: onDone ?? () {},
-            variant: AppButtonVariant.primary, // Note: Design has custom green
+          SizedBox(
+            width: 96,
+            child: AppButton(
+              text: "Done",
+              onPressed: isLoading ? null : onMarkDelivered,
+              isLoading: isLoading,
+            ),
           ),
         ],
       ),
@@ -146,8 +144,14 @@ class ShippingBanner extends StatelessWidget {
 }
 
 class StatusUpdateGrid extends StatelessWidget {
-  const StatusUpdateGrid({required this.onUpdate, super.key});
-  final VoidCallback onUpdate;
+  const StatusUpdateGrid({
+    super.key,
+    required this.currentStatus,
+    required this.onUpdate,
+  });
+
+  final OrderStatus currentStatus;
+  final ValueChanged<OrderStatus> onUpdate;
 
   @override
   Widget build(BuildContext context) {
@@ -158,59 +162,93 @@ class StatusUpdateGrid extends StatelessWidget {
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
       childAspectRatio: 1.5,
-      children: [
-        _StatusUpdateBtn(
-          icon: '✅',
-          label: 'Confirm Order',
-          mmLabel: 'အတည်ပြုမည်',
-          color: AppColors.teal,
-          bgColor: AppColors.tealLight,
-          onTap: onUpdate,
-        ),
-        _StatusUpdateBtn(
-          icon: '🚚',
-          label: 'Out for Delivery',
-          mmLabel: 'ပို့ဆောင်နေသည်',
-          color: Colors.orange,
-          bgColor: const Color(0xFFFEF3C7),
-          onTap: onUpdate,
-        ),
-        _StatusUpdateBtn(
-          icon: '🎉',
-          label: 'Mark Delivered',
-          mmLabel: 'ရောက်ပြီ',
-          color: Colors.green,
-          bgColor: const Color(0xFFDCFCE7),
-          onTap: onUpdate,
-        ),
-        _StatusUpdateBtn(
-          icon: '✗',
-          label: 'Cancel Order',
-          mmLabel: 'ပယ်ဖျက်မည်',
-          color: Colors.red,
-          bgColor: const Color(0xFFFEE2E2),
-          onTap: onUpdate,
-        ),
-      ],
+      children: _statusActions
+          .map(
+            (action) => _StatusUpdateButton(
+              icon: action.icon,
+              label: action.label,
+              mmLabel: action.mmLabel,
+              color: action.color,
+              bgColor: action.bgColor,
+              isActive: currentStatus == action.status,
+              onTap: () => onUpdate(action.status),
+            ),
+          )
+          .toList(growable: false),
     );
   }
 }
 
-class _StatusUpdateBtn extends StatelessWidget {
-  const _StatusUpdateBtn({
+class _StatusUpdateAction {
+  const _StatusUpdateAction({
+    required this.status,
     required this.icon,
     required this.label,
     required this.mmLabel,
     required this.color,
     required this.bgColor,
-    required this.onTap,
   });
 
-  final String icon;
+  final OrderStatus status;
+  final IconData icon;
   final String label;
   final String mmLabel;
   final Color color;
   final Color bgColor;
+}
+
+const List<_StatusUpdateAction> _statusActions = <_StatusUpdateAction>[
+  _StatusUpdateAction(
+    status: OrderStatus.confirmed,
+    icon: Icons.check_circle_rounded,
+    label: "Confirm Order",
+    mmLabel: "အတည်ပြုမည်",
+    color: AppColors.teal,
+    bgColor: AppColors.tealLight,
+  ),
+  _StatusUpdateAction(
+    status: OrderStatus.outForDelivery,
+    icon: Icons.local_shipping_rounded,
+    label: "Out for Delivery",
+    mmLabel: "ပို့ဆောင်နေသည်",
+    color: AppColors.yellow,
+    bgColor: AppColors.yellowLight,
+  ),
+  _StatusUpdateAction(
+    status: OrderStatus.delivered,
+    icon: Icons.task_alt_rounded,
+    label: "Mark Delivered",
+    mmLabel: "ရောက်ပြီ",
+    color: AppColors.green,
+    bgColor: AppColors.greenLight,
+  ),
+  _StatusUpdateAction(
+    status: OrderStatus.cancelled,
+    icon: Icons.cancel_rounded,
+    label: "Cancel Order",
+    mmLabel: "ပယ်ဖျက်မည်",
+    color: Color(0xFFEF4444),
+    bgColor: Color(0xFFFEE2E2),
+  ),
+];
+
+class _StatusUpdateButton extends StatelessWidget {
+  const _StatusUpdateButton({
+    required this.icon,
+    required this.label,
+    required this.mmLabel,
+    required this.color,
+    required this.bgColor,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String mmLabel;
+  final Color color;
+  final Color bgColor;
+  final bool isActive;
   final VoidCallback onTap;
 
   @override
@@ -221,28 +259,29 @@ class _StatusUpdateBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: AppColors.border, width: 2),
+          color: isActive ? bgColor : Colors.white,
+          border: Border.all(
+            color: isActive ? color : AppColors.border,
+            width: 2,
+          ),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(icon, style: const TextStyle(fontSize: 22)),
+            Icon(icon, size: 22, color: color),
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 12,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w900,
                 color: AppColors.textDark,
               ),
             ),
             Text(
               mmLabel,
-              style: const TextStyle(
-                fontSize: 10,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: AppColors.textLight,
                 fontWeight: FontWeight.w600,
               ),
@@ -255,84 +294,70 @@ class _StatusUpdateBtn extends StatelessWidget {
 }
 
 class CustomerInfoCard extends StatelessWidget {
-  const CustomerInfoCard({super.key});
+  const CustomerInfoCard({
+    super.key,
+    required this.order,
+    this.onCallTap,
+    this.onMessageTap,
+    this.onMapTap,
+  });
+
+  final OrderListItem order;
+  final VoidCallback? onCallTap;
+  final VoidCallback? onMessageTap;
+  final VoidCallback? onMapTap;
 
   @override
   Widget build(BuildContext context) {
+    final address = order.customerAddress?.trim();
+    final township = order.customerTownship?.trim();
+    final fullAddress = <String>[
+      if (address != null && address.isNotEmpty) address,
+      if (township != null && township.isNotEmpty) township,
+    ].join(", ");
+
     return AppCard(
+      showShadow: false,
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.softOrangeLight,
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Center(child: Text('👤')),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Customer Info',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  Text(
-                    'ဖောက်သည်အချက်အလက်',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          const AppSectionHeader(
+            icon: Icon(Icons.person_outline_rounded),
+            title: "Customer Info",
+            subtitle: "ဖောက်သည်အချက်အလက်",
           ),
-          const SizedBox(height: AppSpacing.md),
-          const _InfoRow(label: '👤 Name', value: 'Daw Khin Myat'),
-          const _InfoRow(
-            label: '📞 Phone',
-            value: '09 7812 3456',
-            valueColor: AppColors.teal,
-          ),
-          const _InfoRow(
-            label: '🏠 Address',
-            value: 'No. 45, Bo Gyoke St, Sanchaung, Yangon',
+          _InfoRow(label: "Name", value: order.customerName),
+          _InfoRow(label: "Phone", value: order.customerPhone),
+          _InfoRow(
+            label: "Address",
+            value: fullAddress.isEmpty ? "-" : fullAddress,
             isMultiline: true,
+            valueColor: AppColors.textMid,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
               Expanded(
                 child: AppButton(
-                  text: 'Call',
-                  onPressed: () {},
+                  text: "Call",
+                  onPressed: onCallTap,
                   variant: AppButtonVariant.secondary,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: AppButton(
-                  text: 'Message',
-                  onPressed: () {},
+                  text: "Message",
+                  onPressed: onMessageTap,
                   variant: AppButtonVariant.secondary,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: AppButton(
-                  text: 'Map',
-                  onPressed: () {},
+                  text: "Map",
+                  onPressed: onMapTap,
                   variant: AppButtonVariant.secondary,
                 ),
               ),
@@ -345,59 +370,46 @@ class CustomerInfoCard extends StatelessWidget {
 }
 
 class ProductPaymentCard extends StatelessWidget {
-  const ProductPaymentCard({super.key});
+  const ProductPaymentCard({super.key, required this.order, this.details});
+
+  final OrderListItem order;
+  final OrderDetails? details;
 
   @override
   Widget build(BuildContext context) {
+    final items = details?.items ?? order.items;
+    final deliveryFee = details?.deliveryFee ?? 0;
+    final currency = details?.currency ?? order.currency;
+    final numberFormat = NumberFormat.decimalPattern();
+
     return AppCard(
+      showShadow: false,
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.tealLight,
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Center(child: Text('📦')),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Product & Payment',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  Text(
-                    'ပစ္စည်းနှင့် ငွေပေးချေမှု',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          const AppSectionHeader(
+            icon: Icon(Icons.inventory_2_outlined),
+            title: "Product & Payment",
+            subtitle: "ပစ္စည်းနှင့် ငွေပေးချေမှု",
+            iconBackgroundColor: AppColors.tealLight,
+            iconColor: AppColors.teal,
           ),
-          const SizedBox(height: AppSpacing.md),
-          const _InfoRow(
-            label: '🛍️ Product',
-            value: 'Silk Longyi Set (Green, M)',
+          ...items.map(
+            (item) => _InfoRow(
+              label: "${item.productName} x ${item.quantity}",
+              value: "${numberFormat.format(item.lineTotal)} $currency",
+            ),
           ),
-          const _InfoRow(label: '🔢 Quantity', value: '× 2 pcs'),
-          const _InfoRow(label: '💰 Unit Price', value: '18,000 MMK'),
-          const _InfoRow(label: '🚚 Delivery', value: '3,000 MMK'),
-          const SizedBox(height: 4),
-          const _InfoRow(label: 'TOTAL', value: '39,000 MMK', isTotal: true),
+          _InfoRow(
+            label: "Delivery",
+            value: "${numberFormat.format(deliveryFee)} $currency",
+          ),
+          _InfoRow(
+            label: "Total",
+            value: "${numberFormat.format(order.totalPrice)} $currency",
+            isTotal: true,
+          ),
         ],
       ),
     );
@@ -429,13 +441,15 @@ class _InfoRow extends StatelessWidget {
             ? CrossAxisAlignment.start
             : CrossAxisAlignment.center,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: isTotal ? 12 : 11,
-              fontWeight: isTotal ? FontWeight.w900 : FontWeight.w800,
-              color: isTotal ? AppColors.textDark : AppColors.textLight,
-              letterSpacing: 0.05,
+          Expanded(
+            child: Text(
+              label.toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: isTotal ? FontWeight.w900 : FontWeight.w800,
+                color: isTotal ? AppColors.textDark : AppColors.textLight,
+                letterSpacing: 0.4,
+                fontSize: isTotal ? 12 : 11,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -443,12 +457,12 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: isTotal ? 16 : 13,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: isTotal
                     ? AppColors.softOrange
                     : (valueColor ?? AppColors.textDark),
+                fontSize: isTotal ? 16 : 13,
               ),
             ),
           ),
@@ -459,81 +473,90 @@ class _InfoRow extends StatelessWidget {
 }
 
 class ActivityLogCard extends StatelessWidget {
-  const ActivityLogCard({super.key});
+  const ActivityLogCard({
+    super.key,
+    required this.history,
+    required this.createdAt,
+    required this.currentStatus,
+    required this.source,
+  });
+
+  final List<OrderStatusHistoryEvent> history;
+  final DateTime createdAt;
+  final OrderStatus currentStatus;
+  final OrderSource source;
 
   @override
   Widget build(BuildContext context) {
+    final events = history.isNotEmpty ? history : _fallbackEvents();
+
     return AppCard(
+      showShadow: false,
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Center(child: Text('📋')),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Activity Log',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  Text(
-                    'လှုပ်ရှားမှု မှတ်တမ်း',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          const AppSectionHeader(
+            icon: Icon(Icons.history_rounded),
+            title: "Activity Log",
+            subtitle: "လှုပ်ရှားမှု မှတ်တမ်း",
+            iconBackgroundColor: AppColors.yellowLight,
+            iconColor: AppColors.yellow,
           ),
-          const SizedBox(height: AppSpacing.md),
-          const AppTimeline(
-            items: [
-              AppTimelineItem(
-                time: '10:32 AM today',
-                event: 'Order created',
-                subtitle: 'Added manually from Messenger chat',
-                color: AppTimelineColor.orange,
-              ),
-              AppTimelineItem(
-                time: 'Waiting',
-                event: 'Confirmation pending',
-                color: AppTimelineColor.gray,
-                isLast: true,
-              ),
-            ],
+          AppTimeline(
+            items: events
+                .asMap()
+                .entries
+                .map((entry) {
+                  final index = entry.key;
+                  final event = entry.value;
+                  return AppTimelineItem(
+                    time: _formatTimelineTime(event.changedAt),
+                    event: _statusEventTitle(event),
+                    subtitle: _statusEventSubtitle(event),
+                    color: _timelineColor(event.toStatus),
+                    isLast: index == events.length - 1,
+                  );
+                })
+                .toList(growable: false),
           ),
         ],
       ),
     );
   }
+
+  List<OrderStatusHistoryEvent> _fallbackEvents() {
+    return <OrderStatusHistoryEvent>[
+      OrderStatusHistoryEvent(
+        id: "created",
+        fromStatus: null,
+        toStatus: currentStatus,
+        changedAt: createdAt,
+        note: source == OrderSource.messenger
+            ? "Created from Messenger message"
+            : "Created manually",
+      ),
+    ];
+  }
 }
 
 class OrderDetailsBottomBar extends StatelessWidget {
   const OrderDetailsBottomBar({
-    required this.isOutForDelivery,
-    required this.onPrimaryPressed,
     super.key,
+    required this.primaryLabel,
+    required this.primaryEnabled,
+    required this.onPrimaryPressed,
+    required this.onSecondaryPressed,
+    this.secondaryLabel = "Update Status",
+    this.isPrimaryLoading = false,
   });
 
-  final bool isOutForDelivery;
+  final String primaryLabel;
+  final bool primaryEnabled;
   final VoidCallback onPrimaryPressed;
+  final VoidCallback onSecondaryPressed;
+  final String secondaryLabel;
+  final bool isPrimaryLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -548,22 +571,111 @@ class OrderDetailsBottomBar extends StatelessWidget {
         child: Row(
           children: [
             AppButton(
-              text: isOutForDelivery ? '✎ Edit' : '🗑 Delete',
-              onPressed: () {},
+              text: secondaryLabel,
+              onPressed: isPrimaryLoading ? null : onSecondaryPressed,
               variant: AppButtonVariant.secondary,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: AppButton(
-                text: isOutForDelivery ? '✓ Mark Delivered' : '✓ Confirm Order',
-                onPressed: onPrimaryPressed,
-                variant: AppButtonVariant.primary,
-                // Custom green styling for "Mark Delivered" could be added here
+                text: primaryLabel,
+                onPressed: primaryEnabled && !isPrimaryLoading
+                    ? onPrimaryPressed
+                    : null,
+                isLoading: isPrimaryLoading,
               ),
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+String _statusHeading(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return "New Order";
+    case OrderStatus.confirmed:
+      return "Confirmed";
+    case OrderStatus.outForDelivery:
+      return "Out for Delivery";
+    case OrderStatus.delivered:
+      return "Delivered";
+    case OrderStatus.cancelled:
+      return "Cancelled";
+  }
+}
+
+AppStatusVariant _toBadgeVariant(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return AppStatusVariant.newOrder;
+    case OrderStatus.confirmed:
+      return AppStatusVariant.confirmed;
+    case OrderStatus.outForDelivery:
+      return AppStatusVariant.shipping;
+    case OrderStatus.delivered:
+      return AppStatusVariant.delivered;
+    case OrderStatus.cancelled:
+      return AppStatusVariant.cancelled;
+  }
+}
+
+String _statusEventTitle(OrderStatusHistoryEvent event) {
+  switch (event.toStatus) {
+    case OrderStatus.newOrder:
+      return "Order created";
+    case OrderStatus.confirmed:
+      return "Order confirmed";
+    case OrderStatus.outForDelivery:
+      return "Out for delivery";
+    case OrderStatus.delivered:
+      return "Order delivered";
+    case OrderStatus.cancelled:
+      return "Order cancelled";
+  }
+}
+
+String? _statusEventSubtitle(OrderStatusHistoryEvent event) {
+  final note = event.note?.trim();
+  if (note != null && note.isNotEmpty) {
+    return note;
+  }
+
+  final changedBy = event.changedByName?.trim();
+  if (changedBy != null && changedBy.isNotEmpty) {
+    return "Updated by $changedBy";
+  }
+
+  return null;
+}
+
+String _formatTimelineTime(DateTime value) {
+  final now = DateTime.now();
+  final formatter = DateFormat("h:mm a");
+  final time = formatter.format(value);
+
+  if (value.year == now.year &&
+      value.month == now.month &&
+      value.day == now.day) {
+    return "$time today";
+  }
+
+  return DateFormat("dd MMM, h:mm a").format(value);
+}
+
+AppTimelineColor _timelineColor(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return AppTimelineColor.orange;
+    case OrderStatus.confirmed:
+      return AppTimelineColor.teal;
+    case OrderStatus.outForDelivery:
+      return AppTimelineColor.orange;
+    case OrderStatus.delivered:
+      return AppTimelineColor.teal;
+    case OrderStatus.cancelled:
+      return AppTimelineColor.gray;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:app_network/app_network.dart';
 
 import "../../domain/entities/order_entry_draft.dart";
+import "../models/order_details_model.dart";
 import "../models/order_entry_draft_model.dart";
 import '../models/order_list_item_model.dart';
 import "../models/parsed_order_message_model.dart";
@@ -26,6 +27,11 @@ abstract class OrdersRemoteDataSource {
     required String orderId,
     required String status,
     String? note,
+  });
+
+  Future<OrderDetailsModel> fetchOrderDetails({
+    required String shopId,
+    required String orderId,
   });
 }
 
@@ -94,5 +100,14 @@ class OrdersRemoteDataSourceImpl implements OrdersRemoteDataSource {
     );
 
     return OrderListItemModel.fromJson(payload);
+  }
+
+  @override
+  Future<OrderDetailsModel> fetchOrderDetails({
+    required String shopId,
+    required String orderId,
+  }) async {
+    final payload = await _apiClient.getMap("/shops/$shopId/orders/$orderId");
+    return OrderDetailsModel.fromJson(payload);
   }
 }

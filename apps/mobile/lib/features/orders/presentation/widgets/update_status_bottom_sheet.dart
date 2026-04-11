@@ -1,39 +1,70 @@
-import 'package:app_ui_kit/app_ui_kit.dart';
-import 'package:flutter/material.dart';
+import "package:app_ui_kit/app_ui_kit.dart";
+import "package:flutter/material.dart";
 
-/// A bottom sheet for selecting and updating the order status.
+import "../../domain/entities/order_status.dart";
+
+class OrderStatusUpdateSelection {
+  const OrderStatusUpdateSelection({required this.status, this.note});
+
+  final OrderStatus status;
+  final String? note;
+}
+
 class UpdateStatusBottomSheet extends StatefulWidget {
-  const UpdateStatusBottomSheet({required this.initialStatus, super.key});
+  const UpdateStatusBottomSheet({
+    super.key,
+    required this.initialStatus,
+    this.allowedStatuses,
+  });
 
-  final AppStatusVariant initialStatus;
+  final OrderStatus initialStatus;
+  final List<OrderStatus>? allowedStatuses;
 
   @override
   State<UpdateStatusBottomSheet> createState() =>
       _UpdateStatusBottomSheetState();
 
-  /// Helper to show the bottom sheet.
-  static Future<AppStatusVariant?> show(
-    BuildContext context,
-    AppStatusVariant initialStatus,
-  ) {
-    return showModalBottomSheet<AppStatusVariant>(
+  static Future<OrderStatusUpdateSelection?> show(
+    BuildContext context, {
+    required OrderStatus initialStatus,
+    List<OrderStatus>? allowedStatuses,
+  }) {
+    return showModalBottomSheet<OrderStatusUpdateSelection>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          UpdateStatusBottomSheet(initialStatus: initialStatus),
+      builder: (context) => UpdateStatusBottomSheet(
+        initialStatus: initialStatus,
+        allowedStatuses: allowedStatuses,
+      ),
     );
   }
 }
 
 class _UpdateStatusBottomSheetState extends State<UpdateStatusBottomSheet> {
-  late AppStatusVariant _selectedStatus;
-  final _noteController = TextEditingController();
+  late OrderStatus _selectedStatus;
+  late final TextEditingController _noteController;
+
+  List<OrderStatus> get _statuses {
+    final configured = widget.allowedStatuses;
+    if (configured != null && configured.isNotEmpty) {
+      return configured;
+    }
+
+    return const <OrderStatus>[
+      OrderStatus.newOrder,
+      OrderStatus.confirmed,
+      OrderStatus.outForDelivery,
+      OrderStatus.delivered,
+      OrderStatus.cancelled,
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedStatus = widget.initialStatus;
+    _noteController = TextEditingController();
   }
 
   @override
@@ -44,184 +75,129 @@ class _UpdateStatusBottomSheetState extends State<UpdateStatusBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 8,
-        bottom: 36 + bottomInset,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.warmWhite,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomInset),
+        decoration: const BoxDecoration(
+          color: AppColors.warmWhite,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Update Order Status',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: AppColors.textDark,
+            Text(
+              "Update Order Status",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+              ),
             ),
-          ),
-          const Text(
-            'အော်ဒါ အခြေအနေ ပြောင်းမည်',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textLight,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'NotoSansMyanmar',
+            const SizedBox(height: 4),
+            Text(
+              "အော်ဒါ အခြေအနေ ပြောင်းမည်",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textLight,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-
-          // Options
-          _StatusOption(
-            variant: AppStatusVariant.newOrder,
-            icon: '🆕',
-            title: 'New Order',
-            subtitle: 'အော်ဒါ အသစ်',
-            isSelected: _selectedStatus == AppStatusVariant.newOrder,
-            isCurrent: widget.initialStatus == AppStatusVariant.newOrder,
-            onTap: () =>
-                setState(() => _selectedStatus = AppStatusVariant.newOrder),
-          ),
-          _StatusOption(
-            variant: AppStatusVariant.confirmed,
-            icon: '✅',
-            title: 'Confirmed',
-            subtitle: 'အတည်ပြုပြီး',
-            isSelected: _selectedStatus == AppStatusVariant.confirmed,
-            isCurrent: widget.initialStatus == AppStatusVariant.confirmed,
-            onTap: () =>
-                setState(() => _selectedStatus = AppStatusVariant.confirmed),
-          ),
-          _StatusOption(
-            variant: AppStatusVariant.shipping,
-            icon: '🚚',
-            title: 'Out for Delivery',
-            subtitle: 'ပို့ဆောင်နေသည်',
-            isSelected: _selectedStatus == AppStatusVariant.shipping,
-            isCurrent: widget.initialStatus == AppStatusVariant.shipping,
-            onTap: () =>
-                setState(() => _selectedStatus = AppStatusVariant.shipping),
-          ),
-          _StatusOption(
-            variant: AppStatusVariant.delivered,
-            icon: '🎉',
-            title: 'Delivered',
-            subtitle: 'ပေးပို့ပြီးစီး',
-            isSelected: _selectedStatus == AppStatusVariant.delivered,
-            isCurrent: widget.initialStatus == AppStatusVariant.delivered,
-            onTap: () =>
-                setState(() => _selectedStatus = AppStatusVariant.delivered),
-          ),
-          _StatusOption(
-            variant: AppStatusVariant.cancelled,
-            icon: '✗',
-            title: 'Cancelled',
-            subtitle: 'ပယ်ဖျက်မည်',
-            isSelected: _selectedStatus == AppStatusVariant.cancelled,
-            isCurrent: widget.initialStatus == AppStatusVariant.cancelled,
-            onTap: () =>
-                setState(() => _selectedStatus = AppStatusVariant.cancelled),
-          ),
-
-          const SizedBox(height: 16),
-          AppTextField(
-            controller: _noteController,
-            hintText: 'Add a note (optional)',
-            prefixIcon: const Icon(
-              Icons.edit_note_rounded,
-              color: AppColors.textLight,
+            const SizedBox(height: 16),
+            ..._statuses.map((status) {
+              final selected = _selectedStatus == status;
+              return _StatusOptionTile(
+                title: _statusLabel(status),
+                subtitle: _statusMmLabel(status),
+                icon: _statusIcon(status),
+                isSelected: selected,
+                color: _statusColor(status),
+                backgroundColor: _statusBackground(status),
+                isCurrent: widget.initialStatus == status,
+                onTap: () => setState(() {
+                  _selectedStatus = status;
+                }),
+              );
+            }),
+            const SizedBox(height: 8),
+            AppTextField(
+              controller: _noteController,
+              label: "Status Note",
+              hintText: "Add a note (optional)",
+              prefixIcon: const Icon(Icons.edit_note_rounded),
             ),
-          ),
-          const SizedBox(height: 16),
-          AppButton(
-            text: 'Apply Status — အတည်ပြုမည်',
-            onPressed: () => Navigator.of(context).pop(_selectedStatus),
-          ),
-        ],
+            const SizedBox(height: 12),
+            AppButton(
+              text: "Apply Status",
+              onPressed: () {
+                Navigator.of(context).pop(
+                  OrderStatusUpdateSelection(
+                    status: _selectedStatus,
+                    note: _nullableText(_noteController.text),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  String? _nullableText(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    return raw;
+  }
 }
 
-class _StatusOption extends StatelessWidget {
-  const _StatusOption({
-    required this.variant,
-    required this.icon,
+class _StatusOptionTile extends StatelessWidget {
+  const _StatusOptionTile({
     required this.title,
     required this.subtitle,
+    required this.icon,
     required this.isSelected,
+    required this.color,
+    required this.backgroundColor,
     required this.isCurrent,
     required this.onTap,
   });
 
-  final AppStatusVariant variant;
-  final String icon;
   final String title;
   final String subtitle;
+  final IconData icon;
   final bool isSelected;
+  final Color color;
+  final Color backgroundColor;
   final bool isCurrent;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    Color bgColor;
-    Color iconBgColor;
-    switch (variant) {
-      case AppStatusVariant.newOrder:
-        bgColor = AppColors.softOrangeLight;
-        iconBgColor = AppColors.softOrangeLight;
-        break;
-      case AppStatusVariant.confirmed:
-        bgColor = AppColors.tealLight;
-        iconBgColor = AppColors.tealLight;
-        break;
-      case AppStatusVariant.shipping:
-        bgColor = AppColors.yellowLight;
-        iconBgColor = AppColors.yellowLight;
-        break;
-      case AppStatusVariant.delivered:
-        bgColor = AppColors.greenLight;
-        iconBgColor = AppColors.greenLight;
-        break;
-      case AppStatusVariant.cancelled:
-        bgColor = const Color(0xFFFEE2E2);
-        iconBgColor = const Color(0xFFFEE2E2);
-        break;
-    }
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? bgColor : Colors.white,
+          color: isSelected ? backgroundColor : Colors.white,
           border: Border.all(
-            color: isSelected ? _getColor(variant) : AppColors.border,
+            color: isSelected ? color : AppColors.border,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(16),
@@ -232,56 +208,113 @@ class _StatusOption extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: iconBgColor,
+                color: backgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
-              alignment: Alignment.center,
-              child: Text(icon, style: const TextStyle(fontSize: 20)),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isCurrent ? '$title (Current)' : title,
-                    style: theme.textTheme.bodyLarge?.copyWith(
+                    isCurrent ? "$title (Current)" : title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: AppColors.textDark,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textMid,
                       fontWeight: FontWeight.w600,
-                      fontFamily: 'NotoSansMyanmar',
                     ),
                   ),
                 ],
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle_rounded, color: _getColor(variant)),
+              Icon(Icons.radio_button_checked_rounded, color: color, size: 18),
           ],
         ),
       ),
     );
   }
+}
 
-  Color _getColor(AppStatusVariant v) {
-    switch (v) {
-      case AppStatusVariant.newOrder:
-        return AppColors.softOrange;
-      case AppStatusVariant.confirmed:
-        return AppColors.teal;
-      case AppStatusVariant.shipping:
-        return AppColors.yellow;
-      case AppStatusVariant.delivered:
-        return AppColors.green;
-      case AppStatusVariant.cancelled:
-        return const Color(0xFFEF4444);
-    }
+String _statusLabel(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return "New";
+    case OrderStatus.confirmed:
+      return "Confirmed";
+    case OrderStatus.outForDelivery:
+      return "Out for Delivery";
+    case OrderStatus.delivered:
+      return "Delivered";
+    case OrderStatus.cancelled:
+      return "Cancelled";
+  }
+}
+
+String _statusMmLabel(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return "အသစ်";
+    case OrderStatus.confirmed:
+      return "အတည်ပြုပြီး";
+    case OrderStatus.outForDelivery:
+      return "ပို့ဆောင်နေသည်";
+    case OrderStatus.delivered:
+      return "ပေးပို့ပြီးစီး";
+    case OrderStatus.cancelled:
+      return "ပယ်ဖျက်မည်";
+  }
+}
+
+IconData _statusIcon(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return Icons.fiber_new_rounded;
+    case OrderStatus.confirmed:
+      return Icons.check_circle_rounded;
+    case OrderStatus.outForDelivery:
+      return Icons.local_shipping_rounded;
+    case OrderStatus.delivered:
+      return Icons.task_alt_rounded;
+    case OrderStatus.cancelled:
+      return Icons.cancel_rounded;
+  }
+}
+
+Color _statusColor(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return AppColors.softOrange;
+    case OrderStatus.confirmed:
+      return AppColors.teal;
+    case OrderStatus.outForDelivery:
+      return AppColors.yellow;
+    case OrderStatus.delivered:
+      return AppColors.green;
+    case OrderStatus.cancelled:
+      return const Color(0xFFEF4444);
+  }
+}
+
+Color _statusBackground(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.newOrder:
+      return AppColors.softOrangeLight;
+    case OrderStatus.confirmed:
+      return AppColors.tealLight;
+    case OrderStatus.outForDelivery:
+      return AppColors.yellowLight;
+    case OrderStatus.delivered:
+      return AppColors.greenLight;
+    case OrderStatus.cancelled:
+      return const Color(0xFFFEE2E2);
   }
 }

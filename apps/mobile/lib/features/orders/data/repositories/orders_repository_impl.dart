@@ -1,10 +1,11 @@
 import 'package:app_core/app_core.dart';
 import 'package:app_logger/app_logger.dart';
 
+import '../../domain/entities/order_details.dart';
 import '../../domain/entities/order_entry_draft.dart';
 import '../../domain/entities/order_list_item.dart';
 import '../../domain/entities/order_status.dart';
-import "../../domain/entities/parsed_order_message.dart";
+import '../../domain/entities/parsed_order_message.dart';
 import '../../domain/repositories/orders_repository.dart';
 import '../datasources/orders_local_data_source.dart';
 import '../datasources/orders_remote_data_source.dart';
@@ -45,6 +46,33 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         stackTrace: stackTrace,
       );
       return Result<void>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<OrderDetails>> getOrderDetails({
+    required String shopId,
+    required String orderId,
+  }) async {
+    try {
+      final details = await _remoteDataSource.fetchOrderDetails(
+        shopId: shopId,
+        orderId: orderId,
+      );
+
+      await _localDataSource.upsertOrder(
+        order: details.toListItemModel(),
+        syncedAt: DateTime.now(),
+      );
+
+      return Result<OrderDetails>.success(details);
+    } catch (error, stackTrace) {
+      log.error(
+        "Failed to get order details",
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<OrderDetails>.failure(FailureMapper.from(error));
     }
   }
 
@@ -127,5 +155,10 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
   @override
   Stream<List<OrderListItem>> watchOrders({required String shopId}) {
     return _localDataSource.watchOrders(shopId: shopId);
+  }
+
+  @override
+  Stream<OrderListItem?> watchOrderById({required String orderId}) {
+    return _localDataSource.watchOrderById(orderId: orderId);
   }
 }

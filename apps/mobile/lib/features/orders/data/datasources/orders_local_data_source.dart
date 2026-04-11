@@ -5,6 +5,10 @@ import '../models/order_list_item_model.dart';
 abstract class OrdersLocalDataSource {
   Stream<List<OrderListItemModel>> watchOrders({required String shopId});
 
+  Stream<OrderListItemModel?> watchOrderById({required String orderId});
+
+  Future<OrderListItemModel?> getOrderById({required String orderId});
+
   Future<void> replaceOrdersForShop({
     required String shopId,
     required List<OrderListItemModel> orders,
@@ -31,6 +35,21 @@ class OrdersLocalDataSourceImpl implements OrdersLocalDataSource {
               .map(OrderListItemModel.fromCacheRecord)
               .toList(growable: false),
         );
+  }
+
+  @override
+  Stream<OrderListItemModel?> watchOrderById({required String orderId}) {
+    return _orderCacheDao
+        .watchOrderById(orderId)
+        .map(
+          (row) => row == null ? null : OrderListItemModel.fromCacheRecord(row),
+        );
+  }
+
+  @override
+  Future<OrderListItemModel?> getOrderById({required String orderId}) async {
+    final row = await _orderCacheDao.getOrderById(orderId);
+    return row == null ? null : OrderListItemModel.fromCacheRecord(row);
   }
 
   @override

@@ -19,6 +19,18 @@ class OrderCacheDao extends DatabaseAccessor<AppDatabase>
         .watch();
   }
 
+  Stream<OrderCacheRecord?> watchOrderById(String orderId) {
+    return (select(
+      orderCacheRecords,
+    )..where((table) => table.id.equals(orderId))).watchSingleOrNull();
+  }
+
+  Future<OrderCacheRecord?> getOrderById(String orderId) {
+    return (select(
+      orderCacheRecords,
+    )..where((table) => table.id.equals(orderId))).getSingleOrNull();
+  }
+
   Future<void> replaceOrdersForShop({
     required String shopId,
     required List<OrderCacheRecordsCompanion> orders,
