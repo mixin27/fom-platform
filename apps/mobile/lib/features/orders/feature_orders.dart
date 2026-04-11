@@ -1,4 +1,7 @@
 export 'di/orders_module.dart';
+export "presentation/bloc/order_entry_bloc.dart";
+export "presentation/bloc/order_entry_event.dart";
+export "presentation/bloc/order_entry_state.dart";
 export 'presentation/bloc/orders_home_bloc.dart';
 export 'presentation/bloc/orders_home_event.dart';
 export 'presentation/bloc/orders_home_state.dart';

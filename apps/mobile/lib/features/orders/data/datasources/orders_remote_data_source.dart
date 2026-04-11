@@ -1,11 +1,24 @@
 import 'package:app_network/app_network.dart';
 
+import "../../domain/entities/order_entry_draft.dart";
+import "../models/order_entry_draft_model.dart";
 import '../models/order_list_item_model.dart';
+import "../models/parsed_order_message_model.dart";
 
 abstract class OrdersRemoteDataSource {
   Future<List<OrderListItemModel>> fetchOrders({
     required String shopId,
     int limit,
+  });
+
+  Future<OrderListItemModel> createOrder({
+    required String shopId,
+    required OrderEntryDraft draft,
+  });
+
+  Future<ParsedOrderMessageModel> parseOrderMessage({
+    required String shopId,
+    required String message,
   });
 
   Future<OrderListItemModel> updateOrderStatus({
@@ -37,6 +50,32 @@ class OrdersRemoteDataSourceImpl implements OrdersRemoteDataSource {
         .map(OrderListItemModel.fromJson)
         .where((order) => order.id.isNotEmpty)
         .toList(growable: false);
+  }
+
+  @override
+  Future<OrderListItemModel> createOrder({
+    required String shopId,
+    required OrderEntryDraft draft,
+  }) async {
+    final payload = await _apiClient.postMap(
+      "/shops/$shopId/orders",
+      data: OrderEntryDraftModel.fromEntity(draft).toCreatePayload(),
+    );
+
+    return OrderListItemModel.fromJson(payload);
+  }
+
+  @override
+  Future<ParsedOrderMessageModel> parseOrderMessage({
+    required String shopId,
+    required String message,
+  }) async {
+    final payload = await _apiClient.postMap(
+      "/shops/$shopId/orders/parse-message",
+      data: <String, dynamic>{"message": message.trim()},
+    );
+
+    return ParsedOrderMessageModel.fromJson(payload);
   }
 
   @override

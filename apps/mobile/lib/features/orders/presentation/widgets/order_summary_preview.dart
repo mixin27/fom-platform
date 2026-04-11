@@ -1,26 +1,29 @@
-import 'package:app_ui_kit/app_ui_kit.dart';
-import 'package:flutter/material.dart';
+import "package:app_ui_kit/app_ui_kit.dart";
+import "package:flutter/material.dart";
+import "package:intl/intl.dart";
+
+import "../../domain/entities/order_entry_item_draft.dart";
 
 class OrderSummaryPreview extends StatelessWidget {
   const OrderSummaryPreview({
-    required this.productName,
-    required this.quantity,
-    required this.unitPrice,
+    required this.items,
     required this.deliveryFee,
     super.key,
   });
 
-  final String productName;
-  final int quantity;
-  final double unitPrice;
-  final double deliveryFee;
+  final List<OrderEntryItemDraft> items;
+  final int deliveryFee;
 
-  double get subtotal => unitPrice * quantity;
-  double get total => subtotal + deliveryFee;
+  int get subtotal {
+    return items.fold<int>(0, (sum, item) => sum + item.lineTotal);
+  }
+
+  int get total => subtotal + deliveryFee;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final numberFormat = NumberFormat.decimalPattern();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -33,7 +36,7 @@ class OrderSummaryPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Order Summary — အော်ဒါ အကျဉ်း',
+            "Order Summary",
             style: theme.textTheme.labelMedium?.copyWith(
               color: AppColors.textLight,
               fontWeight: FontWeight.w800,
@@ -41,27 +44,29 @@ class OrderSummaryPreview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          _PreviewRow(
-            label: '$productName × $quantity',
-            value: '${subtotal.toStringAsFixed(0)} MMK',
+          ...items.map(
+            (item) => _PreviewRow(
+              label: "${item.productName} x ${item.quantity}",
+              value: "${numberFormat.format(item.lineTotal)} MMK",
+            ),
           ),
           _PreviewRow(
-            label: 'Delivery Fee',
-            value: '${deliveryFee.toStringAsFixed(0)} MMK',
+            label: "Delivery Fee",
+            value: "${numberFormat.format(deliveryFee)} MMK",
           ),
           const SizedBox(height: AppSpacing.xs),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Total',
+                "Total",
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: AppColors.textDark,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               Text(
-                '${total.toStringAsFixed(0)} MMK',
+                "${numberFormat.format(total)} MMK",
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: AppColors.softOrange,
                   fontWeight: FontWeight.w800,
@@ -93,13 +98,18 @@ class _PreviewRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textLight,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textLight,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             value,
             style: theme.textTheme.bodyMedium?.copyWith(

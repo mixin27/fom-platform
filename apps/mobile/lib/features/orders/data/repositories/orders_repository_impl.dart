@@ -1,8 +1,10 @@
 import 'package:app_core/app_core.dart';
 import 'package:app_logger/app_logger.dart';
 
+import '../../domain/entities/order_entry_draft.dart';
 import '../../domain/entities/order_list_item.dart';
 import '../../domain/entities/order_status.dart';
+import "../../domain/entities/parsed_order_message.dart";
 import '../../domain/repositories/orders_repository.dart';
 import '../datasources/orders_local_data_source.dart';
 import '../datasources/orders_remote_data_source.dart';
@@ -43,6 +45,51 @@ class OrdersRepositoryImpl with LoggerMixin implements OrdersRepository {
         stackTrace: stackTrace,
       );
       return Result<void>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<OrderListItem>> createOrder({
+    required String shopId,
+    required OrderEntryDraft draft,
+  }) async {
+    try {
+      final created = await _remoteDataSource.createOrder(
+        shopId: shopId,
+        draft: draft,
+      );
+
+      await _localDataSource.upsertOrder(
+        order: created,
+        syncedAt: DateTime.now(),
+      );
+
+      return Result<OrderListItem>.success(created);
+    } catch (error, stackTrace) {
+      log.error("Failed to create order", error: error, stackTrace: stackTrace);
+      return Result<OrderListItem>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<ParsedOrderMessage>> parseOrderMessage({
+    required String shopId,
+    required String message,
+  }) async {
+    try {
+      final parsed = await _remoteDataSource.parseOrderMessage(
+        shopId: shopId,
+        message: message,
+      );
+
+      return Result<ParsedOrderMessage>.success(parsed);
+    } catch (error, stackTrace) {
+      log.error(
+        "Failed to parse order message",
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<ParsedOrderMessage>.failure(FailureMapper.from(error));
     }
   }
 

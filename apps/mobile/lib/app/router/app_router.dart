@@ -97,7 +97,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutePaths.addOrder,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const AddOrderPage(),
+        builder: (context, state) => AddOrderPage(
+          initialShopId: _resolveCurrentShopId(),
+          initialShopName: _resolveCurrentShopName(),
+        ),
       ),
       GoRoute(
         path: AppRoutePaths.orderDetails,

@@ -9,9 +9,12 @@ import "../data/datasources/orders_local_data_source.dart";
 import "../data/datasources/orders_remote_data_source.dart";
 import "../data/repositories/orders_repository_impl.dart";
 import "../domain/repositories/orders_repository.dart";
+import "../domain/usecases/create_order_use_case.dart";
+import "../domain/usecases/parse_order_message_use_case.dart";
 import "../domain/usecases/refresh_orders_use_case.dart";
 import "../domain/usecases/update_order_status_use_case.dart";
 import "../domain/usecases/watch_orders_use_case.dart";
+import "../presentation/bloc/order_entry_bloc.dart";
 import "../presentation/bloc/orders_home_bloc.dart";
 
 class OrdersModule implements DependencyModule {
@@ -39,6 +42,12 @@ class OrdersModule implements DependencyModule {
       ..putLazySingletonIfAbsent<RefreshOrdersUseCase>(
         () => RefreshOrdersUseCase(getIt<OrdersRepository>()),
       )
+      ..putLazySingletonIfAbsent<ParseOrderMessageUseCase>(
+        () => ParseOrderMessageUseCase(getIt<OrdersRepository>()),
+      )
+      ..putLazySingletonIfAbsent<CreateOrderUseCase>(
+        () => CreateOrderUseCase(getIt<OrdersRepository>()),
+      )
       ..putLazySingletonIfAbsent<UpdateOrderStatusUseCase>(
         () => UpdateOrderStatusUseCase(getIt<OrdersRepository>()),
       )
@@ -48,6 +57,13 @@ class OrdersModule implements DependencyModule {
           refreshOrdersUseCase: getIt<RefreshOrdersUseCase>(),
           updateOrderStatusUseCase: getIt<UpdateOrderStatusUseCase>(),
           networkConnectionService: getIt<NetworkConnectionService>(),
+          logger: getIt<AppLogger>(),
+        ),
+      )
+      ..putFactoryIfAbsent<OrderEntryBloc>(
+        () => OrderEntryBloc(
+          parseOrderMessageUseCase: getIt<ParseOrderMessageUseCase>(),
+          createOrderUseCase: getIt<CreateOrderUseCase>(),
           logger: getIt<AppLogger>(),
         ),
       );
