@@ -18,7 +18,7 @@ abstract final class AppEnvied {
   static const String logLevel = _AppEnvied.logLevel;
 }
 
-@Envied(path: ".env.development", requireEnvFile: false)
+@Envied(path: ".env.dev", requireEnvFile: false)
 abstract final class AppEnviedDevelopment {
   @EnviedField(varName: "APP_ENV", defaultValue: "")
   static const String appEnv = _AppEnviedDevelopment.appEnv;
@@ -34,7 +34,7 @@ abstract final class AppEnviedDevelopment {
   static const String logLevel = _AppEnviedDevelopment.logLevel;
 }
 
-@Envied(path: ".env.staging", requireEnvFile: false)
+@Envied(path: ".env.stg", requireEnvFile: false)
 abstract final class AppEnviedStaging {
   @EnviedField(varName: "APP_ENV", defaultValue: "")
   static const String appEnv = _AppEnviedStaging.appEnv;
@@ -50,7 +50,7 @@ abstract final class AppEnviedStaging {
   static const String logLevel = _AppEnviedStaging.logLevel;
 }
 
-@Envied(path: ".env.production", requireEnvFile: false)
+@Envied(path: ".env.prod", requireEnvFile: false)
 abstract final class AppEnviedProduction {
   @EnviedField(varName: "APP_ENV", defaultValue: "")
   static const String appEnv = _AppEnviedProduction.appEnv;
