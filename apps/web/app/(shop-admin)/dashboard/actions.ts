@@ -9,6 +9,7 @@ import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 function revalidateShopWorkspace() {
   revalidatePath("/dashboard")
   revalidatePath("/dashboard/orders")
+  revalidatePath("/dashboard/orders/paste-from-messenger")
   revalidatePath("/dashboard/customers")
   revalidatePath("/dashboard/deliveries")
   revalidatePath("/dashboard/templates")
@@ -155,6 +156,150 @@ function parseOrderItemsInput(value: string) {
   return { items } as const
 }
 
+export type ShopParsedOrderDraftInput = {
+  customer: {
+    name: string
+    phone: string
+    township: string
+    address: string
+  }
+  items: Array<{
+    product_name: string
+    qty: number
+    unit_price: number
+  }>
+  delivery_fee: number
+  currency: string
+  status: "new" | "confirmed"
+  source: "messenger"
+  note: string
+}
+
+export type ShopParsedOrderResult = {
+  suggested_order: {
+    customer: {
+      name: string | null
+      phone: string | null
+      township: string | null
+      address: string | null
+    }
+    items: Array<{
+      product_name: string | null
+      qty: number | null
+      unit_price: number | null
+      line_total: number | null
+    }>
+    delivery_fee: number | null
+    subtotal: number
+    total_price: number
+    currency: "MMK"
+    status: "new" | "confirmed"
+    source: "messenger"
+    note: string | null
+  }
+  parse_meta: {
+    is_ready_to_create: boolean
+    confidence: number
+    matched_fields: string[]
+    field_sources: Record<string, "message" | "customer_match" | "default">
+    warnings: string[]
+    unparsed_lines: string[]
+  }
+  customer_match: {
+    id: string
+    shop_id: string
+    name: string
+    phone: string
+    township: string | null
+    address: string | null
+    notes: string | null
+    created_at: string
+  } | null
+}
+
+export type ShopAsyncActionResult<T> =
+  | {
+      ok: true
+      data: T
+      message?: string
+    }
+  | {
+      ok: false
+      message: string
+      fieldErrors?: Record<string, string[]>
+    }
+
+function toFieldErrors(details?: Array<{ field: string; errors: string[] }>) {
+  return Object.fromEntries((details ?? []).map((detail) => [detail.field, detail.errors]))
+}
+
+function sanitizeParsedDraftInput(draft: ShopParsedOrderDraftInput) {
+  const customer = {
+    name: draft.customer.name.trim(),
+    phone: draft.customer.phone.trim(),
+    township: draft.customer.township.trim(),
+    address: draft.customer.address.trim(),
+  }
+
+  if (!customer.name || !customer.phone) {
+    return {
+      error: "Customer name and phone are required before creating an order.",
+    } as const
+  }
+
+  const items = draft.items
+    .map((item) => ({
+      product_name: item.product_name.trim(),
+      qty: Number(item.qty),
+      unit_price: Number(item.unit_price),
+    }))
+    .filter((item) => item.product_name.length > 0)
+
+  if (items.length === 0) {
+    return {
+      error: "Add at least one parsed item before creating the order.",
+    } as const
+  }
+
+  for (const [index, item] of items.entries()) {
+    if (!Number.isFinite(item.qty) || item.qty <= 0) {
+      return {
+        error: `Parsed item ${index + 1} has an invalid quantity.`,
+      } as const
+    }
+
+    if (!Number.isFinite(item.unit_price) || item.unit_price < 0) {
+      return {
+        error: `Parsed item ${index + 1} has an invalid unit price.`,
+      } as const
+    }
+  }
+
+  const deliveryFee = Number(draft.delivery_fee)
+  if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
+    return {
+      error: "Delivery fee must be a non-negative integer.",
+    } as const
+  }
+
+  return {
+    payload: {
+      customer: {
+        name: customer.name,
+        phone: customer.phone,
+        ...(customer.township ? { township: customer.township } : {}),
+        ...(customer.address ? { address: customer.address } : {}),
+      },
+      items,
+      delivery_fee: deliveryFee,
+      currency: draft.currency.trim() || "MMK",
+      status: draft.status,
+      source: "messenger" as const,
+      ...(draft.note.trim() ? { note: draft.note.trim() } : {}),
+    },
+  } as const
+}
+
 export async function createShopOrderFromFormAction(formData: FormData) {
   const returnTo = getReturnTo(formData, "/dashboard/orders")
   const shopId = normalizeTextField(formData.get("shop_id"))
@@ -277,6 +422,297 @@ export async function updateShopOrderStatusFromFormAction(formData: FormData) {
   redirectToPath(returnTo, redirectInput)
 }
 
+export async function updateShopOrderFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/orders")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const orderId = normalizeTextField(formData.get("order_id"))
+  const deliveryFee = normalizeIntegerField(formData.get("delivery_fee"))
+  const currency = normalizeTextField(formData.get("currency"))
+  const source = normalizeTextField(formData.get("source"))
+  const note = normalizeTextField(formData.get("note"))
+
+  if (!shopId || !orderId) {
+    redirectToPath(returnTo, {
+      error: "Order context is missing.",
+    })
+  }
+
+  if (deliveryFee !== undefined && (!Number.isFinite(deliveryFee) || deliveryFee < 0)) {
+    redirectToPath(returnTo, {
+      error: "Delivery fee must be a non-negative integer.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(deliveryFee !== undefined ? { delivery_fee: deliveryFee } : {}),
+          ...(currency ? { currency } : {}),
+          ...(source ? { source } : {}),
+          note: note || null,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = { notice: "Order details updated." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(error, "Unable to update the order right now."),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function addShopOrderItemFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/orders")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const orderId = normalizeTextField(formData.get("order_id"))
+  const productName = normalizeTextField(formData.get("product_name"))
+  const qty = normalizeIntegerField(formData.get("qty"))
+  const unitPrice = normalizeIntegerField(formData.get("unit_price"))
+
+  if (!shopId || !orderId || !productName) {
+    redirectToPath(returnTo, {
+      error: "Product name is required to add an order item.",
+    })
+  }
+
+  if (!Number.isFinite(qty) || (qty ?? 0) <= 0) {
+    redirectToPath(returnTo, {
+      error: "Item quantity must be a positive integer.",
+    })
+  }
+
+  if (!Number.isFinite(unitPrice) || (unitPrice ?? -1) < 0) {
+    redirectToPath(returnTo, {
+      error: "Item unit price must be a non-negative integer.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/items`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          product_name: productName,
+          qty,
+          unit_price: unitPrice,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = { notice: "Order item added." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(error, "Unable to add the order item right now."),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function updateShopOrderItemFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/orders")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const orderId = normalizeTextField(formData.get("order_id"))
+  const itemId = normalizeTextField(formData.get("item_id"))
+  const productName = normalizeTextField(formData.get("product_name"))
+  const qty = normalizeIntegerField(formData.get("qty"))
+  const unitPrice = normalizeIntegerField(formData.get("unit_price"))
+
+  if (!shopId || !orderId || !itemId || !productName) {
+    redirectToPath(returnTo, {
+      error: "Order item context is missing.",
+    })
+  }
+
+  if (!Number.isFinite(qty) || (qty ?? 0) <= 0) {
+    redirectToPath(returnTo, {
+      error: "Item quantity must be a positive integer.",
+    })
+  }
+
+  if (!Number.isFinite(unitPrice) || (unitPrice ?? -1) < 0) {
+    redirectToPath(returnTo, {
+      error: "Item unit price must be a non-negative integer.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/items/${itemId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          product_name: productName,
+          qty,
+          unit_price: unitPrice,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = { notice: "Order item updated." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(error, "Unable to update the order item right now."),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function removeShopOrderItemFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/orders")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const orderId = normalizeTextField(formData.get("order_id"))
+  const itemId = normalizeTextField(formData.get("item_id"))
+
+  if (!shopId || !orderId || !itemId) {
+    redirectToPath(returnTo, {
+      error: "Order item context is missing.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/items/${itemId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = { notice: "Order item removed." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(error, "Unable to remove the order item right now."),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function parseShopOrderMessageAction(
+  shopId: string,
+  message: string
+): Promise<ShopAsyncActionResult<ShopParsedOrderResult>> {
+  if (!shopId || !message.trim()) {
+    return {
+      ok: false,
+      message: "Paste a Messenger conversation before parsing.",
+    }
+  }
+
+  try {
+    const response = await requestAuthenticatedActionApiEnvelope<ShopParsedOrderResult>({
+      path: `/api/v1/shops/${shopId}/orders/parse-message`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          message: message.trim(),
+        },
+      },
+    })
+
+    return {
+      ok: true,
+      data: response.data,
+    }
+  } catch (error) {
+    if (error instanceof AuthApiError) {
+      return {
+        ok: false,
+        message: error.message,
+        fieldErrors: toFieldErrors(error.details),
+      }
+    }
+
+    return {
+      ok: false,
+      message: "Unable to parse the Messenger message right now.",
+    }
+  }
+}
+
+export async function createShopOrderFromParsedDraftAction(
+  shopId: string,
+  draft: ShopParsedOrderDraftInput
+): Promise<ShopAsyncActionResult<{ id: string; order_no: string }>> {
+  const sanitized = sanitizeParsedDraftInput(draft)
+
+  if ("error" in sanitized) {
+    return {
+      ok: false,
+      message: sanitized.error ?? "The parsed order draft is incomplete.",
+    }
+  }
+
+  try {
+    const response = await requestAuthenticatedActionApiEnvelope<{
+      id: string
+      order_no: string
+    }>({
+      path: `/api/v1/shops/${shopId}/orders`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: sanitized.payload,
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      data: {
+        id: response.data.id,
+        order_no: response.data.order_no,
+      },
+      message: "Order created from Messenger draft.",
+    }
+  } catch (error) {
+    if (error instanceof AuthApiError) {
+      return {
+        ok: false,
+        message: error.message,
+        fieldErrors: toFieldErrors(error.details),
+      }
+    }
+
+    return {
+      ok: false,
+      message: "Unable to create the order from the parsed draft right now.",
+    }
+  }
+}
+
 export async function createShopCustomerFromFormAction(formData: FormData) {
   const returnTo = getReturnTo(formData, "/dashboard/customers")
   const name = normalizeTextField(formData.get("name"))
@@ -316,6 +752,52 @@ export async function createShopCustomerFromFormAction(formData: FormData) {
   } catch (error) {
     redirectInput = {
       error: toActionMessage(error, "Unable to save the customer right now."),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function updateShopCustomerFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/customers")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const customerId = normalizeTextField(formData.get("customer_id"))
+  const name = normalizeTextField(formData.get("name"))
+  const phone = normalizeTextField(formData.get("phone"))
+  const township = normalizeTextField(formData.get("township"))
+  const address = normalizeTextField(formData.get("address"))
+  const notes = normalizeTextField(formData.get("notes"))
+
+  if (!shopId || !customerId || !name || !phone) {
+    redirectToPath(returnTo, {
+      error: "Customer name and phone are required.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/customers/${customerId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          name,
+          phone,
+          township: township || null,
+          address: address || null,
+          notes: notes || null,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = { notice: "Customer updated." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(error, "Unable to update the customer right now."),
     }
   }
 
@@ -485,6 +967,50 @@ export async function updateShopTemplateStateFromFormAction(formData: FormData) 
         method: "PATCH",
         json: {
           is_active: nextState === "true",
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = { notice: "Template updated." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(error, "Unable to update the template right now."),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function updateShopTemplateFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/templates")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const templateId = normalizeTextField(formData.get("template_id"))
+  const title = normalizeTextField(formData.get("title"))
+  const shortcut = normalizeTextField(formData.get("shortcut"))
+  const body = normalizeTextField(formData.get("body"))
+  const isActive = normalizeTextField(formData.get("is_active"))
+
+  if (!shopId || !templateId || !title || !body) {
+    redirectToPath(returnTo, {
+      error: "Template title and body are required.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/templates/${templateId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          title,
+          body,
+          shortcut: shortcut || null,
+          is_active: isActive !== "inactive",
         },
       },
     })

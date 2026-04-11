@@ -1,4 +1,5 @@
-import { MessageSquareText } from "lucide-react"
+import Link from "next/link"
+import { MessageSquareText, PencilLine } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
@@ -18,6 +19,7 @@ import {
 import { formatRelativeDate } from "@/lib/platform/format"
 import {
   createShopTemplateFromFormAction,
+  updateShopTemplateFromFormAction,
   updateShopTemplateStateFromFormAction,
 } from "../actions"
 import { Button } from "@workspace/ui/components/button"
@@ -40,11 +42,15 @@ export default async function TemplatesPage({
 }: TemplatesPageProps) {
   const params = (await searchParams) ?? {}
   const currentHref = buildQueryHref("/dashboard/templates", params, {})
+  const editTemplateId = getSingleSearchParam(params.edit)
   const [{ activeShop }, templatesResponse] = await Promise.all([
     getShopPortalContext(),
     getShopTemplates(params, currentHref),
   ])
   const rows = templatesResponse.data
+  const selectedTemplate = editTemplateId
+    ? rows.find((template) => template.id === editTemplateId) ?? null
+    : null
   const pagination = templatesResponse.meta?.pagination as ShopCursorPagination | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
   const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
@@ -211,70 +217,139 @@ export default async function TemplatesPage({
                 }
 
                 return (
-                  <form action={updateShopTemplateStateFromFormAction}>
-                    <input type="hidden" name="return_to" value={currentHref} />
-                    <input type="hidden" name="shop_id" value={activeShop.id} />
-                    <input type="hidden" name="template_id" value={template.id} />
-                    <input
-                      type="hidden"
-                      name="is_active"
-                      value={template.is_active ? "false" : "true"}
-                    />
-                    <Button type="submit" size="sm" variant="outline">
-                      {template.is_active ? "Archive" : "Activate"}
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={buildQueryHref("/dashboard/templates", params, {
+                          edit: template.id,
+                        })}
+                      >
+                        <PencilLine data-icon="inline-start" />
+                        Edit
+                      </Link>
                     </Button>
-                  </form>
+                    <form action={updateShopTemplateStateFromFormAction}>
+                      <input type="hidden" name="return_to" value={currentHref} />
+                      <input type="hidden" name="shop_id" value={activeShop.id} />
+                      <input type="hidden" name="template_id" value={template.id} />
+                      <input
+                        type="hidden"
+                        name="is_active"
+                        value={template.is_active ? "false" : "true"}
+                      />
+                      <Button type="submit" size="sm" variant="outline">
+                        {template.is_active ? "Archive" : "Activate"}
+                      </Button>
+                    </form>
+                  </div>
                 )
               },
-              className: "w-[130px] px-4 py-2.5 text-right",
+              className: "w-[210px] px-4 py-2.5 text-right",
               cellClassName: "px-4 py-3 text-right",
             },
           ]}
         />
 
-        <Card className="border border-black/6 bg-white shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>New template</CardDescription>
-            <CardTitle>Create quick reply</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {canManageTemplates ? (
-              <form
-                action={createShopTemplateFromFormAction}
-                className="flex flex-col gap-2.5"
-              >
-                <input type="hidden" name="return_to" value={currentHref} />
-                <input type="hidden" name="shop_id" value={activeShop.id} />
-                <Input name="title" placeholder="Template title" className="h-9" />
-                <Input
-                  name="shortcut"
-                  placeholder="Shortcut, for example /paid"
-                  className="h-9"
-                />
-                <select
-                  name="is_active"
-                  defaultValue="active"
-                  className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+        <div className="flex flex-col gap-3">
+          <Card className="border border-black/6 bg-white shadow-none">
+            <CardHeader className="pb-3">
+              <CardDescription>
+                {selectedTemplate ? `Editing ${selectedTemplate.title}` : "New template"}
+              </CardDescription>
+              <CardTitle>
+                {selectedTemplate ? "Edit quick reply" : "Create quick reply"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {canManageTemplates ? (
+                <form
+                  action={
+                    selectedTemplate
+                      ? updateShopTemplateFromFormAction
+                      : createShopTemplateFromFormAction
+                  }
+                  className="flex flex-col gap-2.5"
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                <Textarea
-                  name="body"
-                  placeholder="Message body"
-                  className="min-h-[140px]"
-                />
-                <Button type="submit" size="sm">
-                  Create template
-                </Button>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Your account can review templates but cannot create or edit them.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                  <input type="hidden" name="return_to" value={currentHref} />
+                  <input type="hidden" name="shop_id" value={activeShop.id} />
+                  {selectedTemplate ? (
+                    <input
+                      type="hidden"
+                      name="template_id"
+                      value={selectedTemplate.id}
+                    />
+                  ) : null}
+                  <Input
+                    name="title"
+                    defaultValue={selectedTemplate?.title ?? ""}
+                    placeholder="Template title"
+                    className="h-9"
+                  />
+                  <Input
+                    name="shortcut"
+                    defaultValue={selectedTemplate?.shortcut ?? ""}
+                    placeholder="Shortcut, for example /paid"
+                    className="h-9"
+                  />
+                  <select
+                    name="is_active"
+                    defaultValue={
+                      selectedTemplate
+                        ? selectedTemplate.is_active
+                          ? "active"
+                          : "inactive"
+                        : "active"
+                    }
+                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  <Textarea
+                    name="body"
+                    defaultValue={selectedTemplate?.body ?? ""}
+                    placeholder="Message body"
+                    className="min-h-[140px]"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" size="sm">
+                      {selectedTemplate ? "Save changes" : "Create template"}
+                    </Button>
+                    {selectedTemplate ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={buildQueryHref("/dashboard/templates", params, {
+                            edit: null,
+                          })}
+                        >
+                          Close
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </form>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Your account can review templates but cannot create or edit them.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {selectedTemplate ? (
+            <Card className="border border-black/6 bg-white shadow-none">
+              <CardHeader className="pb-3">
+                <CardDescription>Template preview</CardDescription>
+                <CardTitle>Current message</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3 text-sm leading-7 text-muted-foreground">
+                  {selectedTemplate.body}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
       </div>
     </div>
   )

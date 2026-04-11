@@ -380,6 +380,10 @@ export async function getShopOrders(
   return shopRequest<ShopOrder[]>("/orders", searchParams, resolvedRetryPath)
 }
 
+export async function getShopOrder(orderId: string, retryPath = "/dashboard/orders") {
+  return shopRequest<ShopOrder>(`/orders/${orderId}`, undefined, retryPath)
+}
+
 export async function getShopCustomers(
   searchParams?: SearchParamsRecord,
   retryPath?: string
@@ -387,6 +391,13 @@ export async function getShopCustomers(
   const resolvedRetryPath =
     retryPath ?? `/dashboard/customers${buildQueryString(searchParams)}`
   return shopRequest<ShopCustomer[]>("/customers", searchParams, resolvedRetryPath)
+}
+
+export async function getShopCustomer(
+  customerId: string,
+  retryPath = "/dashboard/customers"
+) {
+  return shopRequest<ShopCustomer>(`/customers/${customerId}`, undefined, retryPath)
 }
 
 export async function getShopDeliveries(

@@ -1,10 +1,12 @@
-import { HeartHandshake, MapPinned, Users } from "lucide-react"
+import Link from "next/link"
+import { HeartHandshake, MapPinned, PencilLine, Users } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
+  getShopCustomer,
   getShopCustomers,
   getShopPortalContext,
   type ShopCursorPagination,
@@ -20,7 +22,10 @@ import {
   formatPercent,
   formatRelativeDate,
 } from "@/lib/platform/format"
-import { createShopCustomerFromFormAction } from "../actions"
+import {
+  createShopCustomerFromFormAction,
+  updateShopCustomerFromFormAction,
+} from "../actions"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -41,11 +46,18 @@ export default async function CustomersPage({
 }: CustomersPageProps) {
   const params = (await searchParams) ?? {}
   const currentHref = buildQueryHref("/dashboard/customers", params, {})
+  const editCustomerId = getSingleSearchParam(params.edit)
   const [{ activeShop }, customersResponse] = await Promise.all([
     getShopPortalContext(),
     getShopCustomers(params, currentHref),
   ])
   const rows = customersResponse.data
+  const selectedCustomerSummary = editCustomerId
+    ? rows.find((customer) => customer.id === editCustomerId) ?? null
+    : null
+  const selectedCustomer = selectedCustomerSummary
+    ? (await getShopCustomer(selectedCustomerSummary.id, currentHref)).data
+    : null
   const pagination = customersResponse.meta?.pagination as ShopCursorPagination | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
   const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
@@ -82,7 +94,7 @@ export default async function CustomersPage({
       <PageIntro
         eyebrow="Customers"
         title="Customer relationships"
-        description="Track repeat buyers, segment recent activity, and keep delivery notes close to the order workflow."
+        description="Track repeat buyers, segment recent activity, and update customer delivery notes without leaving the shop workspace."
       />
 
       {notice ? (
@@ -245,42 +257,147 @@ export default async function CustomersPage({
                 </div>
               ),
             },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (customer) => (
+                <Button asChild size="sm" variant="outline">
+                  <Link
+                    href={buildQueryHref("/dashboard/customers", params, {
+                      edit: customer.id,
+                    })}
+                  >
+                    <PencilLine data-icon="inline-start" />
+                    Edit
+                  </Link>
+                </Button>
+              ),
+              className: "w-[110px] px-4 py-2.5 text-right",
+              cellClassName: "px-4 py-3 text-right",
+            },
           ]}
         />
 
-        <Card className="border border-black/6 bg-white shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Customer intake</CardDescription>
-            <CardTitle>Create customer</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {canWriteCustomers ? (
-              <form
-                action={createShopCustomerFromFormAction}
-                className="flex flex-col gap-2.5"
-              >
-                <input type="hidden" name="return_to" value={currentHref} />
-                <input type="hidden" name="shop_id" value={activeShop.id} />
-                <Input name="name" placeholder="Customer name" className="h-9" />
-                <Input name="phone" placeholder="Phone" className="h-9" />
-                <Input name="township" placeholder="Township" className="h-9" />
-                <Input name="address" placeholder="Address" className="h-9" />
-                <Textarea
-                  name="notes"
-                  placeholder="Internal notes"
-                  className="min-h-[90px]"
-                />
-                <Button type="submit" size="sm">
-                  Save customer
-                </Button>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Your account can review customer records but cannot create or update them.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-3">
+          <Card className="border border-black/6 bg-white shadow-none">
+            <CardHeader className="pb-3">
+              <CardDescription>
+                {selectedCustomer ? `Editing ${selectedCustomer.name}` : "Customer intake"}
+              </CardDescription>
+              <CardTitle>
+                {selectedCustomer ? "Edit customer" : "Create customer"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {canWriteCustomers ? (
+                <form
+                  action={
+                    selectedCustomer
+                      ? updateShopCustomerFromFormAction
+                      : createShopCustomerFromFormAction
+                  }
+                  className="flex flex-col gap-2.5"
+                >
+                  <input type="hidden" name="return_to" value={currentHref} />
+                  <input type="hidden" name="shop_id" value={activeShop.id} />
+                  {selectedCustomer ? (
+                    <input
+                      type="hidden"
+                      name="customer_id"
+                      value={selectedCustomer.id}
+                    />
+                  ) : null}
+                  <Input
+                    name="name"
+                    defaultValue={selectedCustomer?.name ?? ""}
+                    placeholder="Customer name"
+                    className="h-9"
+                  />
+                  <Input
+                    name="phone"
+                    defaultValue={selectedCustomer?.phone ?? ""}
+                    placeholder="Phone"
+                    className="h-9"
+                  />
+                  <Input
+                    name="township"
+                    defaultValue={selectedCustomer?.township ?? ""}
+                    placeholder="Township"
+                    className="h-9"
+                  />
+                  <Input
+                    name="address"
+                    defaultValue={selectedCustomer?.address ?? ""}
+                    placeholder="Address"
+                    className="h-9"
+                  />
+                  <Textarea
+                    name="notes"
+                    defaultValue={selectedCustomer?.notes ?? ""}
+                    placeholder="Internal notes"
+                    className="min-h-[90px]"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" size="sm">
+                      {selectedCustomer ? "Save changes" : "Save customer"}
+                    </Button>
+                    {selectedCustomer ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={buildQueryHref("/dashboard/customers", params, {
+                            edit: null,
+                          })}
+                        >
+                          Close
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </form>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Your account can review customer records but cannot create or update them.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {selectedCustomer ? (
+            <Card className="border border-black/6 bg-white shadow-none">
+              <CardHeader className="pb-3">
+                <CardDescription>Recent activity</CardDescription>
+                <CardTitle>Latest orders for this customer</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 pt-0">
+                {selectedCustomer.recent_orders && selectedCustomer.recent_orders.length > 0 ? (
+                  selectedCustomer.recent_orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-foreground">
+                          {order.order_no}
+                        </p>
+                        <PlatformStatusBadge status={order.status} />
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {order.product_name}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {formatCurrency(order.total_price)} · {formatRelativeDate(order.created_at)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No recent orders are available for this customer.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
       </div>
     </div>
   )
