@@ -73,12 +73,13 @@ export async function createPlatformSupportIssueFromFormAction(formData: FormDat
     })
 
     revalidatePlatformSupportWorkspace()
-    redirectSupport({ notice: "Support issue created." })
   } catch (error) {
     redirectSupport({
       error: toActionMessage(error, "Unable to create support issue right now."),
     })
   }
+
+  redirectSupport({ notice: "Support issue created." })
 }
 
 export async function updatePlatformSupportIssueFromFormAction(formData: FormData) {
@@ -107,10 +108,12 @@ export async function updatePlatformSupportIssueFromFormAction(formData: FormDat
     })
 
     revalidatePlatformSupportWorkspace()
-    redirectSupport({ notice: "Support issue updated." })
   } catch (error) {
+    console.log(error)
     redirectSupport({
       error: toActionMessage(error, "Unable to update support issue right now."),
     })
   }
+
+  redirectSupport({ notice: "Support issue updated." })
 }
