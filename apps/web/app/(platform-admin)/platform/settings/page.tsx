@@ -11,12 +11,22 @@ import {
   formatRelativeDate,
 } from "@/lib/platform/format"
 import {
+  getSingleSearchParam,
+  type PlatformSearchParams,
+} from "@/lib/platform/query"
+import {
+  updatePlatformPlanFromFormAction,
+  updatePlatformSettingsProfileFromFormAction,
+} from "./actions"
+import { Button } from "@workspace/ui/components/button"
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import { Input } from "@workspace/ui/components/input"
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) {
@@ -32,9 +42,18 @@ function formatDateTime(value: string | null | undefined) {
   })
 }
 
-export default async function PlatformSettingsPage() {
+type PlatformSettingsPageProps = {
+  searchParams?: Promise<PlatformSearchParams>
+}
+
+export default async function PlatformSettingsPage({
+  searchParams,
+}: PlatformSettingsPageProps) {
+  const params = (await searchParams) ?? {}
   const [response, session] = await Promise.all([getPlatformSettings(), getSession()])
   const data = response.data
+  const notice = getSingleSearchParam(params.notice)
+  const error = getSingleSearchParam(params.error)
   const sessionPermissions = session?.platformAccess?.permissions ?? []
   const effectivePermissions = data.access.permissions
   const missingSessionPermissions = effectivePermissions.filter(
@@ -51,6 +70,17 @@ export default async function PlatformSettingsPage() {
         title="Platform settings"
         description="Review platform owner identity, active access, and the currently configured plan catalog."
       />
+
+      {notice ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-800">
+          {notice}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <DashboardStatCard
@@ -85,27 +115,42 @@ export default async function PlatformSettingsPage() {
             <CardDescription>Account</CardDescription>
             <CardTitle>Platform owner identity</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 text-sm leading-6 text-muted-foreground">
-            <div className="flex flex-col gap-2">
-              <div>
-                <span className="font-medium text-[var(--fom-ink)]">Name:</span>{" "}
-                {data.profile.name}
+          <CardContent className="pt-0">
+            <form
+              action={updatePlatformSettingsProfileFromFormAction}
+              className="flex flex-col gap-2.5"
+            >
+              <Input name="name" defaultValue={data.profile.name} placeholder="Name" />
+              <Input
+                name="email"
+                defaultValue={data.profile.email ?? ""}
+                placeholder="Email"
+              />
+              <Input
+                name="phone"
+                defaultValue={data.profile.phone ?? ""}
+                placeholder="Phone"
+              />
+              <select
+                name="locale"
+                defaultValue={data.profile.locale}
+                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              >
+                <option value="en">en</option>
+                <option value="my">my</option>
+              </select>
+              <Input
+                type="password"
+                name="password"
+                placeholder="New password (optional)"
+              />
+              <div className="text-xs text-muted-foreground">
+                Last seen {formatRelativeDate(data.profile.last_seen_at)}
               </div>
-              <div>
-                <span className="font-medium text-[var(--fom-ink)]">Email:</span>{" "}
-                {data.profile.email ?? "—"}
-              </div>
-              <div>
-                <span className="font-medium text-[var(--fom-ink)]">Locale:</span>{" "}
-                {data.profile.locale}
-              </div>
-              <div>
-                <span className="font-medium text-[var(--fom-ink)]">
-                  Last seen:
-                </span>{" "}
-                {formatRelativeDate(data.profile.last_seen_at)}
-              </div>
-            </div>
+              <Button type="submit" size="sm">
+                Update profile
+              </Button>
+            </form>
           </CardContent>
         </Card>
         <Card className="border border-black/6 bg-white shadow-none">
@@ -314,6 +359,45 @@ export default async function PlatformSettingsPage() {
                 status={plan.is_active ? "active" : "inactive"}
               />
             ),
+          },
+          {
+            key: "actions",
+            header: "Quick update",
+            render: (plan) => (
+              <form
+                action={updatePlatformPlanFromFormAction}
+                className="flex items-center justify-end gap-2"
+              >
+                <input type="hidden" name="plan_id" value={plan.id} />
+                <Input
+                  type="number"
+                  min={0}
+                  name="price"
+                  defaultValue={String(plan.price)}
+                  className="h-8 w-24"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  name="sort_order"
+                  defaultValue={String(plan.sort_order ?? 0)}
+                  className="h-8 w-20"
+                />
+                <select
+                  name="status"
+                  defaultValue={plan.is_active ? "active" : "inactive"}
+                  className="h-8 rounded-xl border border-black/8 bg-white px-2.5 text-xs"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <Button type="submit" size="sm" variant="outline">
+                  Save
+                </Button>
+              </form>
+            ),
+            className: "w-[280px] px-4 py-2.5 text-right",
+            cellClassName: "px-4 py-3 text-right",
           },
         ]}
       />

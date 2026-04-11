@@ -1,461 +1,498 @@
-import 'package:app_ui_kit/app_ui_kit.dart';
-import 'package:flutter/material.dart';
+import "package:app_ui_kit/app_ui_kit.dart";
+import "package:flutter/material.dart";
+import "package:flutter_bloc/flutter_bloc.dart";
+import "package:fom_mobile/app/di/injection_container.dart";
+import "package:intl/intl.dart";
 
-import '../widgets/reports_widgets.dart';
+import "../../domain/entities/report_period.dart";
+import "../../domain/entities/shop_report_snapshot.dart";
+import "../bloc/reports_home_bloc.dart";
+import "../bloc/reports_home_event.dart";
+import "../bloc/reports_home_state.dart";
+import "../widgets/reports_widgets.dart";
 
-class ReportsHomePage extends StatefulWidget {
-  const ReportsHomePage({super.key});
+class ReportsHomePage extends StatelessWidget {
+  const ReportsHomePage({
+    super.key,
+    required this.initialShopId,
+    required this.initialShopName,
+  });
 
-  @override
-  State<ReportsHomePage> createState() => _ReportsHomePageState();
-}
-
-enum ReportPeriod { daily, weekly, monthly }
-
-class _ReportsHomePageState extends State<ReportsHomePage> {
-  ReportPeriod _selectedPeriod = ReportPeriod.daily;
+  final String initialShopId;
+  final String initialShopName;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                child: _selectedPeriod == ReportPeriod.daily
-                    ? const _DailyReportView()
-                    : const _WeeklyReportView(),
-              ),
-            ),
-          ],
-        ),
+    return BlocProvider<ReportsHomeBloc>.value(
+      value: getIt<ReportsHomeBloc>(),
+      child: _ReportsHomeView(
+        initialShopId: initialShopId,
+        initialShopName: initialShopName,
       ),
     );
   }
+}
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16),
-      decoration: const BoxDecoration(
-        color: AppColors.warmWhite,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1.5)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _selectedPeriod == ReportPeriod.daily
-                        ? '📊 Daily Report'
-                        : '📊 Weekly Report',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
+class _ReportsHomeView extends StatefulWidget {
+  const _ReportsHomeView({
+    required this.initialShopId,
+    required this.initialShopName,
+  });
+
+  final String initialShopId;
+  final String initialShopName;
+
+  @override
+  State<_ReportsHomeView> createState() => _ReportsHomeViewState();
+}
+
+class _ReportsHomeViewState extends State<_ReportsHomeView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReportsHomeBloc>().add(
+        ReportsHomeStarted(
+          shopId: widget.initialShopId,
+          shopName: widget.initialShopName,
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<ReportsHomeBloc, ReportsHomeState>(
+      listenWhen: (previous, current) {
+        return previous.errorMessage != current.errorMessage &&
+            current.errorMessage != null;
+      },
+      listener: (context, state) {
+        final message = state.errorMessage;
+        if (message == null || message.isEmpty) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+        context.read<ReportsHomeBloc>().add(const ReportsHomeErrorDismissed());
+      },
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: RefreshIndicator(
+            onRefresh: () => _onRefresh(context),
+            color: AppColors.softOrange,
+            child: SafeArea(
+              bottom: false,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: ReportsHeader(
+                      selectedPeriod: state.selectedPeriod,
+                      dateTitle: _dateTitle(state),
+                      dateSubtitle: _dateSubtitle(state),
+                      canNavigateNext: state.canNavigateNext,
+                      onSharePressed: () => showReportsShareSheet(context),
+                      onPeriodChanged: (period) {
+                        context.read<ReportsHomeBloc>().add(
+                          ReportsHomePeriodChanged(period),
+                        );
+                      },
+                      onPreviousPressed: () {
+                        context.read<ReportsHomeBloc>().add(
+                          const ReportsHomePreviousRequested(),
+                        );
+                      },
+                      onNextPressed: () {
+                        context.read<ReportsHomeBloc>().add(
+                          const ReportsHomeNextRequested(),
+                        );
+                      },
                     ),
                   ),
-                  Text(
-                    _selectedPeriod == ReportPeriod.daily
-                        ? 'နေ့စဉ်အစီရင်ခံစာ'
-                        : 'အပတ်အစီရင်ခံစာ',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textLight,
-                    ),
-                  ),
+                  ..._buildContentSlivers(state),
                 ],
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.softOrangeLight,
-                  border: Border.all(
-                    color: AppColors.softOrangeMid,
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                child: Row(
-                  children: [
-                    const Text('📤 ', style: TextStyle(fontSize: 12)),
-                    Text(
-                      _selectedPeriod == ReportPeriod.daily
-                          ? 'Share'
-                          : 'Export',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.softOrange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Toggle between views
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.background, // fallback map for segmented control
-              borderRadius: BorderRadius.circular(14),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: Row(
-              children: [
-                _PeriodToggleBtn(
-                  label: 'Day',
-                  isSelected: _selectedPeriod == ReportPeriod.daily,
-                  onTap: () =>
-                      setState(() => _selectedPeriod = ReportPeriod.daily),
-                ),
-                _PeriodToggleBtn(
-                  label: 'Week',
-                  isSelected: _selectedPeriod == ReportPeriod.weekly,
-                  onTap: () =>
-                      setState(() => _selectedPeriod = ReportPeriod.weekly),
-                ),
-                _PeriodToggleBtn(
-                  label: 'Month',
-                  isSelected: _selectedPeriod == ReportPeriod.monthly,
-                  onTap: () =>
-                      setState(() => _selectedPeriod = ReportPeriod.monthly),
-                ),
-              ],
             ),
           ),
-          // Day navigation (Only in Daily view logically, putting it here for UI completeness)
-          if (_selectedPeriod == ReportPeriod.daily) ...[
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _NavBtn(icon: Icons.chevron_left_rounded, onTap: () {}),
-                const Column(
-                  children: [
-                    Text(
-                      'Thursday, April 2',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    Text(
-                      'Today · 12 orders so far',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                  ],
-                ),
-                _NavBtn(
-                  icon: Icons.chevron_right_rounded,
-                  onTap: () {},
-                  disabled: true,
-                ),
-              ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildContentSlivers(ReportsHomeState state) {
+    final report = state.report;
+    if (report == null) {
+      if (state.status == ReportsHomeStatus.error) {
+        return const [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: AppEmptyState(
+              icon: Icon(Icons.bar_chart_outlined),
+              title: "Unable to load reports",
+              message: "Pull to refresh after checking your connection.",
             ),
-          ],
+          ),
+        ];
+      }
+
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
+    final children = <Widget>[
+      AppReportHeroCard(
+        label: _heroLabel(state.selectedPeriod),
+        amount: _formatCompact(report.totalRevenue),
+        currency: "MMK",
+        deltaText: _deltaText(state.selectedPeriod, report.revenueDelta),
+        deltaColor: report.revenueDelta >= 0
+            ? const Color(0xFF4ADE80)
+            : const Color(0xFFFDA4AF),
+        stats: <AppReportHeroStat>[
+          AppReportHeroStat(value: "${report.totalOrders}", label: "Orders"),
+          AppReportHeroStat(
+            value: "${report.customerCount}",
+            label: "Customers",
+          ),
+          AppReportHeroStat(
+            value: _formatCompact(report.averageOrderValue),
+            label: "Avg Order",
+          ),
         ],
       ),
-    );
-  }
-}
+      const SizedBox(height: 14),
+    ];
 
-class _PeriodToggleBtn extends StatelessWidget {
-  const _PeriodToggleBtn({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
+    if (state.selectedPeriod == ReportPeriod.daily) {
+      children.addAll(_buildDailySections(report));
+    } else {
+      children.addAll(
+        _buildPeriodSections(report, selectedPeriod: state.selectedPeriod),
+      );
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.softOrange : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: isSelected
-                ? null
-                : Border.all(color: AppColors.border, width: 2),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: isSelected ? Colors.white : AppColors.textLight,
-            ),
-          ),
-        ),
+    children.add(const SizedBox(height: 96));
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        sliver: SliverList(delegate: SliverChildListDelegate(children)),
       ),
-    );
+    ];
   }
-}
 
-class _NavBtn extends StatelessWidget {
-  const _NavBtn({
-    required this.icon,
-    required this.onTap,
-    this.disabled = false,
-  });
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool disabled;
+  List<Widget> _buildDailySections(ShopReportSnapshot report) {
+    final peak = report.hourlyBreakdown.fold<ReportHourlyBreakdownItem?>(null, (
+      current,
+      item,
+    ) {
+      if (current == null || item.orderCount > current.orderCount) {
+        return item;
+      }
+      return current;
+    });
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: disabled ? null : onTap,
-      child: Opacity(
-        opacity: disabled ? 0.3 : 1.0,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.border, width: 1.5),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 16, color: AppColors.textDark),
-        ),
+    final hourlyBars = report.hourlyBreakdown
+        .map((item) {
+          final isPeak = peak != null && item.hour == peak.hour;
+          return AppBarChartData(
+            label: item.label,
+            value: item.orderCount.toDouble(),
+            valueLabel: "${item.orderCount}",
+            color: isPeak ? AppColors.softOrange : AppColors.softOrangeMid,
+            isHighlighted: isPeak,
+          );
+        })
+        .toList(growable: false);
+
+    return [
+      const AppSectionHeader(
+        icon: Icon(Icons.pie_chart_rounded),
+        title: "Order Status",
+        iconBackgroundColor: AppColors.softOrangeLight,
+        iconColor: AppColors.softOrange,
       ),
-    );
-  }
-}
-
-// === Daily View Tab ===
-class _DailyReportView extends StatelessWidget {
-  const _DailyReportView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const RevenueHeroCard(
-          title: "Today's Revenue",
-          titleMm: 'ယနေ့ ဝင်ငွေ',
-          amount: '485,000',
-          changeText: '↑ +72,000 MMK vs yesterday',
-          ordersCount: '23',
-          customersCount: '18',
-          avgOrder: '21K',
-        ),
-
-        const DashboardSectionHeader(
-          icon: '📌',
-          iconBgColor: AppColors.softOrangeLight,
-          title: 'Order Status',
-        ),
-        const StatusBreakdownGrid(),
-
-        const DashboardSectionHeader(
-          icon: '📈',
-          iconBgColor: AppColors.tealLight,
-          title: 'Orders by Hour',
-        ),
-        const AppBarChart(
-          title: 'Peak',
-          subtitle: '10AM–12PM · 8 orders',
+      ReportsStatusBreakdownGrid(breakdown: report.statusBreakdown),
+      const SizedBox(height: 12),
+      const AppSectionHeader(
+        icon: Icon(Icons.query_stats_rounded),
+        title: "Orders by Hour",
+        iconBackgroundColor: AppColors.tealLight,
+        iconColor: AppColors.teal,
+      ),
+      if (hourlyBars.isEmpty)
+        const AppEmptyState(
+          icon: Icon(Icons.timeline_outlined),
+          title: "No hourly activity",
+          message: "Orders by hour will appear once orders are available.",
+        )
+      else
+        AppBarChart(
+          title: "Peak",
+          subtitle: peak == null
+              ? "No orders"
+              : "${peak.label} · ${peak.orderCount} orders",
+          data: hourlyBars,
           titleColor: AppColors.textLight,
-          data: [
-            AppBarChartData(
-              label: '8',
-              valueLabel: '1',
-              value: 1,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: '9',
-              valueLabel: '3',
-              value: 3,
-              color: AppColors.softOrange,
-            ),
-            AppBarChartData(
-              label: '10',
-              valueLabel: '5',
-              value: 5,
-              color: AppColors.softOrange,
-            ),
-            AppBarChartData(
-              label: '11',
-              valueLabel: '3',
-              value: 3,
-              color: AppColors.softOrange,
-            ),
-            AppBarChartData(
-              label: '12',
-              valueLabel: '4',
-              value: 4,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: '1P',
-              valueLabel: '2',
-              value: 2,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: '2P',
-              valueLabel: '3',
-              value: 3,
-              color: AppColors.softOrange,
-            ),
-            AppBarChartData(
-              label: '3P',
-              valueLabel: '1',
-              value: 1,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: '4P',
-              valueLabel: '1',
-              value: 1,
-              color: AppColors.border,
-            ),
-          ],
         ),
-
-        const SizedBox(height: 10),
-        DashboardSectionHeader(
-          icon: '🏆',
-          iconBgColor: AppColors.purpleLight,
-          title: 'Top Products',
-          actionLabel: 'See all',
-          onActionPressed: () {},
-        ),
-        const TopProductsList(),
-
-        const SizedBox(height: 10),
-        DashboardSectionHeader(
-          icon: '⏱',
-          iconBgColor: AppColors.yellowLight,
-          title: 'Recent Orders',
-          actionLabel: 'View all',
-          onActionPressed: () {},
-        ),
-        const RecentOrdersMiniList(),
-      ],
-    );
+      const SizedBox(height: 12),
+      const AppSectionHeader(
+        icon: Icon(Icons.inventory_2_rounded),
+        title: "Top Products",
+        iconBackgroundColor: AppColors.purpleLight,
+        iconColor: AppColors.purple,
+      ),
+      ReportsTopProductsCard(products: report.topProducts),
+      const SizedBox(height: 12),
+      const AppSectionHeader(
+        icon: Icon(Icons.receipt_long_rounded),
+        title: "Recent Orders",
+        iconBackgroundColor: AppColors.yellowLight,
+        iconColor: AppColors.yellow,
+      ),
+      ReportsRecentOrdersCard(orders: report.recentOrders),
+    ];
   }
-}
 
-// === Weekly View Tab ===
-class _WeeklyReportView extends StatelessWidget {
-  const _WeeklyReportView();
+  List<Widget> _buildPeriodSections(
+    ShopReportSnapshot report, {
+    required ReportPeriod selectedPeriod,
+  }) {
+    final maxRevenue = report.dailyBreakdown
+        .map((item) => item.revenue)
+        .fold<int>(0, (max, value) => value > max ? value : max);
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const RevenueHeroCard(
-          title: 'This Week',
-          titleMm: 'ဒီအပတ် ဝင်ငွေ',
-          amount: '2,840,000',
-          changeText: '↑ +18% vs last week',
-          ordersCount: '118',
-          customersCount: '89',
-          avgOrder: '24K',
-        ),
+    final dailyBars = report.dailyBreakdown
+        .map((item) {
+          final compactLabel = item.label.split(",").first.trim();
+          final isBestDay = item.revenue == maxRevenue && item.revenue > 0;
 
-        const DashboardSectionHeader(
-          icon: '📈',
-          iconBgColor: AppColors.tealLight,
-          title: 'Revenue by Day',
-        ),
-        const AppBarChart(
-          title: 'Best day',
-          subtitle: 'Wednesday · 520K MMK',
+          return AppBarChartData(
+            label: compactLabel,
+            value: item.revenue.toDouble(),
+            valueLabel: _formatCompact(item.revenue),
+            color: isBestDay ? AppColors.softOrange : AppColors.softOrangeMid,
+            isHighlighted: isBestDay,
+          );
+        })
+        .toList(growable: false);
+
+    final comparisonCards = <Widget>[
+      AppComparisonMetricCard(
+        title: "Revenue",
+        value: "${_formatCompact(report.totalRevenue)} MMK",
+        deltaText: _deltaText(selectedPeriod, report.revenueDelta),
+        deltaColor: report.revenueDelta >= 0
+            ? AppColors.green
+            : AppColors.softOrange,
+        progress: report.totalOrders == 0
+            ? 0
+            : report.deliveredCount / report.totalOrders,
+        progressColor: AppColors.green,
+      ),
+      AppComparisonMetricCard(
+        title: "Orders",
+        value: "${report.totalOrders}",
+        deltaText: "${report.pendingCount} pending",
+        deltaColor: AppColors.teal,
+        progress: report.totalOrders == 0
+            ? 0
+            : report.deliveredCount / report.totalOrders,
+        progressColor: AppColors.teal,
+      ),
+      AppComparisonMetricCard(
+        title: "Deliver Rate",
+        value: "${report.deliveredRate}%",
+        deltaText: "${report.deliveredCount} delivered",
+        deltaColor: AppColors.green,
+        progress: report.deliveredRate / 100,
+        progressColor: AppColors.softOrange,
+      ),
+      AppComparisonMetricCard(
+        title: "Avg Order",
+        value: "${_formatCompact(report.averageOrderValue)} MMK",
+        deltaText: "${report.customerCount} customers",
+        deltaColor: AppColors.yellow,
+        progress: (report.averageOrderValue / 50000).clamp(0, 1).toDouble(),
+        progressColor: AppColors.yellow,
+      ),
+    ];
+
+    return [
+      const AppSectionHeader(
+        icon: Icon(Icons.stacked_bar_chart_rounded),
+        title: "Revenue by Day",
+        iconBackgroundColor: AppColors.tealLight,
+        iconColor: AppColors.teal,
+      ),
+      if (dailyBars.isEmpty)
+        const AppEmptyState(
+          icon: Icon(Icons.query_stats_outlined),
+          title: "No trend data",
+          message: "Daily breakdown will appear once data is synced.",
+        )
+      else
+        AppBarChart(
+          title: "Best day",
+          subtitle: _bestDaySubtitle(report),
+          data: dailyBars,
           titleColor: AppColors.textLight,
-          data: [
-            AppBarChartData(
-              label: 'Mon',
-              valueLabel: '320K',
-              value: 320,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: 'Tue',
-              valueLabel: '410K',
-              value: 410,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: 'Wed',
-              valueLabel: '520K',
-              value: 520,
-              color: AppColors.softOrange,
-            ),
-            AppBarChartData(
-              label: 'Thu',
-              valueLabel: '380K',
-              value: 380,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: 'Fri',
-              valueLabel: '460K',
-              value: 460,
-              color: AppColors.softOrange,
-            ),
-            AppBarChartData(
-              label: 'Sat',
-              valueLabel: '265K',
-              value: 265,
-              color: AppColors.softOrangeMid,
-            ),
-            AppBarChartData(
-              label: 'Today',
-              valueLabel: '485K',
-              value: 485,
-              color: AppColors.softOrange,
-              isHighlighted: true,
-            ),
-          ],
         ),
+      const SizedBox(height: 12),
+      AppSectionHeader(
+        icon: const Icon(Icons.compare_arrows_rounded),
+        title: selectedPeriod == ReportPeriod.weekly
+            ? "vs Last Week"
+            : "vs Last Month",
+        iconBackgroundColor: AppColors.softOrangeLight,
+        iconColor: AppColors.softOrange,
+      ),
+      GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.15,
+        children: comparisonCards,
+      ),
+      const SizedBox(height: 12),
+      const AppSectionHeader(
+        icon: Icon(Icons.star_rounded),
+        title: "Top Customers",
+        iconBackgroundColor: AppColors.purpleLight,
+        iconColor: AppColors.purple,
+      ),
+      ReportsTopCustomersCard(customers: report.topCustomers),
+      const SizedBox(height: 12),
+      const AppSectionHeader(
+        icon: Icon(Icons.receipt_long_rounded),
+        title: "Recent Orders",
+        iconBackgroundColor: AppColors.yellowLight,
+        iconColor: AppColors.yellow,
+      ),
+      ReportsRecentOrdersCard(orders: report.recentOrders),
+    ];
+  }
 
-        const SizedBox(height: 10),
-        const DashboardSectionHeader(
-          icon: '⚖️',
-          iconBgColor: AppColors.softOrangeLight,
-          title: 'vs Last Week',
-        ),
-        const ComparisonCardsGrid(),
+  String _bestDaySubtitle(ShopReportSnapshot report) {
+    if (report.dailyBreakdown.isEmpty) {
+      return "No data";
+    }
 
-        const SizedBox(height: 10),
-        DashboardSectionHeader(
-          icon: '⭐',
-          iconBgColor: AppColors.purpleLight,
-          title: 'Top Customers',
-          actionLabel: 'See all',
-          onActionPressed: () {},
-        ),
-        const TopCustomersList(),
-      ],
-    );
+    final best = report.dailyBreakdown.fold<ReportDailyBreakdownItem?>(null, (
+      current,
+      item,
+    ) {
+      if (current == null || item.revenue > current.revenue) {
+        return item;
+      }
+
+      return current;
+    });
+
+    if (best == null) {
+      return "No data";
+    }
+
+    final shortLabel = best.label.split(",").first.trim();
+    return "$shortLabel · ${_formatCompact(best.revenue)} MMK";
+  }
+
+  String _dateTitle(ReportsHomeState state) {
+    if (state.selectedPeriod == ReportPeriod.daily) {
+      return DateFormat("EEEE, MMMM d").format(state.resolvedAnchorDate);
+    }
+
+    if (state.selectedPeriod == ReportPeriod.weekly) {
+      final start = startOfReportWeek(state.resolvedAnchorDate);
+      final end = DateTime(start.year, start.month, start.day + 6);
+      return "${DateFormat("MMM d").format(start)} - ${DateFormat("MMM d").format(end)}";
+    }
+
+    return DateFormat("MMMM yyyy").format(state.resolvedAnchorDate);
+  }
+
+  String _dateSubtitle(ReportsHomeState state) {
+    final report = state.report;
+
+    if (report == null) {
+      switch (state.selectedPeriod) {
+        case ReportPeriod.daily:
+          return "Daily summary";
+        case ReportPeriod.weekly:
+          return "Weekly trend";
+        case ReportPeriod.monthly:
+          return "Monthly trend";
+      }
+    }
+
+    final isToday = _isSameDay(state.resolvedAnchorDate, DateTime.now());
+    if (state.selectedPeriod == ReportPeriod.daily && isToday) {
+      return "Today · ${report.totalOrders} orders";
+    }
+
+    return "${report.totalOrders} orders · ${_formatCompact(report.totalRevenue)} MMK";
+  }
+
+  String _heroLabel(ReportPeriod period) {
+    switch (period) {
+      case ReportPeriod.daily:
+        return "Today's Revenue";
+      case ReportPeriod.weekly:
+        return "This Week Revenue";
+      case ReportPeriod.monthly:
+        return "This Month Revenue";
+    }
+  }
+
+  String _deltaText(ReportPeriod period, int deltaAmount) {
+    final prefix = deltaAmount >= 0 ? "↑" : "↓";
+    final direction = deltaAmount >= 0 ? "+" : "-";
+    final base = _formatCompact(deltaAmount.abs());
+
+    switch (period) {
+      case ReportPeriod.daily:
+        return "$prefix $direction$base MMK vs yesterday";
+      case ReportPeriod.weekly:
+        return "$prefix $direction$base MMK vs last week";
+      case ReportPeriod.monthly:
+        return "$prefix $direction$base MMK vs last month";
+    }
+  }
+
+  String _formatCompact(int amount) {
+    if (amount.abs() >= 1000000) {
+      final compact = amount / 1000000;
+      final hasFraction = compact.truncateToDouble() != compact;
+      return "${compact.toStringAsFixed(hasFraction ? 1 : 0)}M";
+    }
+
+    if (amount.abs() >= 1000) {
+      final compact = amount / 1000;
+      final hasFraction = compact.truncateToDouble() != compact;
+      return "${compact.toStringAsFixed(hasFraction ? 1 : 0)}K";
+    }
+
+    return "$amount";
+  }
+
+  bool _isSameDay(DateTime left, DateTime right) {
+    return left.year == right.year &&
+        left.month == right.month &&
+        left.day == right.day;
+  }
+
+  Future<void> _onRefresh(BuildContext context) async {
+    context.read<ReportsHomeBloc>().add(const ReportsHomeRefreshRequested());
+    await Future<void>.delayed(const Duration(milliseconds: 800));
   }
 }

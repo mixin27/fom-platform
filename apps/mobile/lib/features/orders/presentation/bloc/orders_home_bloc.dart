@@ -76,6 +76,8 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
       return;
     }
 
+    log.info("Starting orders home for shop=$normalizedShopId");
+
     final shouldRestartOrdersStream =
         state.shopId != normalizedShopId || _ordersSubscription == null;
 
@@ -123,6 +125,10 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
       return;
     }
 
+    if (!event.silent) {
+      log.info("Refreshing orders for shop=$shopId");
+    }
+
     _isRefreshingInFlight = true;
 
     if (!event.silent) {
@@ -164,6 +170,7 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
         );
       },
       (_) {
+        log.info("Orders refreshed successfully for shop=$shopId");
         emit(
           state.copyWith(
             status: OrdersHomeStatus.ready,
@@ -190,6 +197,10 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     if (state.isOrderUpdating(event.orderId)) {
       return;
     }
+
+    log.info(
+      "Updating order status: id=${event.orderId}, status=${event.nextStatus.apiValue}",
+    );
 
     final updatingOrderIds = <String>[...state.updatingOrderIds, event.orderId];
     emit(state.copyWith(updatingOrderIds: updatingOrderIds, clearError: true));
@@ -221,6 +232,7 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
         );
       },
       (_) {
+        log.info("Order status updated: id=${event.orderId}");
         emit(
           state.copyWith(
             updatingOrderIds: nextUpdatingOrderIds,
@@ -258,6 +270,7 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     OrdersHomeOrdersStreamUpdated event,
     Emitter<OrdersHomeState> emit,
   ) {
+    log.debug("Orders stream update: ${event.orders.length} records");
     emit(state.copyWith(status: OrdersHomeStatus.ready, orders: event.orders));
   }
 
@@ -266,6 +279,7 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     Emitter<OrdersHomeState> emit,
   ) {
     if (event.isOnline && !_wasOnline && state.hasShop) {
+      log.info("Network restored. Triggering silent orders refresh.");
       add(const OrdersHomeRefreshRequested(silent: true));
     }
 

@@ -162,7 +162,10 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: reportsPath,
-                builder: (context, state) => const ReportsHomePage(),
+                builder: (context, state) => ReportsHomePage(
+                  initialShopId: _resolveCurrentShopId(),
+                  initialShopName: _resolveCurrentShopName(),
+                ),
               ),
             ],
           ),

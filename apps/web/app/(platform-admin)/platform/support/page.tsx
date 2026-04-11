@@ -7,16 +7,36 @@ import { PlatformStatusBadge } from "@/components/platform/platform-status-badge
 import { getPlatformSupport } from "@/lib/platform/api"
 import { formatRelativeDate } from "@/lib/platform/format"
 import {
+  getSingleSearchParam,
+  type PlatformSearchParams,
+} from "@/lib/platform/query"
+import {
+  createPlatformSupportIssueFromFormAction,
+  updatePlatformSupportIssueFromFormAction,
+} from "./actions"
+import { Button } from "@workspace/ui/components/button"
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import { Input } from "@workspace/ui/components/input"
+import { Textarea } from "@workspace/ui/components/textarea"
 
-export default async function PlatformSupportPage() {
+type PlatformSupportPageProps = {
+  searchParams?: Promise<PlatformSearchParams>
+}
+
+export default async function PlatformSupportPage({
+  searchParams,
+}: PlatformSupportPageProps) {
+  const params = (await searchParams) ?? {}
   const response = await getPlatformSupport()
   const data = response.data
+  const notice = getSingleSearchParam(params.notice)
+  const error = getSingleSearchParam(params.error)
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,6 +45,17 @@ export default async function PlatformSupportPage() {
         title="Support queue and operational follow-up"
         description="This workspace tracks billing risk, renewals, onboarding gaps, and low-adoption tenants."
       />
+
+      {notice ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-800">
+          {notice}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardStatCard
@@ -103,45 +134,150 @@ export default async function PlatformSupportPage() {
               ),
             },
             {
+              key: "status",
+              header: "Status",
+              render: (issue) => (
+                <PlatformStatusBadge status={issue.status} label={issue.status} />
+              ),
+            },
+            {
               key: "when",
               header: "When",
               render: (issue) => formatRelativeDate(issue.occurred_at),
             },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (issue) => (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {issue.status === "open" ? (
+                    <form action={updatePlatformSupportIssueFromFormAction}>
+                      <input type="hidden" name="issue_id" value={issue.id} />
+                      <input type="hidden" name="status" value="in_progress" />
+                      <Button type="submit" size="sm" variant="outline">
+                        Start
+                      </Button>
+                    </form>
+                  ) : null}
+                  <form action={updatePlatformSupportIssueFromFormAction}>
+                    <input type="hidden" name="issue_id" value={issue.id} />
+                    <input type="hidden" name="status" value="resolved" />
+                    <input
+                      type="hidden"
+                      name="resolution_note"
+                      value="Resolved from support workspace."
+                    />
+                    <Button type="submit" size="sm">
+                      Resolve
+                    </Button>
+                  </form>
+                  <form action={updatePlatformSupportIssueFromFormAction}>
+                    <input type="hidden" name="issue_id" value={issue.id} />
+                    <input type="hidden" name="status" value="dismissed" />
+                    <input
+                      type="hidden"
+                      name="resolution_note"
+                      value="Dismissed from support workspace."
+                    />
+                    <Button type="submit" size="sm" variant="outline">
+                      Dismiss
+                    </Button>
+                  </form>
+                </div>
+              ),
+              className: "w-[220px] px-4 py-2.5 text-right",
+              cellClassName: "px-4 py-3 text-right",
+            },
           ]}
         />
 
-        <Card className="border border-black/6 bg-white shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Platform health</CardDescription>
-            <CardTitle>Current posture</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2.5 pt-0">
-            {[
-              {
-                label: "Active shops",
-                value: `${data.health.active_shops} / ${data.health.total_shops}`,
-              },
-              {
-                label: "Inactive shops",
-                value: String(data.health.inactive_shops),
-              },
-              {
-                label: "Overdue invoices",
-                value: String(data.health.overdue_invoices),
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between rounded-xl bg-[var(--fom-admin-surface)] px-3.5 py-3"
+        <div className="flex flex-col gap-3">
+          <Card className="border border-black/6 bg-white shadow-none">
+            <CardHeader className="pb-3">
+              <CardDescription>Platform health</CardDescription>
+              <CardTitle>Current posture</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2.5 pt-0">
+              {[
+                {
+                  label: "Active shops",
+                  value: `${data.health.active_shops} / ${data.health.total_shops}`,
+                },
+                {
+                  label: "Inactive shops",
+                  value: String(data.health.inactive_shops),
+                },
+                {
+                  label: "Overdue invoices",
+                  value: String(data.health.overdue_invoices),
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between rounded-xl bg-[var(--fom-admin-surface)] px-3.5 py-3"
+                >
+                  <span className="text-sm text-muted-foreground">{item.label}</span>
+                  <span className="text-sm font-semibold text-[var(--fom-ink)]">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="border border-black/6 bg-white shadow-none">
+            <CardHeader className="pb-3">
+              <CardDescription>Manual triage</CardDescription>
+              <CardTitle>Create support issue</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <form
+                action={createPlatformSupportIssueFromFormAction}
+                className="flex flex-col gap-2.5"
               >
-                <span className="text-sm text-muted-foreground">{item.label}</span>
-                <span className="text-sm font-semibold text-[var(--fom-ink)]">
-                  {item.value}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <select
+                    name="kind"
+                    defaultValue="operations"
+                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  >
+                    <option value="operations">Operations</option>
+                    <option value="billing">Billing</option>
+                    <option value="renewal">Renewal</option>
+                    <option value="onboarding">Onboarding</option>
+                    <option value="adoption">Adoption</option>
+                    <option value="technical">Technical</option>
+                    <option value="account">Account</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <select
+                    name="severity"
+                    defaultValue="medium"
+                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  >
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <Input
+                  name="shop_id"
+                  placeholder="Optional shop ID"
+                  className="h-9"
+                />
+                <Input name="title" placeholder="Issue title" className="h-9" />
+                <Textarea
+                  name="detail"
+                  placeholder="Issue details"
+                  className="min-h-[92px]"
+                />
+                <Button type="submit" size="sm">
+                  Create issue
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <PlatformDataTable

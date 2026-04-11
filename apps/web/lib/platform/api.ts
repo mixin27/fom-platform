@@ -201,7 +201,7 @@ export async function getPlatformDashboard() {
       id: string
       kind: string
       severity: string
-      shop_id: string
+      shop_id: string | null
       shop_name: string
       title: string
       detail: string
@@ -282,11 +282,17 @@ export async function getPlatformSupport() {
       id: string
       kind: string
       severity: string
-      shop_id: string
+      status: string
+      source: string
+      shop_id: string | null
       shop_name: string
       title: string
       detail: string
       occurred_at: string
+      assigned_to_user_id: string | null
+      assigned_to_user_name: string | null
+      resolution_note: string | null
+      resolved_at: string | null
     }>
     health: {
       total_shops: number
@@ -331,6 +337,7 @@ export async function getPlatformSettings() {
       price: number
       currency: string
       is_active: boolean
+      sort_order: number
       shop_count: number
       collected_revenue: number
     }>

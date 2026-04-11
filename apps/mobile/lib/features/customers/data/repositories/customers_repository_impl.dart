@@ -36,6 +36,9 @@ class CustomersRepositoryImpl with LoggerMixin implements CustomersRepository {
         syncedAt: DateTime.now(),
       );
 
+      log.info(
+        "Customers cache refreshed: shop=$shopId, count=${remoteCustomers.length}",
+      );
       return Result<void>.success(null);
     } catch (error, stackTrace) {
       log.error(
@@ -63,6 +66,7 @@ class CustomersRepositoryImpl with LoggerMixin implements CustomersRepository {
         syncedAt: DateTime.now(),
       );
 
+      log.info("Customer detail refreshed: shop=$shopId, customer=$customerId");
       return Result<void>.success(null);
     } catch (error, stackTrace) {
       log.error(
