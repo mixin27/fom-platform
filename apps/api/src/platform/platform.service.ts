@@ -812,6 +812,8 @@ export class PlatformService {
     const assignee = await this.resolveSupportAssignee(body.assigned_to_user_id);
     const nextStatus = body.status ?? issue.status;
     const nextIsClosed = this.isSupportIssueClosed(nextStatus);
+    const clearsResolutionState =
+      body.status !== undefined && !nextIsClosed && this.isSupportIssueClosed(issue.status);
 
     await (this.prisma as any).platformSupportIssue.update({
       where: { id: issueId },
@@ -841,9 +843,10 @@ export class PlatformService {
         ...(body.status !== undefined
           ? {
               isActive: !nextIsClosed,
-              resolvedAt: nextIsClosed
-                ? issue.resolvedAt ?? new Date()
-                : null,
+              resolvedAt: nextIsClosed ? issue.resolvedAt ?? new Date() : null,
+              ...(clearsResolutionState && body.resolution_note === undefined
+                ? { resolutionNote: null }
+                : {}),
             }
           : {}),
       },

@@ -157,7 +157,32 @@ export async function requestApiEnvelope<T>(
     }
   }
 
-  const payload = (await response.json()) as ApiEnvelope<T>
+  const contentType = response.headers.get("content-type") ?? ""
+  const expectsJson = contentType.includes("application/json")
+  let payload: ApiEnvelope<T> | null = null
+  let responseText: string | null = null
+
+  if (expectsJson) {
+    try {
+      payload = (await response.json()) as ApiEnvelope<T>
+    } catch {
+      throw new AuthApiError(
+        "The API returned an invalid JSON response.",
+        "INVALID_API_RESPONSE",
+        response.status
+      )
+    }
+  } else {
+    responseText = (await response.text()).trim() || null
+  }
+
+  if (!payload) {
+    throw new AuthApiError(
+      responseText ?? response.statusText ?? "Unexpected API response.",
+      response.ok ? "INVALID_API_RESPONSE" : "SERVER_ERROR",
+      response.status
+    )
+  }
 
   if (!response.ok || !payload.success) {
     const error =
@@ -165,7 +190,7 @@ export async function requestApiEnvelope<T>(
         ? payload.error
         : {
             code: "SERVER_ERROR",
-            message: "Unexpected error",
+            message: response.statusText || "Unexpected error",
           }
 
     throw new AuthApiError(

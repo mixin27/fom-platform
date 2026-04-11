@@ -109,7 +109,6 @@ export async function updatePlatformSupportIssueFromFormAction(formData: FormDat
 
     revalidatePlatformSupportWorkspace()
   } catch (error) {
-    console.log(error)
     redirectSupport({
       error: toActionMessage(error, "Unable to update support issue right now."),
     })
