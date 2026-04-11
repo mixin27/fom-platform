@@ -1,6 +1,6 @@
-# Facebook Order Manager Platform
+# FOM Platform
 
-Monorepo for the Facebook Order Manager project.
+Monorepo for the FOM Platform ([getfom.com](https://getfom.com)).
 
 [![CI (Flutter)](https://github.com/mixin27/fom-platform/actions/workflows/flutter.yaml/badge.svg?branch=main)](https://github.com/mixin27/fom-platform/actions/workflows/flutter.yaml)
 [![CI (Web)](https://github.com/mixin27/fom-platform/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/mixin27/fom-platform/actions/workflows/ci.yaml)
@@ -33,6 +33,9 @@ pnpm docker:logs
 pnpm docker:seed
 pnpm docker:down
 ```
+
+- [x] Buy domain: [getfom.com](https://getfom.com) ($11.25 on Vercel)
+- If you want the next frontend slice, the most obvious remaining work is shop-side deliveries/customers/orders using richer client-side sheets/tables instead of the current server-form edit panes, or billing/subscription visibility inside the shop-owner portal.
 
 `pnpm docker:seed` loads the explicit demo dataset into the Docker PostgreSQL instance. The base API seed remains production-safe and only syncs RBAC roles, permissions, and role-permission assignments.
 
