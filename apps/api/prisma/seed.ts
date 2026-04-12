@@ -162,6 +162,7 @@ async function resetDemoData() {
   await prisma.payment.deleteMany();
   await prisma.subscription.deleteMany();
   await prisma.emailMessage.deleteMany();
+  await prisma.emailActionToken.deleteMany();
   await prisma.notificationPreference.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.messageTemplate.deleteMany();
@@ -985,7 +986,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
         textBody:
           'Daw Khin Myat placed ORD-0244 for 39,000 MMK. Open the order to confirm details.',
         status: 'sent',
-        deliveryMode: 'log',
+        providerKey: 'log',
         queuedAt: new Date('2026-04-02T04:02:31.000Z'),
         processedAt: new Date('2026-04-02T04:02:31.000Z'),
         updatedAt: new Date('2026-04-02T04:02:31.000Z'),
@@ -1004,7 +1005,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
         textBody:
           'Yesterday closed with 22 orders and 413,000 MMK revenue. Open reports for the full breakdown.',
         status: 'sent',
-        deliveryMode: 'log',
+        providerKey: 'log',
         queuedAt: new Date('2026-04-02T01:00:01.000Z'),
         processedAt: new Date('2026-04-02T01:00:01.000Z'),
         updatedAt: new Date('2026-04-02T01:00:01.000Z'),

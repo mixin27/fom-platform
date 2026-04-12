@@ -56,6 +56,7 @@ export type AuthResponse = {
     email: string | null
     phone: string | null
     locale: string
+    email_verified_at: string | null
     platform: {
       role: string | null
       roles: string[]
@@ -303,5 +304,55 @@ export async function createShop(input: {
       name: input.name,
       timezone: input.timezone,
     },
+  })
+}
+
+export async function sendEmailVerification(accessToken: string) {
+  return requestAuthorizedApi<{
+    email: string
+    email_verified_at: string | null
+    sent: boolean
+    already_verified: boolean
+  }>(accessToken, "/api/v1/auth/email/verification/send", {
+    method: "POST",
+  })
+}
+
+export async function confirmEmailVerification(token: string) {
+  return requestApi<{
+    email: string
+    email_verified_at: string
+    verified: boolean
+  }>("/api/v1/auth/email/verification/confirm", {
+    method: "POST",
+    json: {
+      token,
+    },
+  })
+}
+
+export async function requestPasswordReset(email: string) {
+  return requestApi<{
+    accepted: boolean
+    message: string
+  }>("/api/v1/auth/password/forgot", {
+    method: "POST",
+    json: {
+      email,
+    },
+  })
+}
+
+export async function resetPasswordWithToken(input: {
+  token: string
+  password: string
+}) {
+  return requestApi<{
+    reset: boolean
+    email: string
+    reset_at: string
+  }>("/api/v1/auth/password/reset", {
+    method: "POST",
+    json: input,
   })
 }

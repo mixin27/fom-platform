@@ -55,6 +55,7 @@ model User {
   authIdentities     AuthIdentity[]
   sessions           Session[]
   authChallenges     AuthChallenge[]
+  emailActionTokens  EmailActionToken[]
   roleAssignments    UserRoleAssignment[]
   statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
   assignedDeliveries Delivery[]          @relation("DeliveryDriver")
@@ -420,6 +421,26 @@ model Session {
   @@map("sessions")
 }
 
+model EmailActionToken {
+  id                 String   @id @default(cuid())
+  userId             String
+  email              String
+  purpose            String
+  tokenHash          String   @unique
+  expiresAt          DateTime
+  consumedAt         DateTime?
+  revokedAt          DateTime?
+  requestedIpAddress String?
+  requestedUserAgent String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, expiresAt])
+  @@index([email, purpose, expiresAt])
+  @@map("email_action_tokens")
+}
+
 model Notification {
   id               String    @id @default(cuid())
   userId           String
@@ -462,15 +483,25 @@ model EmailMessage {
   notificationId String?
   shopId         String?
   category       String
+  templateKey    String?
   toEmail        String
   recipientName  String?
+  fromEmail      String?
+  fromName       String?
+  replyToEmail   String?
+  replyToName    String?
   subject        String
   textBody       String
+  htmlBody       String?
   status         String        @default("queued")
-  deliveryMode   String        @default("log")
+  providerKey    String        @default("log")
+  providerMessageId String?
   queuedAt       DateTime      @default(now())
+  sentAt         DateTime?
   processedAt    DateTime?
+  attemptCount   Int           @default(0)
   failureReason  String?
+  metadata       Json?
   updatedAt      DateTime      @updatedAt
   user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   notification   Notification? @relation(fields: [notificationId], references: [id], onDelete: SetNull)
@@ -479,5 +510,6 @@ model EmailMessage {
   @@index([status, queuedAt])
   @@index([userId, queuedAt])
   @@index([notificationId])
+  @@index([category, queuedAt])
   @@map("email_outbox")
 }

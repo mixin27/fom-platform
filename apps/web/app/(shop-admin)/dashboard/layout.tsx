@@ -5,6 +5,7 @@ import { Bell, Plus, Search } from "lucide-react"
 import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
+import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { shopPortalNav } from "@/lib/navigation"
 import { getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
@@ -15,11 +16,20 @@ export default async function ShopAppLayout({
 }: {
   children: ReactNode
 }) {
-  const [{ session, activeShop }, profileResponse] = await Promise.all([
-    getShopPortalContext(),
+  const portalContext = await getShopPortalContext()
+  const { session, activeShop } = portalContext
+  const [profileResponse, unreadResponse] = await Promise.all([
     getCurrentUserProfile("/dashboard"),
+    getNotificationUnreadCount({
+      requiredAccess: "shop",
+      retryPath: "/dashboard",
+      searchParams: {
+        shop_id: activeShop.id,
+      },
+    }),
   ])
   const profile = profileResponse.data
+  const unreadCount = unreadResponse.data.unread_count
 
   return (
     <div className="fom-portal-canvas min-h-screen">
@@ -93,11 +103,36 @@ export default async function ShopAppLayout({
                   placeholder="Search orders or customers"
                 />
               </div>
-              <button className="flex size-8 items-center justify-center rounded-xl border border-black/8 bg-white text-muted-foreground">
-                <Bell className="size-4" />
-              </button>
+              <Button
+                asChild
+                variant="outline"
+                size="icon"
+                className="relative size-8 rounded-xl border-black/8 bg-white text-muted-foreground"
+              >
+                <Link href="/dashboard/notifications">
+                  <Bell className="size-4" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--fom-orange)] px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </Button>
             </div>
           </header>
+          {session.user.email && !session.user.emailVerifiedAt ? (
+            <div className="border-b border-[var(--fom-orange)]/15 bg-[rgba(249,122,31,0.08)] px-5 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[var(--fom-ink)]">
+                  Verify <span className="font-medium">{session.user.email}</span> to
+                  enable password recovery and billing notices.
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/verify-email">Verify email</Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <main className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {children}
           </main>

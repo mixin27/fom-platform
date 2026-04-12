@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -13,10 +14,14 @@ import type {
 import { PrismaService } from '../common/prisma/prisma.service';
 import { generateId } from '../common/utils/id';
 import { hashPassword, verifyPassword } from '../common/auth/password';
+import { EmailOutboxService } from '../email/email-outbox.service';
 import { ShopsService } from '../shops/shops.service';
+import type { ConfirmEmailVerificationDto } from './dto/confirm-email-verification.dto';
+import type { ForgotPasswordDto } from './dto/forgot-password.dto';
 import type { LoginDto } from './dto/login.dto';
 import type { RefreshSessionDto } from './dto/refresh-session.dto';
 import type { RegisterDto } from './dto/register.dto';
+import type { ResetPasswordDto } from './dto/reset-password.dto';
 import type { SocialLoginDto } from './dto/social-login.dto';
 import type { StartPhoneChallengeDto } from './dto/start-phone-challenge.dto';
 import type { VerifyPhoneChallengeDto } from './dto/verify-phone-challenge.dto';
@@ -43,6 +48,7 @@ type AuthSessionContext = {
     email: string | null;
     phone: string | null;
     locale: string;
+    emailVerifiedAt: string | null;
   };
   platform: {
     role: string | null;
@@ -59,12 +65,16 @@ type AuthSessionContext = {
   jwtShops: JwtShopAccess[];
 };
 
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
     private readonly jwtService: JwtService,
+    private readonly emailOutbox: EmailOutboxService,
   ) {}
 
   async register(body: RegisterDto, metadata: SessionRequestMetadata) {
@@ -98,7 +108,10 @@ export class AuthService {
     });
 
     const issuedSession = await this.issueSessionForUser(user.id, metadata);
-    return this.buildAuthResponse(issuedSession);
+    const authResponse = this.buildAuthResponse(issuedSession);
+
+    await this.sendPostRegistrationEmails(user, metadata);
+    return authResponse;
   }
 
   async login(body: LoginDto, metadata: SessionRequestMetadata) {
@@ -227,6 +240,176 @@ export class AuthService {
 
     const issuedSession = await this.issueSessionForUser(user.id, metadata);
     return this.buildAuthResponse(issuedSession);
+  }
+
+  async sendEmailVerification(
+    currentUser: AuthenticatedUser,
+    metadata: SessionRequestMetadata,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.id },
+    });
+    if (!user) {
+      throw notFoundError('User not found');
+    }
+
+    if (!user.email) {
+      throw conflictError('An email address is required before it can be verified');
+    }
+
+    if (user.emailVerifiedAt) {
+      return {
+        email: user.email,
+        email_verified_at: user.emailVerifiedAt.toISOString(),
+        sent: false,
+        already_verified: true,
+      };
+    }
+
+    await this.enqueueEmailVerification(user, metadata);
+
+    return {
+      email: user.email,
+      email_verified_at: null,
+      sent: true,
+      already_verified: false,
+    };
+  }
+
+  async confirmEmailVerification(body: ConfirmEmailVerificationDto) {
+    const actionToken = await this.resolveEmailActionToken(
+      body.token,
+      'verify_email',
+    );
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: actionToken.userId },
+    });
+    if (!user || !user.email || user.email !== actionToken.email) {
+      throw unauthorizedError('Email verification token is invalid or expired');
+    }
+
+    const verifiedAt = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifiedAt: verifiedAt,
+        },
+      });
+
+      await tx.emailActionToken.update({
+        where: { id: actionToken.id },
+        data: {
+          consumedAt: verifiedAt,
+        },
+      });
+    });
+
+    return {
+      email: user.email,
+      email_verified_at: verifiedAt.toISOString(),
+      verified: true,
+    };
+  }
+
+  async forgotPassword(
+    body: ForgotPasswordDto,
+    metadata: SessionRequestMetadata,
+  ) {
+    const normalizedEmail = body.email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: {
+        passwordCredential: true,
+      },
+    });
+
+    if (user?.passwordCredential && user.email) {
+      await this.enqueuePasswordResetEmail(user, metadata);
+    }
+
+    return {
+      accepted: true,
+      message:
+        'If the account exists, a password reset email has been queued.',
+    };
+  }
+
+  async resetPassword(
+    body: ResetPasswordDto,
+    _metadata: SessionRequestMetadata,
+  ) {
+    const actionToken = await this.resolveEmailActionToken(
+      body.token,
+      'reset_password',
+    );
+    const user = await this.prisma.user.findUnique({
+      where: { id: actionToken.userId },
+    });
+
+    if (!user || !user.email || user.email !== actionToken.email) {
+      throw unauthorizedError('Password reset token is invalid or expired');
+    }
+
+    const passwordHash = await hashPassword(body.password);
+    const resetAt = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.passwordCredential.upsert({
+        where: { userId: user.id },
+        update: {
+          passwordHash,
+        },
+        create: {
+          userId: user.id,
+          passwordHash,
+        },
+      });
+
+      await tx.emailActionToken.update({
+        where: { id: actionToken.id },
+        data: {
+          consumedAt: resetAt,
+        },
+      });
+
+      await tx.session.updateMany({
+        where: {
+          userId: user.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: resetAt,
+        },
+      });
+    });
+
+    await this.upsertIdentity(user.id, {
+      provider: 'password',
+      providerUserId: user.email,
+      email: user.email,
+      phone: user.phone,
+      displayName: user.name,
+    });
+
+    await this.emailOutbox.queueAndSendTemplatedEmail({
+      userId: user.id,
+      toEmail: user.email,
+      recipientName: user.name,
+      templateKey: 'auth.password_reset_success',
+      variables: {
+        ctaLabel: 'Sign in',
+        ctaUrl: `${this.getWebAppBaseUrl()}/sign-in`,
+      },
+    });
+
+    return {
+      reset: true,
+      email: user.email,
+      reset_at: resetAt.toISOString(),
+    };
   }
 
   async startPhoneChallenge(body: StartPhoneChallengeDto) {
@@ -554,6 +737,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         locale: user.locale,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
       },
       platform,
       shops,
@@ -574,7 +758,12 @@ export class AuthService {
       expires_at: input.session.accessExpiresAt.toISOString(),
       refresh_expires_at: input.session.refreshExpiresAt.toISOString(),
       user: {
-        ...input.context.user,
+        id: input.context.user.id,
+        name: input.context.user.name,
+        email: input.context.user.email,
+        phone: input.context.user.phone,
+        locale: input.context.user.locale,
+        email_verified_at: input.context.user.emailVerifiedAt,
         platform: input.context.jwtPlatform,
         shops: input.context.jwtShops,
       },
@@ -735,6 +924,206 @@ export class AuthService {
         throw conflictError('Phone number is already registered');
       }
     }
+  }
+
+  private async sendPostRegistrationEmails(
+    user: User,
+    metadata: SessionRequestMetadata,
+  ) {
+    if (!user.email) {
+      return;
+    }
+
+    await this.emailOutbox.queueAndSendTemplatedEmail({
+      userId: user.id,
+      toEmail: user.email,
+      recipientName: user.name,
+      templateKey: 'auth.welcome',
+      variables: {
+        recipientName: user.name,
+        ctaLabel: 'Open dashboard',
+        ctaUrl: `${this.getWebAppBaseUrl()}/dashboard`,
+      },
+    });
+
+    if (!user.emailVerifiedAt) {
+      await this.enqueueEmailVerification(user, metadata);
+    }
+  }
+
+  private async enqueueEmailVerification(
+    user: User,
+    metadata: SessionRequestMetadata,
+  ) {
+    if (!user.email) {
+      return null;
+    }
+
+    const issuedToken = await this.issueEmailActionToken(
+      user,
+      'verify_email',
+      EMAIL_VERIFICATION_TTL_MS,
+      metadata,
+    );
+
+    return this.emailOutbox.queueAndSendTemplatedEmail({
+      userId: user.id,
+      toEmail: user.email,
+      recipientName: user.name,
+      templateKey: 'auth.verify_email',
+      variables: {
+        ctaLabel: 'Verify email',
+        ctaUrl: `${this.getWebAppBaseUrl()}/verify-email?token=${encodeURIComponent(
+          issuedToken.rawToken,
+        )}`,
+        expiryText: `This verification link expires in ${this.describeDuration(
+          EMAIL_VERIFICATION_TTL_MS,
+        )}.`,
+      },
+      metadata: {
+        purpose: 'verify_email',
+      },
+    });
+  }
+
+  private async enqueuePasswordResetEmail(
+    user: User,
+    metadata: SessionRequestMetadata,
+  ) {
+    if (!user.email) {
+      return null;
+    }
+
+    const issuedToken = await this.issueEmailActionToken(
+      user,
+      'reset_password',
+      PASSWORD_RESET_TTL_MS,
+      metadata,
+    );
+
+    return this.emailOutbox.queueAndSendTemplatedEmail({
+      userId: user.id,
+      toEmail: user.email,
+      recipientName: user.name,
+      templateKey: 'auth.forgot_password',
+      variables: {
+        ctaLabel: 'Reset password',
+        ctaUrl: `${this.getWebAppBaseUrl()}/reset-password?token=${encodeURIComponent(
+          issuedToken.rawToken,
+        )}`,
+        expiryText: `This password reset link expires in ${this.describeDuration(
+          PASSWORD_RESET_TTL_MS,
+        )}.`,
+      },
+      metadata: {
+        purpose: 'reset_password',
+      },
+    });
+  }
+
+  private async issueEmailActionToken(
+    user: User,
+    purpose: 'verify_email' | 'reset_password',
+    ttlMs: number,
+    metadata: SessionRequestMetadata,
+  ) {
+    if (!user.email) {
+      throw conflictError('An email address is required for this action');
+    }
+
+    const rawToken = randomBytes(32).toString('base64url');
+    const tokenHash = this.hashEmailActionToken(rawToken);
+    const expiresAt = new Date(Date.now() + ttlMs);
+    const normalizedMetadata = this.normalizeSessionMetadata(metadata);
+
+    const token = await this.prisma.$transaction(async (tx) => {
+      await tx.emailActionToken.updateMany({
+        where: {
+          userId: user.id,
+          email: user.email!,
+          purpose,
+          consumedAt: null,
+          revokedAt: null,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      return tx.emailActionToken.create({
+        data: {
+          userId: user.id,
+          email: user.email!,
+          purpose,
+          tokenHash,
+          expiresAt,
+          requestedIpAddress: normalizedMetadata.ipAddress,
+          requestedUserAgent: normalizedMetadata.userAgent,
+        },
+      });
+    });
+
+    return {
+      rawToken,
+      record: token,
+    };
+  }
+
+  private async resolveEmailActionToken(
+    rawToken: string,
+    purpose: 'verify_email' | 'reset_password',
+  ) {
+    const tokenHash = this.hashEmailActionToken(rawToken);
+    const actionToken = await this.prisma.emailActionToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (
+      !actionToken ||
+      actionToken.purpose !== purpose ||
+      actionToken.consumedAt ||
+      actionToken.revokedAt ||
+      actionToken.expiresAt.getTime() < Date.now()
+    ) {
+      throw unauthorizedError(
+        purpose === 'verify_email'
+          ? 'Email verification token is invalid or expired'
+          : 'Password reset token is invalid or expired',
+      );
+    }
+
+    return actionToken;
+  }
+
+  private hashEmailActionToken(rawToken: string) {
+    return createHash('sha256').update(rawToken).digest('hex');
+  }
+
+  private getWebAppBaseUrl() {
+    return (
+      process.env.WEB_APP_BASE_URL?.trim() ||
+      process.env.APP_WEB_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+  }
+
+  private describeDuration(valueMs: number) {
+    const minutes = Math.floor(valueMs / 60_000);
+    if (minutes % (24 * 60) === 0) {
+      const days = minutes / (24 * 60);
+      return `${days} day${days === 1 ? '' : 's'}`;
+    }
+
+    if (minutes % 60 === 0) {
+      const hours = minutes / 60;
+      return `${hours} hour${hours === 1 ? '' : 's'}`;
+    }
+
+    return `${minutes} minute${minutes === 1 ? '' : 's'}`;
   }
 
   private normalizePhone(value: string | undefined): string | null {

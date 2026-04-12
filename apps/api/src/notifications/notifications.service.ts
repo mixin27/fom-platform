@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   conflictError,
   notFoundError,
@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../common/http/request-context';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ShopsService } from '../shops/shops.service';
+import { EmailOutboxService } from '../email/email-outbox.service';
 import { GetNotificationUnreadCountQueryDto } from './dto/get-notification-unread-count-query.dto';
 import { ListUserNotificationsQueryDto } from './dto/list-user-notifications-query.dto';
 import { MarkAllNotificationsReadDto } from './dto/mark-all-notifications-read.dto';
@@ -46,13 +47,10 @@ type OrderActivityNotificationInput = {
 
 @Injectable()
 export class NotificationsService {
-  private readonly logger = new Logger(NotificationsService.name);
-  private readonly emailDeliveryMode =
-    process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase() || 'log';
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly emailOutbox: EmailOutboxService,
   ) {}
 
   async listNotifications(
@@ -282,77 +280,24 @@ export class NotificationsService {
         recipient.email &&
         recipient.userId !== input.actorUserId
       ) {
-        const createdEmail = await this.prisma.emailMessage.create({
-          data: {
-            userId: recipient.userId,
-            notificationId,
-            shopId: input.shopId,
-            category: 'order_activity',
-            toEmail: recipient.email,
-            recipientName: recipient.name,
-            subject: input.emailSubject ?? input.title,
-            textBody:
-              input.emailBody ??
-              `${input.title}\n\n${input.body}\n\nOpen order: ${input.orderNo}`,
-            status: 'queued',
-            deliveryMode: this.emailDeliveryMode,
-          },
-          select: { id: true },
+        const createdEmail = await this.emailOutbox.queueEmail({
+          userId: recipient.userId,
+          notificationId,
+          shopId: input.shopId,
+          category: 'order_activity',
+          toEmail: recipient.email,
+          recipientName: recipient.name,
+          subject: input.emailSubject ?? input.title,
+          textBody:
+            input.emailBody ??
+            `${input.title}\n\n${input.body}\n\nOpen order: ${input.orderNo}`,
         });
         emailMessageIds.push(createdEmail.id);
       }
     }
 
     if (emailMessageIds.length > 0) {
-      await this.processQueuedEmails(emailMessageIds);
-    }
-  }
-
-  private async processQueuedEmails(emailMessageIds: string[]) {
-    for (const emailMessageId of emailMessageIds) {
-      const email = await this.prisma.emailMessage.findUnique({
-        where: { id: emailMessageId },
-      });
-      if (!email || email.status !== 'queued') {
-        continue;
-      }
-
-      try {
-        if (this.emailDeliveryMode === 'disabled') {
-          await this.prisma.emailMessage.update({
-            where: { id: email.id },
-            data: {
-              status: 'skipped',
-              processedAt: new Date(),
-              failureReason: 'Email delivery mode is disabled',
-            },
-          });
-          continue;
-        }
-
-        this.logger.log(
-          `[email-outbox] to=${email.toEmail} subject="${email.subject}"\n${email.textBody}`,
-        );
-
-        await this.prisma.emailMessage.update({
-          where: { id: email.id },
-          data: {
-            status: 'sent',
-            processedAt: new Date(),
-            failureReason: null,
-          },
-        });
-      } catch (error) {
-        await this.prisma.emailMessage.update({
-          where: { id: email.id },
-          data: {
-            status: 'failed',
-            processedAt: new Date(),
-            failureReason:
-              error instanceof Error ? error.message : 'Unknown email failure',
-          },
-        });
-      }
+      await this.emailOutbox.sendQueuedEmails(emailMessageIds);
     }
   }
 

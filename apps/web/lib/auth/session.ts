@@ -25,6 +25,7 @@ export type AppSession = {
     email: string | null
     phone: string | null
     locale: string
+    emailVerifiedAt: string | null
   }
   platformAccess: {
     role: string | null
@@ -192,6 +193,7 @@ export function buildSessionFromAuth(
       email: auth.user.email,
       phone: auth.user.phone,
       locale: auth.user.locale,
+      emailVerifiedAt: auth.user.email_verified_at,
     },
     platformAccess,
     shops,

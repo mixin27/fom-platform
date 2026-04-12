@@ -11,6 +11,7 @@ import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { EmailOutboxService } from '../email/email-outbox.service';
 import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import type { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
@@ -194,7 +195,10 @@ const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class PlatformService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailOutbox: EmailOutboxService,
+  ) {}
 
   async getDashboard() {
     const now = new Date();
@@ -975,7 +979,9 @@ export class PlatformService {
       return invoice.id;
     });
 
-    return this.loadPaymentRowById(createdInvoiceId);
+    const createdInvoice = await this.loadPaymentRowById(createdInvoiceId);
+    void this.sendInvoiceNoticeEmail(createdInvoiceId, 'platform.invoice_notice');
+    return createdInvoice;
   }
 
   async updateInvoice(invoiceId: string, body: UpdatePlatformInvoiceDto) {
@@ -1043,7 +1049,14 @@ export class PlatformService {
       await this.syncSubscriptionStatusFromInvoices(tx, invoice.subscriptionId);
     });
 
-    return this.loadPaymentRowById(invoiceId);
+    const updatedInvoice = await this.loadPaymentRowById(invoiceId);
+    void this.sendInvoiceNoticeEmail(
+      invoiceId,
+      nextStatus === 'overdue'
+        ? 'platform.billing_notice'
+        : 'platform.invoice_notice',
+    );
+    return updatedInvoice;
   }
 
   async getSupport() {
@@ -2840,6 +2853,101 @@ export class PlatformService {
     }
 
     return Date.parse(value);
+  }
+
+  private async sendInvoiceNoticeEmail(
+    invoiceId: string,
+    templateKey: 'platform.invoice_notice' | 'platform.billing_notice',
+  ) {
+    const invoice = await (this.prisma as any).payment.findUnique({
+      where: { id: invoiceId },
+      include: {
+        subscription: {
+          include: {
+            plan: true,
+            shop: {
+              include: {
+                owner: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const owner = invoice?.subscription?.shop?.owner;
+    if (!invoice || !owner?.email) {
+      return;
+    }
+
+    const shop = invoice.subscription.shop;
+    const plan = invoice.subscription.plan;
+    const statusLabel = this.toTitleCase(invoice.status);
+    const amountLine = `Amount: ${invoice.amount.toLocaleString()} ${invoice.currency}`;
+    const dueAtLine = invoice.dueAt
+      ? `Due date: ${this.formatDateLabel(invoice.dueAt)}`
+      : 'Due date: No due date assigned';
+    const statusLine = `Status: ${statusLabel}`;
+    const planLine = `Plan: ${plan.name} (${plan.billingPeriod})`;
+
+    await this.emailOutbox.queueAndSendTemplatedEmail({
+      userId: owner.id,
+      shopId: shop.id,
+      toEmail: owner.email,
+      recipientName: owner.name,
+      templateKey,
+      variables: {
+        subject:
+          templateKey === 'platform.billing_notice'
+            ? `[${shop.name}] Billing follow-up for ${invoice.invoiceNo}`
+            : `[${shop.name}] Invoice ${invoice.invoiceNo}`,
+        title:
+          templateKey === 'platform.billing_notice'
+            ? `Billing follow-up for ${invoice.invoiceNo}`
+            : `Invoice ${invoice.invoiceNo}`,
+        intro:
+          templateKey === 'platform.billing_notice'
+            ? `There is a billing action required for ${shop.name}.`
+            : `A subscription invoice is available for ${shop.name}.`,
+        amountLine,
+        dueAtLine,
+        statusLine,
+        planLine,
+        ctaLabel: 'Open billing',
+        ctaUrl: `${this.getWebAppBaseUrl()}/dashboard/settings`,
+        footerText:
+          invoice.paymentMethod || invoice.providerRef
+            ? `Payment method: ${invoice.paymentMethod ?? 'n/a'}${
+                invoice.providerRef ? ` · Ref: ${invoice.providerRef}` : ''
+              }`
+            : `Invoice status: ${statusLabel}`,
+      },
+    });
+  }
+
+  private getWebAppBaseUrl() {
+    return (
+      process.env.WEB_APP_BASE_URL?.trim() ||
+      process.env.APP_WEB_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+  }
+
+  private formatDateLabel(value: Date) {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeZone: 'Asia/Yangon',
+    }).format(value);
+  }
+
+  private toTitleCase(value: string) {
+    return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map((segment) => segment[0]!.toUpperCase() + segment.slice(1))
+      .join(' ');
   }
 
   private normalizePhone(value: string | undefined | null): string | null {
