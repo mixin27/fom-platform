@@ -140,7 +140,7 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
           className="rounded-2xl border border-black/8 bg-[#fffaf5] p-2 text-[var(--fom-ink)] shadow-xl"
           onCloseAutoFocus={(event) => event.preventDefault()}
         >
-          <DropdownMenuLabel className="px-2 pt-1 pb-2 text-[11px] uppercase tracking-[0.18em] text-[rgba(28,28,30,0.42)]">
+          <DropdownMenuLabel className="px-2 pt-1 pb-2 text-[11px] tracking-[0.18em] text-[rgba(28,28,30,0.42)] uppercase">
             Switch shop
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
@@ -161,17 +161,17 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
                     key={shop.id}
                     value={shop.id}
                     disabled={isPending}
-                    className="min-w-0 rounded-xl px-2 py-2.5 text-[var(--fom-ink)] data-[highlighted]:bg-[rgba(28,28,30,0.05)] data-[highlighted]:text-[var(--fom-ink)] data-[state=checked]:bg-[rgba(244,98,42,0.08)]"
+                    className="min-w-0 rounded-xl px-2 py-2.5 text-[var(--fom-ink)] focus:bg-[rgba(28,28,30,0.05)]! focus:text-[var(--fom-ink)]! data-[highlighted]:bg-[rgba(28,28,30,0.05)]! data-[highlighted]:text-[var(--fom-ink)]! data-[state=checked]:bg-[rgba(244,98,42,0.08)]"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f7f4ef] text-xs font-semibold text-[var(--fom-ink)]">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f7f4ef] text-xs font-semibold !text-[var(--fom-ink)]">
                         {getShopAvatarLabel(shop.name)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-[var(--fom-ink)]">
+                        <p className="truncate text-sm font-medium !text-[var(--fom-ink)]">
                           {shop.name}
                         </p>
-                        <p className="mt-1 truncate text-xs text-[rgba(28,28,30,0.62)]">
+                        <p className="mt-1 truncate text-xs !text-[rgba(28,28,30,0.62)]">
                           {metadata}
                         </p>
                       </div>
@@ -185,7 +185,9 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
           <DropdownMenuSeparator className="my-2" />
 
           <div className="rounded-xl bg-[#f3ede5] px-3 py-2.5 text-xs text-[rgba(28,28,30,0.68)]">
-            <p className="font-medium text-[var(--fom-ink)]">{shopCountLabel}</p>
+            <p className="font-medium text-[var(--fom-ink)]">
+              {shopCountLabel}
+            </p>
             <p className="mt-1.5 leading-5">
               One subscription belongs to one shop. Switching workspace changes
               the active shop context only.
