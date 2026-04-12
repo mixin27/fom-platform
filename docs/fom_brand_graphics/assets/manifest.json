@@ -1,0 +1,272 @@
+[
+  {
+    "category": "social",
+    "name": "Facebook Profile Image",
+    "width": 1080,
+    "height": 1080,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/social/facebook-profile.svg",
+    "png": "assets/png/social/facebook-profile.png"
+  },
+  {
+    "category": "social",
+    "name": "Facebook Cover Image",
+    "width": 1640,
+    "height": 624,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/social/facebook-cover.svg",
+    "png": "assets/png/social/facebook-cover.png"
+  },
+  {
+    "category": "social",
+    "name": "Telegram Profile Image",
+    "width": 1080,
+    "height": 1080,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/social/telegram-profile.svg",
+    "png": "assets/png/social/telegram-profile.png"
+  },
+  {
+    "category": "social",
+    "name": "Telegram Cover Image",
+    "width": 1280,
+    "height": 720,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/social/telegram-cover.svg",
+    "png": "assets/png/social/telegram-cover.png"
+  },
+  {
+    "category": "app",
+    "name": "App Icon Master",
+    "width": 1024,
+    "height": 1024,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/app/app-icon-master-1024.svg",
+    "png": "assets/png/app/app-icon-master-1024.png"
+  },
+  {
+    "category": "app",
+    "name": "Android Icon 512",
+    "width": 512,
+    "height": 512,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/app/android-icon-512.svg",
+    "png": "assets/png/app/android-icon-512.png"
+  },
+  {
+    "category": "app",
+    "name": "Android Icon 192",
+    "width": 192,
+    "height": 192,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/app/android-icon-192.svg",
+    "png": "assets/png/app/android-icon-192.png"
+  },
+  {
+    "category": "app",
+    "name": "iOS App Icon 1024",
+    "width": 1024,
+    "height": 1024,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/app/ios-app-icon-1024.svg",
+    "png": "assets/png/app/ios-app-icon-1024.png"
+  },
+  {
+    "category": "app",
+    "name": "Notification Icon (Light)",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "required_transparent",
+    "svg": "assets/svg/app/notification-icon-light.svg",
+    "png": "assets/png/app/notification-icon-light.png"
+  },
+  {
+    "category": "app",
+    "name": "Notification Icon (Dark)",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "required_transparent",
+    "svg": "assets/svg/app/notification-icon-dark.svg",
+    "png": "assets/png/app/notification-icon-dark.png"
+  },
+  {
+    "category": "app",
+    "name": "Play Store Feature Graphic",
+    "width": 1024,
+    "height": 500,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/app/playstore-feature-graphic.svg",
+    "png": "assets/png/app/playstore-feature-graphic.png"
+  },
+  {
+    "category": "app",
+    "name": "Adaptive Icon Background",
+    "width": 432,
+    "height": 432,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/app/adaptive-icon-background.svg",
+    "png": "assets/png/app/adaptive-icon-background.png"
+  },
+  {
+    "category": "app",
+    "name": "Adaptive Icon Foreground",
+    "width": 432,
+    "height": 432,
+    "alphaPolicy": "required_transparent",
+    "svg": "assets/svg/app/adaptive-icon-foreground.svg",
+    "png": "assets/png/app/adaptive-icon-foreground.png"
+  },
+  {
+    "category": "web",
+    "name": "Web Logo Horizontal",
+    "width": 1200,
+    "height": 320,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/logo-horizontal.svg",
+    "png": "assets/png/web/logo-horizontal.png"
+  },
+  {
+    "category": "web",
+    "name": "Web Logo Horizontal (Light)",
+    "width": 1200,
+    "height": 320,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/logo-horizontal-light.svg",
+    "png": "assets/png/web/logo-horizontal-light.png"
+  },
+  {
+    "category": "web",
+    "name": "Web Logo Mark",
+    "width": 512,
+    "height": 512,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/logo-mark.svg",
+    "png": "assets/png/web/logo-mark.png"
+  },
+  {
+    "category": "web",
+    "name": "Favicon",
+    "width": 64,
+    "height": 64,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/favicon.svg",
+    "png": "assets/png/web/favicon.png"
+  },
+  {
+    "category": "web",
+    "name": "Favicon 32",
+    "width": 32,
+    "height": 32,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/favicon-32.svg",
+    "png": "assets/png/web/favicon-32.png"
+  },
+  {
+    "category": "web",
+    "name": "Favicon 16",
+    "width": 16,
+    "height": 16,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/favicon-16.svg",
+    "png": "assets/png/web/favicon-16.png"
+  },
+  {
+    "category": "web",
+    "name": "Apple Touch Icon",
+    "width": 180,
+    "height": 180,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/apple-touch-icon-180.svg",
+    "png": "assets/png/web/apple-touch-icon-180.png"
+  },
+  {
+    "category": "web",
+    "name": "Open Graph Image",
+    "width": 1200,
+    "height": 630,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/web/og-image-1200x630.svg",
+    "png": "assets/png/web/og-image-1200x630.png"
+  },
+  {
+    "category": "extras",
+    "name": "Icon - Order",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/icon-order.svg",
+    "png": "assets/png/extras/icon-order.png"
+  },
+  {
+    "category": "extras",
+    "name": "Icon - Customer",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/icon-customer.svg",
+    "png": "assets/png/extras/icon-customer.png"
+  },
+  {
+    "category": "extras",
+    "name": "Icon - Delivery",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/icon-delivery.svg",
+    "png": "assets/png/extras/icon-delivery.png"
+  },
+  {
+    "category": "extras",
+    "name": "Icon - Analytics",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/icon-analytics.svg",
+    "png": "assets/png/extras/icon-analytics.png"
+  },
+  {
+    "category": "extras",
+    "name": "Icon - Inventory",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/icon-inventory.svg",
+    "png": "assets/png/extras/icon-inventory.png"
+  },
+  {
+    "category": "extras",
+    "name": "Icon - Quick Reply",
+    "width": 256,
+    "height": 256,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/icon-quick-reply.svg",
+    "png": "assets/png/extras/icon-quick-reply.png"
+  },
+  {
+    "category": "extras",
+    "name": "Empty State Illustration",
+    "width": 1200,
+    "height": 840,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/empty-state-illustration.svg",
+    "png": "assets/png/extras/empty-state-illustration.png"
+  },
+  {
+    "category": "extras",
+    "name": "Background Pattern",
+    "width": 1600,
+    "height": 900,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/background-pattern-1600x900.svg",
+    "png": "assets/png/extras/background-pattern-1600x900.png"
+  },
+  {
+    "category": "extras",
+    "name": "Social Post Template",
+    "width": 1080,
+    "height": 1080,
+    "alphaPolicy": "opaque",
+    "svg": "assets/svg/extras/social-post-template-1080.svg",
+    "png": "assets/png/extras/social-post-template-1080.png"
+  }
+]

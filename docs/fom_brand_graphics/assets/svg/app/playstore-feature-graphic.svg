@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500" fill="none" role="img" aria-label="FOM brand asset">
+  <defs>
+    <linearGradient id="grad-shell" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#313D4D"/>
+      <stop offset="100%" stop-color="#0F1722"/>
+    </linearGradient>
+    <linearGradient id="grad-core" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4622A"/>
+      <stop offset="100%" stop-color="#E0521C"/>
+    </linearGradient>
+    <linearGradient id="bg-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F141B"/>
+      <stop offset="100%" stop-color="#242E3B"/>
+    </linearGradient>
+    <linearGradient id="bg-sunset" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B222E"/>
+      <stop offset="50%" stop-color="#202C3D"/>
+      <stop offset="100%" stop-color="#102224"/>
+    </linearGradient>
+    <linearGradient id="bg-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0C5D5D"/>
+      <stop offset="100%" stop-color="#1E9E96"/>
+    </linearGradient>
+    <radialGradient id="glow-orange" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#F4622A" stop-opacity="0.70"/>
+      <stop offset="100%" stop-color="#F4622A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-teal" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#1E9E96" stop-opacity="0.66"/>
+      <stop offset="100%" stop-color="#1E9E96" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid-32" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+    <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    
+  </defs>
+  
+      <rect width="1024" height="500" fill="url(#bg-sunset)"/>
+      <rect width="1024" height="500" fill="url(#grid-32)" opacity="0.35"/>
+      <circle cx="120" cy="64" r="200" fill="url(#glow-orange)"/>
+      <circle cx="940" cy="500" r="200" fill="url(#glow-teal)"/>
+
+      <text x="64" y="156" font-family="Arial, Helvetica, sans-serif" font-size="60" font-weight="700" fill="#FFFFFF">FOM Order Manager</text>
+      <text x="64" y="206" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#FFFFFF" fill-opacity="0.86">Manage Facebook and chat orders from one dashboard.</text>
+      <text x="64" y="240" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#FFFFFF" fill-opacity="0.80">Fast replies, clear statuses, and smarter handoff.</text>
+      <text x="64" y="272" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#FFFFFF" fill-opacity="0.72">Built for social-commerce teams.</text>
+
+      <g transform="translate(64 314)">
+    <rect width="252" height="108" rx="54" fill="#FFFFFF" fill-opacity="0.12"/>
+    <text x="126" y="38" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="29" fill="#FFFFFF" fill-opacity="0.84">Shop Teams</text>
+    <text x="126" y="75" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="39" font-weight="700" fill="#FFFFFF">Built Ready</text>
+  </g>
+      <g transform="translate(330 314)">
+    <rect width="252" height="108" rx="54" fill="#FFFFFF" fill-opacity="0.12"/>
+    <text x="126" y="38" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="29" fill="#FFFFFF" fill-opacity="0.84">Daily Flow</text>
+    <text x="126" y="75" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="39" font-weight="700" fill="#FFFFFF">Always On</text>
+  </g>
+
+      <g transform="translate(738 52)">
+        <rect width="250" height="392" rx="30" fill="#FFFFFF" fill-opacity="0.08"/>
+        <rect x="14" y="14" width="222" height="364" rx="22" fill="#FFFFFF" fill-opacity="0.11"/>
+        <rect x="34" y="72" width="174" height="80" rx="18" fill="#FFFFFF" fill-opacity="0.18"/>
+        <rect x="34" y="170" width="174" height="52" rx="14" fill="#FFFFFF" fill-opacity="0.14"/>
+        <rect x="34" y="238" width="114" height="52" rx="14" fill="#FFFFFF" fill-opacity="0.14"/>
+      </g>
+
+      <g transform="translate(770 102)" filter="url(#soft-shadow)">
+    <rect x="0" y="0" width="186" height="186" rx="44.64" fill="url(#grad-shell)"/>
+    <rect x="22.32" y="22.32" width="141.36" height="141.36" rx="33.48" fill="url(#grad-core)"/>
+    <circle cx="150.288" cy="150.288" r="16.74" fill="#1E9E96"/>
+    <text x="93" y="113.46" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="81.84" font-weight="700" fill="#FFFFFF" letter-spacing="3.72">F</text>
+  </g>
+    
+</svg>

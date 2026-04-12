@@ -41,6 +41,56 @@ export const metadata: Metadata = {
   },
   description:
     "Web surfaces for the FOM SaaS platform: landing page, platform admin console, and shop owner workspace.",
+  icons: {
+    icon: [
+      {
+        url: "/brand/png/favicon-16.png",
+        sizes: "16x16",
+        type: "image/png",
+      },
+      {
+        url: "/brand/png/favicon-32.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        url: "/brand/png/favicon.png",
+        sizes: "64x64",
+        type: "image/png",
+      },
+    ],
+    shortcut: [
+      {
+        url: "/brand/png/favicon-32.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/brand/png/apple-touch-icon-180.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+  openGraph: {
+    title: "FOM Platform",
+    description:
+      "Web surfaces for the FOM SaaS platform: landing page, platform admin console, and shop owner workspace.",
+    images: [
+      {
+        url: "/brand/png/og-image-1200x630.png",
+        width: 1200,
+        height: 630,
+        alt: "FOM Order Manager",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/brand/png/og-image-1200x630.png"],
+  },
 }
 
 export default function RootLayout({

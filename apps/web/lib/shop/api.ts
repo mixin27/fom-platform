@@ -4,7 +4,11 @@ import { redirect } from "next/navigation"
 
 import { type ApiSuccess } from "@/lib/auth/api"
 import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
-import { getActiveShop, requireShopAdmin } from "@/lib/auth/session"
+import {
+  defaultPathForSession,
+  getActiveShop,
+  requireShopAdmin,
+} from "@/lib/auth/session"
 
 type SearchParamsValue = string | string[] | undefined
 type SearchParamsRecord = Record<string, SearchParamsValue>
@@ -388,7 +392,7 @@ export async function getShopPortalContext() {
   const activeShop = getActiveShop(session)
 
   if (!activeShop) {
-    redirect("/sign-in?error=no_access")
+    redirect(defaultPathForSession(session))
   }
 
   return {

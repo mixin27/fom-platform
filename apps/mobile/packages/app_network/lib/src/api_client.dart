@@ -71,7 +71,7 @@ class ApiClient {
     try {
       final response = await _dio.patch<dynamic>(
         path,
-        data: data,
+        data: data ?? <String, dynamic>{},
         options: _options(skipAuth: skipAuth, headers: headers),
       );
       _assertSuccessStatus(response.statusCode);
@@ -92,7 +92,7 @@ class ApiClient {
     try {
       final response = await _dio.patch<dynamic>(
         path,
-        data: data,
+        data: data ?? <String, dynamic>{},
         queryParameters: queryParameters,
         options: _options(skipAuth: skipAuth, headers: headers),
       );
@@ -118,7 +118,7 @@ class ApiClient {
     try {
       final response = await _dio.post<dynamic>(
         path,
-        data: data,
+        data: data ?? <String, dynamic>{},
         queryParameters: queryParameters,
         options: _options(skipAuth: skipAuth, headers: headers),
       );
@@ -145,7 +145,7 @@ class ApiClient {
     try {
       final response = await _dio.post<dynamic>(
         path,
-        data: data,
+        data: data ?? <String, dynamic>{},
         queryParameters: queryParameters,
         options: _options(skipAuth: skipAuth, headers: headers),
       );

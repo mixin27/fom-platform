@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   conflictError,
   notFoundError,
@@ -9,6 +9,7 @@ import { permissions } from '../common/http/rbac.constants';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { paginate } from '../common/utils/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ShopsService } from '../shops/shops.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import {
@@ -27,10 +28,12 @@ export class DeliveriesService {
     out_for_delivery: 1,
     delivered: 2,
   };
+  private readonly logger = new Logger(DeliveriesService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listDeliveries(
@@ -93,13 +96,13 @@ export class DeliveriesService {
     shopId: string,
     body: CreateDeliveryDto,
   ) {
-    await this.shopsService.assertPermission(
+    const { shop } = await this.shopsService.assertPermission(
       currentUser.id,
       shopId,
       permissions.deliveriesWrite,
     );
 
-    return this.prisma.$transaction(async (tx) => {
+    const createdDelivery = await this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, body.order_id);
       await this.assertDriverBelongsToShop(shopId, body.driver_user_id);
 
@@ -182,6 +185,30 @@ export class DeliveriesService {
 
       return this.serializeDelivery(delivery.id, tx);
     });
+
+    void this.notificationsService
+      .notifyOrderStatusChanged({
+        shopId,
+        shopName: shop.name,
+        actorUserId: currentUser.id,
+        actorName: currentUser.name,
+        orderId: createdDelivery.order.id,
+        orderNo: createdDelivery.order.order_no,
+        customerName: createdDelivery.order.customer.name,
+        township: createdDelivery.order.customer.township,
+        totalPrice: createdDelivery.order.total_price,
+        currency: createdDelivery.order.currency,
+        statusLabel: this.toDeliveryStatusLabel(createdDelivery.status),
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish delivery-created notification for delivery ${createdDelivery.id}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
+    return createdDelivery;
   }
 
   async updateDelivery(
@@ -190,7 +217,7 @@ export class DeliveriesService {
     deliveryId: string,
     body: UpdateDeliveryDto,
   ) {
-    await this.shopsService.assertPermission(
+    const { shop } = await this.shopsService.assertPermission(
       currentUser.id,
       shopId,
       permissions.deliveriesWrite,
@@ -212,7 +239,7 @@ export class DeliveriesService {
       ]);
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedDelivery = await this.prisma.$transaction(async (tx) => {
       const delivery = await tx.delivery.findUnique({
         where: { id: deliveryId },
         include: {
@@ -316,6 +343,38 @@ export class DeliveriesService {
 
       return this.serializeDelivery(updated.id, tx);
     });
+
+    const shouldNotify =
+      body.status !== undefined ||
+      body.driver_user_id !== undefined ||
+      body.scheduled_at !== undefined ||
+      body.delivered_at !== undefined;
+
+    if (shouldNotify) {
+      void this.notificationsService
+        .notifyOrderStatusChanged({
+          shopId,
+          shopName: shop.name,
+          actorUserId: currentUser.id,
+          actorName: currentUser.name,
+          orderId: updatedDelivery.order.id,
+          orderNo: updatedDelivery.order.order_no,
+          customerName: updatedDelivery.order.customer.name,
+          township: updatedDelivery.order.customer.township,
+          totalPrice: updatedDelivery.order.total_price,
+          currency: updatedDelivery.order.currency,
+          statusLabel: this.toDeliveryStatusLabel(updatedDelivery.status),
+        })
+        .catch((error) => {
+          this.logger.warn(
+            `Failed to publish delivery-update notification for delivery ${updatedDelivery.id}: ${
+              error instanceof Error ? error.message : 'unknown error'
+            }`,
+          );
+        });
+    }
+
+    return updatedDelivery;
   }
 
   async serializeDelivery(deliveryId: string, db: DbClient = this.prisma) {
@@ -495,5 +554,18 @@ export class DeliveriesService {
 
   private toOrderRankFromDelivery(deliveryStatus: DeliveryStatusValue) {
     return this.toOrderRank(this.toOrderStatusFromDelivery(deliveryStatus));
+  }
+
+  private toDeliveryStatusLabel(status: string) {
+    switch (status) {
+      case 'scheduled':
+        return 'Delivery scheduled';
+      case 'out_for_delivery':
+        return 'Out for delivery';
+      case 'delivered':
+        return 'Order delivered';
+      default:
+        return 'Delivery updated';
+    }
   }
 }

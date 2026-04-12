@@ -23,6 +23,7 @@ import { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
 import { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import { ListPlatformUsersQueryDto } from './dto/list-platform-users-query.dto';
 import { SearchPlatformOwnerAccountsQueryDto } from './dto/search-platform-owner-accounts-query.dto';
 import { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
 import { UpdatePlatformPlanDto } from './dto/update-platform-plan.dto';
@@ -53,6 +54,14 @@ export class PlatformController {
   @ApiOperation({ summary: 'List shops for the platform workspace' })
   listShops(@Query() query: ListPlatformShopsQueryDto) {
     return this.platformService.listShops(query);
+  }
+
+  @Get('users')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformShopsRead)
+  @ApiOperation({ summary: 'List users across the platform workspace' })
+  listUsers(@Query() query: ListPlatformUsersQueryDto) {
+    return this.platformService.listUsers(query);
   }
 
   @Get('owner-accounts')

@@ -40,6 +40,7 @@ class AppRouter {
   static const registerPath = AppRoutePaths.register;
   static const authEmailPath = AppRoutePaths.authEmail;
   static const authOtpPath = AppRoutePaths.authOtp;
+  static const shopSelectionPath = AppRoutePaths.shopSelection;
   static const devtoolsLogsPath = AppRoutePaths.devtoolsLogs;
   static const ordersPath = AppRoutePaths.orders;
   static const reportsPath = AppRoutePaths.reports;
@@ -74,6 +75,11 @@ class AppRouter {
       GoRoute(
         path: registerPath,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: shopSelectionPath,
+        builder: (context, state) =>
+            ShopSelectionPage(returnTo: readFrom(state.uri)),
       ),
       if (_enableLogDevTools)
         GoRoute(
@@ -215,6 +221,18 @@ class AppRouter {
       return authRedirectPath(from: state.uri.toString());
     }
 
+    if (_authBloc.state.hasNoShopAccess ||
+        _authBloc.state.requiresShopSelection) {
+      if (path == shopSelectionPath) {
+        return null;
+      }
+
+      return Uri(
+        path: shopSelectionPath,
+        queryParameters: <String, String>{'from': state.uri.toString()},
+      ).toString();
+    }
+
     if (isSplash || path == onboardingPath || isAuthPath(path)) {
       final from = readFrom(state.uri);
       return from ?? ordersPath;
@@ -255,25 +273,21 @@ class AppRouter {
   }
 
   String _resolveCurrentShopId() {
-    final user = _authBloc.state.user;
-    if (user == null || user.shopAccesses.isEmpty) {
+    final shop = _authBloc.state.activeShop;
+    if (shop == null) {
       return "";
     }
 
-    return user.shopAccesses.first.shopId;
+    return shop.shopId;
   }
 
   String _resolveCurrentShopName() {
-    final rawName = _authBloc.state.user?.name.trim() ?? "";
+    final rawName = _authBloc.state.activeShop?.shopName.trim() ?? "";
     if (rawName.isEmpty) {
       return "My Shop";
     }
 
-    if (rawName.toLowerCase().endsWith("shop")) {
-      return rawName;
-    }
-
-    return "$rawName Shop";
+    return rawName;
   }
 }
 

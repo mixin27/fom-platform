@@ -44,6 +44,15 @@ final class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
 
+final class AuthShopSelected extends AuthEvent {
+  const AuthShopSelected({required this.shopId});
+
+  final String shopId;
+
+  @override
+  List<Object?> get props => <Object?>[shopId];
+}
+
 final class AuthErrorDismissed extends AuthEvent {
   const AuthErrorDismissed();
 }

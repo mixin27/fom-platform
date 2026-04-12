@@ -120,6 +120,33 @@ export type PlatformOwnerAccount = {
   has_password_credential: boolean
 }
 
+export type PlatformUser = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  locale: string
+  created_at: string
+  last_active_at: string | null
+  active_session_count: number
+  auth_methods: string[]
+  access_type: "platform" | "shop_owner" | "staff" | "no_shop"
+  platform_roles: Array<{
+    id: string
+    code: string
+    name: string
+  }>
+  platform_permissions_count: number
+  owned_shop_count: number
+  active_shop_count: number
+  shops: Array<{
+    shop_id: string
+    shop_name: string
+    membership_status: string
+    role: string | null
+  }>
+}
+
 function buildQueryString(searchParams?: SearchParamsRecord) {
   const query = new URLSearchParams()
 
@@ -226,6 +253,16 @@ export async function getPlatformShops(searchParams?: SearchParamsRecord) {
 
   return platformRequest<Array<PlatformShop>>(
     "/api/v1/platform/shops",
+    searchParams,
+    retryPath
+  )
+}
+
+export async function getPlatformUsers(searchParams?: SearchParamsRecord) {
+  const retryPath = `/platform/users${buildQueryString(searchParams)}`
+
+  return platformRequest<Array<PlatformUser>>(
+    "/api/v1/platform/users",
     searchParams,
     retryPath
   )

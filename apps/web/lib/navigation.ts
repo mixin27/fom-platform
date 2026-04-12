@@ -2,11 +2,13 @@ export type NavIconName =
   | "dashboard"
   | "orders"
   | "customers"
+  | "staffs"
   | "deliveries"
   | "templates"
   | "reports"
   | "settings"
   | "shops"
+  | "users"
   | "subscriptions"
   | "support"
 
@@ -21,6 +23,7 @@ export const shopPortalNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
   { href: "/dashboard/customers", label: "Customers", icon: "customers" },
+  { href: "/dashboard/staffs", label: "Staffs", icon: "staffs" },
   {
     href: "/dashboard/deliveries",
     label: "Deliveries",
@@ -38,6 +41,7 @@ export const shopPortalNav: NavItem[] = [
 export const platformPortalNav: NavItem[] = [
   { href: "/platform", label: "Dashboard", icon: "dashboard", exact: true },
   { href: "/platform/shops", label: "Shops", icon: "shops" },
+  { href: "/platform/users", label: "Users", icon: "users" },
   {
     href: "/platform/subscriptions",
     label: "Subscriptions",

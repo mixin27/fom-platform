@@ -18,16 +18,27 @@ class AuthPlatformAccess extends Equatable {
 class AuthShopAccess extends Equatable {
   const AuthShopAccess({
     required this.shopId,
+    required this.shopName,
+    required this.timezone,
     required this.role,
     required this.roles,
     required this.permissions,
   });
 
   final String shopId;
+  final String shopName;
+  final String timezone;
   final String? role;
   final List<String> roles;
   final List<String> permissions;
 
   @override
-  List<Object?> get props => <Object?>[shopId, role, roles, permissions];
+  List<Object?> get props => <Object?>[
+    shopId,
+    shopName,
+    timezone,
+    role,
+    roles,
+    permissions,
+  ];
 }

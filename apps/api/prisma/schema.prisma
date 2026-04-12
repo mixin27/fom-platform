@@ -58,6 +58,9 @@ model User {
   roleAssignments    UserRoleAssignment[]
   statusEvents       OrderStatusEvent[]  @relation("ChangedByUser")
   assignedDeliveries Delivery[]          @relation("DeliveryDriver")
+  notifications      Notification[]
+  notificationPreferences NotificationPreference[]
+  emailMessages      EmailMessage[]
   assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
 }
@@ -75,6 +78,8 @@ model Shop {
   messageTemplates MessageTemplate[]
   subscription     Subscription?
   supportIssues    PlatformSupportIssue[]
+  notifications    Notification[]
+  emailMessages    EmailMessage[]
 
   @@index([ownerUserId])
 }
@@ -413,4 +418,66 @@ model Session {
   @@index([accessExpiresAt])
   @@index([refreshExpiresAt])
   @@map("sessions")
+}
+
+model Notification {
+  id               String    @id @default(cuid())
+  userId           String
+  shopId           String?
+  shopNameSnapshot String?
+  category         String
+  title            String
+  body             String
+  actionType       String?
+  actionTarget     String?
+  readAt           DateTime?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop             Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  emailMessages    EmailMessage[]
+
+  @@index([userId, readAt, createdAt])
+  @@index([shopId, category, createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id           String   @id @default(cuid())
+  userId       String
+  category     String
+  inAppEnabled Boolean  @default(true)
+  emailEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model EmailMessage {
+  id             String        @id @default(cuid())
+  userId         String?
+  notificationId String?
+  shopId         String?
+  category       String
+  toEmail        String
+  recipientName  String?
+  subject        String
+  textBody       String
+  status         String        @default("queued")
+  deliveryMode   String        @default("log")
+  queuedAt       DateTime      @default(now())
+  processedAt    DateTime?
+  failureReason  String?
+  updatedAt      DateTime      @updatedAt
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  notification   Notification? @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+  shop           Shop?         @relation(fields: [shopId], references: [id], onDelete: SetNull)
+
+  @@index([status, queuedAt])
+  @@index([userId, queuedAt])
+  @@index([notificationId])
+  @@map("email_outbox")
 }

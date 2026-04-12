@@ -11,8 +11,10 @@ import '../data/repositories/auth_repository_impl.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../domain/usecases/logout_use_case.dart';
+import '../domain/usecases/read_selected_shop_use_case.dart';
 import '../domain/usecases/register_use_case.dart';
 import '../domain/usecases/restore_auth_session_use_case.dart';
+import '../domain/usecases/save_selected_shop_use_case.dart';
 import '../presentation/bloc/auth_bloc.dart';
 
 class AuthModule implements DependencyModule {
@@ -49,12 +51,20 @@ class AuthModule implements DependencyModule {
       ..putLazySingletonIfAbsent<LogoutUseCase>(
         () => LogoutUseCase(getIt<AuthRepository>()),
       )
+      ..putLazySingletonIfAbsent<ReadSelectedShopUseCase>(
+        () => ReadSelectedShopUseCase(getIt<AuthRepository>()),
+      )
+      ..putLazySingletonIfAbsent<SaveSelectedShopUseCase>(
+        () => SaveSelectedShopUseCase(getIt<AuthRepository>()),
+      )
       ..putLazySingletonIfAbsent<AuthBloc>(
         () => AuthBloc(
           restoreAuthSessionUseCase: getIt<RestoreAuthSessionUseCase>(),
           loginUseCase: getIt<LoginUseCase>(),
           registerUseCase: getIt<RegisterUseCase>(),
           logoutUseCase: getIt<LogoutUseCase>(),
+          readSelectedShopUseCase: getIt<ReadSelectedShopUseCase>(),
+          saveSelectedShopUseCase: getIt<SaveSelectedShopUseCase>(),
           logger: getIt<AppLogger>(),
         ),
       );

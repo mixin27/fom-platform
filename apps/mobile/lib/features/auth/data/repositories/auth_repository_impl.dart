@@ -55,6 +55,21 @@ class AuthRepositoryImpl with LoggerMixin implements AuthRepository {
   }
 
   @override
+  Future<Result<String?>> readSelectedShopId() async {
+    try {
+      final shopId = await _localDataSource.readSelectedShopId();
+      return Result<String?>.success(shopId);
+    } catch (error, stackTrace) {
+      log.error(
+        'Read selected shop failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<String?>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
   Future<Result<AuthSession>> refreshSession({required String refreshToken}) {
     return _runSessionFlow(
       action: () => _remoteDataSource.refresh(refreshToken: refreshToken),
@@ -134,6 +149,21 @@ class AuthRepositoryImpl with LoggerMixin implements AuthRepository {
       );
       await _localDataSource.clearSession();
       return Result<AuthSession?>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<void>> saveSelectedShopId(String? shopId) async {
+    try {
+      await _localDataSource.saveSelectedShopId(shopId);
+      return Result<void>.success(null);
+    } catch (error, stackTrace) {
+      log.error(
+        'Save selected shop failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<void>.failure(FailureMapper.from(error));
     }
   }
 
