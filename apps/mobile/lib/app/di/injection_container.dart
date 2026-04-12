@@ -8,6 +8,7 @@ import "../../features/notifications/feature_notifications.dart";
 import "../../features/onboarding/feature_onboarding.dart";
 import "../../features/orders/feature_orders.dart";
 import "../../features/reports/feature_reports.dart";
+import "../../features/settings/feature_settings.dart";
 import "../config/app_config.dart";
 import "../router/app_router.dart";
 import "modules/app_core_module.dart";
@@ -41,6 +42,7 @@ Future<void> configureDependencies({
     const CustomersModule(),
     const NotificationsModule(),
     const ReportsModule(),
+    const SettingsModule(),
     const RouterModule(),
     // more module registration here
   ];

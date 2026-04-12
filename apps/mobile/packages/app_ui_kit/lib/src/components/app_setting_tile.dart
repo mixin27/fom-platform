@@ -56,6 +56,7 @@ class AppSettingTile extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.leading,
     this.iconEmoji,
     this.iconBgColor,
     this.trailingValue,
@@ -70,6 +71,9 @@ class AppSettingTile extends StatelessWidget {
 
   /// Optional sub-description.
   final String? subtitle;
+
+  /// Optional leading widget shown inside the icon box.
+  final Widget? leading;
 
   /// Emoji or text based icon character to show in the leading box.
   final String? iconEmoji;
@@ -103,7 +107,7 @@ class AppSettingTile extends StatelessWidget {
           child: Row(
             children: [
               // Lead icon box
-              if (iconEmoji != null) ...[
+              if (leading != null || iconEmoji != null) ...[
                 Container(
                   width: 36,
                   height: 36,
@@ -112,7 +116,9 @@ class AppSettingTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(11),
                   ),
                   alignment: Alignment.center,
-                  child: Text(iconEmoji!, style: const TextStyle(fontSize: 17)),
+                  child:
+                      leading ??
+                      Text(iconEmoji!, style: const TextStyle(fontSize: 17)),
                 ),
                 const SizedBox(width: 12),
               ],

@@ -53,6 +53,10 @@ final class AuthShopSelected extends AuthEvent {
   List<Object?> get props => <Object?>[shopId];
 }
 
+final class AuthSessionRefreshRequested extends AuthEvent {
+  const AuthSessionRefreshRequested();
+}
+
 final class AuthErrorDismissed extends AuthEvent {
   const AuthErrorDismissed();
 }

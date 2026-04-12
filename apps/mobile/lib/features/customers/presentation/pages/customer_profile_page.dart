@@ -2,13 +2,18 @@ import "package:app_ui_kit/app_ui_kit.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:fom_mobile/app/di/injection_container.dart";
+import "package:fom_mobile/app/router/app_route_paths.dart";
+import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
 
+import "../../domain/entities/customer_draft.dart";
 import "../../domain/entities/customer_list_item.dart";
 import "../../domain/entities/customer_recent_order.dart";
+import "../../domain/usecases/update_customer_use_case.dart";
 import "../bloc/customer_profile_bloc.dart";
 import "../bloc/customer_profile_event.dart";
 import "../bloc/customer_profile_state.dart";
+import "../widgets/customer_editor_sheet.dart";
 
 class CustomerProfilePage extends StatelessWidget {
   const CustomerProfilePage({
@@ -135,7 +140,9 @@ class _CustomerProfileView extends StatelessWidget {
       averageOrderText: _formatCompactAmount(average),
       deliveredRateText: "${normalized.deliveredRate}%",
       onBackPressed: () => Navigator.of(context).pop(),
-      onMorePressed: () {},
+      onMorePressed: customer == null
+          ? null
+          : () => _openEditCustomerSheet(context, customer),
     );
   }
 
@@ -167,7 +174,7 @@ class _CustomerProfileView extends StatelessWidget {
               borderColor: AppColors.softOrange,
               backgroundColor: AppColors.softOrangeLight,
               foregroundColor: AppColors.softOrange,
-              onTap: () {},
+              onTap: () => context.push(AppRoutePaths.addOrder),
             ),
           ),
           const SizedBox(width: 8),
@@ -256,6 +263,56 @@ class _CustomerProfileView extends StatelessWidget {
       const CustomerProfileRefreshRequested(),
     );
     await Future<void>.delayed(const Duration(milliseconds: 800));
+  }
+
+  Future<void> _openEditCustomerSheet(
+    BuildContext context,
+    CustomerListItem customer,
+  ) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => CustomerEditorSheet(
+        title: 'Edit Customer',
+        submitLabel: 'Save Changes',
+        initialCustomer: customer,
+        onSubmitted: (draft) async {
+          final updateResult = await getIt<UpdateCustomerUseCase>().call(
+            UpdateCustomerParams(
+              shopId: customer.shopId,
+              customerId: customer.id,
+              draft: CustomerDraft(
+                name: draft.name,
+                phone: draft.phone,
+                township: draft.township,
+                address: draft.address,
+                notes: draft.notes,
+              ),
+            ),
+          );
+          final failure = updateResult.failureOrNull;
+
+          if (failure != null) {
+            throw Exception(failure.message);
+          }
+        },
+      ),
+    );
+
+    if (!context.mounted || result != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Customer updated successfully.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   CustomerListItem _fallbackCustomer() {

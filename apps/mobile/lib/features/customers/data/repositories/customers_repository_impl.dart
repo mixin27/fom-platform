@@ -1,6 +1,7 @@
 import 'package:app_core/app_core.dart';
 import 'package:app_logger/app_logger.dart';
 
+import '../../domain/entities/customer_draft.dart';
 import '../../domain/entities/customer_list_item.dart';
 import '../../domain/repositories/customers_repository.dart';
 import '../datasources/customers_local_data_source.dart';
@@ -75,6 +76,64 @@ class CustomersRepositoryImpl with LoggerMixin implements CustomersRepository {
         stackTrace: stackTrace,
       );
       return Result<void>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<CustomerListItem>> createCustomer({
+    required String shopId,
+    required CustomerDraft draft,
+  }) async {
+    try {
+      final customer = await _remoteDataSource.createCustomer(
+        shopId: shopId,
+        draft: draft,
+      );
+
+      await _localDataSource.upsertCustomer(
+        customer: customer,
+        syncedAt: DateTime.now(),
+      );
+
+      log.info("Customer created: shop=$shopId, customer=${customer.id}");
+      return Result<CustomerListItem>.success(customer);
+    } catch (error, stackTrace) {
+      log.error(
+        'Failed to create customer',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<CustomerListItem>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<CustomerListItem>> updateCustomer({
+    required String shopId,
+    required String customerId,
+    required CustomerDraft draft,
+  }) async {
+    try {
+      final customer = await _remoteDataSource.updateCustomer(
+        shopId: shopId,
+        customerId: customerId,
+        draft: draft,
+      );
+
+      await _localDataSource.upsertCustomer(
+        customer: customer,
+        syncedAt: DateTime.now(),
+      );
+
+      log.info("Customer updated: shop=$shopId, customer=$customerId");
+      return Result<CustomerListItem>.success(customer);
+    } catch (error, stackTrace) {
+      log.error(
+        'Failed to update customer',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<CustomerListItem>.failure(FailureMapper.from(error));
     }
   }
 
