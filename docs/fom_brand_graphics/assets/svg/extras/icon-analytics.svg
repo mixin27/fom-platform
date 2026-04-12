@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none" role="img" aria-label="FOM brand asset">
+  <defs>
+    <linearGradient id="grad-shell" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#313D4D"/>
+      <stop offset="100%" stop-color="#0F1722"/>
+    </linearGradient>
+    <linearGradient id="grad-core" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4622A"/>
+      <stop offset="100%" stop-color="#E0521C"/>
+    </linearGradient>
+    <linearGradient id="bg-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F141B"/>
+      <stop offset="100%" stop-color="#242E3B"/>
+    </linearGradient>
+    <linearGradient id="bg-sunset" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B222E"/>
+      <stop offset="50%" stop-color="#202C3D"/>
+      <stop offset="100%" stop-color="#102224"/>
+    </linearGradient>
+    <linearGradient id="bg-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0C5D5D"/>
+      <stop offset="100%" stop-color="#1E9E96"/>
+    </linearGradient>
+    <radialGradient id="glow-orange" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#F4622A" stop-opacity="0.70"/>
+      <stop offset="100%" stop-color="#F4622A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-teal" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#1E9E96" stop-opacity="0.66"/>
+      <stop offset="100%" stop-color="#1E9E96" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid-32" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+    <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    
+  </defs>
+  
+      <rect width="256" height="256" fill="url(#bg-dark)"/>
+      <rect x="22" y="22" width="212" height="212" rx="44" fill="#F4622A" fill-opacity="0.16"/>
+      
+        <path d="M62 190H194" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+        <rect x="74" y="132" width="26" height="58" rx="8" fill="#FFFFFF"/>
+        <rect x="116" y="102" width="26" height="88" rx="8" fill="#FFFFFF"/>
+        <rect x="158" y="84" width="26" height="106" rx="8" fill="#FFFFFF"/>
+        <path d="M70 106L114 82L146 106L188 70" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      
+    
+</svg>
