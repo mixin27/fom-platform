@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import { defaultPathForSession, getSession } from "@/lib/auth/session"
+import { getMarketingPlans, type MarketingPlan } from "@/lib/marketing/api"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -72,62 +73,20 @@ const featureCards = [
 
 const workflowSteps = [
   {
-    title: "Create your shop",
-    body: "Set up your workspace quickly and start capturing orders without technical onboarding.",
+    title: "Create your account",
+    body: "Register with email and set up your first shop in a few minutes.",
   },
   {
-    title: "Get an order on Messenger",
-    body: "Customers continue messaging you the same way they already do on Facebook.",
+    title: "Capture Messenger orders",
+    body: "Keep selling through Facebook and Messenger while the app handles the operational side.",
   },
   {
-    title: "Add it in seconds",
-    body: "Paste chat or type the details, then save and move on to the next customer.",
+    title: "Save clean order data",
+    body: "Paste chat or type the details once, then keep customer, item, and address records together.",
   },
   {
-    title: "Track until delivered",
-    body: "Keep delivery and status updates moving until the order is fully completed.",
-  },
-]
-
-const pricingCards = [
-  {
-    name: "Starter",
-    price: "5,000",
-    detail: "For smaller shops getting started",
-    features: [
-      "Up to 200 orders per month",
-      "Full order management",
-      "Customer profiles",
-      "Daily summary",
-    ],
-    cta: "Get started",
-    featured: false,
-  },
-  {
-    name: "Professional",
-    price: "10,000",
-    detail: "For growing Facebook-first shops",
-    features: [
-      "Unlimited orders",
-      "Weekly and monthly reports",
-      "Message templates",
-      "Advanced search and filters",
-    ],
-    cta: "Start 7-day free trial",
-    featured: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Let's talk",
-    detail: "For larger shops and teams",
-    features: [
-      "Multi-user staff accounts",
-      "Custom onboarding",
-      "Operational support",
-      "Future integration options",
-    ],
-    cta: "Contact us",
-    featured: false,
+    title: "Track delivery and payment",
+    body: "Move from new to confirmed to delivered with a clear daily view of what still needs attention.",
   },
 ]
 
@@ -145,14 +104,120 @@ const faqItems = [
     a: "Yes. Daily summaries are core, and weekly and monthly reporting are already part of the backend scope.",
   },
   {
-    q: "Is this only for mobile?",
-    a: "No. The platform can support both shop-owner workspace flows and a platform admin console on the web.",
+    q: "Can one owner manage more than one shop?",
+    a: "Yes. One account can switch between multiple shops, while each shop keeps its own subscription and billing state.",
   },
 ]
 
+function formatPlanPrice(plan: MarketingPlan) {
+  if (plan.price === 0) {
+    return "Free"
+  }
+
+  return new Intl.NumberFormat("en-US").format(plan.price)
+}
+
+function getPlanPeriodLabel(plan: MarketingPlan) {
+  switch (plan.billing_period) {
+    case "trial":
+      return "Free trial"
+    case "monthly":
+      return "Monthly billing"
+    case "yearly":
+      return "Yearly billing"
+    default:
+      return plan.billing_period
+    }
+}
+
+function getPlanSummary(plan: MarketingPlan, monthlyPlan: MarketingPlan | null) {
+  if (plan.description?.trim()) {
+    return plan.description.trim()
+  }
+
+  if (plan.billing_period === "trial") {
+    return "Start using the shop workflow before moving into paid billing."
+  }
+
+  if (
+    plan.billing_period === "yearly" &&
+    monthlyPlan &&
+    monthlyPlan.currency === plan.currency
+  ) {
+    const savings = monthlyPlan.price * 12 - plan.price
+
+    if (savings > 0) {
+      return `Save ${new Intl.NumberFormat("en-US").format(savings)} ${plan.currency} compared with paying monthly for a year.`
+    }
+  }
+
+  if (plan.billing_period === "monthly") {
+    return "Flexible month-to-month billing for a single active shop subscription."
+  }
+
+  if (plan.billing_period === "yearly") {
+    return "Lower total yearly pricing for shops that run every day."
+  }
+
+  return "Simple pricing for one shop subscription."
+}
+
+function getPlanFeatures(plan: MarketingPlan, monthlyPlan: MarketingPlan | null) {
+  const baseFeatures = [
+    "Orders, customers, deliveries, and message templates",
+    "Daily summaries plus weekly and monthly reporting",
+  ]
+
+  if (plan.billing_period === "trial") {
+    return [
+      "Start with a new shop before committing to paid billing",
+      ...baseFeatures,
+      "Upgrade later without losing shop data",
+    ]
+  }
+
+  if (
+    plan.billing_period === "yearly" &&
+    monthlyPlan &&
+    monthlyPlan.currency === plan.currency &&
+    monthlyPlan.price * 12 > plan.price
+  ) {
+    return [
+      "One subscription belongs to one active shop",
+      ...baseFeatures,
+      "Lower yearly cost than the monthly plan",
+    ]
+  }
+
+  return [
+    "One subscription belongs to one active shop",
+    ...baseFeatures,
+    "Email notices for billing, recovery, and verification",
+  ]
+}
+
+function getPlanActionLabel(plan: MarketingPlan, dashboardHref: string | null) {
+  if (dashboardHref) {
+    return "Open dashboard"
+  }
+
+  if (plan.billing_period === "trial") {
+    return "Start free trial"
+  }
+
+  return "Create shop account"
+}
+
 export default async function LandingPage() {
-  const session = await getSession()
+  const [session, plans] = await Promise.all([getSession(), getMarketingPlans()])
   const dashboardHref = session ? defaultPathForSession(session) : null
+  const monthlyPlan =
+    plans.find((plan) => plan.billing_period === "monthly") ?? null
+  const featuredPlanCode =
+    plans.find((plan) => plan.billing_period === "yearly")?.code ??
+    plans.find((plan) => plan.billing_period === "monthly")?.code ??
+    plans[0]?.code ??
+    ""
 
   return (
     <div className="bg-[#fafaf8]">
@@ -169,9 +234,9 @@ export default async function LandingPage() {
                 Turn Facebook orders into a real operating workflow.
               </h1>
               <p className="text-lg leading-8 text-white/56">
-                FOM gives shop owners a proper SaaS experience: landing page,
-                sign in, registration, and a protected shop workspace for orders,
-                customers, deliveries, templates, and reporting.
+                Capture Messenger orders, track delivery progress, keep customer
+                history, and see daily results from one workspace built for
+                Myanmar shops selling on Facebook.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -210,9 +275,9 @@ export default async function LandingPage() {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-5 text-sm text-white/40">
-              <span>Shop owner sign in</span>
+              <span>One subscription per shop</span>
               <span className="h-4 w-px bg-white/12" />
-              <span>Registration flow</span>
+              <span>Monthly or yearly billing</span>
               <span className="h-4 w-px bg-white/12" />
               <span>Email/password auth</span>
             </div>
@@ -272,15 +337,15 @@ export default async function LandingPage() {
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="max-w-[520px]">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
-              Product shape
+              Why FOM
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
-              A cleaner structure than one oversized dashboard page.
+              Built for the work that starts after the message arrives.
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
-              The public web product stays focused on shops: landing, registration,
-              sign in, and a protected shop workspace. The internal operator surface
-              stays private and out of the public navigation.
+              Most Facebook shops already know how to sell. The hard part is
+              keeping orders, customer details, delivery progress, and payment
+              follow-up organized once the inbox gets busy.
             </p>
           </div>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -307,11 +372,12 @@ export default async function LandingPage() {
               Core capability
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
-              Focused on the actual operating model.
+              Everything a Facebook-first shop needs in one place.
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
-              The shop workspace is built around orders, customers, deliveries,
-              templates, and reports instead of flattening everything into one screen.
+              FOM keeps order capture, customer memory, delivery follow-up,
+              templates, and reporting close together so owners and staff can
+              work faster without losing context.
             </p>
           </div>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -378,14 +444,14 @@ export default async function LandingPage() {
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="mx-auto max-w-[520px] text-center">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
-              Access model
+              Workflow
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
-              A real SaaS flow for shop owners
+              Start fast and keep the day moving
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
-              Public pages lead into sign in or registration, and signed-in owners
-              land in the shop workspace with dedicated routes for each core job.
+              Set up the shop once, then use the workspace every day for order
+              entry, customer tracking, delivery updates, and closing summaries.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -415,85 +481,117 @@ export default async function LandingPage() {
               Pricing
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
-              Simple, local-friendly pricing
+              Simple pricing for each shop you run
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
-              Shop owners enter through registration and sign in, then continue
-              into the subscribed workspace.
+              Plans come from the active subscription catalog. One subscription
+              belongs to one shop, and owners can switch between shops from the
+              same account.
             </p>
           </div>
           <div className="grid gap-5 lg:grid-cols-3">
-            {pricingCards.map((tier) => (
+            {plans.map((plan) => {
+              const isFeatured = plan.code === featuredPlanCode
+              const href = dashboardHref ?? "/register"
+              const actionLabel = getPlanActionLabel(plan, dashboardHref)
+              const summary = getPlanSummary(plan, monthlyPlan)
+              const features = getPlanFeatures(plan, monthlyPlan)
+
+              return (
               <Card
-                key={tier.name}
+                key={plan.id}
                 className={
-                  tier.featured
+                  isFeatured
                     ? "border-0 bg-[var(--fom-ink)] text-white"
                     : "border border-[var(--fom-marketing-border)] bg-white"
                 }
               >
                 <CardHeader>
-                  {tier.featured ? (
+                  {isFeatured ? (
                     <Badge className="w-fit bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange)]">
-                      Most popular
+                      Recommended
                     </Badge>
                   ) : null}
-                  <CardDescription className={tier.featured ? "text-white/58" : ""}>
-                    {tier.name}
+                  <CardDescription className={isFeatured ? "text-white/58" : ""}>
+                    {getPlanPeriodLabel(plan)}
                   </CardDescription>
-                  <CardTitle className={tier.featured ? "text-white" : ""}>
-                    {tier.featured ? "Professional" : tier.name}
+                  <CardTitle className={isFeatured ? "text-white" : ""}>
+                    {plan.name}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-5">
                   <div>
                     <p
                       className={`text-4xl font-semibold tracking-[-0.03em] ${
-                        tier.featured ? "text-white" : "text-[var(--fom-ink)]"
+                        isFeatured ? "text-white" : "text-[var(--fom-ink)]"
                       }`}
                     >
-                      {tier.price}
-                      {tier.price !== "Let's talk" ? (
-                        <span className={tier.featured ? "text-white/62" : "text-muted-foreground"}>
+                      {formatPlanPrice(plan)}
+                      {plan.price > 0 ? (
+                        <span
+                          className={
+                            isFeatured
+                              ? "text-white/62"
+                              : "text-muted-foreground"
+                          }
+                        >
                           {" "}
-                          MMK
+                          {plan.currency}
                         </span>
                       ) : null}
                     </p>
-                    <p className={tier.featured ? "mt-2 text-white/62" : "mt-2 text-muted-foreground"}>
-                      {tier.detail}
+                    <p
+                      className={
+                        isFeatured
+                          ? "mt-2 text-white/62"
+                          : "mt-2 text-muted-foreground"
+                      }
+                    >
+                      {summary}
                     </p>
                   </div>
                   <div className="flex flex-col gap-3">
-                    {tier.features.map((feature) => (
+                    {features.map((feature) => (
                       <div key={feature} className="flex items-start gap-3">
                         <Check
                           className={
-                            tier.featured
+                            isFeatured
                               ? "mt-0.5 size-4 text-[var(--fom-orange)]"
                               : "mt-0.5 size-4 text-[var(--fom-teal)]"
                           }
                         />
-                        <span className={tier.featured ? "text-white/72" : "text-[var(--fom-slate)]"}>
+                        <span
+                          className={
+                            isFeatured
+                              ? "text-white/72"
+                              : "text-[var(--fom-slate)]"
+                          }
+                        >
                           {feature}
                         </span>
                       </div>
                     ))}
                   </div>
                   <Button
+                    asChild
                     className={
-                      tier.featured
+                      isFeatured
                         ? "bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
                         : ""
                     }
-                    variant={tier.featured ? "default" : "outline"}
+                    variant={isFeatured ? "default" : "outline"}
                   >
-                    {tier.cta}
+                    <Link href={href}>{actionLabel}</Link>
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
+          <p className="text-center text-sm leading-7 text-[var(--fom-slate)]">
+            One owner account can manage multiple shops, but each shop keeps its
+            own subscription, invoices, and renewal cycle.
+          </p>
         </div>
       </section>
 

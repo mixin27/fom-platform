@@ -270,6 +270,8 @@ export async function confirmEmailVerificationAction(formData: FormData) {
     redirect("/verify-email?error=missing_token")
   }
 
+  let nextPath = "/verify-email?status=verified"
+
   try {
     await confirmEmailVerification(token)
 
@@ -286,18 +288,18 @@ export async function confirmEmailVerificationAction(formData: FormData) {
         // Keep the local session if refresh is unavailable. The next refresh will reconcile it.
       }
     }
-
-    redirect("/verify-email?status=verified")
   } catch (error) {
     if (
       error instanceof AuthApiError &&
       (error.code === "UNAUTHORIZED" || error.status === 401)
     ) {
-      redirect("/verify-email?error=expired")
+      nextPath = "/verify-email?error=expired"
+    } else {
+      nextPath = "/verify-email?error=verification_failed"
     }
-
-    redirect("/verify-email?error=verification_failed")
   }
+
+  redirect(nextPath)
 }
 
 export async function sendEmailVerificationAction(formData: FormData) {
@@ -307,6 +309,8 @@ export async function sendEmailVerificationAction(formData: FormData) {
   if (!session) {
     redirect("/sign-in")
   }
+
+  let nextPath = `${returnTo}?status=sent`
 
   try {
     const result = await sendEmailVerification(session.accessToken)
@@ -318,10 +322,9 @@ export async function sendEmailVerificationAction(formData: FormData) {
         session.activeShopId
       )
       await persistSession(refreshedSession)
-      redirect(`${returnTo}?status=already_verified`)
-    }
 
-    redirect(`${returnTo}?status=sent`)
+      nextPath = `${returnTo}?status=already_verified`
+    }
   } catch (error) {
     if (
       error instanceof AuthApiError &&
@@ -331,8 +334,10 @@ export async function sendEmailVerificationAction(formData: FormData) {
       redirect("/sign-in?error=session_expired")
     }
 
-    redirect(`${returnTo}?error=send_failed`)
+    nextPath = `${returnTo}?error=send_failed`
   }
+
+  redirect(nextPath)
 }
 
 export async function markNotificationReadAction(formData: FormData) {

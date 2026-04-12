@@ -36,6 +36,13 @@ export default async function VerifyEmailPage({
   const status = params?.status ?? ""
   const error = params?.error ?? ""
   const isVerified = Boolean(session?.user.emailVerifiedAt)
+  const showVerifiedMessage = status === "verified"
+  const showAlreadyVerifiedMessage =
+    !showVerifiedMessage && (status === "already_verified" || isVerified)
+  const showActionError =
+    !showVerifiedMessage &&
+    !showAlreadyVerifiedMessage &&
+    (error === "verification_failed" || error === "send_failed")
   const defaultPath =
     session && (hasPlatformAccess(session) || hasShopAccess(session))
       ? defaultPathForSession(session)
@@ -49,7 +56,7 @@ export default async function VerifyEmailPage({
           <CardTitle>Verify your email</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          {status === "verified" ? (
+          {showVerifiedMessage ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
               Your email is verified. You can continue in the portal.
             </div>
@@ -59,7 +66,7 @@ export default async function VerifyEmailPage({
               A new verification email has been sent.
             </div>
           ) : null}
-          {status === "already_verified" || isVerified ? (
+          {showAlreadyVerifiedMessage ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
               This account email is already verified.
             </div>
@@ -74,13 +81,13 @@ export default async function VerifyEmailPage({
               This verification link is invalid or expired.
             </div>
           ) : null}
-          {error === "verification_failed" || error === "send_failed" ? (
+          {showActionError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               Email verification could not be completed right now.
             </div>
           ) : null}
 
-          {status === "verified" || isVerified ? (
+          {showVerifiedMessage || showAlreadyVerifiedMessage ? (
             <Button
               asChild
               size="lg"

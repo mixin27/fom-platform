@@ -27,6 +27,17 @@
 | No Content | 204      | No response body                          |
 | Error      | 4xx, 5xx | Error envelope with `error`               |
 
+## Public Marketing
+
+| Method | Path          | Description                                 | Response                  |
+| ------ | ------------- | ------------------------------------------- | ------------------------- |
+| GET    | /public/plans | List active public subscription plans       | 200 List Plan             |
+
+Public marketing notes:
+
+- `GET /public/plans` is unauthenticated and intended for the landing page or other public pricing surfaces.
+- The response returns the active plan catalog only; inactive plans stay hidden from public pricing.
+
 ## Auth and Profile
 
 | Method | Path               | Description                                            | Response                                       |

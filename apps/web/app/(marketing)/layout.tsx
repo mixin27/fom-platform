@@ -7,8 +7,8 @@ import { defaultPathForSession, getSession } from "@/lib/auth/session"
 import { Button } from "@workspace/ui/components/button"
 
 const marketingLinks = [
-  { href: "#product", label: "Product" },
-  { href: "#workflow", label: "Workflow" },
+  { href: "#problem", label: "Why FOM" },
+  { href: "#how", label: "Workflow" },
   { href: "#pricing", label: "Pricing" },
 ]
 
@@ -57,7 +57,7 @@ export default async function MarketingLayout({
                   </Link>
                 </Button>
                 <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-                  <Link href="/register">Start free trial</Link>
+                  <Link href="/register">Create shop account</Link>
                 </Button>
               </>
             )}

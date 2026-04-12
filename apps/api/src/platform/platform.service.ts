@@ -1346,6 +1346,12 @@ export class PlatformService {
     return this.loadPlanSettingsRowById(planId);
   }
 
+  async getPublicPlans() {
+    const plans = await this.loadPlanOptions();
+
+    return plans.filter((plan) => plan.is_active);
+  }
+
   private async buildSettingsPayload(currentUser: AuthenticatedUser) {
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.id },
