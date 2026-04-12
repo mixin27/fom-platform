@@ -11,6 +11,11 @@
   --fom-marketing-muted: var(--fom-slate);
   --fom-marketing-featured-bg: #1c1c1e;
   --fom-marketing-featured-fg: #ffffff;
+  --fom-admin-bg: #f8f8f8;
+  --fom-admin-surface: #ffffff;
+  --fom-admin-sidebar: #1c1c1e;
+  --fom-portal-bg: #fdfdfc;
+  --fom-portal-surface: #ffffff;
   --font-sans:
     var(--font-web-sans), var(--font-web-myanmar), "Inter", "Segoe UI",
     system-ui, -apple-system, BlinkMacSystemFont,
@@ -35,6 +40,11 @@
   --fom-marketing-muted: #a1a1aa;
   --fom-marketing-featured-bg: #000000;
   --fom-marketing-featured-fg: #ffffff;
+  --fom-admin-bg: #000000;
+  --fom-admin-surface: #111111;
+  --fom-admin-sidebar: #111111;
+  --fom-portal-bg: #0c0c0e;
+  --fom-portal-surface: #141417;
   --fom-ink: #f0f0f2;
   --fom-slate: #a1a1aa;
 }
