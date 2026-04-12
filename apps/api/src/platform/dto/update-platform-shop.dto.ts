@@ -38,6 +38,17 @@ export class UpdatePlatformShopDto {
   timezone?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Reassign the shop to an existing user instead of mutating the current owner account',
+  })
+  @Transform(({ value }) => trimOptionalString(value))
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  owner_user_id?: string;
+
+  @ApiPropertyOptional({
     description: 'Owner display name',
   })
   @Transform(({ value }) => trimOptionalString(value))

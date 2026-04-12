@@ -795,6 +795,25 @@ export type ShopTemplateInput = {
 
 export type ShopTemplateUpdateInput = Partial<ShopTemplateInput>
 
+export type ShopDeliveryInput = {
+  order_id: string
+  driver_user_id: string
+  status?: "scheduled" | "out_for_delivery" | "delivered"
+  delivery_fee?: number | null
+  address_snapshot?: string | null
+  scheduled_at?: string | null
+  delivered_at?: string | null
+}
+
+export type ShopDeliveryUpdateInput = {
+  driver_user_id?: string
+  status?: "scheduled" | "out_for_delivery" | "delivered"
+  delivery_fee?: number | null
+  address_snapshot?: string | null
+  scheduled_at?: string | null
+  delivered_at?: string | null
+}
+
 export async function createShopOrderAction(
   shopId: string,
   input: ShopOrderCreateInput
@@ -1184,6 +1203,102 @@ export async function updateShopTemplateAction(
     }
   } catch (error) {
     return toMutationActionError(error, "Unable to update the template right now.")
+  }
+}
+
+export async function createShopDeliveryAction(
+  shopId: string,
+  input: ShopDeliveryInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !input.order_id.trim() || !input.driver_user_id.trim()) {
+    return {
+      ok: false,
+      message: "Order and driver are required.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/deliveries`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          order_id: input.order_id.trim(),
+          driver_user_id: input.driver_user_id.trim(),
+          ...(input.status ? { status: input.status } : {}),
+          ...(input.delivery_fee !== undefined
+            ? { delivery_fee: input.delivery_fee }
+            : {}),
+          ...(input.address_snapshot?.trim()
+            ? { address_snapshot: input.address_snapshot.trim() }
+            : {}),
+          ...(input.scheduled_at ? { scheduled_at: input.scheduled_at } : {}),
+          ...(input.delivered_at ? { delivered_at: input.delivered_at } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Delivery created.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to create the delivery right now.")
+  }
+}
+
+export async function updateShopDeliveryAction(
+  shopId: string,
+  deliveryId: string,
+  input: ShopDeliveryUpdateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !deliveryId) {
+    return {
+      ok: false,
+      message: "Delivery context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/deliveries/${deliveryId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.driver_user_id !== undefined
+            ? { driver_user_id: input.driver_user_id.trim() }
+            : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.delivery_fee !== undefined
+            ? { delivery_fee: input.delivery_fee }
+            : {}),
+          ...(input.address_snapshot !== undefined
+            ? {
+                address_snapshot: input.address_snapshot?.trim()
+                  ? input.address_snapshot.trim()
+                  : null,
+              }
+            : {}),
+          ...(input.scheduled_at !== undefined ? { scheduled_at: input.scheduled_at } : {}),
+          ...(input.delivered_at !== undefined ? { delivered_at: input.delivered_at } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Delivery updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the delivery right now.")
   }
 }
 

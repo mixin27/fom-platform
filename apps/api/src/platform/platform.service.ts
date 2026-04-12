@@ -16,6 +16,7 @@ import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto
 import type { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
 import type { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import type { SearchPlatformOwnerAccountsQueryDto } from './dto/search-platform-owner-accounts-query.dto';
 import type { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
 import type { UpdatePlatformPlanDto } from './dto/update-platform-plan.dto';
 import type { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings-profile.dto';
@@ -37,6 +38,7 @@ type TenantSnapshot = {
   id: string;
   name: string;
   timezone: string;
+  owner_user_id: string;
   owner_name: string;
   owner_email: string | null;
   owner_phone: string | null;
@@ -132,6 +134,16 @@ type SupportIssue = {
   assigned_to_user_name: string | null;
   resolution_note: string | null;
   resolved_at: string | null;
+};
+
+type PlatformOwnerAccount = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  active_shop_count: number;
+  owned_shop_count: number;
+  has_password_credential: boolean;
 };
 
 type DetectedSupportIssue = {
@@ -254,6 +266,93 @@ export class PlatformService {
     return paged(page.items, page.pagination);
   }
 
+  async searchOwnerAccounts(query: SearchPlatformOwnerAccountsQueryDto) {
+    const normalizedQuery = query.query?.trim() ?? '';
+    const limit = query.limit ?? 8;
+
+    if (!normalizedQuery) {
+      return [] as PlatformOwnerAccount[];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: normalizedQuery,
+              mode: 'insensitive',
+            },
+          },
+          {
+            email: {
+              contains: normalizedQuery.toLowerCase(),
+              mode: 'insensitive',
+            },
+          },
+          {
+            phone: {
+              contains: normalizedQuery,
+            },
+          },
+        ],
+      },
+      take: limit,
+      orderBy: [{ name: 'asc' }, { createdAt: 'asc' }],
+      include: {
+        memberships: {
+          where: {
+            status: 'active',
+          },
+          select: {
+            id: true,
+          },
+        },
+        ownedShops: {
+          select: {
+            id: true,
+          },
+        },
+        passwordCredential: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    const exactEmailQuery = normalizedQuery.toLowerCase();
+    const normalizedPhoneQuery = this.normalizePhone(normalizedQuery) ?? normalizedQuery;
+
+    return users
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        active_shop_count: user.memberships.length,
+        owned_shop_count: user.ownedShops.length,
+        has_password_credential: user.passwordCredential !== null,
+      }))
+      .sort((left, right) => {
+        const leftExact =
+          left.email?.toLowerCase() === exactEmailQuery ||
+          left.phone === normalizedPhoneQuery;
+        const rightExact =
+          right.email?.toLowerCase() === exactEmailQuery ||
+          right.phone === normalizedPhoneQuery;
+
+        if (leftExact !== rightExact) {
+          return leftExact ? -1 : 1;
+        }
+
+        if (left.active_shop_count !== right.active_shop_count) {
+          return right.active_shop_count - left.active_shop_count;
+        }
+
+        return left.name.localeCompare(right.name);
+      });
+  }
+
   async getShop(shopId: string) {
     return this.loadTenantSnapshotById(shopId, new Date());
   }
@@ -342,6 +441,7 @@ export class PlatformService {
     if (
       !body.name &&
       !body.timezone &&
+      !body.owner_user_id &&
       !body.owner_name &&
       !body.owner_email &&
       !body.owner_phone &&
@@ -360,6 +460,8 @@ export class PlatformService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      let effectiveOwnerId = shop.owner.id;
+
       if (body.name || body.timezone) {
         await tx.shop.update({
           where: { id: shopId },
@@ -370,34 +472,65 @@ export class PlatformService {
         });
       }
 
-      if (body.owner_name || body.owner_email || body.owner_phone) {
-        await this.assertOwnerUniqueIdentifiers(tx, shop.owner.id, {
+      const matchedExistingOwner =
+        body.owner_user_id || body.owner_email || body.owner_phone
+          ? await this.findExistingOwnerForPlatformShop(tx, {
+              owner_user_id: body.owner_user_id,
+              owner_email: body.owner_email,
+              owner_phone: body.owner_phone,
+            })
+          : null;
+
+      if (matchedExistingOwner && matchedExistingOwner.id !== shop.owner.id) {
+        const ownerRoles = await this.requireShopRoles(['owner']);
+        await this.reassignPlatformShopOwner(tx, {
+          shopId,
+          previousOwnerUserId: shop.owner.id,
+          nextOwnerUserId: matchedExistingOwner.id,
+          ownerRoleIds: ownerRoles.map((role) => role.id),
+        });
+        effectiveOwnerId = matchedExistingOwner.id;
+      }
+
+      if (
+        body.owner_name ||
+        body.owner_email ||
+        body.owner_phone ||
+        body.owner_user_id
+      ) {
+        await this.assertOwnerUniqueIdentifiers(tx, effectiveOwnerId, {
           owner_email: body.owner_email,
           owner_phone: body.owner_phone,
         });
 
-        await tx.user.update({
-          where: { id: shop.owner.id },
-          data: {
-            ...(body.owner_name ? { name: body.owner_name.trim() } : {}),
-            ...(body.owner_email ? { email: body.owner_email.trim().toLowerCase() } : {}),
-            ...(body.owner_phone
-              ? { phone: this.normalizePhone(body.owner_phone) }
-              : {}),
-          },
-        });
+        const ownerUpdateData = {
+          ...(body.owner_name ? { name: body.owner_name.trim() } : {}),
+          ...(body.owner_email
+            ? { email: body.owner_email.trim().toLowerCase() }
+            : {}),
+          ...(body.owner_phone
+            ? { phone: this.normalizePhone(body.owner_phone) }
+            : {}),
+        };
+
+        if (Object.keys(ownerUpdateData).length > 0) {
+          await tx.user.update({
+            where: { id: effectiveOwnerId },
+            data: ownerUpdateData,
+          });
+        }
       }
 
       if (body.owner_password) {
         await tx.passwordCredential.upsert({
           where: {
-            userId: shop.owner.id,
+            userId: effectiveOwnerId,
           },
           update: {
             passwordHash: await hashPassword(body.owner_password),
           },
           create: {
-            userId: shop.owner.id,
+            userId: effectiveOwnerId,
             passwordHash: await hashPassword(body.owner_password),
           },
         });
@@ -1472,18 +1605,15 @@ export class PlatformService {
     return roles;
   }
 
-  private async resolveOwnerForPlatformShop(
+  private async findExistingOwnerForPlatformShop(
     tx: any,
     input: {
       owner_user_id?: string;
-      owner_name?: string;
       owner_email?: string;
       owner_phone?: string;
-      owner_password?: string;
     },
   ) {
     const ownerUserId = input.owner_user_id?.trim() || null;
-    const ownerName = input.owner_name?.trim() || null;
     const ownerEmail = input.owner_email?.trim().toLowerCase() || null;
     const ownerPhone = this.normalizePhone(input.owner_phone);
 
@@ -1560,7 +1690,28 @@ export class PlatformService {
       );
     }
 
-    const existingOwner = uniqueOwners[0] ?? null;
+    return uniqueOwners[0] ?? null;
+  }
+
+  private async resolveOwnerForPlatformShop(
+    tx: any,
+    input: {
+      owner_user_id?: string;
+      owner_name?: string;
+      owner_email?: string;
+      owner_phone?: string;
+      owner_password?: string;
+    },
+  ) {
+    const ownerName = input.owner_name?.trim() || null;
+    const ownerEmail = input.owner_email?.trim().toLowerCase() || null;
+    const ownerPhone = this.normalizePhone(input.owner_phone);
+
+    const existingOwner = await this.findExistingOwnerForPlatformShop(tx, {
+      owner_user_id: input.owner_user_id,
+      owner_email: input.owner_email,
+      owner_phone: input.owner_phone,
+    });
 
     if (existingOwner) {
       await this.assertOwnerUniqueIdentifiers(tx, existingOwner.id, {
@@ -1640,6 +1791,107 @@ export class PlatformService {
     });
 
     return owner;
+  }
+
+  private async reassignPlatformShopOwner(
+    tx: any,
+    input: {
+      shopId: string;
+      previousOwnerUserId: string;
+      nextOwnerUserId: string;
+      ownerRoleIds: string[];
+    },
+  ) {
+    if (input.previousOwnerUserId === input.nextOwnerUserId) {
+      return;
+    }
+
+    const nextOwnerMember = await tx.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId: input.shopId,
+          userId: input.nextOwnerUserId,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    const ensuredNextOwnerMember = nextOwnerMember
+      ? nextOwnerMember.status === 'active'
+        ? nextOwnerMember
+        : await tx.shopMember.update({
+            where: { id: nextOwnerMember.id },
+            data: { status: 'active' },
+            select: {
+              id: true,
+              status: true,
+            },
+          })
+      : await tx.shopMember.create({
+          data: {
+            shopId: input.shopId,
+            userId: input.nextOwnerUserId,
+            status: 'active',
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+    await tx.shopMemberRoleAssignment.createMany({
+      data: input.ownerRoleIds.map((roleId) => ({
+        shopMemberId: ensuredNextOwnerMember.id,
+        roleId,
+      })),
+      skipDuplicates: true,
+    });
+
+    const previousOwnerMember = await tx.shopMember.findUnique({
+      where: {
+        shopId_userId: {
+          shopId: input.shopId,
+          userId: input.previousOwnerUserId,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (previousOwnerMember) {
+      await tx.shopMemberRoleAssignment.deleteMany({
+        where: {
+          shopMemberId: previousOwnerMember.id,
+          roleId: {
+            in: input.ownerRoleIds,
+          },
+        },
+      });
+
+      const remainingRoleCount = await tx.shopMemberRoleAssignment.count({
+        where: {
+          shopMemberId: previousOwnerMember.id,
+        },
+      });
+
+      if (remainingRoleCount === 0) {
+        await tx.shopMember.update({
+          where: { id: previousOwnerMember.id },
+          data: { status: 'disabled' },
+        });
+      }
+    }
+
+    await tx.shop.update({
+      where: { id: input.shopId },
+      data: {
+        ownerUserId: input.nextOwnerUserId,
+      },
+    });
   }
 
   private async assertOwnerUniqueIdentifiers(
@@ -1775,6 +2027,7 @@ export class PlatformService {
         id: shop.id,
         name: shop.name,
         timezone: shop.timezone,
+        owner_user_id: shop.owner.id,
         owner_name: shop.owner.name,
         owner_email: shop.owner.email,
         owner_phone: shop.owner.phone,

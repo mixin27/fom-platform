@@ -6,28 +6,20 @@ import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
 import { shopPortalNav } from "@/lib/navigation"
-import { getShopDetails, getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
-import { Badge } from "@workspace/ui/components/badge"
+import { getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
+import { ShopSwitcher } from "./_components/shop-switcher"
 
 export default async function ShopAppLayout({
   children,
 }: {
   children: ReactNode
 }) {
-  const [{ session, activeShop }, shopResponse, profileResponse] = await Promise.all([
+  const [{ session, activeShop }, profileResponse] = await Promise.all([
     getShopPortalContext(),
-    getShopDetails("/dashboard"),
     getCurrentUserProfile("/dashboard"),
   ])
-  const shop = shopResponse.data
   const profile = profileResponse.data
-  const primaryRole =
-    activeShop?.membership.role === "owner"
-      ? "Owner"
-      : activeShop?.membership.role === "staff"
-        ? "Staff"
-        : "Member"
 
   return (
     <div className="fom-portal-canvas min-h-screen">
@@ -40,17 +32,10 @@ export default async function ShopAppLayout({
                 <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
                   Shop portal
                 </p>
-                <p className="mt-1.5 text-sm font-semibold text-foreground">
-                  {shop.name}
-                </p>
-                <div className="mt-2.5 flex items-center gap-2">
-                  <Badge variant="outline">
-                    {primaryRole}
-                  </Badge>
-                  <span className="text-[11px] text-muted-foreground">
-                    {activeShop ? `${activeShop.membership.permissions.length} permissions` : "No shop selected"}
-                  </span>
-                </div>
+                <ShopSwitcher
+                  shops={session.shops}
+                  activeShopId={activeShop?.id ?? session.activeShopId}
+                />
               </div>
               <Button
                 asChild

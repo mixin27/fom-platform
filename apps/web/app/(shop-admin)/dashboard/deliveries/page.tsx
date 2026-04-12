@@ -22,19 +22,10 @@ import {
   formatDate,
   formatRelativeDate,
 } from "@/lib/platform/format"
-import {
-  createShopDeliveryFromFormAction,
-  updateShopDeliveryFromFormAction,
-} from "../actions"
+import { updateShopDeliveryFromFormAction } from "../actions"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
+import { ShopDeliverySheet } from "./_components/shop-delivery-sheet"
 
 const nextDeliveryActionByStatus: Record<string, { label: string; status: string } | undefined> =
   {
@@ -90,6 +81,17 @@ export default async function DeliveriesPage({
         eyebrow="Deliveries"
         title="Delivery coordination"
         description="Assign riders, monitor route state, and keep delivery fees visible alongside the customer and order details."
+        actions={
+          canManageDeliveries ? (
+            <ShopDeliverySheet
+              shopId={activeShop.id}
+              orders={availableOrders}
+              members={members}
+              triggerLabel="Create delivery"
+              triggerVariant="default"
+            />
+          ) : undefined
+        }
       />
 
       {notice ? (
@@ -124,220 +126,165 @@ export default async function DeliveriesPage({
           title="Delivered"
           value={String(deliveredCount)}
           detail="Completed deliveries in the current filtered list."
-          delta={formatDate(rows[0]?.updated_at)}
+          delta={rows[0]?.updated_at ? formatDate(rows[0].updated_at) : "No recent update"}
           icon={PackageCheck}
           accent="sunset"
         />
       </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-        <PlatformDataTable
-          title="Delivery board"
-          description="Assignments and route state"
-          rows={rows}
-          emptyMessage="No deliveries matched the current filters."
-          footer={`Showing ${rows.length} deliver${rows.length === 1 ? "y" : "ies"}`}
-          pagination={
-            pagination
-              ? {
-                  previousHref: previousCursor
+      <PlatformDataTable
+        title="Delivery board"
+        description="Assignments and route state"
+        rows={rows}
+        emptyMessage="No deliveries matched the current filters."
+        footer={`Showing ${rows.length} deliver${rows.length === 1 ? "y" : "ies"}`}
+        pagination={
+          pagination
+            ? {
+                previousHref: previousCursor
+                  ? buildQueryHref("/dashboard/deliveries", params, {
+                      cursor: previousCursor,
+                    })
+                  : currentCursor
                     ? buildQueryHref("/dashboard/deliveries", params, {
-                        cursor: previousCursor,
-                      })
-                    : currentCursor
-                      ? buildQueryHref("/dashboard/deliveries", params, {
-                          cursor: null,
-                        })
-                      : null,
-                  nextHref: pagination.next_cursor
-                    ? buildQueryHref("/dashboard/deliveries", params, {
-                        cursor: pagination.next_cursor,
+                        cursor: null,
                       })
                     : null,
-                }
-              : undefined
-          }
-          toolbar={
-            <form method="GET" className="flex flex-wrap gap-2">
-              <Input
-                name="search"
-                defaultValue={search}
-                placeholder="Search order or customer"
-                className="h-9 w-[220px]"
-              />
-              <select
-                name="status"
-                defaultValue={status}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="out_for_delivery">Out for delivery</option>
-                <option value="delivered">Delivered</option>
-              </select>
-              <select
-                name="driver_user_id"
-                defaultValue={driverUserId}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-              >
-                <option value="">All drivers</option>
-                {members.map((member) => (
-                  <option key={member.user_id} value={member.user_id}>
-                    {member.user.name}
-                  </option>
-                ))}
-              </select>
-              <input type="hidden" name="limit" value={String(limit)} />
-              <Button type="submit" size="sm" variant="outline">
-                Filter
-              </Button>
-            </form>
-          }
-          columns={[
-            {
-              key: "order",
-              header: "Order",
-              render: (delivery) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">
-                    {delivery.order.order_no}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {delivery.order.customer.name}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "driver",
-              header: "Driver",
-              render: (delivery) => (
-                <div className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground">{delivery.driver.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {delivery.driver.phone ?? delivery.driver.email ?? "No contact"}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "status",
-              header: "Status",
-              render: (delivery) => <PlatformStatusBadge status={delivery.status} />,
-            },
-            {
-              key: "amount",
-              header: "Fee",
-              render: (delivery) =>
-                formatCurrency(delivery.delivery_fee ?? delivery.order.delivery_fee),
-            },
-            {
-              key: "updated",
-              header: "Updated",
-              render: (delivery) => formatRelativeDate(delivery.updated_at),
-            },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (delivery) => {
-                const nextAction = nextDeliveryActionByStatus[delivery.status]
+                nextHref: pagination.next_cursor
+                  ? buildQueryHref("/dashboard/deliveries", params, {
+                      cursor: pagination.next_cursor,
+                    })
+                  : null,
+              }
+            : undefined
+        }
+        toolbar={
+          <form method="GET" className="flex flex-wrap gap-2">
+            <Input
+              name="search"
+              defaultValue={search}
+              placeholder="Search order or customer"
+              className="h-9 w-[220px]"
+            />
+            <select
+              name="status"
+              defaultValue={status}
+              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+            >
+              <option value="scheduled">Scheduled</option>
+              <option value="out_for_delivery">Out for delivery</option>
+              <option value="delivered">Delivered</option>
+            </select>
+            <select
+              name="driver_user_id"
+              defaultValue={driverUserId}
+              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+            >
+              <option value="">All drivers</option>
+              {members.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {member.user.name}
+                </option>
+              ))}
+            </select>
+            <input type="hidden" name="limit" value={String(limit)} />
+            <Button type="submit" size="sm" variant="outline">
+              Filter
+            </Button>
+          </form>
+        }
+        columns={[
+          {
+            key: "order",
+            header: "Order",
+            render: (delivery) => (
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">
+                  {delivery.order.order_no}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {delivery.order.customer.name}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "driver",
+            header: "Driver",
+            render: (delivery) => (
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-foreground">{delivery.driver.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {delivery.driver.phone ?? delivery.driver.email ?? "No contact"}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (delivery) => <PlatformStatusBadge status={delivery.status} />,
+          },
+          {
+            key: "fee",
+            header: "Fee",
+            render: (delivery) =>
+              formatCurrency(delivery.delivery_fee ?? delivery.order.delivery_fee),
+          },
+          {
+            key: "timing",
+            header: "Timing",
+            render: (delivery) => (
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-foreground">
+                  {delivery.scheduled_at ? formatDate(delivery.scheduled_at) : "No schedule"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Updated {formatRelativeDate(delivery.updated_at)}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            render: (delivery) => {
+              const nextAction = nextDeliveryActionByStatus[delivery.status]
+              const hasAnyAction =
+                canManageDeliveries || Boolean(canManageDeliveries && nextAction)
 
-                if (!canManageDeliveries || !nextAction) {
-                  return <span className="text-xs text-muted-foreground">No actions</span>
-                }
-
-                return (
-                  <form action={updateShopDeliveryFromFormAction}>
-                    <input type="hidden" name="return_to" value={currentHref} />
-                    <input type="hidden" name="shop_id" value={activeShop.id} />
-                    <input type="hidden" name="delivery_id" value={delivery.id} />
-                    <input type="hidden" name="status" value={nextAction.status} />
-                    <Button type="submit" size="sm" variant="outline">
-                      {nextAction.label}
-                    </Button>
-                  </form>
-                )
-              },
-              className: "w-[140px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
-            },
-          ]}
-        />
-
-        <Card className="border border-black/6 bg-white shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Dispatch</CardDescription>
-            <CardTitle>Create delivery</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {canManageDeliveries ? (
-              <form
-                action={createShopDeliveryFromFormAction}
-                className="flex flex-col gap-2.5"
-              >
-                <input type="hidden" name="return_to" value={currentHref} />
-                <input type="hidden" name="shop_id" value={activeShop.id} />
-                <select
-                  name="order_id"
-                  defaultValue=""
-                  className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-                >
-                  <option value="" disabled>
-                    Select confirmed order
-                  </option>
-                  {availableOrders.map((order) => (
-                    <option key={order.id} value={order.id}>
-                      {order.order_no} · {order.customer.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="driver_user_id"
-                  defaultValue=""
-                  className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-                >
-                  <option value="" disabled>
-                    Assign driver
-                  </option>
-                  {members.map((member) => (
-                    <option key={member.user_id} value={member.user_id}>
-                      {member.user.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <select
-                    name="status"
-                    defaultValue="scheduled"
-                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="out_for_delivery">Out for delivery</option>
-                  </select>
-                  <Input name="delivery_fee" placeholder="Delivery fee" className="h-9" />
+              return (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {canManageDeliveries ? (
+                    <ShopDeliverySheet
+                      shopId={activeShop.id}
+                      delivery={delivery}
+                      orders={availableOrders}
+                      members={members}
+                    />
+                  ) : null}
+                  {canManageDeliveries && nextAction ? (
+                    <form action={updateShopDeliveryFromFormAction}>
+                      <input type="hidden" name="return_to" value={currentHref} />
+                      <input type="hidden" name="shop_id" value={activeShop.id} />
+                      <input type="hidden" name="delivery_id" value={delivery.id} />
+                      <input type="hidden" name="status" value={nextAction.status} />
+                      <Button type="submit" size="sm" variant="outline">
+                        {nextAction.label}
+                      </Button>
+                    </form>
+                  ) : null}
+                  {!hasAnyAction ? (
+                    <span className="text-xs text-muted-foreground">No actions</span>
+                  ) : null}
                 </div>
-                <Input
-                  name="scheduled_at"
-                  type="datetime-local"
-                  placeholder="Scheduled time"
-                  className="h-9"
-                />
-                <Input
-                  name="address_snapshot"
-                  placeholder="Address snapshot override"
-                  className="h-9"
-                />
-                <Button type="submit" size="sm">
-                  Create delivery
-                </Button>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Your account can review deliveries but cannot create or update them.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              )
+            },
+            className: "w-[220px] px-4 py-2.5 text-right",
+            cellClassName: "px-4 py-3 text-right",
+          },
+        ]}
+      />
     </div>
   )
 }

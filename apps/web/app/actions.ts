@@ -14,6 +14,7 @@ import {
   buildSessionFromAuth,
   clearSession,
   defaultPathForSession,
+  getSession,
   hasPlatformAccess,
   hasShopAccess,
   persistSession,
@@ -139,4 +140,46 @@ export async function signOutAction() {
 
   await clearSession()
   redirect("/")
+}
+
+export async function switchActiveShopAction(shopId: string) {
+  const normalizedShopId = shopId.trim()
+  const session = await getSession()
+
+  if (!session) {
+    return {
+      ok: false as const,
+      message: "Session expired. Please sign in again.",
+    }
+  }
+
+  if (!normalizedShopId) {
+    return {
+      ok: false as const,
+      message: "Select a shop to continue.",
+    }
+  }
+
+  const shopExists = session.shops.some((shop) => shop.id === normalizedShopId)
+  if (!shopExists) {
+    return {
+      ok: false as const,
+      message: "That shop is not available in the current account.",
+    }
+  }
+
+  if (session.activeShopId === normalizedShopId) {
+    return {
+      ok: true as const,
+    }
+  }
+
+  await persistSession({
+    ...session,
+    activeShopId: normalizedShopId,
+  })
+
+  return {
+    ok: true as const,
+  }
 }
