@@ -54,7 +54,7 @@ export default async function SetupShopPage({
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10">
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <Card className="border border-black/6 bg-white">
+            <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
               <CardHeader>
                 <CardDescription>Initial shop setup</CardDescription>
                 <CardTitle>Create the first shop for this account</CardTitle>
@@ -132,7 +132,7 @@ export default async function SetupShopPage({
               </CardContent>
             </Card>
 
-            <Card className="border border-black/6 bg-[linear-gradient(180deg,#fff8f2_0%,#fff_100%)]">
+            <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
               <CardHeader>
                 <CardDescription>What happens next</CardDescription>
                 <CardTitle className="text-4xl leading-tight">
@@ -157,7 +157,7 @@ export default async function SetupShopPage({
                 ].map(({ icon: Icon, title, detail }) => (
                   <div
                     key={title}
-                    className="rounded-2xl border border-black/6 bg-white p-4"
+                    className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4"
                   >
                     <div className="flex items-start gap-3">
                       <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-[rgba(249,122,31,0.12)] text-[var(--fom-orange)]">

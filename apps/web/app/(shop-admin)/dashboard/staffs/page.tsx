@@ -225,7 +225,7 @@ export default async function ShopStaffsPage({
           ]}
         />
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Invite staff</CardDescription>
             <CardTitle>Add member</CardTitle>
@@ -241,7 +241,7 @@ export default async function ShopStaffsPage({
                 <select
                   name="role_code"
                   defaultValue="staff"
-                  className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <option value="staff">Staff</option>
                 </select>

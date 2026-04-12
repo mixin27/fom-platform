@@ -146,7 +146,7 @@ export default async function TemplatesPage({
             <select
               name="state"
               defaultValue={state}
-              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             >
               <option value="all">All</option>
               <option value="active">Active</option>

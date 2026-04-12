@@ -192,7 +192,7 @@ export default async function PlatformSupportPage({
         />
 
         <div className="flex flex-col gap-3">
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Platform health</CardDescription>
               <CardTitle>Current posture</CardTitle>
@@ -225,7 +225,7 @@ export default async function PlatformSupportPage({
             </CardContent>
           </Card>
 
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Manual triage</CardDescription>
               <CardTitle>Create support issue</CardTitle>
@@ -239,7 +239,7 @@ export default async function PlatformSupportPage({
                   <select
                     name="kind"
                     defaultValue="operations"
-                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                    className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] px-3 text-sm"
                   >
                     <option value="operations">Operations</option>
                     <option value="billing">Billing</option>
@@ -253,7 +253,7 @@ export default async function PlatformSupportPage({
                   <select
                     name="severity"
                     defaultValue="medium"
-                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                    className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] px-3 text-sm"
                   >
                     <option value="high">High</option>
                     <option value="medium">Medium</option>

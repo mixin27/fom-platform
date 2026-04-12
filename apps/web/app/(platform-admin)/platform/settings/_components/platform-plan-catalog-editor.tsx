@@ -199,7 +199,7 @@ function PlanItemEditorRow({
   onRemove: () => void
 }) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-white px-4 py-4">
+    <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-4">
       <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_auto]">
         <Input
           value={item.label}
@@ -350,8 +350,8 @@ function EditablePlanCard({
   }
 
   return (
-    <Card className="border border-black/6 bg-white shadow-none">
-      <CardHeader className="gap-3 border-b border-black/6 pb-4">
+    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
+      <CardHeader className="gap-3 border-b border-[var(--fom-border-subtle)] pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <CardTitle>{plan.name}</CardTitle>
@@ -448,7 +448,7 @@ function EditablePlanCard({
           rows={3}
         />
 
-        <div className="flex items-center justify-between rounded-2xl border border-black/6 bg-[var(--fom-admin-surface)] px-4 py-3">
+        <div className="flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3">
           <div>
             <p className="text-sm font-medium text-[var(--fom-ink)]">
               Show on platform pricing surfaces
@@ -570,8 +570,8 @@ function CreatePlanCard({
   }
 
   return (
-    <Card className="border border-dashed border-black/12 bg-[var(--fom-admin-surface)] shadow-none">
-      <CardHeader className="border-b border-black/6 pb-4">
+    <Card className="border border-dashed border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
+      <CardHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
         <CardTitle>Create plan</CardTitle>
         <CardDescription>
           Add a new plan to the commercial catalog and define exactly which items show as available or unavailable.
@@ -655,7 +655,7 @@ function CreatePlanCard({
           rows={3}
         />
 
-        <div className="flex items-center justify-between rounded-2xl border border-black/6 bg-white px-4 py-3">
+        <div className="flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3">
           <div>
             <p className="text-sm font-medium text-[var(--fom-ink)]">Active on pricing</p>
             <p className="text-xs text-muted-foreground">
@@ -729,7 +729,7 @@ export function PlatformPlanCatalogEditor({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <BadgeCheckIcon className="h-4 w-4 text-emerald-600" />
@@ -740,7 +740,7 @@ export function PlatformPlanCatalogEditor({
             </CardDescription>
           </CardHeader>
         </Card>
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <CircleSlash2Icon className="h-4 w-4 text-muted-foreground" />

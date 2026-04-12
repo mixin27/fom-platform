@@ -53,12 +53,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         description="Use the summary views to compare operating rhythm, delivery performance, and revenue contribution across time windows."
         actions={
           <form method="GET" className="flex flex-wrap gap-2">
-            <Input name="date" type="date" defaultValue={date} className="h-9" />
+            <Input name="date" type="date" defaultValue={date} className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm" />
             <Input
               name="month"
               type="month"
               defaultValue={month}
-              className="h-9"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             />
             <Button type="submit" size="sm" variant="outline">
               Refresh
@@ -127,7 +127,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             ],
           },
         ].map((section) => (
-          <Card key={section.title} className="border border-black/6 bg-white shadow-none">
+          <Card key={section.title} className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>{section.description}</CardDescription>
               <CardTitle>{section.title} snapshot</CardTitle>
@@ -136,7 +136,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               {section.stats.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex items-center justify-between rounded-xl bg-[#f7f8fc] px-3.5 py-3"
+                  className="flex items-center justify-between rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
                 >
                   <span className="text-sm text-muted-foreground">{label}</span>
                   <span className="text-sm font-semibold text-foreground">{value}</span>

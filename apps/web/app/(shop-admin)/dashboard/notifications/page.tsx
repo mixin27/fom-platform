@@ -136,7 +136,7 @@ export default async function ShopNotificationsPage({
       </section>
 
       <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -166,8 +166,8 @@ export default async function ShopNotificationsPage({
                     key={notification.id}
                     className={`rounded-2xl border px-4 py-3 ${
                       notification.is_read
-                        ? "border-black/6 bg-[var(--fom-portal-surface)]"
-                        : "border-[var(--fom-orange)]/20 bg-[rgba(249,122,31,0.06)]"
+                        ? "border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]"
+                        : "border-transparent bg-muted/5 hover:bg-muted/10"
                     }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -214,14 +214,14 @@ export default async function ShopNotificationsPage({
                 )
               })
             ) : (
-              <div className="rounded-2xl border border-dashed border-black/10 bg-[var(--fom-portal-surface)] px-4 py-8 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-4 py-8 text-sm text-muted-foreground">
                 No notifications are available for the current shop yet.
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Preferences</CardDescription>
             <CardTitle>Notification channels</CardTitle>
@@ -238,7 +238,7 @@ export default async function ShopNotificationsPage({
               {preferences.map((preference) => (
                 <div
                   key={preference.category}
-                  className="rounded-2xl border border-black/6 bg-[var(--fom-portal-surface)] p-3"
+                  className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <div className="space-y-1">
                     <p className="font-medium text-[var(--fom-ink)]">{preference.label}</p>

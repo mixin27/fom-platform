@@ -2816,11 +2816,13 @@ export class PlatformService {
       existing.collected_revenue += payment.amount;
     }
 
+    const totalShopsWithPlan = tenants.filter(t => t.plan_code).length;
+
     return [...grouped.values()]
       .sort((left, right) => right.shop_count - left.shop_count)
       .map((plan) => ({
         ...plan,
-        share: tenants.length > 0 ? Number((plan.shop_count / tenants.length).toFixed(4)) : 0,
+        share: totalShopsWithPlan > 0 ? Number((plan.shop_count / totalShopsWithPlan).toFixed(4)) : 0,
       }));
   }
 

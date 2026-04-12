@@ -50,7 +50,7 @@ export default async function VerifyEmailPage({
 
   return (
     <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <Card className="border border-black/6 bg-white">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Email verification</CardDescription>
           <CardTitle>Verify your email</CardTitle>
@@ -144,7 +144,7 @@ export default async function VerifyEmailPage({
         </CardContent>
       </Card>
 
-      <Card className="border border-black/6 bg-[linear-gradient(180deg,#fff8f2_0%,#fff_100%)]">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Account trust</CardDescription>
           <CardTitle className="text-4xl leading-tight">
@@ -159,7 +159,7 @@ export default async function VerifyEmailPage({
           ].map((item) => (
             <div
               key={item}
-              className="rounded-2xl border border-black/6 bg-white p-4 text-sm leading-7 text-muted-foreground"
+              className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-4 text-sm leading-7 text-muted-foreground"
             >
               {item}
             </div>

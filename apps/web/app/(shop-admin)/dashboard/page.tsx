@@ -123,7 +123,7 @@ export default async function ShopDashboardPage({
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Today's pipeline</CardDescription>
             <CardTitle>Order movement by status</CardTitle>
@@ -151,10 +151,10 @@ export default async function ShopDashboardPage({
                 note: "Already landed in collected revenue.",
               },
             ].map((item) => (
-              <div
-                key={item.key}
-                className="rounded-2xl border border-black/6 bg-[#fcfbf9] p-4"
-              >
+                <div
+                  key={item.key}
+                  className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 p-4"
+                >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-foreground">
                     {formatCodeLabel(item.key)}
@@ -172,7 +172,7 @@ export default async function ShopDashboardPage({
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Top customers</CardDescription>
             <CardTitle>Who is buying most often</CardTitle>
@@ -182,7 +182,7 @@ export default async function ShopDashboardPage({
               summary.top_customers.slice(0, 4).map((customer) => (
                 <div
                   key={customer.customer_id}
-                  className="flex items-center justify-between rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3"
+                  className="flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 px-4 py-3"
                 >
                   <div>
                     <p className="text-sm font-semibold text-foreground">
@@ -198,7 +198,7 @@ export default async function ShopDashboardPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 px-4 py-3 text-sm text-muted-foreground">
                 No repeat-customer data yet.
               </div>
             )}
@@ -253,7 +253,7 @@ export default async function ShopDashboardPage({
           ]}
         />
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Dispatch board</CardDescription>
             <CardTitle>Orders currently on route</CardTitle>
@@ -263,7 +263,7 @@ export default async function ShopDashboardPage({
               deliveries.map((delivery) => (
                 <div
                   key={delivery.id}
-                  className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3"
+                  className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 px-4 py-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-foreground">
@@ -283,7 +283,7 @@ export default async function ShopDashboardPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 px-4 py-3 text-sm text-muted-foreground">
                 No deliveries are currently out for delivery.
               </div>
             )}

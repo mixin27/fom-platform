@@ -115,7 +115,7 @@ function SubscriptionMetricCard({
   caption: string
 }) {
   return (
-    <Card size="sm" className="border border-black/6 bg-white shadow-none">
+    <Card size="sm" className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
       <CardHeader className="pb-0">
         <CardDescription>{title}</CardDescription>
         <CardTitle className="text-2xl font-semibold tracking-[-0.04em]">
@@ -427,7 +427,7 @@ export function PlatformSubscriptionsTable({
         />
       </div>
 
-      <Card className="border border-black/6 bg-white shadow-none">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
         <CardHeader className="flex flex-col gap-3 pb-3 md:flex-row md:items-start md:justify-between">
           <div>
             <CardDescription>Subscriptions</CardDescription>
@@ -496,7 +496,7 @@ export function PlatformSubscriptionsTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
                   key={headerGroup.id}
-                  className="bg-[#fdfeff] hover:bg-[#fdfeff]"
+                  className="bg-[var(--fom-surface-variant)] hover:bg-[var(--fom-surface-variant)]"
                 >
                   {headerGroup.headers.map((header) => (
                     <TableHead

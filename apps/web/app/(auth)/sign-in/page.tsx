@@ -84,14 +84,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </CardContent>
       </Card>
 
-      <Card className="border border-black/6 bg-white">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Authentication</CardDescription>
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Email or password is incorrect.
             </div>
           ) : null}
@@ -101,7 +101,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </div>
           ) : null}
           {authFailed ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Sign-in could not be completed right now. Check the API connection and try again.
             </div>
           ) : null}

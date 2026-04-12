@@ -36,7 +36,7 @@ export default async function ResetPasswordPage({
 
   return (
     <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <Card className="border border-black/6 bg-white">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Recovery</CardDescription>
           <CardTitle>Reset password</CardTitle>

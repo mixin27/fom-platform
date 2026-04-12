@@ -128,8 +128,8 @@ export function ShopCustomerSheet({
           {triggerLabel ?? (isEdit ? "Edit" : "Create customer")}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>{isEdit ? "Edit customer" : "Create customer"}</SheetTitle>
           <SheetDescription>
             {isEdit
@@ -213,7 +213,7 @@ export function ShopCustomerSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 px-4 py-4">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] px-4 py-4">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>

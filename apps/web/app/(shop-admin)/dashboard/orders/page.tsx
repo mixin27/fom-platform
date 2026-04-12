@@ -25,6 +25,7 @@ import { updateShopOrderStatusFromFormAction } from "../actions"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { ShopOrderSheet } from "./_components/shop-order-sheet"
+import { Card } from "@workspace/ui/components/card"
 
 const nextOrderActionByStatus: Record<
   string,
@@ -66,9 +67,13 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   ])
   const rows = ordersResponse.data
   const summary = summaryResponse.data
-  const pagination = ordersResponse.meta?.pagination as ShopCursorPagination | undefined
+  const pagination = ordersResponse.meta?.pagination as
+    | ShopCursorPagination
+    | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
-  const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
+  const limit = Number(
+    getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20
+  )
   const previousCursor = getPreviousCursor(currentCursor, limit)
   const search = getSingleSearchParam(params.search) ?? ""
   const status = getSingleSearchParam(params.status) ?? "pending"
@@ -87,7 +92,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         title="Order management"
         description="Track the queue, edit order metadata and items, or move directly into the Messenger paste workflow."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <Card className="flex flex-wrap gap-2 border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-1 shadow-none">
             {canCreateOrders ? (
               <ShopOrderSheet
                 shopId={activeShop.id}
@@ -101,7 +106,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 Paste from Messenger
               </Link>
             </Button>
-          </div>
+          </Card>
         }
       />
 
@@ -117,8 +122,14 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <PlatformStatusBadge status="active" label={formatDate(summary.summary_date)} />
-        <PlatformStatusBadge status="new" label={`New ${summary.status_breakdown.new}`} />
+        <PlatformStatusBadge
+          status="active"
+          label={formatDate(summary.summary_date)}
+        />
+        <PlatformStatusBadge
+          status="new"
+          label={`New ${summary.status_breakdown.new}`}
+        />
         <PlatformStatusBadge
           status="confirmed"
           label={`Confirmed ${summary.status_breakdown.confirmed}`}
@@ -170,7 +181,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             <select
               name="status"
               defaultValue={status}
-              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             >
               <option value="pending">Pending</option>
               <option value="new">New</option>
@@ -179,7 +190,12 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            <Input name="date" defaultValue={date} type="date" className="h-9" />
+            <Input
+              name="date"
+              defaultValue={date}
+              type="date"
+              className="h-9"
+            />
             <input type="hidden" name="limit" value={String(limit)} />
             <Button type="submit" size="sm" variant="outline">
               Filter
@@ -192,7 +208,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             header: "Order",
             render: (order) => (
               <div className="flex flex-col gap-1">
-                <span className="font-semibold text-foreground">{order.order_no}</span>
+                <span className="font-semibold text-foreground">
+                  {order.order_no}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {formatRelativeDate(order.updated_at)}
                 </span>
@@ -204,7 +222,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             header: "Customer",
             render: (order) => (
               <div className="flex flex-col gap-1">
-                <span className="font-medium text-foreground">{order.customer.name}</span>
+                <span className="font-medium text-foreground">
+                  {order.customer.name}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {order.customer.phone}
                 </span>
@@ -216,7 +236,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             header: "Items",
             render: (order) => (
               <span className="text-sm text-muted-foreground">
-                {order.items.map((item) => `${item.product_name} x${item.qty}`).join(", ")}
+                {order.items
+                  .map((item) => `${item.product_name} x${item.qty}`)
+                  .join(", ")}
               </span>
             ),
           },
@@ -228,14 +250,16 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
           {
             key: "amount",
             header: "Amount",
-            render: (order) => formatCurrency(order.total_price, order.currency),
+            render: (order) =>
+              formatCurrency(order.total_price, order.currency),
           },
           {
             key: "actions",
             header: "Actions",
             render: (order) => {
               const nextAction = nextOrderActionByStatus[order.status]
-              const hasAnyAction = canEditOrders || Boolean(canAdvanceOrders && nextAction)
+              const hasAnyAction =
+                canEditOrders || Boolean(canAdvanceOrders && nextAction)
 
               return (
                 <div className="flex flex-wrap justify-end gap-2">
@@ -244,18 +268,36 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                   ) : null}
                   {canAdvanceOrders && nextAction ? (
                     <form action={updateShopOrderStatusFromFormAction}>
-                      <input type="hidden" name="return_to" value={currentHref} />
-                      <input type="hidden" name="shop_id" value={activeShop.id} />
+                      <input
+                        type="hidden"
+                        name="return_to"
+                        value={currentHref}
+                      />
+                      <input
+                        type="hidden"
+                        name="shop_id"
+                        value={activeShop.id}
+                      />
                       <input type="hidden" name="order_id" value={order.id} />
-                      <input type="hidden" name="status" value={nextAction.status} />
-                      <input type="hidden" name="note" value={nextAction.note} />
+                      <input
+                        type="hidden"
+                        name="status"
+                        value={nextAction.status}
+                      />
+                      <input
+                        type="hidden"
+                        name="note"
+                        value={nextAction.note}
+                      />
                       <Button type="submit" size="sm" variant="outline">
                         {nextAction.label}
                       </Button>
                     </form>
                   ) : null}
                   {!hasAnyAction ? (
-                    <span className="text-xs text-muted-foreground">No actions</span>
+                    <span className="text-xs text-muted-foreground">
+                      No actions
+                    </span>
                   ) : null}
                 </div>
               )

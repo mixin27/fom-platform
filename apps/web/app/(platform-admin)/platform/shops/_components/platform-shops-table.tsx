@@ -161,7 +161,7 @@ function SortableHeader({ label, column, className }: SortableHeaderProps) {
 
 function ShopMetricCard({ title, value, caption }: ShopMetricCardProps) {
   return (
-    <Card size="sm" className="border border-black/6 bg-white shadow-none">
+    <Card size="sm" className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
       <CardHeader className="pb-0">
         <CardDescription>{title}</CardDescription>
         <CardTitle className="text-2xl font-semibold tracking-[-0.04em]">
@@ -291,8 +291,8 @@ function ShopDetailsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <div className="flex items-start gap-3">
             <Avatar size="lg">
               <AvatarFallback>{getInitials(shop.name)}</AvatarFallback>
@@ -312,7 +312,7 @@ function ShopDetailsSheet({
 
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Card size="sm" className="border border-black/6 bg-white shadow-none">
+            <Card size="sm" className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
               <CardHeader className="pb-0">
                 <CardDescription>Plan</CardDescription>
                 <CardTitle>
@@ -338,7 +338,7 @@ function ShopDetailsSheet({
               </CardContent>
             </Card>
 
-            <Card size="sm" className="border border-black/6 bg-white shadow-none">
+            <Card size="sm" className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
               <CardHeader className="pb-0">
                 <CardDescription>Usage health</CardDescription>
                 <CardTitle>{deliveryRate}% delivery rate</CardTitle>
@@ -357,7 +357,7 @@ function ShopDetailsSheet({
                 <span className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground">
                   Ownership
                 </span>
-                <div className="rounded-xl border border-black/6 bg-muted/30 p-3">
+                <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-muted/5 p-3">
                   <p className="font-medium text-foreground">{shop.owner_name}</p>
                   <p className="text-sm text-muted-foreground">
                     {shop.owner_email ?? "No email on file"}
@@ -372,7 +372,7 @@ function ShopDetailsSheet({
                 <span className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground">
                   Workspace
                 </span>
-                <div className="rounded-xl border border-black/6 bg-muted/30 p-3 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-muted/5 p-3 text-sm text-muted-foreground">
                   <p>Timezone: {shop.timezone}</p>
                   <p>Township: {shop.township ?? "—"}</p>
                   <p>Joined: {formatDate(shop.joined_at)}</p>
@@ -386,7 +386,7 @@ function ShopDetailsSheet({
                 <span className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground">
                   Usage
                 </span>
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-black/6 bg-muted/30 p-3">
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-[var(--fom-border-subtle)] bg-muted/5 p-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Members</p>
                     <p className="text-sm font-medium text-foreground">
@@ -418,7 +418,7 @@ function ShopDetailsSheet({
                 <span className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground">
                   Latest invoice
                 </span>
-                <div className="rounded-xl border border-black/6 bg-muted/30 p-3">
+                <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-muted/5 p-3">
                   {shop.latest_invoice ? (
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
@@ -451,7 +451,7 @@ function ShopDetailsSheet({
           </div>
         </div>
 
-        <SheetFooter className="border-t border-black/6 bg-muted/20">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] bg-muted/10">
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"
@@ -811,8 +811,8 @@ export function PlatformShopsTable({
         </div>
       ) : null}
 
-      <Card className="border border-black/6 bg-white shadow-none">
-        <CardHeader className="flex flex-col gap-4 border-b border-black/6 pb-4">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
+        <CardHeader className="flex flex-col gap-4 border-b border-[var(--fom-border-subtle)] pb-4">
           <div className="flex flex-col gap-1">
             <CardDescription>Shops</CardDescription>
             <CardTitle>Shop management workspace</CardTitle>
@@ -986,7 +986,7 @@ export function PlatformShopsTable({
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-3 border-t border-black/6 bg-muted/20 md:flex-row md:items-center md:justify-between">
+        <CardFooter className="flex flex-col gap-3 border-t border-[var(--fom-border-subtle)] bg-muted/10 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col gap-1">
             <p className="text-xs text-muted-foreground">
               {pagination

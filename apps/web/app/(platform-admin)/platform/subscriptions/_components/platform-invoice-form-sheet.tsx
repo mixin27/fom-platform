@@ -193,15 +193,15 @@ export function PlatformInvoiceFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">
           {subscription ? (
-            <div className="mb-4 rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm">
+            <div className="mb-4 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm">
               <p className="font-semibold text-[var(--fom-ink)]">{subscription.shop_name}</p>
               <p className="text-muted-foreground">
                 {subscription.plan_name} · {subscription.owner_name}
@@ -314,7 +314,7 @@ export function PlatformInvoiceFormSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 bg-muted/20">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] bg-muted/10">
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Button
               type="button"

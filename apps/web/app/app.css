@@ -14,8 +14,12 @@
   --fom-admin-bg: #f8f8f8;
   --fom-admin-surface: #ffffff;
   --fom-admin-sidebar: #1c1c1e;
-  --fom-portal-bg: #fdfdfc;
+  --fom-portal-bg: #f7f4ef;
   --fom-portal-surface: #ffffff;
+  --fom-portal-sidebar: #ffffff;
+  --fom-surface-variant: #fcfbf9;
+  --fom-border-subtle: rgba(0, 0, 0, 0.06);
+  --fom-border-strong: rgba(0, 0, 0, 0.12);
   --font-sans:
     var(--font-web-sans), var(--font-web-myanmar), "Inter", "Segoe UI",
     system-ui, -apple-system, BlinkMacSystemFont,
@@ -45,6 +49,10 @@
   --fom-admin-sidebar: #111111;
   --fom-portal-bg: #0c0c0e;
   --fom-portal-surface: #141417;
+  --fom-portal-sidebar: #141417;
+  --fom-surface-variant: #1a1a1c;
+  --fom-border-subtle: rgba(255, 255, 255, 0.08);
+  --fom-border-strong: rgba(255, 255, 255, 0.15);
   --fom-ink: #f0f0f2;
   --fom-slate: #a1a1aa;
 }

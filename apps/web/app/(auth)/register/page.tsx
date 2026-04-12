@@ -46,7 +46,7 @@ export default async function RegisterPage({
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <Card className="border border-black/6 bg-white">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Get started</CardDescription>
           <CardTitle>Create your shop account</CardTitle>
@@ -113,7 +113,7 @@ export default async function RegisterPage({
         </CardContent>
       </Card>
 
-      <Card className="border border-black/6 bg-[linear-gradient(180deg,#fff8f2_0%,#fff_100%)]">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>For shop owners</CardDescription>
           <CardTitle className="text-4xl leading-tight">
@@ -128,7 +128,7 @@ export default async function RegisterPage({
             "Free trial starts automatically with the first self-serve shop",
             "RBAC-ready staff expansion once the shop grows",
           ].map((item) => (
-            <div key={item} className="rounded-2xl border border-black/6 bg-white p-4 text-sm leading-7 text-muted-foreground">
+            <div key={item} className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-4 text-sm leading-7 text-muted-foreground">
               {item}
             </div>
           ))}

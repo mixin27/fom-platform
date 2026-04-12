@@ -115,9 +115,9 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-black/8 bg-white px-3 py-3 text-left shadow-none transition-colors hover:bg-white/95"
+            className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 py-3 text-left shadow-none transition-colors hover:bg-muted/5"
           >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(249,122,31,0.12)] text-sm font-semibold text-[var(--fom-orange)]">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--fom-orange)]/10 text-sm font-semibold text-[var(--fom-orange)]">
               {getShopAvatarLabel(activeShop?.name)}
             </div>
             <div className="min-w-0 flex-1">
@@ -137,10 +137,10 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
         <DropdownMenuContent
           align="start"
           sideOffset={8}
-          className="rounded-2xl border border-black/8 bg-[#fffaf5] p-2 text-[var(--fom-ink)] shadow-xl"
+          className="rounded-2xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] p-2 text-[var(--fom-ink)] shadow-xl"
           onCloseAutoFocus={(event) => event.preventDefault()}
         >
-          <DropdownMenuLabel className="px-2 pt-1 pb-2 text-[11px] tracking-[0.18em] text-[rgba(28,28,30,0.42)] uppercase">
+          <DropdownMenuLabel className="px-2 pt-1 pb-2 text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
             Switch shop
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
@@ -161,17 +161,17 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
                     key={shop.id}
                     value={shop.id}
                     disabled={isPending}
-                    className="min-w-0 rounded-xl px-2 py-2.5 text-[var(--fom-ink)] focus:bg-[rgba(28,28,30,0.05)]! focus:text-[var(--fom-ink)]! data-[highlighted]:bg-[rgba(28,28,30,0.05)]! data-[highlighted]:text-[var(--fom-ink)]! data-[state=checked]:bg-[rgba(244,98,42,0.08)]"
+                    className="min-w-0 rounded-xl px-2 py-2.5 text-[var(--fom-ink)] focus:bg-muted/10! focus:text-[var(--fom-ink)]! data-[highlighted]:bg-muted/10! data-[highlighted]:text-[var(--fom-ink)]! data-[state=checked]:bg-[var(--fom-orange)]/10"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f7f4ef] text-xs font-semibold !text-[var(--fom-ink)]">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--fom-portal-bg)] text-xs font-semibold !text-[var(--fom-ink)]">
                         {getShopAvatarLabel(shop.name)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium !text-[var(--fom-ink)]">
                           {shop.name}
                         </p>
-                        <p className="mt-1 truncate text-xs !text-[rgba(28,28,30,0.62)]">
+                        <p className="mt-1 truncate text-xs !text-muted-foreground">
                           {metadata}
                         </p>
                       </div>
@@ -184,7 +184,7 @@ export function ShopSwitcher({ shops, activeShopId }: ShopSwitcherProps) {
 
           <DropdownMenuSeparator className="my-2" />
 
-          <div className="rounded-xl bg-[#f3ede5] px-3 py-2.5 text-xs text-[rgba(28,28,30,0.68)]">
+          <div className="rounded-xl bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
             <p className="font-medium text-[var(--fom-ink)]">
               {shopCountLabel}
             </p>

@@ -125,8 +125,8 @@ export function ShopTemplateSheet({
           {triggerLabel ?? (isEdit ? "Edit" : "Create template")}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>{isEdit ? "Edit quick reply" : "Create quick reply"}</SheetTitle>
           <SheetDescription>
             Keep reusable customer messages consistent across confirmations,
@@ -184,7 +184,7 @@ export function ShopTemplateSheet({
                 onChange={(event) =>
                   updateValue("isActive", event.target.value === "active")
                 }
-                className="h-10 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                className="h-10 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -199,7 +199,7 @@ export function ShopTemplateSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 px-4 py-4">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] px-4 py-4">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>

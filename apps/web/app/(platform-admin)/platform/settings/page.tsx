@@ -108,7 +108,7 @@ export default async function PlatformSettingsPage({
       </div>
 
       <div className="grid gap-3 xl:grid-cols-3">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Account</CardDescription>
             <CardTitle>Platform owner identity</CardTitle>
@@ -132,7 +132,7 @@ export default async function PlatformSettingsPage({
               <select
                 name="locale"
                 defaultValue={data.profile.locale}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] px-3 text-sm"
               >
                 <option value="en">en</option>
                 <option value="my">my</option>
@@ -151,7 +151,7 @@ export default async function PlatformSettingsPage({
             </form>
           </CardContent>
         </Card>
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Access policy</CardDescription>
             <CardTitle>Granted platform access</CardTitle>
@@ -172,7 +172,7 @@ export default async function PlatformSettingsPage({
             )}
           </CardContent>
         </Card>
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Roles</CardDescription>
             <CardTitle>Current assignments</CardTitle>
@@ -192,7 +192,7 @@ export default async function PlatformSettingsPage({
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Diagnostics</CardDescription>
             <CardTitle>Current web session</CardTitle>
@@ -237,7 +237,7 @@ export default async function PlatformSettingsPage({
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Diagnostics</CardDescription>
             <CardTitle>Cookie vs effective permissions</CardTitle>

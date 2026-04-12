@@ -170,8 +170,8 @@ export function PlatformSubscriptionFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>Edit subscription</SheetTitle>
           <SheetDescription>
             Update the plan, renewal window, and billing state for this shop.
@@ -180,7 +180,7 @@ export function PlatformSubscriptionFormSheet({
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">
           {subscription ? (
-            <div className="mb-4 rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm">
+            <div className="mb-4 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm">
               <p className="font-semibold text-[var(--fom-ink)]">{subscription.shop_name}</p>
               <p className="text-muted-foreground">
                 {subscription.owner_name}
@@ -260,7 +260,7 @@ export function PlatformSubscriptionFormSheet({
             </Field>
 
             <Field>
-              <div className="flex items-center justify-between rounded-xl border border-black/8 px-3 py-3">
+              <div className="flex items-center justify-between rounded-xl border border-[var(--fom-border-strong)] px-3 py-3">
                 <div className="flex flex-col gap-1">
                   <FieldLabel className="text-sm">Auto renew</FieldLabel>
                   <FieldDescription>
@@ -282,7 +282,7 @@ export function PlatformSubscriptionFormSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 bg-muted/20">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] bg-muted/10">
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Button
               type="button"
