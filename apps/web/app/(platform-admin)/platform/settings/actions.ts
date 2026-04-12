@@ -154,3 +154,130 @@ export async function updatePlatformPlanFromFormAction(formData: FormData) {
 
   redirectSettings(redirectInput)
 }
+
+export type PlatformPlanItemInput = {
+  label: string
+  description?: string | null
+  availability_status: "available" | "unavailable"
+  sort_order?: number
+}
+
+export type PlatformPlanEditorInput = {
+  code: string
+  name: string
+  description?: string | null
+  price: number
+  currency: string
+  billing_period: string
+  is_active: boolean
+  sort_order: number
+  items: PlatformPlanItemInput[]
+}
+
+export type PlatformPlanActionResult =
+  | {
+      ok: true
+      message: string
+    }
+  | {
+      ok: false
+      message: string
+      fieldErrors?: Record<string, string[]>
+    }
+
+function toFieldErrors(details?: Array<{ field: string; errors: string[] }>) {
+  return Object.fromEntries((details ?? []).map((detail) => [detail.field, detail.errors]))
+}
+
+function toPlanActionError(
+  error: unknown,
+  fallbackMessage: string
+): PlatformPlanActionResult {
+  if (error instanceof AuthApiError) {
+    return {
+      ok: false,
+      message: error.message,
+      fieldErrors: toFieldErrors(error.details),
+    }
+  }
+
+  return {
+    ok: false,
+    message: fallbackMessage,
+  }
+}
+
+export async function createPlatformPlanAction(
+  input: PlatformPlanEditorInput
+): Promise<PlatformPlanActionResult> {
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: "/api/v1/platform/settings/plans",
+      preferFreshSession: true,
+      requiredAccess: "platform",
+      init: {
+        method: "POST",
+        json: input,
+      },
+    })
+
+    revalidatePlatformSettingsWorkspace()
+
+    return {
+      ok: true,
+      message: "Plan created successfully.",
+    }
+  } catch (error) {
+    return toPlanActionError(error, "Unable to create the plan right now.")
+  }
+}
+
+export async function updatePlatformPlanAction(
+  planId: string,
+  input: Partial<PlatformPlanEditorInput>
+): Promise<PlatformPlanActionResult> {
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/platform/settings/plans/${planId}`,
+      preferFreshSession: true,
+      requiredAccess: "platform",
+      init: {
+        method: "PATCH",
+        json: input,
+      },
+    })
+
+    revalidatePlatformSettingsWorkspace()
+
+    return {
+      ok: true,
+      message: "Plan updated successfully.",
+    }
+  } catch (error) {
+    return toPlanActionError(error, "Unable to update the plan right now.")
+  }
+}
+
+export async function deletePlatformPlanAction(
+  planId: string
+): Promise<PlatformPlanActionResult> {
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/platform/settings/plans/${planId}`,
+      preferFreshSession: true,
+      requiredAccess: "platform",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidatePlatformSettingsWorkspace()
+
+    return {
+      ok: true,
+      message: "Plan deleted successfully.",
+    }
+  } catch (error) {
+    return toPlanActionError(error, "Unable to delete the plan right now.")
+  }
+}

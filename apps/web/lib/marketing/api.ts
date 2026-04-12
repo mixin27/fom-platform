@@ -2,6 +2,14 @@ import "server-only"
 
 import { requestApi } from "@/lib/auth/api"
 
+export type MarketingPlanItem = {
+  id: string
+  label: string
+  description: string | null
+  availability_status: "available" | "unavailable" | string
+  sort_order: number
+}
+
 export type MarketingPlan = {
   id: string
   code: string
@@ -11,6 +19,8 @@ export type MarketingPlan = {
   price: number
   currency: string
   is_active: boolean
+  sort_order: number
+  items: MarketingPlanItem[]
 }
 
 const fallbackPlans: MarketingPlan[] = [
@@ -23,26 +33,32 @@ const fallbackPlans: MarketingPlan[] = [
     price: 0,
     currency: "MMK",
     is_active: true,
+    sort_order: 0,
+    items: [],
   },
   {
     id: "pro_monthly",
     code: "pro_monthly",
-    name: "Pro Monthly",
-    description: "Flexible month-to-month billing for an active shop.",
+    name: "Shop Monthly",
+    description: "Single-shop monthly plan for daily Facebook order operations.",
     billing_period: "monthly",
-    price: 5000,
+    price: 7000,
     currency: "MMK",
     is_active: true,
+    sort_order: 1,
+    items: [],
   },
   {
     id: "pro_yearly",
     code: "pro_yearly",
-    name: "Pro Yearly",
-    description: "Lower yearly pricing for shops running every day.",
+    name: "Shop Yearly",
+    description: "Discounted yearly plan for shops running the workflow every day.",
     billing_period: "yearly",
-    price: 50000,
+    price: 70000,
     currency: "MMK",
     is_active: true,
+    sort_order: 2,
+    items: [],
   },
 ]
 

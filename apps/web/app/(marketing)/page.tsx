@@ -2,6 +2,7 @@ import Link from "next/link"
 import {
   ArrowRight,
   Check,
+  CircleSlash2,
   LayoutDashboard,
   ScanSearch,
   Search,
@@ -162,19 +163,28 @@ function getPlanSummary(plan: MarketingPlan, monthlyPlan: MarketingPlan | null) 
   return "Simple pricing for one shop subscription."
 }
 
-function getPlanFeatures(plan: MarketingPlan, monthlyPlan: MarketingPlan | null) {
-  const baseFeatures = [
-    "Orders, customers, deliveries, and message templates",
-    "Daily summaries plus weekly and monthly reporting",
+function getFallbackPlanItems(
+  plan: MarketingPlan,
+  monthlyPlan: MarketingPlan | null
+) {
+  if (plan.billing_period === "trial") {
+    return {
+      available: [
+        "7-day access for one shop workspace",
+        "Orders, customers, deliveries, templates, and reporting",
+        "Upgrade later without losing shop data",
+      ],
+      unavailable: ["Continuous access after the trial window"],
+    }
+  }
+
+  const available = [
+    "One subscription belongs to one active shop",
+    "Orders, customers, deliveries, templates, and reporting",
+    "Email notices for billing and account recovery",
   ]
 
-  if (plan.billing_period === "trial") {
-    return [
-      "Start with a new shop before committing to paid billing",
-      ...baseFeatures,
-      "Upgrade later without losing shop data",
-    ]
-  }
+  const unavailable: string[] = []
 
   if (
     plan.billing_period === "yearly" &&
@@ -182,18 +192,27 @@ function getPlanFeatures(plan: MarketingPlan, monthlyPlan: MarketingPlan | null)
     monthlyPlan.currency === plan.currency &&
     monthlyPlan.price * 12 > plan.price
   ) {
-    return [
-      "One subscription belongs to one active shop",
-      ...baseFeatures,
-      "Lower yearly cost than the monthly plan",
-    ]
+    available.push("Discounted annual billing compared with month-to-month")
+  } else if (plan.billing_period === "monthly") {
+    unavailable.push("Discounted annual billing")
   }
 
-  return [
-    "One subscription belongs to one active shop",
-    ...baseFeatures,
-    "Email notices for billing, recovery, and verification",
-  ]
+  return { available, unavailable }
+}
+
+function getPlanItems(plan: MarketingPlan, monthlyPlan: MarketingPlan | null) {
+  const available = plan.items
+    .filter((item) => item.availability_status === "available")
+    .map((item) => item.label)
+  const unavailable = plan.items
+    .filter((item) => item.availability_status === "unavailable")
+    .map((item) => item.label)
+
+  if (available.length > 0 || unavailable.length > 0) {
+    return { available, unavailable }
+  }
+
+  return getFallbackPlanItems(plan, monthlyPlan)
 }
 
 function getPlanActionLabel(plan: MarketingPlan, dashboardHref: string | null) {
@@ -516,7 +535,7 @@ export default async function LandingPage() {
               const href = dashboardHref ?? "/register"
               const actionLabel = getPlanActionLabel(plan, dashboardHref)
               const summary = getPlanSummary(plan, monthlyPlan)
-              const features = getPlanFeatures(plan, monthlyPlan)
+              const items = getPlanItems(plan, monthlyPlan)
 
               return (
               <Card
@@ -572,8 +591,8 @@ export default async function LandingPage() {
                     </p>
                   </div>
                   <div className="flex flex-col gap-3">
-                    {features.map((feature) => (
-                      <div key={feature} className="flex items-start gap-3">
+                    {items.available.map((feature) => (
+                      <div key={`available-${feature}`} className="flex items-start gap-3">
                         <Check
                           className={
                             isFeatured
@@ -586,6 +605,26 @@ export default async function LandingPage() {
                             isFeatured
                               ? "text-white/80"
                               : "text-[var(--fom-marketing-muted)]"
+                          }
+                        >
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                    {items.unavailable.map((feature) => (
+                      <div key={`unavailable-${feature}`} className="flex items-start gap-3">
+                        <CircleSlash2
+                          className={
+                            isFeatured
+                              ? "mt-0.5 size-4 text-white/38"
+                              : "mt-0.5 size-4 text-muted-foreground/70"
+                          }
+                        />
+                        <span
+                          className={
+                            isFeatured
+                              ? "text-white/52"
+                              : "text-[var(--fom-marketing-muted)]/75"
                           }
                         >
                           {feature}

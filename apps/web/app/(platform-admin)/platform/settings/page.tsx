@@ -2,12 +2,10 @@ import { Shield, UserRound, WalletCards } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import { getSession } from "@/lib/auth/session"
 import { getPlatformSettings } from "@/lib/platform/api"
 import {
-  formatCurrency,
   formatRelativeDate,
 } from "@/lib/platform/format"
 import {
@@ -15,9 +13,9 @@ import {
   type PlatformSearchParams,
 } from "@/lib/platform/query"
 import {
-  updatePlatformPlanFromFormAction,
   updatePlatformSettingsProfileFromFormAction,
 } from "./actions"
+import { PlatformPlanCatalogEditor } from "./_components/platform-plan-catalog-editor"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -310,97 +308,7 @@ export default async function PlatformSettingsPage({
         </Card>
       </div>
 
-      <PlatformDataTable
-        title="Configured plans"
-        description="Plan catalog"
-        rows={data.plans}
-        emptyMessage="No plans configured yet."
-        footer={`Showing ${data.plans.length} plans`}
-        columns={[
-          {
-            key: "plan",
-            header: "Plan",
-            render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold text-[var(--fom-ink)]">
-                  {plan.name}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {plan.code}
-                </span>
-              </div>
-            ),
-          },
-          {
-            key: "period",
-            header: "Billing period",
-            render: (plan) => plan.billing_period,
-          },
-          {
-            key: "price",
-            header: "Price",
-            render: (plan) => formatCurrency(plan.price, plan.currency),
-          },
-          {
-            key: "shops",
-            header: "Shops",
-            render: (plan) => plan.shop_count.toLocaleString(),
-          },
-          {
-            key: "revenue",
-            header: "Revenue",
-            render: (plan) => formatCurrency(plan.collected_revenue, plan.currency),
-          },
-          {
-            key: "status",
-            header: "Status",
-            render: (plan) => (
-              <PlatformStatusBadge
-                status={plan.is_active ? "active" : "inactive"}
-              />
-            ),
-          },
-          {
-            key: "actions",
-            header: "Quick update",
-            render: (plan) => (
-              <form
-                action={updatePlatformPlanFromFormAction}
-                className="flex items-center justify-end gap-2"
-              >
-                <input type="hidden" name="plan_id" value={plan.id} />
-                <Input
-                  type="number"
-                  min={0}
-                  name="price"
-                  defaultValue={String(plan.price)}
-                  className="h-8 w-24"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  name="sort_order"
-                  defaultValue={String(plan.sort_order ?? 0)}
-                  className="h-8 w-20"
-                />
-                <select
-                  name="status"
-                  defaultValue={plan.is_active ? "active" : "inactive"}
-                  className="h-8 rounded-xl border border-black/8 bg-white px-2.5 text-xs"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                <Button type="submit" size="sm" variant="outline">
-                  Save
-                </Button>
-              </form>
-            ),
-            className: "w-[280px] px-4 py-2.5 text-right",
-            cellClassName: "px-4 py-3 text-right",
-          },
-        ]}
-      />
+      <PlatformPlanCatalogEditor plans={data.plans} />
     </div>
   )
 }

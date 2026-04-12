@@ -18,6 +18,7 @@ import { RequirePermissions } from '../common/http/permissions.decorator';
 import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { CreatePlatformPlanDto } from './dto/create-platform-plan.dto';
 import { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
@@ -209,5 +210,22 @@ export class PlatformController {
     @Body() body: UpdatePlatformPlanDto,
   ) {
     return ok(this.platformService.updateSettingsPlan(planId, body));
+  }
+
+  @Post('settings/plans')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Create a billing plan from platform settings' })
+  createSettingsPlan(@Body() body: CreatePlatformPlanDto) {
+    return ok(this.platformService.createSettingsPlan(body));
+  }
+
+  @Delete('settings/plans/:planId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete an unused billing plan from platform settings' })
+  async deleteSettingsPlan(@Param('planId') planId: string) {
+    await this.platformService.deleteSettingsPlan(planId);
   }
 }

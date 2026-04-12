@@ -17,7 +17,7 @@ import { platformInvoiceStatuses } from '../platform-billing.constants';
 export class UpdatePlatformInvoiceDto {
   @ApiPropertyOptional({
     description: 'Updated invoice amount',
-    example: 5000,
+    example: 7000,
     minimum: 0,
   })
   @Type(() => Number)

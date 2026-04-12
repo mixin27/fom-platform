@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
   IsArray,
@@ -7,41 +7,39 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  ValidateNested,
   Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { trimString } from '../../auth/dto/transforms';
 import { PlatformPlanItemInputDto } from './platform-plan-item-input.dto';
 
-export class UpdatePlatformPlanDto {
-  @ApiPropertyOptional({
+export class CreatePlatformPlanDto {
+  @ApiProperty({
     example: 'pro_monthly',
     description: 'Unique plan code used in subscriptions',
   })
   @Transform(trimString)
-  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   @Matches(/^[a-z0-9_-]+$/)
-  code?: string;
+  code!: string;
 
-  @ApiPropertyOptional({
-    example: 'Pro Monthly',
+  @ApiProperty({
+    example: 'Shop Monthly',
   })
   @Transform(trimString)
-  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
-  name?: string;
+  name!: string;
 
   @ApiPropertyOptional({
-    example: 'Pro tier with monthly billing cycle',
+    example: 'Single-shop monthly plan for daily Facebook order operations.',
     nullable: true,
   })
   @Transform(trimString)
@@ -50,14 +48,13 @@ export class UpdatePlatformPlanDto {
   @MaxLength(400)
   description?: string | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 7000,
   })
-  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1000000000)
-  price?: number;
+  price!: number;
 
   @ApiPropertyOptional({
     example: 'MMK',
@@ -69,15 +66,14 @@ export class UpdatePlatformPlanDto {
   @MaxLength(10)
   currency?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 'monthly',
   })
   @Transform(trimString)
-  @IsOptional()
   @IsString()
   @MinLength(3)
   @MaxLength(40)
-  billing_period?: string;
+  billing_period!: string;
 
   @ApiPropertyOptional({
     example: true,
