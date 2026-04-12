@@ -557,14 +557,6 @@ export class OrdersService {
     shopId: string,
     body: CreateOrderDto,
   ) {
-    if (body.customer_id) {
-      const customer = await this.requireCustomer(db, body.customer_id);
-      if (customer.shopId !== shopId) {
-        throw conflictError('Customer does not belong to this shop');
-      }
-      return customer;
-    }
-
     const inlineCustomer = body.customer
       ? {
           name: body.customer.name,
@@ -578,6 +570,42 @@ export class OrdersService {
           township: body.township,
           address: body.address,
         };
+
+    if (body.customer_id) {
+      const customer = await this.requireCustomer(db, body.customer_id);
+      if (customer.shopId !== shopId) {
+        throw conflictError('Customer does not belong to this shop');
+      }
+
+      const hasInlineCustomer =
+        Boolean(inlineCustomer.name?.trim()) || Boolean(inlineCustomer.phone?.trim());
+
+      if (!hasInlineCustomer) {
+        return customer;
+      }
+
+      const inlinePhone = inlineCustomer.phone
+        ? this.toCanonicalPhone(this.normalizePhone(inlineCustomer.phone))
+        : null;
+      const referencedPhone = this.toCanonicalPhone(customer.phone);
+
+      if (!inlinePhone || inlinePhone === referencedPhone) {
+        return db.customer.update({
+          where: { id: customer.id },
+          data: {
+            ...(inlineCustomer.name?.trim()
+              ? { name: inlineCustomer.name.trim() }
+              : {}),
+            ...(inlineCustomer.township !== undefined
+              ? { township: inlineCustomer.township ?? customer.township }
+              : {}),
+            ...(inlineCustomer.address !== undefined
+              ? { address: inlineCustomer.address ?? customer.address }
+              : {}),
+          },
+        });
+      }
+    }
 
     const errors: Array<{ field: string; errors: string[] }> = [];
     if (!inlineCustomer.name) {
@@ -598,19 +626,22 @@ export class OrdersService {
 
     const name = inlineCustomer.name;
     const phone = this.normalizePhone(inlineCustomer.phone);
-    const existing = await db.customer.findUnique({
+    const canonicalPhone = this.toCanonicalPhone(phone);
+    const existingCustomers = await db.customer.findMany({
       where: {
-        shopId_phone: {
-          shopId,
-          phone,
-        },
+        shopId,
       },
     });
+    const existing = existingCustomers.find(
+      (customer) => this.toCanonicalPhone(customer.phone) === canonicalPhone,
+    );
+
     if (existing) {
       return db.customer.update({
         where: { id: existing.id },
         data: {
           name,
+          phone,
           township: inlineCustomer.township ?? existing.township,
           address: inlineCustomer.address ?? existing.address,
         },

@@ -14,9 +14,15 @@ class AuthSessionModel extends AuthSession {
 
   factory AuthSessionModel.fromJson(Map<String, dynamic> json) {
     final rawUser = _asNullableMap(json['user']) ?? json;
+    final mergedUser = <String, dynamic>{
+      ...rawUser,
+      if (json['platform_access'] != null)
+        'platform_access': json['platform_access'],
+      if (json['shops'] != null) 'shops': json['shops'],
+    };
 
     return AuthSessionModel(
-      user: AuthUserModel.fromJson(rawUser),
+      user: AuthUserModel.fromJson(mergedUser),
       accessToken: _asString(json['access_token'] ?? json['token']),
       refreshToken: _asString(json['refresh_token']),
       accessExpiresAt: _asDateTime(json['expires_at']),

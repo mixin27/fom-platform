@@ -6,8 +6,10 @@ import 'package:fom_mobile/features/auth/domain/entities/auth_user.dart';
 import 'package:fom_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:fom_mobile/features/auth/domain/usecases/login_use_case.dart';
 import 'package:fom_mobile/features/auth/domain/usecases/logout_use_case.dart';
+import 'package:fom_mobile/features/auth/domain/usecases/read_selected_shop_use_case.dart';
 import 'package:fom_mobile/features/auth/domain/usecases/register_use_case.dart';
 import 'package:fom_mobile/features/auth/domain/usecases/restore_auth_session_use_case.dart';
+import 'package:fom_mobile/features/auth/domain/usecases/save_selected_shop_use_case.dart';
 import 'package:fom_mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:fom_mobile/features/auth/presentation/bloc/auth_event.dart';
 import 'package:fom_mobile/features/auth/presentation/bloc/auth_state.dart';
@@ -59,6 +61,7 @@ void main() {
                 AuthStatus.authenticated,
               )
               .having((state) => state.user?.id, 'user.id', 'usr_1')
+              .having((state) => state.activeShopId, 'activeShopId', 'shop_1')
               .having((state) => state.isSubmitting, 'isSubmitting', false),
         ]),
       );
@@ -81,6 +84,8 @@ AuthBloc _buildBloc(_FakeAuthRepository repository) {
     loginUseCase: LoginUseCase(repository),
     registerUseCase: RegisterUseCase(repository),
     logoutUseCase: LogoutUseCase(repository),
+    readSelectedShopUseCase: ReadSelectedShopUseCase(repository),
+    saveSelectedShopUseCase: SaveSelectedShopUseCase(repository),
   );
 }
 
@@ -105,6 +110,7 @@ class _FakeAuthRepository implements AuthRepository {
   final Result<AuthSession> _registerResult;
   final Result<AuthSession> _refreshResult;
   final Result<void> _logoutResult;
+  String? _selectedShopId;
 
   @override
   Future<Result<AuthSession>> login({
@@ -117,6 +123,11 @@ class _FakeAuthRepository implements AuthRepository {
   @override
   Future<Result<void>> logout() async {
     return _logoutResult;
+  }
+
+  @override
+  Future<Result<String?>> readSelectedShopId() async {
+    return Result<String?>.success(_selectedShopId);
   }
 
   @override
@@ -141,6 +152,12 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Result<AuthSession?>> restoreSession() async {
     return _restoreResult;
   }
+
+  @override
+  Future<Result<void>> saveSelectedShopId(String? shopId) async {
+    _selectedShopId = shopId;
+    return Result<void>.success(null);
+  }
 }
 
 AuthSession _fakeSession() {
@@ -159,6 +176,8 @@ AuthSession _fakeSession() {
       shopAccesses: <AuthShopAccess>[
         AuthShopAccess(
           shopId: 'shop_1',
+          shopName: 'Ma Aye Shop',
+          timezone: 'Asia/Yangon',
           role: 'owner',
           roles: <String>['owner'],
           permissions: <String>['orders.read'],

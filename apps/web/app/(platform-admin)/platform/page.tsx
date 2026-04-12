@@ -59,6 +59,9 @@ export default async function PlatformHomePage() {
               <Link href="/platform/shops">Shops</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
+              <Link href="/platform/users">Users</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
               <Link href="/platform/subscriptions">Subscriptions</Link>
             </Button>
             <Button asChild variant="outline" size="sm">

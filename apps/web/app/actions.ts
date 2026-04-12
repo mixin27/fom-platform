@@ -18,7 +18,6 @@ import {
   hasPlatformAccess,
   hasShopAccess,
   persistSession,
-  type AppSession,
 } from "@/lib/auth/session"
 
 function getFieldValue(formData: FormData, key: string) {
@@ -27,18 +26,6 @@ function getFieldValue(formData: FormData, key: string) {
 
 function ensureEmail(value: string) {
   return value.includes("@") && value.includes(".")
-}
-
-function requireAccessibleSession(session: AppSession) {
-  if (hasPlatformAccess(session) || hasShopAccess(session)) {
-    return session
-  }
-
-  throw new AuthApiError(
-    "This account does not have portal access yet.",
-    "NO_ACCESS",
-    403
-  )
 }
 
 export async function signInAction(formData: FormData) {
@@ -54,7 +41,7 @@ export async function signInAction(formData: FormData) {
       email,
       password,
     })
-    const session = requireAccessibleSession(buildSessionFromAuth(auth))
+    const session = buildSessionFromAuth(auth)
 
     await persistSession(session)
     redirect(defaultPathForSession(session))
@@ -64,10 +51,6 @@ export async function signInAction(formData: FormData) {
       (error.code === "UNAUTHORIZED" || error.status === 401)
     ) {
       redirect("/sign-in?error=invalid_credentials")
-    }
-
-    if (error instanceof AuthApiError && error.code === "NO_ACCESS") {
-      redirect("/sign-in?error=no_access")
     }
 
     redirect("/sign-in?error=auth_failed")
@@ -113,7 +96,7 @@ export async function registerAction(formData: FormData) {
     }
 
     const refreshedAuth = await refreshAuthSession(auth.refresh_token)
-    const session = requireAccessibleSession(buildSessionFromAuth(refreshedAuth))
+    const session = buildSessionFromAuth(refreshedAuth)
 
     await persistSession(session)
     redirect(defaultPathForSession(session))
@@ -181,5 +164,47 @@ export async function switchActiveShopAction(shopId: string) {
 
   return {
     ok: true as const,
+  }
+}
+
+export async function createInitialShopAction(formData: FormData) {
+  const session = await getSession()
+
+  if (!session) {
+    redirect("/sign-in")
+  }
+
+  if (hasPlatformAccess(session) || hasShopAccess(session)) {
+    redirect(defaultPathForSession(session))
+  }
+
+  const shopName = getFieldValue(formData, "shopName")
+  const timezone = getFieldValue(formData, "timezone") || "Asia/Yangon"
+
+  if (!shopName) {
+    redirect("/setup/shop?error=invalid_setup")
+  }
+
+  try {
+    await createShop({
+      accessToken: session.accessToken,
+      name: shopName,
+      timezone,
+    })
+
+    const refreshedAuth = await refreshAuthSession(session.refreshToken)
+    const refreshedSession = buildSessionFromAuth(
+      refreshedAuth,
+      session.activeShopId
+    )
+
+    await persistSession(refreshedSession)
+    redirect(defaultPathForSession(refreshedSession))
+  } catch (error) {
+    if (error instanceof AuthApiError && error.code === "CONFLICT") {
+      redirect("/setup/shop?error=shop_name_unavailable")
+    }
+
+    redirect("/setup/shop?error=shop_setup_failed")
   }
 }

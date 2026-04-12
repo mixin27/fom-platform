@@ -16,6 +16,7 @@ import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto
 import type { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
 import type { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import type { ListPlatformUsersQueryDto } from './dto/list-platform-users-query.dto';
 import type { SearchPlatformOwnerAccountsQueryDto } from './dto/search-platform-owner-accounts-query.dto';
 import type { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
 import type { UpdatePlatformPlanDto } from './dto/update-platform-plan.dto';
@@ -146,6 +147,33 @@ type PlatformOwnerAccount = {
   has_password_credential: boolean;
 };
 
+type PlatformUserRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  locale: string;
+  created_at: string;
+  last_active_at: string | null;
+  active_session_count: number;
+  auth_methods: string[];
+  access_type: 'platform' | 'shop_owner' | 'staff' | 'no_shop';
+  platform_roles: Array<{
+    id: string;
+    code: string;
+    name: string;
+  }>;
+  platform_permissions_count: number;
+  owned_shop_count: number;
+  active_shop_count: number;
+  shops: Array<{
+    shop_id: string;
+    shop_name: string;
+    membership_status: string;
+    role: string | null;
+  }>;
+};
+
 type DetectedSupportIssue = {
   issue_key: string;
   source: 'system';
@@ -263,6 +291,179 @@ export class PlatformService {
     });
 
     const page = paginate(filtered, query.limit, query.cursor);
+    return paged(page.items, page.pagination);
+  }
+
+  async listUsers(query: ListPlatformUsersQueryDto) {
+    const normalizedSearch = query.search?.trim().toLowerCase() ?? '';
+    const normalizedAccess = query.access ?? 'all';
+    const users = await this.prisma.user.findMany({
+      include: {
+        ownedShops: {
+          select: {
+            id: true,
+          },
+        },
+        memberships: {
+          include: {
+            shop: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            roleAssignments: {
+              include: {
+                role: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: {
+                      select: {
+                        id: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        passwordCredential: {
+          select: {
+            userId: true,
+          },
+        },
+        authIdentities: {
+          select: {
+            provider: true,
+          },
+        },
+        sessions: {
+          where: {
+            revokedAt: null,
+          },
+          select: {
+            createdAt: true,
+            lastUsedAt: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { name: 'asc' }],
+    });
+
+    const rows = users
+      .map((user) => {
+        const platformRoles = user.roleAssignments.map((assignment) => ({
+          id: assignment.role.id,
+          code: assignment.role.code,
+          name: assignment.role.name,
+        }));
+        const platformPermissionsCount = new Set(
+          user.roleAssignments.flatMap((assignment) =>
+            assignment.role.permissionAssignments.map(
+              (permissionAssignment) => permissionAssignment.permission.id,
+            ),
+          ),
+        ).size;
+        const shopRows = user.memberships
+          .map((membership) => ({
+            shop_id: membership.shop.id,
+            shop_name: membership.shop.name,
+            membership_status: membership.status,
+            role:
+              membership.roleAssignments
+                .map((assignment) => assignment.role.code)
+                .sort()[0] ?? null,
+          }))
+          .sort((left, right) => left.shop_name.localeCompare(right.shop_name));
+        const activeShopCount = user.memberships.filter(
+          (membership) => membership.status === 'active',
+        ).length;
+        const hasOwnerRole = shopRows.some((shop) => shop.role === 'owner');
+        const accessType: PlatformUserRow['access_type'] =
+          platformRoles.length > 0
+            ? 'platform'
+            : user.ownedShops.length > 0 || hasOwnerRole
+              ? 'shop_owner'
+              : activeShopCount > 0
+                ? 'staff'
+                : 'no_shop';
+        const lastActiveAt = user.sessions.reduce<Date | null>((latest, session) => {
+          const candidate = session.lastUsedAt ?? session.createdAt;
+
+          if (!latest || candidate.getTime() > latest.getTime()) {
+            return candidate;
+          }
+
+          return latest;
+        }, null);
+        const authMethods = [
+          ...(user.passwordCredential ? ['password'] : []),
+          ...new Set(user.authIdentities.map((identity) => identity.provider)),
+        ].sort((left, right) => left.localeCompare(right));
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          locale: user.locale,
+          created_at: user.createdAt.toISOString(),
+          last_active_at: lastActiveAt?.toISOString() ?? null,
+          active_session_count: user.sessions.length,
+          auth_methods: authMethods,
+          access_type: accessType,
+          platform_roles: platformRoles,
+          platform_permissions_count: platformPermissionsCount,
+          owned_shop_count: user.ownedShops.length,
+          active_shop_count: activeShopCount,
+          shops: shopRows,
+        } satisfies PlatformUserRow;
+      })
+      .filter((user) => {
+        if (normalizedAccess !== 'all' && user.access_type !== normalizedAccess) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return [
+          user.name,
+          user.email ?? '',
+          user.phone ?? '',
+          ...user.auth_methods,
+          ...user.platform_roles.map((role) => role.name),
+          ...user.shops.map((shop) => shop.shop_name),
+        ].some((value) => value.toLowerCase().includes(normalizedSearch));
+      })
+      .sort((left, right) => {
+        const leftLastActive = Date.parse(left.last_active_at ?? left.created_at);
+        const rightLastActive = Date.parse(right.last_active_at ?? right.created_at);
+
+        if (leftLastActive !== rightLastActive) {
+          return rightLastActive - leftLastActive;
+        }
+
+        return left.name.localeCompare(right.name);
+      });
+
+    const page = paginate(rows, query.limit, query.cursor);
     return paged(page.items, page.pagination);
   }
 

@@ -22,11 +22,13 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
   orders: ShoppingCart,
   customers: Users,
+  staffs: Users,
   deliveries: PackageCheck,
   templates: MessageSquareText,
   reports: BarChart3,
   settings: Settings,
   shops: Store,
+  users: Users,
   subscriptions: CreditCard,
   support: LifeBuoy,
 }

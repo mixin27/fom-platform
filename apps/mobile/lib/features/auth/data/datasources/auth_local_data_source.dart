@@ -11,9 +11,13 @@ abstract class AuthLocalDataSource {
 
   Future<AuthUserModel?> readCachedUser();
 
+  Future<String?> readSelectedShopId();
+
   Future<void> saveSession(AuthSessionModel session);
 
   Future<void> saveCachedUser(AuthUserModel user);
+
+  Future<void> saveSelectedShopId(String? shopId);
 
   Future<void> clearSession();
 }
@@ -26,6 +30,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
        _sharedPreferencesService = sharedPreferencesService;
 
   static const String _cachedUserKey = 'auth.cached_user';
+  static const String _selectedShopIdKey = 'auth.selected_shop_id';
 
   final AuthTokenStore _tokenStore;
   final SharedPreferencesService _sharedPreferencesService;
@@ -34,6 +39,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   Future<void> clearSession() async {
     await _tokenStore.clearTokens();
     await _sharedPreferencesService.remove(_cachedUserKey);
+    await _sharedPreferencesService.remove(_selectedShopIdKey);
   }
 
   @override
@@ -57,6 +63,14 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     }
 
     return null;
+  }
+
+  @override
+  Future<String?> readSelectedShopId() async {
+    final shopId = _sharedPreferencesService.getString(_selectedShopIdKey);
+    final normalized = shopId?.trim() ?? '';
+
+    return normalized.isEmpty ? null : normalized;
   }
 
   @override
@@ -87,5 +101,17 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   Future<void> saveSession(AuthSessionModel session) async {
     await _tokenStore.saveTokens(session.toTokens());
     await saveCachedUser(session.user as AuthUserModel);
+  }
+
+  @override
+  Future<void> saveSelectedShopId(String? shopId) async {
+    final normalized = shopId?.trim() ?? '';
+
+    if (normalized.isEmpty) {
+      await _sharedPreferencesService.remove(_selectedShopIdKey);
+      return;
+    }
+
+    await _sharedPreferencesService.setString(_selectedShopIdKey, normalized);
   }
 }

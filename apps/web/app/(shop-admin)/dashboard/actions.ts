@@ -11,6 +11,7 @@ function revalidateShopWorkspace() {
   revalidatePath("/dashboard/orders")
   revalidatePath("/dashboard/orders/paste-from-messenger")
   revalidatePath("/dashboard/customers")
+  revalidatePath("/dashboard/staffs")
   revalidatePath("/dashboard/deliveries")
   revalidatePath("/dashboard/templates")
   revalidatePath("/dashboard/reports")

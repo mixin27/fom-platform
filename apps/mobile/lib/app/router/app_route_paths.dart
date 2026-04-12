@@ -8,6 +8,7 @@ abstract final class AppRoutePaths {
   static const String register = '/register';
   static const String authEmail = '/auth/email';
   static const String authOtp = '/auth/otp';
+  static const String shopSelection = '/shop-selection';
 
   // Orders
   static const String orders = '/orders';

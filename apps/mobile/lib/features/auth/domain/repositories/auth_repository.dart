@@ -20,5 +20,9 @@ abstract class AuthRepository {
 
   Future<Result<AuthSession>> refreshSession({required String refreshToken});
 
+  Future<Result<String?>> readSelectedShopId();
+
+  Future<Result<void>> saveSelectedShopId(String? shopId);
+
   Future<Result<void>> logout();
 }

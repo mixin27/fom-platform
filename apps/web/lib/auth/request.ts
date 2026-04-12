@@ -32,11 +32,11 @@ type AuthenticatedRequestOptions = {
 
 function redirectForMissingAccess(session: AppSession, requiredAccess: RequiredAccess) {
   if (requiredAccess === "platform") {
-    redirect(hasShopAccess(session) ? "/dashboard" : "/sign-in?error=no_access")
+    redirect(hasShopAccess(session) ? "/dashboard" : defaultPathForSession(session))
   }
 
   if (requiredAccess === "shop") {
-    redirect(hasPlatformAccess(session) ? "/platform" : "/sign-in?error=no_access")
+    redirect(hasPlatformAccess(session) ? "/platform" : defaultPathForSession(session))
   }
 }
 

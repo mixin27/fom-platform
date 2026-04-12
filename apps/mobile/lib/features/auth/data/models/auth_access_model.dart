@@ -27,6 +27,8 @@ class AuthPlatformAccessModel extends AuthPlatformAccess {
 class AuthShopAccessModel extends AuthShopAccess {
   const AuthShopAccessModel({
     required super.shopId,
+    required super.shopName,
+    required super.timezone,
     required super.role,
     required super.roles,
     required super.permissions,
@@ -38,6 +40,8 @@ class AuthShopAccessModel extends AuthShopAccess {
 
     return AuthShopAccessModel(
       shopId: _asString(json['shop_id'] ?? json['id'] ?? source['shop_id']),
+      shopName: _asNullableString(json['name']) ?? 'Shop',
+      timezone: _asNullableString(json['timezone']) ?? 'Asia/Yangon',
       role: _asNullableString(source['role']),
       roles: _asStringList(source['roles']),
       permissions: _asStringList(source['permissions']),
@@ -47,6 +51,8 @@ class AuthShopAccessModel extends AuthShopAccess {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'shop_id': shopId,
+      'name': shopName,
+      'timezone': timezone,
       'role': role,
       'roles': roles,
       'permissions': permissions,

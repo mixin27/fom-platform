@@ -208,7 +208,7 @@ export function defaultPathForSession(session: AppSession) {
     return "/dashboard"
   }
 
-  return "/sign-in?error=no_access"
+  return "/setup/shop"
 }
 
 export function buildSessionRefreshPath(nextPath: string) {
@@ -251,6 +251,16 @@ const readSession = cache(async () => {
 
 export async function getSession() {
   return readSession()
+}
+
+export async function requireSession() {
+  const session = await getSession()
+
+  if (!session) {
+    redirect("/sign-in")
+  }
+
+  return session
 }
 
 function isCookieMutationError(error: unknown) {
@@ -343,28 +353,20 @@ export async function redirectIfAuthenticated() {
 }
 
 export async function requirePlatformAdmin() {
-  const session = await getSession()
-
-  if (!session) {
-    redirect("/sign-in")
-  }
+  const session = await requireSession()
 
   if (!hasPlatformAccess(session)) {
-    redirect("/dashboard")
+    redirect(defaultPathForSession(session))
   }
 
   return session
 }
 
 export async function requireShopAdmin() {
-  const session = await getSession()
-
-  if (!session) {
-    redirect("/sign-in")
-  }
+  const session = await requireSession()
 
   if (!hasShopAccess(session)) {
-    redirect(hasPlatformAccess(session) ? "/platform" : "/sign-in?error=no_access")
+    redirect(defaultPathForSession(session))
   }
 
   return session

@@ -1,5 +1,6 @@
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -25,157 +26,189 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _buildShopHeaderHero()),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildPlanCard(),
+    return BlocBuilder<AuthBloc, AuthState>(
+      bloc: getIt<AuthBloc>(),
+      builder: (context, authState) {
+        final activeShop = authState.activeShop;
+        final hasMultipleShops = (authState.user?.shopAccesses.length ?? 0) > 1;
 
-                // SHOP SETTINGS
-                const _SectionLabel(label: 'Shop Settings'),
-                AppSettingGroup(
-                  children: [
-                    AppSettingTile(
-                      iconEmoji: '🏪',
-                      iconBgColor: AppColors.softOrangeLight,
-                      title: 'Shop Profile',
-                      subtitle: 'Name, category, address',
-                      showArrow: true,
-                      onTap: _navigateToEditProfile,
-                    ),
-                    AppSettingTile(
-                      iconEmoji: '🌐',
-                      iconBgColor: AppColors.tealLight,
-                      title: 'Language',
-                      subtitle: 'ဘာသာစကား',
-                      trailingValue: 'မြန်မာ + EN',
-                      showArrow: true,
-                      onTap: () {},
-                    ),
-                    AppSettingTile(
-                      iconEmoji: '💰',
-                      iconBgColor: AppColors.yellowLight,
-                      title: 'Default Delivery Fee',
-                      subtitle: 'Auto-fill when adding orders',
-                      trailingValue: '3,000 MMK',
-                      showArrow: true,
-                      onTap: () {},
-                    ),
-                  ],
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildShopHeaderHero(activeShop?.shopName),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
                 ),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    _buildPlanCard(),
 
-                // NOTIFICATIONS
-                const _SectionLabel(label: 'Notifications — အသိပေးချက်'),
-                AppSettingGroup(
-                  children: [
-                    AppSettingTile(
-                      iconEmoji: '🔔',
-                      iconBgColor: AppColors.softOrangeLight,
-                      title: 'Order Reminders',
-                      subtitle: 'New & pending order alerts',
-                      trailingWidget: AppToggle(
-                        value: _orderReminders,
-                        onChanged: (val) =>
-                            setState(() => _orderReminders = val),
-                      ),
+                    // SHOP SETTINGS
+                    const _SectionLabel(label: 'Shop Settings'),
+                    AppSettingGroup(
+                      children: [
+                        if (hasMultipleShops)
+                          AppSettingTile(
+                            iconEmoji: '🏬',
+                            iconBgColor: AppColors.purpleLight,
+                            title: 'Switch Shop',
+                            subtitle:
+                                activeShop?.shopName ?? 'Choose active shop',
+                            showArrow: true,
+                            onTap: () => context.push(
+                              Uri(
+                                path: AppRoutePaths.shopSelection,
+                                queryParameters: <String, String>{
+                                  'from': AppRoutePaths.settings,
+                                },
+                              ).toString(),
+                            ),
+                          ),
+                        AppSettingTile(
+                          iconEmoji: '🏪',
+                          iconBgColor: AppColors.softOrangeLight,
+                          title: 'Shop Profile',
+                          subtitle: 'Name, category, address',
+                          showArrow: true,
+                          onTap: _navigateToEditProfile,
+                        ),
+                        AppSettingTile(
+                          iconEmoji: '🌐',
+                          iconBgColor: AppColors.tealLight,
+                          title: 'Language',
+                          subtitle: 'ဘာသာစကား',
+                          trailingValue: 'မြန်မာ + EN',
+                          showArrow: true,
+                          onTap: () {},
+                        ),
+                        AppSettingTile(
+                          iconEmoji: '💰',
+                          iconBgColor: AppColors.yellowLight,
+                          title: 'Default Delivery Fee',
+                          subtitle: 'Auto-fill when adding orders',
+                          trailingValue: '3,000 MMK',
+                          showArrow: true,
+                          onTap: () {},
+                        ),
+                      ],
                     ),
-                    AppSettingTile(
-                      iconEmoji: '📊',
-                      iconBgColor: AppColors.purpleLight,
-                      title: 'Daily Summary',
-                      subtitle: 'End-of-day report at 8 PM',
-                      trailingWidget: AppToggle(
-                        value: _dailySummary,
-                        onChanged: (val) => setState(() => _dailySummary = val),
-                      ),
-                    ),
-                    AppSettingTile(
-                      iconEmoji: '💬',
-                      iconBgColor: AppColors.tealLight,
-                      title: 'Promotional Tips',
-                      subtitle: 'Selling tips & app updates',
-                      trailingWidget: AppToggle(
-                        value: _promoTips,
-                        onChanged: (val) => setState(() => _promoTips = val),
-                      ),
-                    ),
-                  ],
-                ),
 
-                // DATA & PRIVACY
-                const _SectionLabel(label: 'Data & Privacy'),
-                AppSettingGroup(
-                  children: [
-                    AppSettingTile(
-                      iconEmoji: '📤',
-                      iconBgColor: AppColors.greenLight,
-                      title: 'Export All Data',
-                      subtitle: 'Download orders as Excel',
-                      showArrow: true,
-                      onTap: () {},
+                    // NOTIFICATIONS
+                    const _SectionLabel(label: 'Notifications — အသိပေးချက်'),
+                    AppSettingGroup(
+                      children: [
+                        AppSettingTile(
+                          iconEmoji: '🔔',
+                          iconBgColor: AppColors.softOrangeLight,
+                          title: 'Order Reminders',
+                          subtitle: 'New & pending order alerts',
+                          trailingWidget: AppToggle(
+                            value: _orderReminders,
+                            onChanged: (val) =>
+                                setState(() => _orderReminders = val),
+                          ),
+                        ),
+                        AppSettingTile(
+                          iconEmoji: '📊',
+                          iconBgColor: AppColors.purpleLight,
+                          title: 'Daily Summary',
+                          subtitle: 'End-of-day report at 8 PM',
+                          trailingWidget: AppToggle(
+                            value: _dailySummary,
+                            onChanged: (val) =>
+                                setState(() => _dailySummary = val),
+                          ),
+                        ),
+                        AppSettingTile(
+                          iconEmoji: '💬',
+                          iconBgColor: AppColors.tealLight,
+                          title: 'Promotional Tips',
+                          subtitle: 'Selling tips & app updates',
+                          trailingWidget: AppToggle(
+                            value: _promoTips,
+                            onChanged: (val) =>
+                                setState(() => _promoTips = val),
+                          ),
+                        ),
+                      ],
                     ),
-                    AppSettingTile(
-                      iconEmoji: '🔒',
-                      iconBgColor: const Color(0xFFE8E8F0),
-                      title: 'Change Password',
-                      subtitle: 'Update your login credentials',
-                      showArrow: true,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
 
-                // SUPPORT
-                const _SectionLabel(label: 'Support'),
-                AppSettingGroup(
-                  children: [
-                    AppSettingTile(
-                      iconEmoji: '💬',
-                      iconBgColor: AppColors.tealLight,
-                      title: 'Contact Support',
-                      subtitle: 'Message us on Facebook',
-                      showArrow: true,
-                      onTap: () {},
+                    // DATA & PRIVACY
+                    const _SectionLabel(label: 'Data & Privacy'),
+                    AppSettingGroup(
+                      children: [
+                        AppSettingTile(
+                          iconEmoji: '📤',
+                          iconBgColor: AppColors.greenLight,
+                          title: 'Export All Data',
+                          subtitle: 'Download orders as Excel',
+                          showArrow: true,
+                          onTap: () {},
+                        ),
+                        AppSettingTile(
+                          iconEmoji: '🔒',
+                          iconBgColor: const Color(0xFFE8E8F0),
+                          title: 'Change Password',
+                          subtitle: 'Update your login credentials',
+                          showArrow: true,
+                          onTap: () {},
+                        ),
+                      ],
                     ),
-                    AppSettingTile(
-                      iconEmoji: '⭐',
-                      iconBgColor: AppColors.yellowLight,
-                      title: 'Rate the App',
-                      subtitle: 'Help us grow',
-                      showArrow: true,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
 
-                // LOG OUT
-                const SizedBox(height: 8),
-                AppSettingGroup(
-                  marginBottom: 80, // Allow space for bottom nav
-                  children: [
-                    AppSettingTile(
-                      title: '🚪 Log Out',
-                      titleColor: const Color(0xFFEF4444), // Red color
-                      onTap: () {
-                        getIt<AuthBloc>().add(const AuthLogoutRequested());
-                      },
+                    // SUPPORT
+                    const _SectionLabel(label: 'Support'),
+                    AppSettingGroup(
+                      children: [
+                        AppSettingTile(
+                          iconEmoji: '💬',
+                          iconBgColor: AppColors.tealLight,
+                          title: 'Contact Support',
+                          subtitle: 'Message us on Facebook',
+                          showArrow: true,
+                          onTap: () {},
+                        ),
+                        AppSettingTile(
+                          iconEmoji: '⭐',
+                          iconBgColor: AppColors.yellowLight,
+                          title: 'Rate the App',
+                          subtitle: 'Help us grow',
+                          showArrow: true,
+                          onTap: () {},
+                        ),
+                      ],
                     ),
-                  ],
+
+                    // LOG OUT
+                    const SizedBox(height: 8),
+                    AppSettingGroup(
+                      marginBottom: 80,
+                      children: [
+                        AppSettingTile(
+                          title: '🚪 Log Out',
+                          titleColor: const Color(0xFFEF4444),
+                          onTap: () {
+                            getIt<AuthBloc>().add(const AuthLogoutRequested());
+                          },
+                        ),
+                      ],
+                    ),
+                  ]),
                 ),
-              ]),
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildShopHeaderHero() {
+  Widget _buildShopHeaderHero(String? shopName) {
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 20,
@@ -228,19 +261,19 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
                         child: const Text('👗', style: TextStyle(fontSize: 26)),
                       ),
                       const SizedBox(width: 12),
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Ma Aye Shop',
-                            style: TextStyle(
+                            shopName ?? 'My Shop',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(height: 2),
-                          Text(
+                          const SizedBox(height: 2),
+                          const Text(
                             'Fashion · Yangon · 23 orders today',
                             style: TextStyle(
                               fontSize: 11,

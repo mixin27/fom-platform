@@ -47,6 +47,7 @@
 | ------ | ----------------------- | ----------------------------------------- | ----------------------------------- |
 | GET    | /platform/dashboard     | Internal platform dashboard metrics       | 200 Single PlatformDashboard        |
 | GET    | /platform/shops         | List tenant shops with platform filters   | 200 List PlatformShop               |
+| GET    | /platform/users         | List users across the platform workspace  | 200 List PlatformUser               |
 | GET    | /platform/shops/{shopId} | Get a single tenant shop snapshot        | 200 Single PlatformShop             |
 | POST   | /platform/shops         | Create a tenant shop and owner account    | 200 Single PlatformShop             |
 | PATCH  | /platform/shops/{shopId} | Update tenant shop and owner details     | 200 Single PlatformShop             |
@@ -66,6 +67,7 @@ Platform notes:
 
 - Platform routes require platform-scoped permissions and are intended only for the internal owner account.
 - `GET /platform/shops` accepts `search`, `status`, `plan`, `limit`, and `cursor`.
+- `GET /platform/users` accepts `search`, `access`, `limit`, and `cursor`.
 - `POST /platform/shops` creates a shop, assigns the owner role, and starts the default trial subscription when the trial plan exists.
 - `PATCH /platform/shops/{shopId}` can update shop name, timezone, owner name, owner email, owner phone, and optionally reset the owner password.
 - `DELETE /platform/shops/{shopId}` permanently deletes the shop and its shop-scoped orders, customers, templates, deliveries, sessions, and billing records.
