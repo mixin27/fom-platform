@@ -7,6 +7,8 @@ import "package:fom_mobile/features/notifications/feature_notifications.dart";
 import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
 
+import "../../../../app/router/app_route_paths.dart";
+
 class NotificationsHomePage extends StatelessWidget {
   const NotificationsHomePage({super.key});
 
@@ -228,7 +230,23 @@ class _NotificationsHomeViewState extends State<_NotificationsHomeView> {
     }
 
     final actionTarget = notification.actionTarget?.trim();
-    if (actionTarget != null && actionTarget.isNotEmpty) {
+    if (actionTarget == null || actionTarget.isEmpty) {
+      return;
+    }
+
+    final primaryRoutes = [
+      AppRoutePaths.orders,
+      AppRoutePaths.customers,
+      AppRoutePaths.reports,
+      AppRoutePaths.settings,
+      AppRoutePaths.splash,
+      AppRoutePaths.onboarding,
+      AppRoutePaths.auth,
+    ];
+
+    if (primaryRoutes.contains(actionTarget)) {
+      context.go(actionTarget);
+    } else {
       context.push(actionTarget);
     }
   }
