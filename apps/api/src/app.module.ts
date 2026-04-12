@@ -31,6 +31,7 @@ import { NotificationsController } from './notifications/notifications.controlle
 import { NotificationsService } from './notifications/notifications.service';
 import { PlatformController } from './platform/platform.controller';
 import { PlatformService } from './platform/platform.service';
+import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.service';
 import { PrismaService } from './common/prisma/prisma.service';
 import { ShopsController } from './shops/shops.controller';
 import { ReportsController } from './summaries/reports.controller';
@@ -68,6 +69,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     UsersService,
     ShopsService,
     PlatformService,
+    SubscriptionLifecycleService,
     CustomersService,
     OrderMessageParserService,
     OrdersService,

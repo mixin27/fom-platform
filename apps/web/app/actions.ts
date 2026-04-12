@@ -98,8 +98,14 @@ export async function registerAction(formData: FormData) {
         // Best-effort session cleanup after partial signup.
       }
 
-      if (error instanceof AuthApiError && error.code === "CONFLICT") {
-        redirect("/register?error=shop_name_unavailable")
+      if (error instanceof AuthApiError) {
+        if (error.message.toLowerCase().includes("free trial")) {
+          redirect("/register?error=trial_unavailable")
+        }
+
+        if (error.code === "CONFLICT") {
+          redirect("/register?error=shop_name_unavailable")
+        }
       }
 
       redirect("/register?error=shop_setup_failed")
@@ -211,8 +217,14 @@ export async function createInitialShopAction(formData: FormData) {
     await persistSession(refreshedSession)
     redirect(defaultPathForSession(refreshedSession))
   } catch (error) {
-    if (error instanceof AuthApiError && error.code === "CONFLICT") {
-      redirect("/setup/shop?error=shop_name_unavailable")
+    if (error instanceof AuthApiError) {
+      if (error.message.toLowerCase().includes("free trial")) {
+        redirect("/setup/shop?error=trial_unavailable")
+      }
+
+      if (error.code === "CONFLICT") {
+        redirect("/setup/shop?error=shop_name_unavailable")
+      }
     }
 
     redirect("/setup/shop?error=shop_setup_failed")

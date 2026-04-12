@@ -11,7 +11,7 @@ import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { permissions, type Permission } from '../common/http/rbac.constants';
-import { DEFAULT_TRIAL_PLAN_CODE } from '../platform/platform-billing.constants';
+import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
@@ -27,9 +27,14 @@ type MemberWithAccess = any;
 
 @Injectable()
 export class ShopsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly subscriptionLifecycle: SubscriptionLifecycleService,
+  ) {}
 
   async listUserShops(userId: string) {
+    await this.subscriptionLifecycle.expireElapsedTrials();
+
     const memberships = await this.prisma.shopMember.findMany({
       where: {
         userId,
@@ -96,10 +101,6 @@ export class ShopsService {
     const ownerRole = await this.requireRolesByCodes(['owner']);
 
     const created = await this.prisma.$transaction(async (tx) => {
-      const defaultTrialPlan = await (tx as any).plan.findUnique({
-        where: { code: DEFAULT_TRIAL_PLAN_CODE },
-        select: { id: true },
-      });
       const shop = await tx.shop.create({
         data: {
           ownerUserId: currentUser.id,
@@ -123,22 +124,9 @@ export class ShopsService {
         })),
       });
 
-      if (defaultTrialPlan) {
-        const startAt = new Date();
-        const endAt = new Date(startAt);
-        endAt.setDate(endAt.getDate() + 7);
-
-        await (tx as any).subscription.create({
-          data: {
-            shopId: shop.id,
-            planId: defaultTrialPlan.id,
-            status: 'trialing',
-            startAt,
-            endAt,
-            autoRenews: false,
-          },
-        });
-      }
+      await this.subscriptionLifecycle.createDefaultTrialSubscription(tx, shop.id, {
+        required: true,
+      });
 
       return shop;
     });
@@ -153,6 +141,7 @@ export class ShopsService {
 
   async getBilling(currentUser: AuthenticatedUser, shopId: string) {
     await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
+    await this.subscriptionLifecycle.expireElapsedTrials();
 
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -589,6 +578,8 @@ export class ShopsService {
   }
 
   async serializeShop(shopId: string) {
+    await this.subscriptionLifecycle.expireElapsedTrials();
+
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
       include: {

@@ -46,6 +46,7 @@ export default async function SetupShopPage({
   const params = await searchParams
   const invalidSetup = params?.error === "invalid_setup"
   const shopNameUnavailable = params?.error === "shop_name_unavailable"
+  const trialUnavailable = params?.error === "trial_unavailable"
   const setupFailed = params?.error === "shop_setup_failed"
 
   return (
@@ -68,6 +69,13 @@ export default async function SetupShopPage({
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                     That shop name is already in use. Choose a different name
                     and try again.
+                  </div>
+                ) : null}
+                {trialUnavailable ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    The self-serve free trial plan is currently disabled. Ask
+                    the platform owner to enable the trial plan before creating
+                    the first shop.
                   </div>
                 ) : null}
                 {setupFailed ? (
@@ -106,7 +114,8 @@ export default async function SetupShopPage({
                       />
                       <FieldDescription>
                         This creates the first shop membership for{" "}
-                        {session.user.name}.
+                        {session.user.name} and starts the shop on the self-serve
+                        free trial.
                       </FieldDescription>
                     </Field>
                   </FieldGroup>
@@ -143,7 +152,7 @@ export default async function SetupShopPage({
                     icon: Building2,
                     title: "Per-shop billing",
                     detail:
-                      "Each shop keeps its own subscription. Additional shops can be added later without mixing billing state.",
+                      "Each shop keeps its own subscription. The first self-serve shop starts on a free trial and additional shops can be added later without mixing billing state.",
                   },
                 ].map(({ icon: Icon, title, detail }) => (
                   <div

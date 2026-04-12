@@ -137,6 +137,8 @@ Platform notes:
 Shop notes:
 
 - `GET /shops/{shopId}/billing` is intended for owner or manager-facing settings surfaces and currently requires `shops.write`.
+- `POST /shops` starts the new self-serve shop on the default free trial plan when the trial plan is active.
+- Trial subscriptions expire automatically once `end_at` passes. The default trial length is controlled by `DEFAULT_TRIAL_DAYS` and defaults to 7 days.
 
 ## Customers
 

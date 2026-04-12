@@ -25,10 +25,8 @@ import type { UpdatePlatformSettingsProfileDto } from './dto/update-platform-set
 import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import type { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
-import {
-  DEFAULT_TRIAL_PLAN_CODE,
-  platformSubscriptionStatuses,
-} from './platform-billing.constants';
+import { platformSubscriptionStatuses } from './platform-billing.constants';
+import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
 import {
   platformSupportIssueKinds,
   platformSupportIssueSeverities,
@@ -198,6 +196,7 @@ export class PlatformService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailOutbox: EmailOutboxService,
+    private readonly subscriptionLifecycle: SubscriptionLifecycleService,
   ) {}
 
   async getDashboard() {
@@ -576,11 +575,6 @@ export class PlatformService {
         owner_password: body.owner_password,
       });
 
-      const defaultTrialPlan = await (tx as any).plan.findUnique({
-        where: { code: DEFAULT_TRIAL_PLAN_CODE },
-        select: { id: true },
-      });
-
       const createdShop = await tx.shop.create({
         data: {
           ownerUserId: owner.id,
@@ -604,22 +598,10 @@ export class PlatformService {
         })),
       });
 
-      if (defaultTrialPlan) {
-        const startAt = new Date();
-        const endAt = new Date(startAt);
-        endAt.setDate(endAt.getDate() + 7);
-
-        await (tx as any).subscription.create({
-          data: {
-            shopId: createdShop.id,
-            planId: defaultTrialPlan.id,
-            status: 'trialing',
-            startAt,
-            endAt,
-            autoRenews: false,
-          },
-        });
-      }
+      await this.subscriptionLifecycle.createDefaultTrialSubscription(
+        tx,
+        createdShop.id,
+      );
 
       return createdShop;
     });
@@ -2159,6 +2141,8 @@ export class PlatformService {
     now: Date,
     where?: Record<string, unknown>,
   ): Promise<TenantSnapshot[]> {
+    await this.subscriptionLifecycle.expireElapsedTrials(now);
+
     const shops = (await (this.prisma as any).shop.findMany({
       ...(where ? { where } : {}),
       orderBy: [{ createdAt: 'desc' }, { name: 'asc' }],
@@ -2354,6 +2338,8 @@ export class PlatformService {
   }
 
   private async loadSubscriptionRows(): Promise<SubscriptionRow[]> {
+    await this.subscriptionLifecycle.expireElapsedTrials();
+
     const subscriptions = (await (this.prisma as any).subscription.findMany({
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       include: {
@@ -2594,9 +2580,15 @@ export class PlatformService {
     const hasOverdueInvoice = subscription.payments.some(
       (payment: { status: string }) => payment.status === 'overdue',
     );
+    const isExpiredTrial =
+      subscription.plan.billingPeriod === 'trial' &&
+      subscription.endAt &&
+      subscription.endAt.getTime() <= Date.now();
     const nextStatus = hasOverdueInvoice
       ? 'overdue'
-      : subscription.plan.billingPeriod === 'trial'
+      : isExpiredTrial
+        ? 'expired'
+        : subscription.plan.billingPeriod === 'trial'
         ? 'trialing'
         : 'active';
 
@@ -2814,6 +2806,10 @@ export class PlatformService {
     }
 
     if (subscription.status === 'trialing') {
+      if (subscription.endAt && subscription.endAt.getTime() <= now.getTime()) {
+        return 'inactive';
+      }
+
       if (
         subscription.endAt &&
         subscription.endAt.getTime() <= now.getTime() + SEVEN_DAYS_MS
