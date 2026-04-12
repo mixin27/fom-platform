@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   conflictError,
   notFoundError,
@@ -10,6 +10,7 @@ import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate } from '../common/utils/dates';
 import { paginate } from '../common/utils/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ShopsService } from '../shops/shops.service';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
@@ -36,11 +37,13 @@ type NewOrderItem = {
 @Injectable()
 export class OrdersService {
   private readonly validStatuses = orderStatuses;
+  private readonly logger = new Logger(OrdersService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
     private readonly orderMessageParser: OrderMessageParserService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listOrders(
@@ -109,9 +112,12 @@ export class OrdersService {
     shopId: string,
     body: CreateOrderDto,
   ) {
-    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const { shop } = await this.shopsService.assertShopAccess(
+      currentUser.id,
+      shopId,
+    );
 
-    return this.prisma.$transaction(async (tx) => {
+    const createdOrder = await this.prisma.$transaction(async (tx) => {
       const customer = await this.resolveCustomer(tx, shopId, body);
       const items = this.extractItems(body);
       const deliveryFee = body.delivery_fee ?? 0;
@@ -165,6 +171,29 @@ export class OrdersService {
 
       return this.serializeOrderRecord(order, { includeHistory: true });
     });
+
+    void this.notificationsService
+      .notifyOrderCreated({
+        shopId,
+        shopName: shop.name,
+        actorUserId: currentUser.id,
+        actorName: currentUser.name,
+        orderId: createdOrder.id,
+        orderNo: createdOrder.order_no,
+        customerName: createdOrder.customer.name,
+        township: createdOrder.customer.township,
+        totalPrice: createdOrder.total_price,
+        currency: createdOrder.currency,
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish order-created notification for order ${createdOrder.id}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
+    return createdOrder;
   }
 
   async parseOrderMessage(
@@ -294,9 +323,12 @@ export class OrdersService {
     orderId: string,
     body: ChangeOrderStatusDto,
   ) {
-    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const { shop } = await this.shopsService.assertShopAccess(
+      currentUser.id,
+      shopId,
+    );
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
       const status = body.status;
       const note = body.note ?? null;
@@ -323,6 +355,30 @@ export class OrdersService {
 
       return this.serializeOrder(order.id, { includeHistory: true }, tx);
     });
+
+    void this.notificationsService
+      .notifyOrderStatusChanged({
+        shopId,
+        shopName: shop.name,
+        actorUserId: currentUser.id,
+        actorName: currentUser.name,
+        orderId: updatedOrder.id,
+        orderNo: updatedOrder.order_no,
+        customerName: updatedOrder.customer.name,
+        township: updatedOrder.customer.township,
+        totalPrice: updatedOrder.total_price,
+        currency: updatedOrder.currency,
+        statusLabel: this.toStatusLabel(updatedOrder.status),
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish order-status notification for order ${updatedOrder.id}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
+    return updatedOrder;
   }
 
   async addItem(
@@ -809,5 +865,22 @@ export class OrdersService {
 
   private toCanonicalPhone(phone: string): string {
     return phone.replace(/\+?959/, '09').replace(/\D/g, '');
+  }
+
+  private toStatusLabel(status: string): string {
+    switch (status) {
+      case 'new':
+        return 'New order';
+      case 'confirmed':
+        return 'Order confirmed';
+      case 'out_for_delivery':
+        return 'Out for delivery';
+      case 'delivered':
+        return 'Order delivered';
+      case 'cancelled':
+        return 'Order cancelled';
+      default:
+        return 'Order updated';
+    }
   }
 }

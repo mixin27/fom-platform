@@ -161,6 +161,9 @@ function requireMappedId(
 async function resetDemoData() {
   await prisma.payment.deleteMany();
   await prisma.subscription.deleteMany();
+  await prisma.emailMessage.deleteMany();
+  await prisma.notificationPreference.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.messageTemplate.deleteMany();
   await prisma.delivery.deleteMany();
   await prisma.orderStatusEvent.deleteMany();
@@ -850,6 +853,161 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
         toStatus: 'delivered',
         changedByUserId: maAye.id,
         changedAt: new Date('2026-03-22T05:05:00.000Z'),
+      },
+    ],
+  });
+
+  await prisma.notificationPreference.createMany({
+    data: [
+      {
+        userId: maAye.id,
+        category: 'order_activity',
+        inAppEnabled: true,
+        emailEnabled: true,
+        createdAt: new Date('2026-03-20T09:05:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+      {
+        userId: maAye.id,
+        category: 'daily_summary',
+        inAppEnabled: true,
+        emailEnabled: true,
+        createdAt: new Date('2026-03-20T09:05:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+      {
+        userId: maAye.id,
+        category: 'promotional_tips',
+        inAppEnabled: false,
+        emailEnabled: false,
+        createdAt: new Date('2026-03-20T09:05:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+      {
+        userId: koMin.id,
+        category: 'order_activity',
+        inAppEnabled: true,
+        emailEnabled: true,
+        createdAt: new Date('2026-03-22T09:05:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+      {
+        userId: koMin.id,
+        category: 'daily_summary',
+        inAppEnabled: true,
+        emailEnabled: false,
+        createdAt: new Date('2026-03-22T09:05:00.000Z'),
+        updatedAt: new Date('2026-04-02T05:30:00.000Z'),
+      },
+    ],
+  });
+
+  const seededNotifications = await prisma.notification.createManyAndReturn({
+    data: [
+      {
+        userId: maAye.id,
+        shopId: shop.id,
+        shopNameSnapshot: shop.name,
+        category: 'order_activity',
+        title: 'New order — Daw Khin Myat',
+        body: 'ORD-0244 · 39,000 MMK · Sanchaung',
+        actionType: 'order',
+        actionTarget: `/orders/${requireMapValue(orderIdByNo, 'ORD-0244')}`,
+        createdAt: new Date('2026-04-02T04:02:30.000Z'),
+      },
+      {
+        userId: maAye.id,
+        shopId: shop.id,
+        shopNameSnapshot: shop.name,
+        category: 'order_activity',
+        title: 'Out for delivery — Ko Zaw Lin',
+        body: 'ORD-0240 moved to out for delivery',
+        actionType: 'order',
+        actionTarget: `/orders/${requireMapValue(orderIdByNo, 'ORD-0240')}`,
+        createdAt: new Date('2026-04-02T04:35:30.000Z'),
+      },
+      {
+        userId: maAye.id,
+        shopId: shop.id,
+        shopNameSnapshot: shop.name,
+        category: 'daily_summary',
+        title: 'Daily summary ready',
+        body: 'Yesterday closed with 22 orders and 413,000 MMK revenue.',
+        actionType: 'report',
+        actionTarget: '/reports',
+        createdAt: new Date('2026-04-02T01:00:00.000Z'),
+      },
+      {
+        userId: koMin.id,
+        shopId: shop.id,
+        shopNameSnapshot: shop.name,
+        category: 'order_activity',
+        title: 'New order — Daw Khin Myat',
+        body: 'ORD-0244 · 39,000 MMK · Sanchaung',
+        actionType: 'order',
+        actionTarget: `/orders/${requireMapValue(orderIdByNo, 'ORD-0244')}`,
+        createdAt: new Date('2026-04-02T04:02:30.000Z'),
+      },
+      {
+        userId: koMin.id,
+        shopId: shop.id,
+        shopNameSnapshot: shop.name,
+        category: 'order_activity',
+        title: 'Delivery scheduled — Ma Thin Zar',
+        body: 'ORD-0239 is ready for dispatch this afternoon.',
+        actionType: 'order',
+        actionTarget: `/orders/${requireMapValue(orderIdByNo, 'ORD-0239')}`,
+        createdAt: new Date('2026-04-02T03:55:30.000Z'),
+      },
+    ],
+  });
+
+  const notificationByCompositeKey = new Map<string, any>(
+    seededNotifications.map((notification: any) => [
+      `${notification.userId}:${notification.title}`,
+      notification,
+    ]),
+  );
+
+  await prisma.emailMessage.createMany({
+    data: [
+      {
+        userId: koMin.id,
+        notificationId: requireMapValue(
+          notificationByCompositeKey,
+          `${koMin.id}:New order — Daw Khin Myat`,
+        ).id,
+        shopId: shop.id,
+        category: 'order_activity',
+        toEmail: koMin.email!,
+        recipientName: koMin.name,
+        subject: `[${shop.name}] New order ORD-0244`,
+        textBody:
+          'Daw Khin Myat placed ORD-0244 for 39,000 MMK. Open the order to confirm details.',
+        status: 'sent',
+        deliveryMode: 'log',
+        queuedAt: new Date('2026-04-02T04:02:31.000Z'),
+        processedAt: new Date('2026-04-02T04:02:31.000Z'),
+        updatedAt: new Date('2026-04-02T04:02:31.000Z'),
+      },
+      {
+        userId: maAye.id,
+        notificationId: requireMapValue(
+          notificationByCompositeKey,
+          `${maAye.id}:Daily summary ready`,
+        ).id,
+        shopId: shop.id,
+        category: 'daily_summary',
+        toEmail: maAye.email!,
+        recipientName: maAye.name,
+        subject: `[${shop.name}] Daily summary ready`,
+        textBody:
+          'Yesterday closed with 22 orders and 413,000 MMK revenue. Open reports for the full breakdown.',
+        status: 'sent',
+        deliveryMode: 'log',
+        queuedAt: new Date('2026-04-02T01:00:01.000Z'),
+        processedAt: new Date('2026-04-02T01:00:01.000Z'),
+        updatedAt: new Date('2026-04-02T01:00:01.000Z'),
       },
     ],
   });

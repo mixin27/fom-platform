@@ -1,2 +1,11 @@
+export "di/notifications_module.dart";
+export "domain/entities/inbox_notification.dart";
+export "domain/entities/notification_preference.dart";
+export "presentation/bloc/notification_preferences_bloc.dart";
+export "presentation/bloc/notification_preferences_event.dart";
+export "presentation/bloc/notification_preferences_state.dart";
+export "presentation/bloc/notifications_home_bloc.dart";
+export "presentation/bloc/notifications_home_event.dart";
+export "presentation/bloc/notifications_home_state.dart";
 export 'presentation/pages/notifications_home_page.dart';
 export 'presentation/widgets/notification_card.dart';

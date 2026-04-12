@@ -41,6 +41,24 @@
 | GET    | /users/me          | Current user profile                                   | 200 Single User                                |
 | PATCH  | /users/me          | Update profile, locale, email, or phone                | 200 Single User                                |
 
+## Notifications and Email
+
+| Method | Path                                   | Description                                          | Response                     |
+| ------ | -------------------------------------- | ---------------------------------------------------- | ---------------------------- |
+| GET    | /users/me/notifications                | List inbox notifications for the current user        | 200 List Notification        |
+| GET    | /users/me/notifications/unread-count   | Get unread inbox count for the current user          | 200 Single {unread_count}    |
+| PATCH  | /users/me/notifications/{notificationId}/read | Mark one inbox notification as read           | 200 Single Notification      |
+| POST   | /users/me/notifications/read-all       | Mark unread notifications as read in bulk            | 200 Single {read_count}      |
+| GET    | /users/me/notification-preferences     | Get per-category in-app and email delivery settings  | 200 Single {preferences[]}   |
+| PATCH  | /users/me/notification-preferences     | Update per-category in-app and email delivery settings | 200 Single {preferences[]} |
+
+Notification notes:
+
+- `GET /users/me/notifications` accepts `shop_id`, `category`, `unread_only`, `limit`, and `cursor`.
+- The first implemented event category is `order_activity`, which covers order creation, order status changes, and delivery-driven order progress updates.
+- Preferences currently support `order_activity`, `daily_summary`, `promotional_tips`, `billing_updates`, and `support_updates`.
+- Email delivery is backed by an outbox table and a dev-safe log transport. The backend records queued/sent/failed email state without requiring SMTP setup yet.
+
 ## Platform Workspace
 
 | Method | Path                    | Description                               | Response                            |
