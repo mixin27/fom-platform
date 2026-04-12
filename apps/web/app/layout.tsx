@@ -34,13 +34,27 @@ const notoSansMyanmar = Noto_Sans_Myanmar({
   variable: "--font-web-myanmar",
 })
 
+const metadataBase = (() => {
+  const rawBaseUrl =
+    process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
+    process.env.WEB_APP_BASE_URL?.trim() ||
+    "http://localhost:3000"
+
+  try {
+    return new URL(rawBaseUrl)
+  } catch {
+    return new URL("http://localhost:3000")
+  }
+})()
+
 export const metadata: Metadata = {
+  metadataBase,
   title: {
-    default: "FOM Platform",
-    template: "%s | FOM Platform",
+    default: "FOM Order Manager",
+    template: "%s | FOM Order Manager",
   },
   description:
-    "Web surfaces for the FOM SaaS platform: landing page, platform admin console, and shop owner workspace.",
+    "Order management for Facebook-first shops: capture Messenger orders, track deliveries, manage customers, and run each shop with simple monthly or yearly pricing.",
   icons: {
     icon: [
       {
@@ -75,9 +89,9 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "FOM Platform",
+    title: "FOM Order Manager",
     description:
-      "Web surfaces for the FOM SaaS platform: landing page, platform admin console, and shop owner workspace.",
+      "Order management for Facebook-first shops: capture Messenger orders, track deliveries, manage customers, and run each shop with simple monthly or yearly pricing.",
     images: [
       {
         url: "/brand/png/og-image-1200x630.png",

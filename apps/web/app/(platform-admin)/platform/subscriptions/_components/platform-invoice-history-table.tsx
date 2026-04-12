@@ -186,7 +186,7 @@ export function PlatformInvoiceHistoryTable({
   })
 
   return (
-    <Card className="border border-black/6 bg-white shadow-none">
+    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
       <CardHeader className="flex flex-col gap-3 pb-3 md:flex-row md:items-start md:justify-between">
         <div>
           <CardDescription>Invoice history</CardDescription>
@@ -205,7 +205,7 @@ export function PlatformInvoiceHistoryTable({
           <select
             name="status"
             defaultValue={initialFilters.status}
-            className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+            className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] px-3 text-sm"
           >
             <option value="all">All statuses</option>
             <option value="paid">Paid</option>
@@ -223,7 +223,7 @@ export function PlatformInvoiceHistoryTable({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-[#fdfeff] hover:bg-[#fdfeff]">
+              <TableRow key={headerGroup.id} className="bg-muted/5 hover:bg-muted/5">
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
@@ -277,7 +277,7 @@ export function PlatformInvoiceHistoryTable({
           </TableBody>
         </Table>
         {pagination || paginationLinks ? (
-          <div className="flex flex-col gap-3 border-t border-black/6 px-4 py-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 border-t border-[var(--fom-border-subtle)] px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div className="text-xs text-muted-foreground">
               {pagination
                 ? `Showing ${rows.length} of ${pagination.total} invoices`

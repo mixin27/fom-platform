@@ -36,7 +36,7 @@ class NotificationsRemoteDataSourceImpl
     int limit = _defaultListLimit,
   }) async {
     final payload = await _apiClient.getList(
-      "/users/me/notifications",
+      "/notifications",
       queryParameters: <String, dynamic>{"shop_id": shopId, "limit": limit},
     );
 
@@ -51,7 +51,7 @@ class NotificationsRemoteDataSourceImpl
     required String notificationId,
   }) async {
     final payload = await _apiClient.patchMap(
-      "/users/me/notifications/$notificationId/read",
+      "/notifications/$notificationId/read",
     );
     return InboxNotificationModel.fromJson(payload);
   }
@@ -59,7 +59,7 @@ class NotificationsRemoteDataSourceImpl
   @override
   Future<int> markAllNotificationsRead({String? shopId}) async {
     final payload = await _apiClient.postMap(
-      "/users/me/notifications/read-all",
+      "/notifications/read-all",
       data: <String, dynamic>{
         if ((shopId ?? "").trim().isNotEmpty) "shop_id": shopId!.trim(),
       },
@@ -79,9 +79,7 @@ class NotificationsRemoteDataSourceImpl
 
   @override
   Future<List<NotificationPreferenceModel>> fetchPreferences() async {
-    final payload = await _apiClient.getMap(
-      "/users/me/notification-preferences",
-    );
+    final payload = await _apiClient.getMap("/notification-preferences");
     return _extractPreferences(payload);
   }
 
@@ -90,7 +88,7 @@ class NotificationsRemoteDataSourceImpl
     required List<NotificationPreferenceUpdate> updates,
   }) async {
     final payload = await _apiClient.patchMap(
-      "/users/me/notification-preferences",
+      "/notification-preferences",
       data: <String, dynamic>{
         "preferences": updates
             .map(

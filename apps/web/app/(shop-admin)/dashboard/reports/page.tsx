@@ -2,6 +2,7 @@ import { BarChart3, CalendarRange, NotebookTabs } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
+import { ShopReportChart } from "./_components/shop-report-chart"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import {
   getShopDailySummary,
@@ -53,12 +54,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         description="Use the summary views to compare operating rhythm, delivery performance, and revenue contribution across time windows."
         actions={
           <form method="GET" className="flex flex-wrap gap-2">
-            <Input name="date" type="date" defaultValue={date} className="h-9" />
+            <Input name="date" type="date" defaultValue={date} className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm" />
             <Input
               name="month"
               type="month"
               defaultValue={month}
-              className="h-9"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             />
             <Button type="submit" size="sm" variant="outline">
               Refresh
@@ -105,6 +106,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               ["Average order", formatCurrency(daily.average_order_value)],
               ["Delivered rate", formatPercent(daily.delivered_rate / 100)],
             ],
+            chartData: daily.hourly_breakdown,
+            color: "var(--fom-sunset)",
           },
           {
             title: "Weekly",
@@ -115,6 +118,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               ["Pending", weekly.pending_count.toLocaleString()],
               ["Delivered rate", formatPercent(weekly.delivered_rate / 100)],
             ],
+            chartData: weekly.daily_breakdown,
+            color: "var(--fom-teal)",
           },
           {
             title: "Monthly",
@@ -125,9 +130,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               ["Customers", monthly.customer_count.toLocaleString()],
               ["Average order", formatCurrency(monthly.average_order_value)],
             ],
+            chartData: monthly.daily_breakdown,
+            color: "var(--fom-ink)",
           },
         ].map((section) => (
-          <Card key={section.title} className="border border-black/6 bg-white shadow-none">
+          <Card key={section.title} className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>{section.description}</CardDescription>
               <CardTitle>{section.title} snapshot</CardTitle>
@@ -136,12 +143,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               {section.stats.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex items-center justify-between rounded-xl bg-[#f7f8fc] px-3.5 py-3"
+                  className="flex items-center justify-between rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
                 >
                   <span className="text-sm text-muted-foreground">{label}</span>
                   <span className="text-sm font-semibold text-foreground">{value}</span>
                 </div>
               ))}
+              <ShopReportChart data={section.chartData} colorVar={section.color} />
             </CardContent>
           </Card>
         ))}

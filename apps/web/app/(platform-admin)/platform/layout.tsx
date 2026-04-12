@@ -6,6 +6,7 @@ import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
 import { platformPortalNav } from "@/lib/navigation"
+import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { requirePlatformAdmin } from "@/lib/auth/session"
 import { Button } from "@workspace/ui/components/button"
 
@@ -15,13 +16,18 @@ export default async function PlatformLayout({
   children: ReactNode
 }) {
   const session = await requirePlatformAdmin()
+  const unreadResponse = await getNotificationUnreadCount({
+    requiredAccess: "platform",
+    retryPath: "/platform",
+  })
+  const unreadCount = unreadResponse.data.unread_count
 
   return (
     <div className="fom-admin-canvas min-h-screen">
       <div className="fom-admin-shell flex h-screen w-full max-w-none max-h-none overflow-hidden rounded-none border-0 shadow-none">
-        <aside className="w-[232px] flex-shrink-0 border-r border-white/6 bg-[var(--fom-admin-sidebar)] text-white">
+        <aside className="w-[232px] flex-shrink-0 border-r border-white/10 bg-[var(--fom-admin-sidebar)] text-white">
           <div className="flex h-full flex-col">
-            <div className="border-b border-white/6 px-4 py-3.5">
+            <div className="border-b border-white/10 px-4 py-3.5">
               <BrandMark tone="light" compact />
               <div className="mt-3 rounded-2xl border border-white/8 bg-white/5 p-3">
                 <div className="flex items-center gap-2">
@@ -42,8 +48,8 @@ export default async function PlatformLayout({
             <div className="flex-1 overflow-y-auto px-3 py-3">
               <AppSideNav items={platformPortalNav} tone="platform" />
             </div>
-            <div className="border-t border-white/6 px-4 py-3">
-              <div className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
+            <div className="border-t border-white/10 px-4 py-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
                 <p className="text-sm font-semibold text-white">
                   {session.user.name}
                 </p>
@@ -73,7 +79,7 @@ export default async function PlatformLayout({
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-admin-surface)]">
-          <header className="flex h-14 items-center gap-4 border-b border-black/6 bg-white px-5">
+          <header className="flex h-14 items-center gap-4 border-b border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-5">
             <div className="flex flex-col">
               <span className="text-[13px] font-semibold text-[var(--fom-ink)]">
                 Platform workspace
@@ -86,15 +92,40 @@ export default async function PlatformLayout({
               <div className="relative">
                 <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  className="h-8 w-60 rounded-xl border border-black/8 bg-[var(--fom-admin-surface)] pr-3 pl-9 text-sm outline-none focus:border-[var(--fom-orange)]"
+                  className="h-8 w-60 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] pr-3 pl-9 text-sm outline-none focus:border-[var(--fom-orange)]"
                   placeholder="Search shops or invoices..."
                 />
               </div>
-              <button className="flex size-8 items-center justify-center rounded-xl border border-black/8 bg-white text-muted-foreground">
-                <Bell className="size-4" />
-              </button>
+              <Button
+                asChild
+                variant="outline"
+                size="icon"
+                className="relative size-8 rounded-xl border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] text-muted-foreground"
+              >
+                <Link href="/platform/notifications">
+                  <Bell className="size-4" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--fom-orange)] px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </Button>
             </div>
           </header>
+          {session.user.email && !session.user.emailVerifiedAt ? (
+            <div className="border-b border-[var(--fom-orange)]/15 bg-[rgba(249,122,31,0.08)] px-5 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[var(--fom-ink)]">
+                  Verify <span className="font-medium">{session.user.email}</span> to
+                  receive billing, recovery, and platform notices reliably.
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/verify-email">Verify email</Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <main className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {children}
           </main>

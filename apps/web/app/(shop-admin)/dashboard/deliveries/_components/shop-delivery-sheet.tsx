@@ -189,8 +189,8 @@ export function ShopDeliverySheet({
           {triggerLabel ?? (isEdit ? "Edit" : "Create delivery")}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>{isEdit ? "Edit delivery" : "Create delivery"}</SheetTitle>
           <SheetDescription>
             Assign a rider, keep route timing accurate, and sync the underlying
@@ -200,7 +200,7 @@ export function ShopDeliverySheet({
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">
           {isEdit && delivery ? (
-            <div className="mb-4 rounded-2xl border border-black/6 bg-[#fcfaf6] p-4 text-sm">
+            <div className="mb-4 rounded-2xl border border-[var(--fom-border-strong)] bg-[var(--fom-surface-variant)] p-4 text-sm">
               <p className="font-semibold text-foreground">{delivery.order.order_no}</p>
               <p className="mt-1 text-muted-foreground">
                 {delivery.order.customer.name} · {delivery.order.customer.phone}
@@ -216,7 +216,7 @@ export function ShopDeliverySheet({
                   id="shop-delivery-order"
                   value={values.order_id}
                   onChange={(event) => updateValue("order_id", event.target.value)}
-                  className="h-10 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  className="h-10 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <option value="">Select confirmed order</option>
                   {orders.map((order) => (
@@ -235,7 +235,7 @@ export function ShopDeliverySheet({
                 id="shop-delivery-driver"
                 value={values.driver_user_id}
                 onChange={(event) => updateValue("driver_user_id", event.target.value)}
-                className="h-10 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                className="h-10 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-3 text-sm"
               >
                 <option value="">Assign driver</option>
                 {members.map((member) => (
@@ -259,7 +259,7 @@ export function ShopDeliverySheet({
                       event.target.value as FormValues["status"]
                     )
                   }
-                  className="h-10 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  className="h-10 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <option value="scheduled">Scheduled</option>
                   <option value="out_for_delivery">Out for delivery</option>
@@ -337,7 +337,7 @@ export function ShopDeliverySheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 px-4 py-4">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] px-4 py-4">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>

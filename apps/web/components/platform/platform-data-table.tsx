@@ -56,7 +56,7 @@ export function PlatformDataTable<T>({
   pagination,
 }: PlatformDataTableProps<T>) {
   return (
-    <Card className="border border-black/6 bg-white shadow-none">
+    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
       <CardHeader className="flex flex-col gap-3 pb-3 md:flex-row md:items-start md:justify-between">
         <div>
           <CardDescription>{description}</CardDescription>
@@ -67,7 +67,7 @@ export function PlatformDataTable<T>({
       <CardContent className="overflow-hidden p-0">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#fdfeff] hover:bg-[#fdfeff]">
+            <TableRow className="bg-muted/5 hover:bg-muted/5">
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
@@ -105,7 +105,7 @@ export function PlatformDataTable<T>({
           </TableBody>
         </Table>
         {footer || pagination ? (
-          <div className="flex flex-col gap-3 border-t border-black/6 px-4 py-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 border-t border-[var(--fom-border-subtle)] px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div className="text-xs text-muted-foreground">{footer}</div>
             {pagination ? (
               <Pagination className="mx-0 w-auto justify-start md:justify-end">

@@ -115,7 +115,7 @@ export default async function ShopSettingsPage({
       </section>
 
       <div className="grid gap-3 xl:grid-cols-3">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Shop profile</CardDescription>
             <CardTitle>Identity and timezone</CardTitle>
@@ -145,7 +145,7 @@ export default async function ShopSettingsPage({
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Your profile</CardDescription>
             <CardTitle>Sign-in identity</CardTitle>
@@ -170,7 +170,7 @@ export default async function ShopSettingsPage({
               <select
                 name="locale"
                 defaultValue={profile.locale}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
               >
                 <option value="en">en</option>
                 <option value="my">my</option>
@@ -182,7 +182,7 @@ export default async function ShopSettingsPage({
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Current access</CardDescription>
             <CardTitle>Effective permissions</CardTitle>
@@ -306,7 +306,7 @@ export default async function ShopSettingsPage({
           ]}
         />
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Access control</CardDescription>
             <CardTitle>Add member</CardTitle>
@@ -322,7 +322,7 @@ export default async function ShopSettingsPage({
                 <select
                   name="role_code"
                   defaultValue="staff"
-                  className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  className="h-9 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <option value="staff">Staff</option>
                 </select>
@@ -383,7 +383,7 @@ export default async function ShopSettingsPage({
 
       {canManageShop ? (
         <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Billing visibility</CardDescription>
               <CardTitle>Subscription health</CardTitle>
@@ -405,7 +405,7 @@ export default async function ShopSettingsPage({
               </div>
 
               <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-                <div className="rounded-2xl border border-black/6 bg-[#fcfaf6] p-4">
+                <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
                     Next due
                   </p>
@@ -415,7 +415,7 @@ export default async function ShopSettingsPage({
                       : "No unpaid invoice"}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-black/6 bg-[#fcfaf6] p-4">
+                <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
                     Last paid
                   </p>
@@ -427,7 +427,7 @@ export default async function ShopSettingsPage({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-black/6 bg-[#fcfaf6] p-4 text-sm leading-7 text-muted-foreground">
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4 text-sm leading-7 text-muted-foreground">
                 <p>
                   Subscription created{" "}
                   {billing?.subscription?.created_at
@@ -499,7 +499,7 @@ export default async function ShopSettingsPage({
           />
         </div>
       ) : (
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Billing visibility</CardDescription>
             <CardTitle>Subscription details stay with shop management access</CardTitle>

@@ -10,17 +10,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # env_file:
-    #   - ./apps/api/.env.docker
-    environment:
-      NODE_ENV: production
-      PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-fom_platform_api}?schema=public
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_secret_change_me_facebook_order_manager}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_facebook_order_manager}
-      REDIS_URL: redis://redis:6379/0
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+    env_file:
+      - ./apps/api/.env.docker
     healthcheck:
       test:
         [

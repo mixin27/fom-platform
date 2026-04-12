@@ -11,6 +11,8 @@ import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { EmailOutboxService } from '../email/email-outbox.service';
+import type { CreatePlatformPlanDto } from './dto/create-platform-plan.dto';
 import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import type { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
@@ -24,10 +26,8 @@ import type { UpdatePlatformSettingsProfileDto } from './dto/update-platform-set
 import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import type { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
-import {
-  DEFAULT_TRIAL_PLAN_CODE,
-  platformSubscriptionStatuses,
-} from './platform-billing.constants';
+import { platformSubscriptionStatuses } from './platform-billing.constants';
+import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
 import {
   platformSupportIssueKinds,
   platformSupportIssueSeverities,
@@ -118,6 +118,16 @@ type PlanOptionRow = {
   price: number;
   currency: string;
   is_active: boolean;
+  sort_order: number;
+  items: PlanItemRow[];
+};
+
+type PlanItemRow = {
+  id: string;
+  label: string;
+  description: string | null;
+  availability_status: string;
+  sort_order: number;
 };
 
 type SupportIssue = {
@@ -194,7 +204,11 @@ const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class PlatformService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailOutbox: EmailOutboxService,
+    private readonly subscriptionLifecycle: SubscriptionLifecycleService,
+  ) {}
 
   async getDashboard() {
     const now = new Date();
@@ -572,11 +586,6 @@ export class PlatformService {
         owner_password: body.owner_password,
       });
 
-      const defaultTrialPlan = await (tx as any).plan.findUnique({
-        where: { code: DEFAULT_TRIAL_PLAN_CODE },
-        select: { id: true },
-      });
-
       const createdShop = await tx.shop.create({
         data: {
           ownerUserId: owner.id,
@@ -600,22 +609,10 @@ export class PlatformService {
         })),
       });
 
-      if (defaultTrialPlan) {
-        const startAt = new Date();
-        const endAt = new Date(startAt);
-        endAt.setDate(endAt.getDate() + 7);
-
-        await (tx as any).subscription.create({
-          data: {
-            shopId: createdShop.id,
-            planId: defaultTrialPlan.id,
-            status: 'trialing',
-            startAt,
-            endAt,
-            autoRenews: false,
-          },
-        });
-      }
+      await this.subscriptionLifecycle.createDefaultTrialSubscription(
+        tx,
+        createdShop.id,
+      );
 
       return createdShop;
     });
@@ -975,7 +972,9 @@ export class PlatformService {
       return invoice.id;
     });
 
-    return this.loadPaymentRowById(createdInvoiceId);
+    const createdInvoice = await this.loadPaymentRowById(createdInvoiceId);
+    void this.sendInvoiceNoticeEmail(createdInvoiceId, 'platform.invoice_notice');
+    return createdInvoice;
   }
 
   async updateInvoice(invoiceId: string, body: UpdatePlatformInvoiceDto) {
@@ -1043,7 +1042,14 @@ export class PlatformService {
       await this.syncSubscriptionStatusFromInvoices(tx, invoice.subscriptionId);
     });
 
-    return this.loadPaymentRowById(invoiceId);
+    const updatedInvoice = await this.loadPaymentRowById(invoiceId);
+    void this.sendInvoiceNoticeEmail(
+      invoiceId,
+      nextStatus === 'overdue'
+        ? 'platform.billing_notice'
+        : 'platform.invoice_notice',
+    );
+    return updatedInvoice;
   }
 
   async getSupport() {
@@ -1291,7 +1297,8 @@ export class PlatformService {
       body.currency === undefined &&
       body.billing_period === undefined &&
       body.is_active === undefined &&
-      body.sort_order === undefined
+      body.sort_order === undefined &&
+      body.items === undefined
     ) {
       throw validationError([
         {
@@ -1312,25 +1319,99 @@ export class PlatformService {
       }
     }
 
-    await (this.prisma as any).plan.update({
-      where: { id: planId },
-      data: {
-        ...(body.code !== undefined ? { code: body.code } : {}),
-        ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(body.price !== undefined ? { price: body.price } : {}),
-        ...(body.currency !== undefined
-          ? { currency: body.currency.trim().toUpperCase() }
-          : {}),
-        ...(body.billing_period !== undefined
-          ? { billingPeriod: body.billing_period.trim() }
-          : {}),
-        ...(body.is_active !== undefined ? { isActive: body.is_active } : {}),
-        ...(body.sort_order !== undefined ? { sortOrder: body.sort_order } : {}),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await (tx as any).plan.update({
+        where: { id: planId },
+        data: {
+          ...(body.code !== undefined ? { code: body.code } : {}),
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(body.price !== undefined ? { price: body.price } : {}),
+          ...(body.currency !== undefined
+            ? { currency: body.currency.trim().toUpperCase() }
+            : {}),
+          ...(body.billing_period !== undefined
+            ? { billingPeriod: body.billing_period.trim() }
+            : {}),
+          ...(body.is_active !== undefined ? { isActive: body.is_active } : {}),
+          ...(body.sort_order !== undefined ? { sortOrder: body.sort_order } : {}),
+        },
+      });
+
+      if (body.items !== undefined) {
+        await this.syncPlanItems(tx, planId, body.items);
+      }
     });
 
     return this.loadPlanSettingsRowById(planId);
+  }
+
+  async createSettingsPlan(body: CreatePlatformPlanDto) {
+    const existingPlan = await (this.prisma as any).plan.findUnique({
+      where: { code: body.code },
+      select: { id: true },
+    });
+
+    if (existingPlan) {
+      throw conflictError('Plan code is already in use');
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const plan = await (tx as any).plan.create({
+        data: {
+          code: body.code,
+          name: body.name,
+          description: body.description ?? null,
+          price: body.price,
+          currency: body.currency?.trim().toUpperCase() || 'MMK',
+          billingPeriod: body.billing_period.trim(),
+          isActive: body.is_active ?? true,
+          sortOrder: body.sort_order ?? 0,
+        },
+        select: { id: true },
+      });
+
+      if (body.items && body.items.length > 0) {
+        await this.syncPlanItems(tx, plan.id, body.items);
+      }
+
+      return plan;
+    });
+
+    return this.loadPlanSettingsRowById(created.id);
+  }
+
+  async deleteSettingsPlan(planId: string) {
+    const plan = await (this.prisma as any).plan.findUnique({
+      where: { id: planId },
+      include: {
+        _count: {
+          select: {
+            subscriptions: true,
+          },
+        },
+      },
+    });
+
+    if (!plan) {
+      throw notFoundError('Plan not found');
+    }
+
+    if (plan._count.subscriptions > 0) {
+      throw conflictError(
+        'Cannot delete a plan that still has subscriptions. Reassign or deactivate it first.',
+      );
+    }
+
+    await (this.prisma as any).plan.delete({
+      where: { id: planId },
+    });
+  }
+
+  async getPublicPlans() {
+    const plans = await this.loadPlanOptions();
+
+    return plans.filter((plan) => plan.is_active);
   }
 
   private async buildSettingsPayload(currentUser: AuthenticatedUser) {
@@ -1404,6 +1485,9 @@ export class PlatformService {
     const plans = await (this.prisma as any).plan.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
+        items: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
         subscriptions: {
           include: {
             payments: true,
@@ -1419,6 +1503,9 @@ export class PlatformService {
     const plan = await (this.prisma as any).plan.findUnique({
       where: { id: planId },
       include: {
+        items: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
         subscriptions: {
           include: {
             payments: true,
@@ -1456,7 +1543,47 @@ export class PlatformService {
       sort_order: plan.sortOrder,
       shop_count: plan.subscriptions.length,
       collected_revenue: paidRevenue,
+      items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
     };
+  }
+
+  private serializePlanItem(item: any): PlanItemRow {
+    return {
+      id: item.id,
+      label: item.label,
+      description: item.description,
+      availability_status: item.availabilityStatus,
+      sort_order: item.sortOrder,
+    };
+  }
+
+  private async syncPlanItems(
+    tx: any,
+    planId: string,
+    items: Array<{
+      label: string;
+      description?: string | null;
+      availability_status: string;
+      sort_order?: number;
+    }>,
+  ) {
+    await (tx as any).planItem.deleteMany({
+      where: { planId },
+    });
+
+    if (items.length === 0) {
+      return;
+    }
+
+    await (tx as any).planItem.createMany({
+      data: items.map((item, index) => ({
+        planId,
+        label: item.label,
+        description: item.description ?? null,
+        availabilityStatus: item.availability_status,
+        sortOrder: item.sort_order ?? index,
+      })),
+    });
   }
 
   private async resolveSupportShop(shopId: string | null | undefined) {
@@ -2140,6 +2267,8 @@ export class PlatformService {
     now: Date,
     where?: Record<string, unknown>,
   ): Promise<TenantSnapshot[]> {
+    await this.subscriptionLifecycle.expireElapsedTrials(now);
+
     const shops = (await (this.prisma as any).shop.findMany({
       ...(where ? { where } : {}),
       orderBy: [{ createdAt: 'desc' }, { name: 'asc' }],
@@ -2335,6 +2464,8 @@ export class PlatformService {
   }
 
   private async loadSubscriptionRows(): Promise<SubscriptionRow[]> {
+    await this.subscriptionLifecycle.expireElapsedTrials();
+
     const subscriptions = (await (this.prisma as any).subscription.findMany({
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       include: {
@@ -2425,6 +2556,11 @@ export class PlatformService {
   private async loadPlanOptions(): Promise<PlanOptionRow[]> {
     const plans = await (this.prisma as any).plan.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        items: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+      },
     });
 
     return plans.map((plan: any) => ({
@@ -2436,6 +2572,8 @@ export class PlatformService {
       price: plan.price,
       currency: plan.currency,
       is_active: plan.isActive,
+      sort_order: plan.sortOrder,
+      items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
     }));
   }
 
@@ -2575,9 +2713,15 @@ export class PlatformService {
     const hasOverdueInvoice = subscription.payments.some(
       (payment: { status: string }) => payment.status === 'overdue',
     );
+    const isExpiredTrial =
+      subscription.plan.billingPeriod === 'trial' &&
+      subscription.endAt &&
+      subscription.endAt.getTime() <= Date.now();
     const nextStatus = hasOverdueInvoice
       ? 'overdue'
-      : subscription.plan.billingPeriod === 'trial'
+      : isExpiredTrial
+        ? 'expired'
+        : subscription.plan.billingPeriod === 'trial'
         ? 'trialing'
         : 'active';
 
@@ -2672,11 +2816,13 @@ export class PlatformService {
       existing.collected_revenue += payment.amount;
     }
 
+    const totalShopsWithPlan = tenants.filter(t => t.plan_code).length;
+
     return [...grouped.values()]
       .sort((left, right) => right.shop_count - left.shop_count)
       .map((plan) => ({
         ...plan,
-        share: tenants.length > 0 ? Number((plan.shop_count / tenants.length).toFixed(4)) : 0,
+        share: totalShopsWithPlan > 0 ? Number((plan.shop_count / totalShopsWithPlan).toFixed(4)) : 0,
       }));
   }
 
@@ -2795,6 +2941,10 @@ export class PlatformService {
     }
 
     if (subscription.status === 'trialing') {
+      if (subscription.endAt && subscription.endAt.getTime() <= now.getTime()) {
+        return 'inactive';
+      }
+
       if (
         subscription.endAt &&
         subscription.endAt.getTime() <= now.getTime() + SEVEN_DAYS_MS
@@ -2840,6 +2990,101 @@ export class PlatformService {
     }
 
     return Date.parse(value);
+  }
+
+  private async sendInvoiceNoticeEmail(
+    invoiceId: string,
+    templateKey: 'platform.invoice_notice' | 'platform.billing_notice',
+  ) {
+    const invoice = await (this.prisma as any).payment.findUnique({
+      where: { id: invoiceId },
+      include: {
+        subscription: {
+          include: {
+            plan: true,
+            shop: {
+              include: {
+                owner: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const owner = invoice?.subscription?.shop?.owner;
+    if (!invoice || !owner?.email) {
+      return;
+    }
+
+    const shop = invoice.subscription.shop;
+    const plan = invoice.subscription.plan;
+    const statusLabel = this.toTitleCase(invoice.status);
+    const amountLine = `Amount: ${invoice.amount.toLocaleString()} ${invoice.currency}`;
+    const dueAtLine = invoice.dueAt
+      ? `Due date: ${this.formatDateLabel(invoice.dueAt)}`
+      : 'Due date: No due date assigned';
+    const statusLine = `Status: ${statusLabel}`;
+    const planLine = `Plan: ${plan.name} (${plan.billingPeriod})`;
+
+    await this.emailOutbox.queueAndSendTemplatedEmail({
+      userId: owner.id,
+      shopId: shop.id,
+      toEmail: owner.email,
+      recipientName: owner.name,
+      templateKey,
+      variables: {
+        subject:
+          templateKey === 'platform.billing_notice'
+            ? `[${shop.name}] Billing follow-up for ${invoice.invoiceNo}`
+            : `[${shop.name}] Invoice ${invoice.invoiceNo}`,
+        title:
+          templateKey === 'platform.billing_notice'
+            ? `Billing follow-up for ${invoice.invoiceNo}`
+            : `Invoice ${invoice.invoiceNo}`,
+        intro:
+          templateKey === 'platform.billing_notice'
+            ? `There is a billing action required for ${shop.name}.`
+            : `A subscription invoice is available for ${shop.name}.`,
+        amountLine,
+        dueAtLine,
+        statusLine,
+        planLine,
+        ctaLabel: 'Open billing',
+        ctaUrl: `${this.getWebAppBaseUrl()}/dashboard/settings`,
+        footerText:
+          invoice.paymentMethod || invoice.providerRef
+            ? `Payment method: ${invoice.paymentMethod ?? 'n/a'}${
+                invoice.providerRef ? ` · Ref: ${invoice.providerRef}` : ''
+              }`
+            : `Invoice status: ${statusLabel}`,
+      },
+    });
+  }
+
+  private getWebAppBaseUrl() {
+    return (
+      process.env.WEB_APP_BASE_URL?.trim() ||
+      process.env.APP_WEB_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+  }
+
+  private formatDateLabel(value: Date) {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeZone: 'Asia/Yangon',
+    }).format(value);
+  }
+
+  private toTitleCase(value: string) {
+    return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map((segment) => segment[0]!.toUpperCase() + segment.slice(1))
+      .join(' ');
   }
 
   private normalizePhone(value: string | undefined | null): string | null {

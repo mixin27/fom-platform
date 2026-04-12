@@ -19,7 +19,7 @@ import { MarkAllNotificationsReadDto } from './dto/mark-all-notifications-read.d
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { NotificationsService } from './notifications.service';
 
-@Controller('api/v1/users/me')
+@Controller('api/v1')
 @UseGuards(AuthGuard)
 @ApiTags('Notifications')
 @ApiBearerAuth('access-token')

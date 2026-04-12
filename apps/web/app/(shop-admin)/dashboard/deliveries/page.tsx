@@ -169,7 +169,7 @@ export default async function DeliveriesPage({
             <select
               name="status"
               defaultValue={status}
-              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             >
               <option value="scheduled">Scheduled</option>
               <option value="out_for_delivery">Out for delivery</option>
@@ -178,7 +178,7 @@ export default async function DeliveriesPage({
             <select
               name="driver_user_id"
               defaultValue={driverUserId}
-              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             >
               <option value="">All drivers</option>
               {members.map((member) => (

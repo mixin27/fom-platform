@@ -20,10 +20,18 @@ import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.int
 import { OrdersController } from './orders/orders.controller';
 import { OrderMessageParserService } from './orders/order-message-parser.service';
 import { OrdersService } from './orders/orders.service';
+import { EmailOutboxService } from './email/email-outbox.service';
+import { EmailTemplateService } from './email/email-template.service';
+import { EmailTransportService } from './email/email-transport.service';
+import { DisabledEmailProvider } from './email/providers/disabled-email.provider';
+import { LogEmailProvider } from './email/providers/log-email.provider';
+import { SendgridEmailProvider } from './email/providers/sendgrid-email.provider';
+import { SmtpEmailProvider } from './email/providers/smtp-email.provider';
 import { NotificationsController } from './notifications/notifications.controller';
 import { NotificationsService } from './notifications/notifications.service';
 import { PlatformController } from './platform/platform.controller';
 import { PlatformService } from './platform/platform.service';
+import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.service';
 import { PrismaService } from './common/prisma/prisma.service';
 import { ShopsController } from './shops/shops.controller';
 import { ReportsController } from './summaries/reports.controller';
@@ -61,9 +69,17 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     UsersService,
     ShopsService,
     PlatformService,
+    SubscriptionLifecycleService,
     CustomersService,
     OrderMessageParserService,
     OrdersService,
+    DisabledEmailProvider,
+    LogEmailProvider,
+    SendgridEmailProvider,
+    SmtpEmailProvider,
+    EmailTransportService,
+    EmailTemplateService,
+    EmailOutboxService,
     NotificationsService,
     DeliveriesService,
     TemplatesService,

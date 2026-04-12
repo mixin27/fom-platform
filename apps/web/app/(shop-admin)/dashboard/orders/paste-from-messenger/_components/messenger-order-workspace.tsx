@@ -204,7 +204,7 @@ export function MessengerOrderWorkspace({
 
   if (!canUseParser) {
     return (
-      <Card className="border border-black/6 bg-white shadow-none">
+    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
         <CardHeader>
           <CardDescription>Access restricted</CardDescription>
           <CardTitle>Orders write permission is required</CardTitle>
@@ -218,7 +218,7 @@ export function MessengerOrderWorkspace({
 
   return (
     <div className="grid gap-3 xl:grid-cols-[0.85fr_1.15fr]">
-      <Card className="border border-black/6 bg-white shadow-none">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
         <CardHeader className="pb-3">
           <CardDescription>Source message</CardDescription>
           <CardTitle>Paste Messenger conversation</CardTitle>
@@ -272,7 +272,7 @@ export function MessengerOrderWorkspace({
       </Card>
 
       <div className="flex flex-col gap-3">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Draft review</CardDescription>
             <CardTitle>Parsed order draft</CardTitle>
@@ -355,7 +355,7 @@ export function MessengerOrderWorkspace({
                         status: event.target.value as "new" | "confirmed",
                       }))
                     }
-                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                    className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                   >
                     <option value="new">New</option>
                     <option value="confirmed">Confirmed</option>
@@ -388,7 +388,7 @@ export function MessengerOrderWorkspace({
                   {draft.items.map((item, index) => (
                     <div
                       key={`${index}-${item.product_name}`}
-                      className="rounded-2xl border border-black/6 bg-[#fcfbf9] p-3"
+                      className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-foreground">
@@ -457,7 +457,7 @@ export function MessengerOrderWorkspace({
         </Card>
 
         <div className="grid gap-3 xl:grid-cols-2">
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Diagnostics</CardDescription>
               <CardTitle>Parse signals</CardTitle>
@@ -465,7 +465,7 @@ export function MessengerOrderWorkspace({
             <CardContent className="flex flex-col gap-3 pt-0">
               {result ? (
                 <>
-                  <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3">
+                  <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                       Totals
                     </p>
@@ -474,7 +474,7 @@ export function MessengerOrderWorkspace({
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3">
+                  <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                       Matched fields
                     </p>
@@ -486,7 +486,7 @@ export function MessengerOrderWorkspace({
                   </div>
 
                   {result.customer_match ? (
-                    <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3">
+                    <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-4 py-3">
                       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         Existing customer
                       </p>
@@ -507,7 +507,7 @@ export function MessengerOrderWorkspace({
             </CardContent>
           </Card>
 
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Warnings</CardDescription>
               <CardTitle>Uncertain or unparsed content</CardTitle>
@@ -532,7 +532,7 @@ export function MessengerOrderWorkspace({
                   )}
 
                   {result.parse_meta.unparsed_lines.length > 0 ? (
-                    <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3">
+                    <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-4 py-3">
                       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         Unparsed lines
                       </p>
@@ -554,7 +554,7 @@ export function MessengerOrderWorkspace({
         </div>
 
         {createdOrderNo ? (
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Next step</CardDescription>
               <CardTitle>Continue in the order workspace</CardTitle>

@@ -8,9 +8,9 @@ import { cn } from "@workspace/ui/lib/utils"
 
 const accentClasses = {
   default: "bg-primary/10 text-primary",
-  sunset: "bg-[rgba(249,122,31,0.12)] text-[rgba(148,67,7,1)]",
-  teal: "bg-[rgba(24,183,165,0.14)] text-[rgba(10,102,92,1)]",
-  ink: "bg-[rgba(19,26,34,0.08)] text-[rgba(19,26,34,0.78)]",
+  sunset: "bg-[var(--fom-orange)]/10 text-[var(--fom-orange)]",
+  teal: "bg-[var(--fom-teal)]/10 text-[var(--fom-teal)]",
+  ink: "bg-muted text-muted-foreground",
 } as const
 
 type DashboardStatCardProps = {
@@ -33,7 +33,7 @@ export function DashboardStatCard({
   className,
 }: DashboardStatCardProps) {
   return (
-    <Card className={cn("border border-black/6 bg-white shadow-none", className)}>
+    <Card className={cn("border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none", className)}>
       <CardContent className="flex flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <span

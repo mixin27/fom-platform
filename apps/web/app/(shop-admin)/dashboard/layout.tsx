@@ -5,6 +5,7 @@ import { Bell, Plus, Search } from "lucide-react"
 import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
+import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { shopPortalNav } from "@/lib/navigation"
 import { getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
@@ -15,20 +16,29 @@ export default async function ShopAppLayout({
 }: {
   children: ReactNode
 }) {
-  const [{ session, activeShop }, profileResponse] = await Promise.all([
-    getShopPortalContext(),
+  const portalContext = await getShopPortalContext()
+  const { session, activeShop } = portalContext
+  const [profileResponse, unreadResponse] = await Promise.all([
     getCurrentUserProfile("/dashboard"),
+    getNotificationUnreadCount({
+      requiredAccess: "shop",
+      retryPath: "/dashboard",
+      searchParams: {
+        shop_id: activeShop.id,
+      },
+    }),
   ])
   const profile = profileResponse.data
+  const unreadCount = unreadResponse.data.unread_count
 
   return (
     <div className="fom-portal-canvas min-h-screen">
       <div className="fom-portal-shell flex h-screen w-full max-w-none max-h-none overflow-hidden rounded-none border-0 shadow-none">
-        <aside className="w-[236px] flex-shrink-0 border-r border-black/6 bg-[var(--fom-portal-sidebar)]">
+        <aside className="w-[236px] flex-shrink-0 border-r border-[var(--fom-border-subtle)] bg-[var(--fom-portal-sidebar)]">
           <div className="flex h-full flex-col">
-            <div className="border-b border-black/6 px-4 py-3.5">
+            <div className="border-b border-[var(--fom-border-subtle)] px-4 py-3.5">
               <BrandMark compact />
-              <div className="mt-3 rounded-2xl border border-black/6 bg-[var(--fom-portal-surface)] p-3.5">
+              <div className="mt-3 rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-bg)] p-3.5">
                 <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
                   Shop portal
                 </p>
@@ -52,8 +62,8 @@ export default async function ShopAppLayout({
               <AppSideNav items={shopPortalNav} tone="shop" />
             </div>
 
-            <div className="border-t border-black/6 px-4 py-3">
-              <div className="rounded-2xl border border-black/6 bg-white p-3.5">
+            <div className="border-t border-[var(--fom-border-subtle)] px-4 py-3">
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-3.5">
                 <p className="text-sm font-semibold text-foreground">
                   {profile.name}
                 </p>
@@ -75,8 +85,8 @@ export default async function ShopAppLayout({
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-[#f7f4ef]">
-          <header className="flex h-14 items-center gap-4 border-b border-black/6 bg-white px-5">
+        <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-portal-bg)]">
+          <header className="flex h-14 items-center gap-4 border-b border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-5">
             <div className="flex flex-col">
               <span className="text-[13px] font-semibold text-foreground">
                 Shop dashboard
@@ -89,15 +99,40 @@ export default async function ShopAppLayout({
               <div className="relative">
                 <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  className="h-8 w-60 rounded-xl border border-black/8 bg-[#f7f4ef] pr-3 pl-9 text-sm outline-none focus:border-[var(--fom-orange)]"
+                  className="h-8 w-60 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-bg)] pr-3 pl-9 text-sm outline-none focus:border-[var(--fom-orange)]"
                   placeholder="Search orders or customers"
                 />
               </div>
-              <button className="flex size-8 items-center justify-center rounded-xl border border-black/8 bg-white text-muted-foreground">
-                <Bell className="size-4" />
-              </button>
+              <Button
+                asChild
+                variant="outline"
+                size="icon"
+                className="relative size-8 rounded-xl border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] text-muted-foreground"
+              >
+                <Link href="/dashboard/notifications">
+                  <Bell className="size-4" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--fom-orange)] px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </Button>
             </div>
           </header>
+          {session.user.email && !session.user.emailVerifiedAt ? (
+            <div className="border-b border-[var(--fom-orange)]/15 bg-[rgba(249,122,31,0.08)] px-5 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[var(--fom-ink)]">
+                  Verify <span className="font-medium">{session.user.email}</span> to
+                  enable password recovery and billing notices.
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/verify-email">Verify email</Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <main className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {children}
           </main>

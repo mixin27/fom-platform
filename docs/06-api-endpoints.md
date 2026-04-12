@@ -27,6 +27,17 @@
 | No Content | 204      | No response body                          |
 | Error      | 4xx, 5xx | Error envelope with `error`               |
 
+## Public Marketing
+
+| Method | Path          | Description                                 | Response                  |
+| ------ | ------------- | ------------------------------------------- | ------------------------- |
+| GET    | /public/plans | List active public subscription plans       | 200 List Plan             |
+
+Public marketing notes:
+
+- `GET /public/plans` is unauthenticated and intended for the landing page or other public pricing surfaces.
+- The response returns the active plan catalog only; inactive plans stay hidden from public pricing.
+
 ## Auth and Profile
 
 | Method | Path               | Description                                            | Response                                       |
@@ -34,6 +45,10 @@
 | POST   | /auth/register     | Register with email/password                           | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/login        | Login with email plus password                         | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/refresh      | Rotate access and refresh tokens                       | 200 Single {access_token, refresh_token, user, platform_access, shops} |
+| POST   | /auth/email/verification/send | Send or resend an email verification link     | 200 Single {email, email_verified_at, sent, already_verified} |
+| POST   | /auth/email/verification/confirm | Confirm an email verification token        | 200 Single {email, email_verified_at, verified} |
+| POST   | /auth/password/forgot | Queue a password reset email                        | 200 Single {accepted, message} |
+| POST   | /auth/password/reset | Reset password with a token and revoke sessions      | 200 Single {reset, email, reset_at} |
 | POST   | /auth/social/login | Create or reuse a Google/Facebook identity and sign in | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/phone/start  | Send OTP to phone number                               | 200 Single {challenge_id, purpose, expires_at} |
 | POST   | /auth/phone/verify | Verify OTP and create session                          | 200 Single {access_token, refresh_token, user, platform_access, shops} |
@@ -45,19 +60,24 @@
 
 | Method | Path                                   | Description                                          | Response                     |
 | ------ | -------------------------------------- | ---------------------------------------------------- | ---------------------------- |
-| GET    | /users/me/notifications                | List inbox notifications for the current user        | 200 List Notification        |
-| GET    | /users/me/notifications/unread-count   | Get unread inbox count for the current user          | 200 Single {unread_count}    |
-| PATCH  | /users/me/notifications/{notificationId}/read | Mark one inbox notification as read           | 200 Single Notification      |
-| POST   | /users/me/notifications/read-all       | Mark unread notifications as read in bulk            | 200 Single {read_count}      |
-| GET    | /users/me/notification-preferences     | Get per-category in-app and email delivery settings  | 200 Single {preferences[]}   |
-| PATCH  | /users/me/notification-preferences     | Update per-category in-app and email delivery settings | 200 Single {preferences[]} |
+| GET    | /notifications                         | List inbox notifications for the current user        | 200 List Notification        |
+| GET    | /notifications/unread-count            | Get unread inbox count for the current user          | 200 Single {unread_count}    |
+| PATCH  | /notifications/{notificationId}/read   | Mark one inbox notification as read                  | 200 Single Notification      |
+| POST   | /notifications/read-all                | Mark unread notifications as read in bulk            | 200 Single {read_count}      |
+| GET    | /notification-preferences              | Get per-category in-app and email delivery settings  | 200 Single {preferences[]}   |
+| PATCH  | /notification-preferences              | Update per-category in-app and email delivery settings | 200 Single {preferences[]} |
 
 Notification notes:
 
-- `GET /users/me/notifications` accepts `shop_id`, `category`, `unread_only`, `limit`, and `cursor`.
+- `GET /notifications` accepts `shop_id`, `category`, `unread_only`, `limit`, and `cursor`.
 - The first implemented event category is `order_activity`, which covers order creation, order status changes, and delivery-driven order progress updates.
 - Preferences currently support `order_activity`, `daily_summary`, `promotional_tips`, `billing_updates`, and `support_updates`.
-- Email delivery is backed by an outbox table and a dev-safe log transport. The backend records queued/sent/failed email state without requiring SMTP setup yet.
+- Email delivery is backed by an outbox table plus provider adapters. Supported providers are `log`, `disabled`, `smtp`, and `sendgrid`, selected through `EMAIL_PROVIDER`.
+- Common sender configuration uses `EMAIL_FROM_EMAIL`, `EMAIL_FROM_NAME`, and optional `EMAIL_SUPPORT_EMAIL`.
+- SMTP mode also supports `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, `EMAIL_SMTP_IGNORE_TLS`, and `EMAIL_SMTP_REQUIRE_TLS`.
+- SendGrid mode requires `SENDGRID_API_KEY` and can override sender defaults with `EMAIL_SENDGRID_FROM_EMAIL` and `EMAIL_SENDGRID_FROM_NAME`.
+- Auth emails are production-oriented templates for welcome, email verification, forgot password, and password reset success.
+- Platform billing currently emits invoice and billing notice emails when invoices are created or updated. Trial and promotion templates are available through the shared template system for future workflows.
 
 ## Platform Workspace
 
@@ -117,6 +137,8 @@ Platform notes:
 Shop notes:
 
 - `GET /shops/{shopId}/billing` is intended for owner or manager-facing settings surfaces and currently requires `shops.write`.
+- `POST /shops` starts the new self-serve shop on the default free trial plan when the trial plan is active.
+- Trial subscriptions expire automatically once `end_at` passes. The default trial length is controlled by `DEFAULT_TRIAL_DAYS` and defaults to 7 days.
 
 ## Customers
 

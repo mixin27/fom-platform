@@ -317,8 +317,8 @@ export function PlatformShopFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
@@ -376,7 +376,7 @@ export function PlatformShopFormSheet({
             </Field>
 
             {selectedOwner ? (
-              <div className="rounded-2xl border border-black/8 bg-muted/20 p-4">
+              <div className="rounded-2xl border border-[var(--fom-border-strong)] bg-muted/5 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
@@ -409,7 +409,7 @@ export function PlatformShopFormSheet({
             ) : null}
 
             {!selectedOwner && ownerSearchQuery.trim().length >= 2 ? (
-              <div className="rounded-2xl border border-black/8 bg-white">
+              <div className="rounded-2xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)]">
                 {isSearchingOwners ? (
                   <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
                     <LoaderCircleIcon className="size-4 animate-spin" />
@@ -541,7 +541,7 @@ export function PlatformShopFormSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 bg-muted/20">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] bg-muted/10">
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"

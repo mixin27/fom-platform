@@ -380,8 +380,8 @@ export function ShopOrderSheet({
           {triggerLabel ?? (isEdit ? "Edit" : "Create order")}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full border-l bg-white sm:max-w-2xl">
-        <SheetHeader className="border-b border-black/6 pb-4">
+      <SheetContent side="right" className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] sm:max-w-xl">
+        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
           <SheetTitle>{isEdit ? "Edit order" : "Create order"}</SheetTitle>
           <SheetDescription>
             {isEdit
@@ -392,7 +392,7 @@ export function ShopOrderSheet({
 
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4">
           {isEdit && order ? (
-            <div className="rounded-2xl border border-black/6 bg-[#fcfaf6] p-4 text-sm">
+            <div className="rounded-2xl border border-[var(--fom-border-strong)] bg-[var(--fom-surface-variant)] p-4 text-sm">
               <p className="font-semibold text-foreground">{order.order_no}</p>
               <p className="mt-1 text-muted-foreground">
                 {order.customer.name} · {order.customer.phone}
@@ -455,7 +455,7 @@ export function ShopOrderSheet({
                       onChange={(event) =>
                         updateValue("status", event.target.value as "new" | "confirmed")
                       }
-                      className="h-10 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                      className="h-10 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                     >
                       <option value="new">New</option>
                       <option value="confirmed">Confirmed</option>
@@ -510,7 +510,7 @@ export function ShopOrderSheet({
                   onChange={(event) =>
                     updateValue("source", event.target.value as "manual" | "messenger")
                   }
-                  className="h-10 rounded-xl border border-black/8 bg-white px-3 text-sm"
+                  className="h-10 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <option value="manual">Manual</option>
                   <option value="messenger">Messenger</option>
@@ -536,8 +536,8 @@ export function ShopOrderSheet({
             </Field>
           </FieldGroup>
 
-          <div className="rounded-2xl border border-black/6 bg-white">
-            <div className="flex items-center justify-between border-b border-black/6 px-4 py-3">
+          <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
+            <div className="flex items-center justify-between border-b border-[var(--fom-border-subtle)] px-4 py-3">
               <div>
                 <p className="font-semibold text-foreground">Order items</p>
                 <p className="text-xs text-muted-foreground">
@@ -556,7 +556,7 @@ export function ShopOrderSheet({
               {values.items.map((item, index) => (
                 <div
                   key={item.id ?? `draft-${index}`}
-                  className="rounded-2xl border border-black/6 bg-[#fcfaf6] p-3"
+                  className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-3"
                 >
                   <div className="grid gap-3 sm:grid-cols-[1.5fr_0.55fr_0.75fr_auto]">
                     <Input
@@ -621,7 +621,7 @@ export function ShopOrderSheet({
               ))}
 
               {isEdit ? (
-                <div className="rounded-2xl border border-dashed border-black/10 p-3">
+                <div className="rounded-2xl border border-dashed border-[var(--fom-border-subtle)] p-3">
                   <p className="mb-3 text-sm font-medium text-foreground">Add new item</p>
                   <div className="grid gap-3 sm:grid-cols-[1.5fr_0.55fr_0.75fr_auto]">
                     <Input
@@ -691,7 +691,7 @@ export function ShopOrderSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-black/6 px-4 py-4">
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] px-4 py-4">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>

@@ -144,7 +144,7 @@ export default async function PlatformSubscriptionsPage({
         />
 
         <div className="flex flex-col gap-3">
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Upcoming renewals</CardDescription>
               <CardTitle>What is due next</CardTitle>
@@ -154,7 +154,7 @@ export default async function PlatformSubscriptionsPage({
                 data.upcoming_renewals.map((renewal) => (
                   <div
                     key={renewal.shop_id}
-                    className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3"
+                    className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -179,14 +179,14 @@ export default async function PlatformSubscriptionsPage({
                   </div>
                 ))
               ) : (
-                <div className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3 text-sm text-muted-foreground">
                   No renewals due in the next 30 days.
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border border-black/6 bg-white shadow-none">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
             <CardHeader className="pb-3">
               <CardDescription>Plan mix</CardDescription>
               <CardTitle>Current catalog usage</CardTitle>
@@ -195,7 +195,7 @@ export default async function PlatformSubscriptionsPage({
               {data.plans.map((plan) => (
                 <div
                   key={plan.plan_code}
-                  className="rounded-xl bg-[#f7f8fc] px-3.5 py-3"
+                  className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[var(--fom-ink)]">

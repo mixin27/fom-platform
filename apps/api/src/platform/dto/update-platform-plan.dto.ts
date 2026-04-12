@@ -1,10 +1,13 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsInt,
   IsOptional,
   IsString,
+  ValidateNested,
   Matches,
   Max,
   MaxLength,
@@ -12,6 +15,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { trimString } from '../../auth/dto/transforms';
+import { PlatformPlanItemInputDto } from './platform-plan-item-input.dto';
 
 export class UpdatePlatformPlanDto {
   @ApiPropertyOptional({
@@ -47,7 +51,7 @@ export class UpdatePlatformPlanDto {
   description?: string | null;
 
   @ApiPropertyOptional({
-    example: 45000,
+    example: 7000,
   })
   @IsOptional()
   @IsInt()
@@ -90,4 +94,14 @@ export class UpdatePlatformPlanDto {
   @Min(0)
   @Max(10000)
   sort_order?: number;
+
+  @ApiPropertyOptional({
+    type: [PlatformPlanItemInputDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => PlatformPlanItemInputDto)
+  items?: PlatformPlanItemInputDto[];
 }

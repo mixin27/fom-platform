@@ -41,11 +41,12 @@ export default async function RegisterPage({
   const shopSetupFailed =
     params?.error === "shop_setup_failed" ||
     params?.error === "shop_name_unavailable"
+  const trialUnavailable = params?.error === "trial_unavailable"
   const registrationFailed = params?.error === "registration_failed"
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <Card className="border border-black/6 bg-white">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Get started</CardDescription>
           <CardTitle>Create your shop account</CardTitle>
@@ -64,6 +65,11 @@ export default async function RegisterPage({
           {shopSetupFailed ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Your account was created, but the initial shop setup did not complete. Try signing in and create the shop again later.
+            </div>
+          ) : null}
+          {trialUnavailable ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Self-serve registration is available, but the free trial plan is currently disabled. Ask the platform owner to enable the trial plan.
             </div>
           ) : null}
           {registrationFailed ? (
@@ -89,7 +95,7 @@ export default async function RegisterPage({
                 <FieldLabel htmlFor="password">Password</FieldLabel>
                 <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
                 <FieldDescription>
-                  Registration creates your account in the API, provisions the first shop, then signs you into the dashboard.
+                  Registration creates your account, provisions the first shop, starts that shop on a free trial, then signs you into the dashboard.
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -107,7 +113,7 @@ export default async function RegisterPage({
         </CardContent>
       </Card>
 
-      <Card className="border border-black/6 bg-[linear-gradient(180deg,#fff8f2_0%,#fff_100%)]">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>For shop owners</CardDescription>
           <CardTitle className="text-4xl leading-tight">
@@ -119,9 +125,10 @@ export default async function RegisterPage({
             "Manual order entry for fast Facebook selling",
             "Customer, delivery, and message template workflows",
             "Daily, weekly, and monthly reporting surfaces",
+            "Free trial starts automatically with the first self-serve shop",
             "RBAC-ready staff expansion once the shop grows",
           ].map((item) => (
-            <div key={item} className="rounded-2xl border border-black/6 bg-white p-4 text-sm leading-7 text-muted-foreground">
+            <div key={item} className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-4 text-sm leading-7 text-muted-foreground">
               {item}
             </div>
           ))}

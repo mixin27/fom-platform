@@ -10,6 +10,7 @@ import {
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { DashboardRevenueChart } from "./_components/dashboard-revenue-chart"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getPlatformDashboard,
@@ -42,10 +43,6 @@ export default async function PlatformHomePage() {
   const dashboard = dashboardResponse.data
   const subscriptions = subscriptionsResponse.data
   const support = supportResponse.data
-  const maxRevenueAmount = Math.max(
-    ...dashboard.revenue_series.map((entry) => entry.amount),
-    1
-  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -107,29 +104,14 @@ export default async function PlatformHomePage() {
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Revenue overview</CardDescription>
             <CardTitle>Collected invoice revenue this week</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
-            <div className="grid h-36 grid-cols-7 items-end gap-3">
-              {dashboard.revenue_series.map((entry) => (
-                <div key={entry.date} className="flex flex-col items-center gap-3">
-                  <div
-                    className="w-full rounded-t-[6px] bg-[rgba(244,98,42,0.2)]"
-                    style={{
-                      height: `${Math.max(
-                        8,
-                        (entry.amount / maxRevenueAmount) * 100
-                      )}%`,
-                    }}
-                  />
-                  <span className="text-xs text-muted-foreground">{entry.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="grid gap-3 border-t border-black/6 pt-3 md:grid-cols-3">
+            <DashboardRevenueChart data={dashboard.revenue_series} />
+            <div className="grid gap-3 border-t border-[var(--fom-border-subtle)] pt-3 md:grid-cols-3">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.08em] uppercase text-muted-foreground">
                   This week
@@ -163,7 +145,7 @@ export default async function PlatformHomePage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>What needs attention</CardDescription>
             <CardTitle>Operator queue</CardTitle>
@@ -173,7 +155,7 @@ export default async function PlatformHomePage() {
               dashboard.attention_items.slice(0, 4).map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3"
+                  className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
                 >
                   <div className="flex items-center gap-2">
                     <PlatformStatusBadge status={item.severity} label={item.severity} />
@@ -190,7 +172,7 @@ export default async function PlatformHomePage() {
                 </div>
               ))
             ) : (
-              <div className="rounded-xl border border-black/6 bg-[var(--fom-admin-surface)] px-3.5 py-3 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3 text-sm text-muted-foreground">
                 No urgent support items right now.
               </div>
             )}
@@ -199,7 +181,7 @@ export default async function PlatformHomePage() {
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr_0.95fr]">
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Plan breakdown</CardDescription>
             <CardTitle>Subscription mix</CardTitle>
@@ -215,7 +197,7 @@ export default async function PlatformHomePage() {
                     {plan.shop_count} shops · {formatPercent(plan.share)}
                   </span>
                 </div>
-                <div className="h-[6px] rounded-full bg-[#eef0f4]">
+                <div className="h-[6px] rounded-full bg-[var(--fom-border-subtle)]">
                   <div
                     className="h-full rounded-full bg-[var(--fom-orange)]"
                     style={{ width: `${Math.max(8, plan.share * 100)}%` }}
@@ -226,7 +208,7 @@ export default async function PlatformHomePage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Billing pressure</CardDescription>
             <CardTitle>Renewals and overdue risk</CardTitle>
@@ -246,7 +228,7 @@ export default async function PlatformHomePage() {
                 </p>
               </div>
             ) : (
-              <div className="rounded-xl border border-black/6 bg-[#f7f8fc] px-3.5 py-3 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3 text-sm text-muted-foreground">
                 No overdue invoice is currently leading the queue.
               </div>
             )}
@@ -254,7 +236,7 @@ export default async function PlatformHomePage() {
             {subscriptions.upcoming_renewals.slice(0, 3).map((renewal) => (
               <div
                 key={renewal.shop_id}
-                className="flex items-center justify-between rounded-xl bg-[#f7f8fc] px-3.5 py-3"
+                className="flex items-center justify-between rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
               >
                 <div>
                   <p className="text-sm font-semibold text-[var(--fom-ink)]">
@@ -273,7 +255,7 @@ export default async function PlatformHomePage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-black/6 bg-white shadow-none">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Platform health</CardDescription>
             <CardTitle>Operational summary</CardTitle>
@@ -298,7 +280,7 @@ export default async function PlatformHomePage() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex items-center justify-between rounded-xl bg-[#f7f8fc] px-3.5 py-3"
+                className="flex items-center justify-between rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
               >
                 <span className="text-sm text-muted-foreground">{label}</span>
                 <span className="text-sm font-semibold text-[var(--fom-ink)]">

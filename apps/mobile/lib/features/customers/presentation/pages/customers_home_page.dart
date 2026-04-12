@@ -7,10 +7,12 @@ import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
 
 import "../../domain/entities/customer_list_item.dart";
+import "../../domain/usecases/create_customer_use_case.dart";
 import "../bloc/customers_home_bloc.dart";
 import "../bloc/customers_home_event.dart";
 import "../bloc/customers_home_state.dart";
 import "../models/customers_home_tab.dart";
+import "../widgets/customer_editor_sheet.dart";
 
 class CustomersHomePage extends StatelessWidget {
   const CustomersHomePage({
@@ -101,10 +103,12 @@ class _CustomersHomeViewState extends State<_CustomersHomeView> {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          floatingActionButton: AppFAB(
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            onPressed: () => _showComingSoon(context, "Add customer"),
-          ),
+          floatingActionButton: state.shopId == null
+              ? null
+              : AppFAB(
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  onPressed: () => _openCreateCustomerSheet(context, state),
+                ),
           body: RefreshIndicator(
             onRefresh: () => _onRefresh(context),
             color: AppColors.softOrange,
@@ -137,8 +141,9 @@ class _CustomersHomeViewState extends State<_CustomersHomeView> {
                               ),
                             );
                           },
-                          onAddPressed: () =>
-                              _showComingSoon(context, "Add customer"),
+                          onAddPressed: state.shopId == null
+                              ? null
+                              : () => _openCreateCustomerSheet(context, state),
                         ),
                       ),
                       SliverPadding(
@@ -338,10 +343,45 @@ class _CustomersHomeViewState extends State<_CustomersHomeView> {
         left.day == right.day;
   }
 
-  void _showComingSoon(BuildContext context, String label) {
+  Future<void> _openCreateCustomerSheet(
+    BuildContext context,
+    CustomersHomeState state,
+  ) async {
+    final shopId = state.shopId?.trim() ?? '';
+    if (shopId.isEmpty) {
+      return;
+    }
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => CustomerEditorSheet(
+        title: 'Add Customer',
+        submitLabel: 'Save Customer',
+        onSubmitted: (draft) async {
+          final createResult = await getIt<CreateCustomerUseCase>().call(
+            CreateCustomerParams(shopId: shopId, draft: draft),
+          );
+          final failure = createResult.failureOrNull;
+
+          if (failure != null) {
+            throw Exception(failure.message);
+          }
+        },
+      ),
+    );
+
+    if (!context.mounted || result != true) {
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("$label is coming soon."),
+      const SnackBar(
+        content: Text('Customer saved successfully.'),
         behavior: SnackBarBehavior.floating,
       ),
     );

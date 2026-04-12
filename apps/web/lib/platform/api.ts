@@ -71,6 +71,21 @@ export type PlatformPlanOption = {
   price: number
   currency: string
   is_active: boolean
+  sort_order: number
+  items: PlatformPlanItem[]
+}
+
+export type PlatformPlanItem = {
+  id: string
+  label: string
+  description: string | null
+  availability_status: "available" | "unavailable" | string
+  sort_order: number
+}
+
+export type PlatformSettingsPlan = PlatformPlanOption & {
+  shop_count: number
+  collected_revenue: number
 }
 
 export type PlatformPlanSummary = {
@@ -387,18 +402,6 @@ export async function getPlatformSettings() {
       role_count: number
       permission_count: number
     }
-    plans: Array<{
-      id: string
-      code: string
-      name: string
-      description: string | null
-      billing_period: string
-      price: number
-      currency: string
-      is_active: boolean
-      sort_order: number
-      shop_count: number
-      collected_revenue: number
-    }>
+    plans: PlatformSettingsPlan[]
   }>("/api/v1/platform/settings", undefined, "/platform/settings")
 }

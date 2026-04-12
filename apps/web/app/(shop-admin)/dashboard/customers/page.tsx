@@ -161,7 +161,7 @@ export default async function CustomersPage({
             <select
               name="segment"
               defaultValue={segment}
-              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             >
               <option value="all">All</option>
               <option value="vip">VIP</option>
@@ -171,7 +171,7 @@ export default async function CustomersPage({
             <select
               name="sort"
               defaultValue={sort}
-              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
             >
               <option value="recent">Recent</option>
               <option value="top_spenders">Top spenders</option>

@@ -72,6 +72,24 @@ async function seedPlanCatalog() {
       },
     });
 
+    await prisma.planItem.deleteMany({
+      where: {
+        planId: record.id,
+      },
+    });
+
+    if (plan.items.length > 0) {
+      await prisma.planItem.createMany({
+        data: plan.items.map((item) => ({
+          planId: record.id,
+          label: item.label,
+          description: item.description,
+          availabilityStatus: item.availabilityStatus,
+          sortOrder: item.sortOrder,
+        })),
+      });
+    }
+
     plansByCode.set(record.code, record);
   }
 
@@ -162,6 +180,7 @@ async function resetDemoData() {
   await prisma.payment.deleteMany();
   await prisma.subscription.deleteMany();
   await prisma.emailMessage.deleteMany();
+  await prisma.emailActionToken.deleteMany();
   await prisma.notificationPreference.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.messageTemplate.deleteMany();
@@ -361,7 +380,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
       data: {
         subscriptionId: subscription.id,
         invoiceNo: 'INV-0089',
-        amount: 5000,
+        amount: 7000,
         currency: 'MMK',
         status: 'paid',
         paymentMethod: 'KBZ Pay',
@@ -985,7 +1004,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
         textBody:
           'Daw Khin Myat placed ORD-0244 for 39,000 MMK. Open the order to confirm details.',
         status: 'sent',
-        deliveryMode: 'log',
+        providerKey: 'log',
         queuedAt: new Date('2026-04-02T04:02:31.000Z'),
         processedAt: new Date('2026-04-02T04:02:31.000Z'),
         updatedAt: new Date('2026-04-02T04:02:31.000Z'),
@@ -1004,7 +1023,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
         textBody:
           'Yesterday closed with 22 orders and 413,000 MMK revenue. Open reports for the full breakdown.',
         status: 'sent',
-        deliveryMode: 'log',
+        providerKey: 'log',
         queuedAt: new Date('2026-04-02T01:00:01.000Z'),
         processedAt: new Date('2026-04-02T01:00:01.000Z'),
         updatedAt: new Date('2026-04-02T01:00:01.000Z'),
@@ -1196,7 +1215,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     paymentData.push({
       subscriptionId: aungSubscriptionId,
       invoiceNo: 'INV-0084',
-      amount: 50000,
+      amount: 70000,
       currency: 'MMK',
       status: 'paid',
       paymentMethod: 'KBZ Pay',
@@ -1213,7 +1232,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     paymentData.push({
       subscriptionId: phyoSubscriptionId,
       invoiceNo: 'INV-0086',
-      amount: 5000,
+      amount: 7000,
       currency: 'MMK',
       status: 'overdue',
       paymentMethod: null,
@@ -1230,7 +1249,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     paymentData.push({
       subscriptionId: thidaSubscriptionId,
       invoiceNo: 'INV-0088',
-      amount: 5000,
+      amount: 7000,
       currency: 'MMK',
       status: 'paid',
       paymentMethod: 'Wave Money',

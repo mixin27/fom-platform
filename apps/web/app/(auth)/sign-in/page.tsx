@@ -23,6 +23,7 @@ import {
 type SignInPageProps = {
   searchParams?: Promise<{
     error?: string
+    notice?: string
   }>
 }
 
@@ -38,6 +39,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const noAccess = params?.error === "no_access"
   const authFailed = params?.error === "auth_failed"
   const sessionExpired = params?.error === "session_expired"
+  const passwordReset = params?.notice === "password_reset"
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -82,14 +84,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </CardContent>
       </Card>
 
-      <Card className="border border-black/6 bg-white">
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Authentication</CardDescription>
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Email or password is incorrect.
             </div>
           ) : null}
@@ -99,13 +101,18 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </div>
           ) : null}
           {authFailed ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Sign-in could not be completed right now. Check the API connection and try again.
             </div>
           ) : null}
           {sessionExpired ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Your session expired. Sign in again to continue.
+            </div>
+          ) : null}
+          {passwordReset ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Password updated. Sign in with the new password.
             </div>
           ) : null}
           <form action={signInAction} className="flex flex-col gap-5">
@@ -127,6 +134,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               <ArrowRight data-icon="inline-end" />
             </Button>
           </form>
+          <div className="text-sm">
+            <Link href="/forgot-password" className="font-medium text-foreground">
+              Forgot password?
+            </Link>
+          </div>
           <div className="text-sm text-muted-foreground">
             Need a shop account?{" "}
             <Link href="/register" className="font-medium text-foreground">

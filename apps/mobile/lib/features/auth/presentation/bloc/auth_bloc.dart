@@ -34,6 +34,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     on<AuthRegisterSubmitted>(_onRegisterSubmitted);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthShopSelected>(_onShopSelected);
+    on<AuthSessionRefreshRequested>(_onSessionRefreshRequested);
     on<AuthErrorDismissed>(_onErrorDismissed);
   }
 
@@ -56,6 +57,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
       return;
     }
 
+    await _restoreSessionAndEmit(emit);
+  }
+
+  Future<void> _onSessionRefreshRequested(
+    AuthSessionRefreshRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state.session == null) {
+      return;
+    }
+
+    await _restoreSessionAndEmit(emit);
+  }
+
+  Future<void> _restoreSessionAndEmit(Emitter<AuthState> emit) async {
     final result = await _restoreAuthSessionUseCase(
       const RestoreAuthSessionParams(),
     );

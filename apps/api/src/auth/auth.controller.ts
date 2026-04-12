@@ -15,8 +15,11 @@ import {
   type RequestWithContext,
 } from '../common/http/request-context';
 import { LoginDto } from './dto/login.dto';
+import { ConfirmEmailVerificationDto } from './dto/confirm-email-verification.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RefreshSessionDto } from './dto/refresh-session.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 import { StartPhoneChallengeDto } from './dto/start-phone-challenge.dto';
 import { VerifyPhoneChallengeDto } from './dto/verify-phone-challenge.dto';
@@ -61,6 +64,51 @@ export class AuthController {
   ) {
     return ok(
       this.authService.socialLogin(body, getSessionRequestMetadata(request)),
+    );
+  }
+
+  @Post('email/verification/send')
+  @UseGuards(AuthGuard)
+  @HttpCode(200)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Send or resend an email verification link' })
+  sendEmailVerification(@Req() request: RequestWithContext) {
+    return ok(
+      this.authService.sendEmailVerification(
+        request.user!,
+        getSessionRequestMetadata(request),
+      ),
+    );
+  }
+
+  @Post('email/verification/confirm')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Confirm an email verification token' })
+  confirmEmailVerification(@Body() body: ConfirmEmailVerificationDto) {
+    return ok(this.authService.confirmEmailVerification(body));
+  }
+
+  @Post('password/forgot')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Request a password reset email' })
+  forgotPassword(
+    @Body() body: ForgotPasswordDto,
+    @Req() request: RequestWithContext,
+  ) {
+    return ok(
+      this.authService.forgotPassword(body, getSessionRequestMetadata(request)),
+    );
+  }
+
+  @Post('password/reset')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reset a password using an email action token' })
+  resetPassword(
+    @Body() body: ResetPasswordDto,
+    @Req() request: RequestWithContext,
+  ) {
+    return ok(
+      this.authService.resetPassword(body, getSessionRequestMetadata(request)),
     );
   }
 

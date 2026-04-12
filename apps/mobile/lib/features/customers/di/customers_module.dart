@@ -9,8 +9,10 @@ import "../data/datasources/customers_local_data_source.dart";
 import "../data/datasources/customers_remote_data_source.dart";
 import "../data/repositories/customers_repository_impl.dart";
 import "../domain/repositories/customers_repository.dart";
+import "../domain/usecases/create_customer_use_case.dart";
 import "../domain/usecases/refresh_customer_detail_use_case.dart";
 import "../domain/usecases/refresh_customers_use_case.dart";
+import "../domain/usecases/update_customer_use_case.dart";
 import "../domain/usecases/watch_customer_use_case.dart";
 import "../domain/usecases/watch_customers_use_case.dart";
 import "../presentation/bloc/customer_profile_bloc.dart";
@@ -47,6 +49,12 @@ class CustomersModule implements DependencyModule {
       )
       ..putLazySingletonIfAbsent<RefreshCustomerDetailUseCase>(
         () => RefreshCustomerDetailUseCase(getIt<CustomersRepository>()),
+      )
+      ..putLazySingletonIfAbsent<CreateCustomerUseCase>(
+        () => CreateCustomerUseCase(getIt<CustomersRepository>()),
+      )
+      ..putLazySingletonIfAbsent<UpdateCustomerUseCase>(
+        () => UpdateCustomerUseCase(getIt<CustomersRepository>()),
       )
       ..putLazySingletonIfAbsent<CustomersHomeBloc>(
         () => CustomersHomeBloc(

@@ -1,5 +1,6 @@
 import 'package:app_core/app_core.dart';
 
+import '../entities/customer_draft.dart';
 import '../entities/customer_list_item.dart';
 
 abstract class CustomersRepository {
@@ -15,5 +16,16 @@ abstract class CustomersRepository {
   Future<Result<void>> refreshCustomerDetail({
     required String shopId,
     required String customerId,
+  });
+
+  Future<Result<CustomerListItem>> createCustomer({
+    required String shopId,
+    required CustomerDraft draft,
+  });
+
+  Future<Result<CustomerListItem>> updateCustomer({
+    required String shopId,
+    required String customerId,
+    required CustomerDraft draft,
   });
 }
