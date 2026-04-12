@@ -2,6 +2,7 @@ import { BarChart3, CalendarRange, NotebookTabs } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
+import { ShopReportChart } from "./_components/shop-report-chart"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import {
   getShopDailySummary,
@@ -105,6 +106,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               ["Average order", formatCurrency(daily.average_order_value)],
               ["Delivered rate", formatPercent(daily.delivered_rate / 100)],
             ],
+            chartData: daily.hourly_breakdown,
+            color: "var(--fom-sunset)",
           },
           {
             title: "Weekly",
@@ -115,6 +118,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               ["Pending", weekly.pending_count.toLocaleString()],
               ["Delivered rate", formatPercent(weekly.delivered_rate / 100)],
             ],
+            chartData: weekly.daily_breakdown,
+            color: "var(--fom-teal)",
           },
           {
             title: "Monthly",
@@ -125,6 +130,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               ["Customers", monthly.customer_count.toLocaleString()],
               ["Average order", formatCurrency(monthly.average_order_value)],
             ],
+            chartData: monthly.daily_breakdown,
+            color: "var(--fom-ink)",
           },
         ].map((section) => (
           <Card key={section.title} className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
@@ -142,6 +149,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                   <span className="text-sm font-semibold text-foreground">{value}</span>
                 </div>
               ))}
+              <ShopReportChart data={section.chartData} colorVar={section.color} />
             </CardContent>
           </Card>
         ))}
