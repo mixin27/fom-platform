@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { MessageSquareText, PencilLine } from "lucide-react"
+import { MessageSquareText } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
@@ -17,21 +16,10 @@ import {
   type ShopSearchParams,
 } from "@/lib/shop/query"
 import { formatRelativeDate } from "@/lib/platform/format"
-import {
-  createShopTemplateFromFormAction,
-  updateShopTemplateFromFormAction,
-  updateShopTemplateStateFromFormAction,
-} from "../actions"
+import { updateShopTemplateStateFromFormAction } from "../actions"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
-import { Textarea } from "@workspace/ui/components/textarea"
+import { ShopTemplateSheet } from "./_components/shop-template-sheet"
 
 type TemplatesPageProps = {
   searchParams?: Promise<ShopSearchParams>
@@ -42,15 +30,11 @@ export default async function TemplatesPage({
 }: TemplatesPageProps) {
   const params = (await searchParams) ?? {}
   const currentHref = buildQueryHref("/dashboard/templates", params, {})
-  const editTemplateId = getSingleSearchParam(params.edit)
   const [{ activeShop }, templatesResponse] = await Promise.all([
     getShopPortalContext(),
     getShopTemplates(params, currentHref),
   ])
   const rows = templatesResponse.data
-  const selectedTemplate = editTemplateId
-    ? rows.find((template) => template.id === editTemplateId) ?? null
-    : null
   const pagination = templatesResponse.meta?.pagination as ShopCursorPagination | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
   const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
@@ -69,6 +53,15 @@ export default async function TemplatesPage({
         eyebrow="Templates"
         title="Message templates"
         description="Keep the high-repeat customer replies in one place so the team can move faster across confirmations, dispatch, and payment follow-up."
+        actions={
+          canManageTemplates ? (
+            <ShopTemplateSheet
+              shopId={activeShop.id}
+              triggerLabel="Create template"
+              triggerVariant="default"
+            />
+          ) : undefined
+        }
       />
 
       {notice ? (
@@ -116,241 +109,129 @@ export default async function TemplatesPage({
         />
       </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-        <PlatformDataTable
-          title="Template library"
-          description="Quick-reply and customer message templates"
-          rows={rows}
-          emptyMessage="No templates matched the current filters."
-          footer={`Showing ${rows.length} template${rows.length === 1 ? "" : "s"}`}
-          pagination={
-            pagination
-              ? {
-                  previousHref: previousCursor
+      <PlatformDataTable
+        title="Template library"
+        description="Quick-reply and customer message templates"
+        rows={rows}
+        emptyMessage="No templates matched the current filters."
+        footer={`Showing ${rows.length} template${rows.length === 1 ? "" : "s"}`}
+        pagination={
+          pagination
+            ? {
+                previousHref: previousCursor
+                  ? buildQueryHref("/dashboard/templates", params, {
+                      cursor: previousCursor,
+                    })
+                  : currentCursor
                     ? buildQueryHref("/dashboard/templates", params, {
-                        cursor: previousCursor,
-                      })
-                    : currentCursor
-                      ? buildQueryHref("/dashboard/templates", params, {
-                          cursor: null,
-                        })
-                      : null,
-                  nextHref: pagination.next_cursor
-                    ? buildQueryHref("/dashboard/templates", params, {
-                        cursor: pagination.next_cursor,
+                        cursor: null,
                       })
                     : null,
-                }
-              : undefined
-          }
-          toolbar={
-            <form method="GET" className="flex flex-wrap gap-2">
-              <Input
-                name="search"
-                defaultValue={search}
-                placeholder="Search templates"
-                className="h-9 w-[220px]"
-              />
-              <select
-                name="state"
-                defaultValue={state}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <input type="hidden" name="limit" value={String(limit)} />
-              <Button type="submit" size="sm" variant="outline">
-                Filter
-              </Button>
-            </form>
-          }
-          columns={[
-            {
-              key: "title",
-              header: "Template",
-              render: (template) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{template.title}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {template.shortcut ?? "No shortcut"}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "body",
-              header: "Preview",
-              render: (template) => (
-                <span className="text-sm leading-6 text-muted-foreground">
-                  {template.preview}
+                nextHref: pagination.next_cursor
+                  ? buildQueryHref("/dashboard/templates", params, {
+                      cursor: pagination.next_cursor,
+                    })
+                  : null,
+              }
+            : undefined
+        }
+        toolbar={
+          <form method="GET" className="flex flex-wrap gap-2">
+            <Input
+              name="search"
+              defaultValue={search}
+              placeholder="Search templates"
+              className="h-9 w-[220px]"
+            />
+            <select
+              name="state"
+              defaultValue={state}
+              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <input type="hidden" name="limit" value={String(limit)} />
+            <Button type="submit" size="sm" variant="outline">
+              Filter
+            </Button>
+          </form>
+        }
+        columns={[
+          {
+            key: "title",
+            header: "Template",
+            render: (template) => (
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">{template.title}</span>
+                <span className="text-xs text-muted-foreground">
+                  {template.shortcut ?? "No shortcut"}
                 </span>
-              ),
-            },
-            {
-              key: "length",
-              header: "Length",
-              render: (template) => `${template.character_count} chars`,
-            },
-            {
-              key: "status",
-              header: "Status",
-              render: (template) => (
-                <PlatformStatusBadge
-                  status={template.is_active ? "active" : "inactive"}
-                  label={template.is_active ? "Active" : "Inactive"}
-                />
-              ),
-            },
-            {
-              key: "updated",
-              header: "Updated",
-              render: (template) => formatRelativeDate(template.updated_at),
-            },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (template) => {
-                if (!canManageTemplates) {
-                  return <span className="text-xs text-muted-foreground">No actions</span>
-                }
+              </div>
+            ),
+          },
+          {
+            key: "body",
+            header: "Preview",
+            render: (template) => (
+              <span className="text-sm leading-6 text-muted-foreground">
+                {template.preview}
+              </span>
+            ),
+          },
+          {
+            key: "length",
+            header: "Length",
+            render: (template) => `${template.character_count} chars`,
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (template) => (
+              <PlatformStatusBadge
+                status={template.is_active ? "active" : "inactive"}
+                label={template.is_active ? "Active" : "Inactive"}
+              />
+            ),
+          },
+          {
+            key: "updated",
+            header: "Updated",
+            render: (template) => formatRelativeDate(template.updated_at),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            render: (template) => {
+              if (!canManageTemplates) {
+                return <span className="text-xs text-muted-foreground">No actions</span>
+              }
 
-                return (
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <Button asChild size="sm" variant="outline">
-                      <Link
-                        href={buildQueryHref("/dashboard/templates", params, {
-                          edit: template.id,
-                        })}
-                      >
-                        <PencilLine data-icon="inline-start" />
-                        Edit
-                      </Link>
-                    </Button>
-                    <form action={updateShopTemplateStateFromFormAction}>
-                      <input type="hidden" name="return_to" value={currentHref} />
-                      <input type="hidden" name="shop_id" value={activeShop.id} />
-                      <input type="hidden" name="template_id" value={template.id} />
-                      <input
-                        type="hidden"
-                        name="is_active"
-                        value={template.is_active ? "false" : "true"}
-                      />
-                      <Button type="submit" size="sm" variant="outline">
-                        {template.is_active ? "Archive" : "Activate"}
-                      </Button>
-                    </form>
-                  </div>
-                )
-              },
-              className: "w-[210px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
-            },
-          ]}
-        />
-
-        <div className="flex flex-col gap-3">
-          <Card className="border border-black/6 bg-white shadow-none">
-            <CardHeader className="pb-3">
-              <CardDescription>
-                {selectedTemplate ? `Editing ${selectedTemplate.title}` : "New template"}
-              </CardDescription>
-              <CardTitle>
-                {selectedTemplate ? "Edit quick reply" : "Create quick reply"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {canManageTemplates ? (
-                <form
-                  action={
-                    selectedTemplate
-                      ? updateShopTemplateFromFormAction
-                      : createShopTemplateFromFormAction
-                  }
-                  className="flex flex-col gap-2.5"
-                >
-                  <input type="hidden" name="return_to" value={currentHref} />
-                  <input type="hidden" name="shop_id" value={activeShop.id} />
-                  {selectedTemplate ? (
+              return (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <ShopTemplateSheet shopId={activeShop.id} template={template} />
+                  <form action={updateShopTemplateStateFromFormAction}>
+                    <input type="hidden" name="return_to" value={currentHref} />
+                    <input type="hidden" name="shop_id" value={activeShop.id} />
+                    <input type="hidden" name="template_id" value={template.id} />
                     <input
                       type="hidden"
-                      name="template_id"
-                      value={selectedTemplate.id}
+                      name="is_active"
+                      value={template.is_active ? "false" : "true"}
                     />
-                  ) : null}
-                  <Input
-                    name="title"
-                    defaultValue={selectedTemplate?.title ?? ""}
-                    placeholder="Template title"
-                    className="h-9"
-                  />
-                  <Input
-                    name="shortcut"
-                    defaultValue={selectedTemplate?.shortcut ?? ""}
-                    placeholder="Shortcut, for example /paid"
-                    className="h-9"
-                  />
-                  <select
-                    name="is_active"
-                    defaultValue={
-                      selectedTemplate
-                        ? selectedTemplate.is_active
-                          ? "active"
-                          : "inactive"
-                        : "active"
-                    }
-                    className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                  <Textarea
-                    name="body"
-                    defaultValue={selectedTemplate?.body ?? ""}
-                    placeholder="Message body"
-                    className="min-h-[140px]"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="submit" size="sm">
-                      {selectedTemplate ? "Save changes" : "Create template"}
+                    <Button type="submit" size="sm" variant="outline">
+                      {template.is_active ? "Archive" : "Activate"}
                     </Button>
-                    {selectedTemplate ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={buildQueryHref("/dashboard/templates", params, {
-                            edit: null,
-                          })}
-                        >
-                          Close
-                        </Link>
-                      </Button>
-                    ) : null}
-                  </div>
-                </form>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Your account can review templates but cannot create or edit them.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {selectedTemplate ? (
-            <Card className="border border-black/6 bg-white shadow-none">
-              <CardHeader className="pb-3">
-                <CardDescription>Template preview</CardDescription>
-                <CardTitle>Current message</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3 text-sm leading-7 text-muted-foreground">
-                  {selectedTemplate.body}
+                  </form>
                 </div>
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
+              )
+            },
+            className: "w-[220px] px-4 py-2.5 text-right",
+            cellClassName: "px-4 py-3 text-right",
+          },
+        ]}
+      />
     </div>
   )
 }

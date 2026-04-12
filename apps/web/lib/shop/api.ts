@@ -182,6 +182,59 @@ export type ShopTemplate = {
   updated_at: string
 }
 
+export type ShopBilling = {
+  shop_id: string
+  shop_name: string
+  overview: {
+    status: string | null
+    auto_renews: boolean
+    plan_code: string | null
+    plan_name: string | null
+    plan_price: number | null
+    plan_currency: string | null
+    billing_period: string | null
+    current_period_start: string | null
+    current_period_end: string | null
+    outstanding_balance: number
+    overdue_invoice_count: number
+    next_due_at: string | null
+    latest_invoice_status: string | null
+    latest_paid_at: string | null
+  }
+  subscription: {
+    id: string
+    status: string
+    auto_renews: boolean
+    start_at: string
+    end_at: string | null
+    created_at: string
+    updated_at: string
+  } | null
+  plan: {
+    id: string
+    code: string
+    name: string
+    description: string | null
+    price: number
+    currency: string
+    billing_period: string
+    is_active: boolean
+  } | null
+  invoices: Array<{
+    id: string
+    invoice_no: string
+    amount: number
+    currency: string
+    status: string
+    payment_method: string | null
+    provider_ref: string | null
+    due_at: string | null
+    paid_at: string | null
+    created_at: string
+    updated_at: string
+  }>
+}
+
 export type ShopDailySummary = {
   id: string
   shop_id: string
@@ -369,6 +422,10 @@ export async function getShopMembers(
   const resolvedRetryPath =
     retryPath ?? `/dashboard/settings${buildQueryString(searchParams)}`
   return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath)
+}
+
+export async function getShopBilling(retryPath = "/dashboard/settings") {
+  return shopRequest<ShopBilling>("/billing", undefined, retryPath)
 }
 
 export async function getShopOrders(

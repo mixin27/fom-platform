@@ -229,8 +229,37 @@ export type ShopAsyncActionResult<T> =
       fieldErrors?: Record<string, string[]>
     }
 
+export type ShopMutationActionResult =
+  | {
+      ok: true
+      message: string
+    }
+  | {
+      ok: false
+      message: string
+      fieldErrors?: Record<string, string[]>
+    }
+
 function toFieldErrors(details?: Array<{ field: string; errors: string[] }>) {
   return Object.fromEntries((details ?? []).map((detail) => [detail.field, detail.errors]))
+}
+
+function toMutationActionError(
+  error: unknown,
+  fallbackMessage: string
+): ShopMutationActionResult {
+  if (error instanceof AuthApiError) {
+    return {
+      ok: false,
+      message: error.message,
+      fieldErrors: toFieldErrors(error.details),
+    }
+  }
+
+  return {
+    ok: false,
+    message: fallbackMessage,
+  }
 }
 
 function sanitizeParsedDraftInput(draft: ShopParsedOrderDraftInput) {
@@ -710,6 +739,451 @@ export async function createShopOrderFromParsedDraftAction(
       ok: false,
       message: "Unable to create the order from the parsed draft right now.",
     }
+  }
+}
+
+export type ShopOrderCreateInput = {
+  customer: {
+    name: string
+    phone: string
+    township?: string | null
+    address?: string | null
+  }
+  items: Array<{
+    product_name: string
+    qty: number
+    unit_price: number
+    product_id?: string | null
+  }>
+  status?: "new" | "confirmed"
+  source?: "manual" | "messenger"
+  delivery_fee?: number
+  currency?: string
+  note?: string | null
+}
+
+export type ShopOrderUpdateInput = {
+  delivery_fee?: number | null
+  currency?: string
+  source?: "manual" | "messenger"
+  note?: string | null
+}
+
+export type ShopOrderItemInput = {
+  product_name?: string
+  qty?: number
+  unit_price?: number
+  product_id?: string | null
+}
+
+export type ShopCustomerInput = {
+  name: string
+  phone: string
+  township?: string | null
+  address?: string | null
+  notes?: string | null
+}
+
+export type ShopCustomerUpdateInput = Partial<ShopCustomerInput>
+
+export type ShopTemplateInput = {
+  title: string
+  body: string
+  shortcut?: string | null
+  is_active?: boolean
+}
+
+export type ShopTemplateUpdateInput = Partial<ShopTemplateInput>
+
+export async function createShopOrderAction(
+  shopId: string,
+  input: ShopOrderCreateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !input.customer.name.trim() || !input.customer.phone.trim()) {
+    return {
+      ok: false,
+      message: "Customer name and phone are required.",
+    }
+  }
+
+  if (input.items.length === 0) {
+    return {
+      ok: false,
+      message: "Add at least one order item.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          customer: {
+            name: input.customer.name.trim(),
+            phone: input.customer.phone.trim(),
+            ...(input.customer.township?.trim()
+              ? { township: input.customer.township.trim() }
+              : {}),
+            ...(input.customer.address?.trim()
+              ? { address: input.customer.address.trim() }
+              : {}),
+          },
+          items: input.items.map((item) => ({
+            product_name: item.product_name.trim(),
+            qty: item.qty,
+            unit_price: item.unit_price,
+            ...(item.product_id?.trim() ? { product_id: item.product_id.trim() } : {}),
+          })),
+          ...(input.status ? { status: input.status } : {}),
+          ...(input.source ? { source: input.source } : {}),
+          ...(input.delivery_fee !== undefined
+            ? { delivery_fee: input.delivery_fee }
+            : {}),
+          ...(input.currency?.trim() ? { currency: input.currency.trim() } : {}),
+          ...(input.note !== undefined
+            ? { note: input.note?.trim() ? input.note.trim() : null }
+            : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Order created.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to create the order right now.")
+  }
+}
+
+export async function updateShopOrderAction(
+  shopId: string,
+  orderId: string,
+  input: ShopOrderUpdateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !orderId) {
+    return {
+      ok: false,
+      message: "Order context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.delivery_fee !== undefined
+            ? { delivery_fee: input.delivery_fee }
+            : {}),
+          ...(input.currency !== undefined
+            ? { currency: input.currency.trim() }
+            : {}),
+          ...(input.source !== undefined ? { source: input.source } : {}),
+          ...(input.note !== undefined ? { note: input.note } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Order updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the order right now.")
+  }
+}
+
+export async function addShopOrderItemAction(
+  shopId: string,
+  orderId: string,
+  input: Required<Pick<ShopOrderItemInput, "product_name" | "qty" | "unit_price">> &
+    Pick<ShopOrderItemInput, "product_id">
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !orderId || !input.product_name.trim()) {
+    return {
+      ok: false,
+      message: "Product name is required.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/items`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          product_name: input.product_name.trim(),
+          qty: input.qty,
+          unit_price: input.unit_price,
+          ...(input.product_id?.trim() ? { product_id: input.product_id.trim() } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Order item added.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to add the order item right now.")
+  }
+}
+
+export async function updateShopOrderItemAction(
+  shopId: string,
+  orderId: string,
+  itemId: string,
+  input: ShopOrderItemInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !orderId || !itemId) {
+    return {
+      ok: false,
+      message: "Order item context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/items/${itemId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.product_name !== undefined
+            ? { product_name: input.product_name.trim() }
+            : {}),
+          ...(input.qty !== undefined ? { qty: input.qty } : {}),
+          ...(input.unit_price !== undefined
+            ? { unit_price: input.unit_price }
+            : {}),
+          ...(input.product_id !== undefined
+            ? { product_id: input.product_id?.trim() ? input.product_id.trim() : null }
+            : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Order item updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the order item right now.")
+  }
+}
+
+export async function removeShopOrderItemAction(
+  shopId: string,
+  orderId: string,
+  itemId: string
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !orderId || !itemId) {
+    return {
+      ok: false,
+      message: "Order item context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/items/${itemId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Order item removed.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to remove the order item right now.")
+  }
+}
+
+export async function createShopCustomerAction(
+  shopId: string,
+  input: ShopCustomerInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !input.name.trim() || !input.phone.trim()) {
+    return {
+      ok: false,
+      message: "Customer name and phone are required.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/customers`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          name: input.name.trim(),
+          phone: input.phone.trim(),
+          ...(input.township?.trim() ? { township: input.township.trim() } : {}),
+          ...(input.address?.trim() ? { address: input.address.trim() } : {}),
+          ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Customer saved.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to save the customer right now.")
+  }
+}
+
+export async function updateShopCustomerAction(
+  shopId: string,
+  customerId: string,
+  input: ShopCustomerUpdateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !customerId) {
+    return {
+      ok: false,
+      message: "Customer context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/customers/${customerId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.phone !== undefined ? { phone: input.phone.trim() } : {}),
+          ...(input.township !== undefined
+            ? { township: input.township?.trim() ? input.township.trim() : null }
+            : {}),
+          ...(input.address !== undefined
+            ? { address: input.address?.trim() ? input.address.trim() : null }
+            : {}),
+          ...(input.notes !== undefined
+            ? { notes: input.notes?.trim() ? input.notes.trim() : null }
+            : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Customer updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the customer right now.")
+  }
+}
+
+export async function createShopTemplateAction(
+  shopId: string,
+  input: ShopTemplateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !input.title.trim() || !input.body.trim()) {
+    return {
+      ok: false,
+      message: "Template title and body are required.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/templates`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          title: input.title.trim(),
+          body: input.body.trim(),
+          ...(input.shortcut?.trim() ? { shortcut: input.shortcut.trim() } : {}),
+          ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Template created.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to create the template right now.")
+  }
+}
+
+export async function updateShopTemplateAction(
+  shopId: string,
+  templateId: string,
+  input: ShopTemplateUpdateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !templateId) {
+    return {
+      ok: false,
+      message: "Template context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/templates/${templateId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.title !== undefined ? { title: input.title.trim() } : {}),
+          ...(input.body !== undefined ? { body: input.body.trim() } : {}),
+          ...(input.shortcut !== undefined
+            ? { shortcut: input.shortcut?.trim() ? input.shortcut.trim() : null }
+            : {}),
+          ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Template updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the template right now.")
   }
 }
 

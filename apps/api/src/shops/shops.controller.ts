@@ -71,6 +71,17 @@ export class ShopsController {
     return ok(this.shopsService.updateShop(currentUser, shopId, body));
   }
 
+  @Get(':shopId/billing')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsWrite)
+  @ApiOperation({ summary: 'Get shop subscription and recent billing history' })
+  getBilling(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+  ) {
+    return ok(this.shopsService.getBilling(currentUser, shopId));
+  }
+
   @Get(':shopId/members')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.membersRead)

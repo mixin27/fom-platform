@@ -1,12 +1,10 @@
-import Link from "next/link"
-import { HeartHandshake, MapPinned, PencilLine, Users } from "lucide-react"
+import { HeartHandshake, MapPinned, Users } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
-  getShopCustomer,
   getShopCustomers,
   getShopPortalContext,
   type ShopCursorPagination,
@@ -22,20 +20,9 @@ import {
   formatPercent,
   formatRelativeDate,
 } from "@/lib/platform/format"
-import {
-  createShopCustomerFromFormAction,
-  updateShopCustomerFromFormAction,
-} from "../actions"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
-import { Textarea } from "@workspace/ui/components/textarea"
+import { ShopCustomerSheet } from "./_components/shop-customer-sheet"
 
 type CustomersPageProps = {
   searchParams?: Promise<ShopSearchParams>
@@ -46,18 +33,11 @@ export default async function CustomersPage({
 }: CustomersPageProps) {
   const params = (await searchParams) ?? {}
   const currentHref = buildQueryHref("/dashboard/customers", params, {})
-  const editCustomerId = getSingleSearchParam(params.edit)
   const [{ activeShop }, customersResponse] = await Promise.all([
     getShopPortalContext(),
     getShopCustomers(params, currentHref),
   ])
   const rows = customersResponse.data
-  const selectedCustomerSummary = editCustomerId
-    ? rows.find((customer) => customer.id === editCustomerId) ?? null
-    : null
-  const selectedCustomer = selectedCustomerSummary
-    ? (await getShopCustomer(selectedCustomerSummary.id, currentHref)).data
-    : null
   const pagination = customersResponse.meta?.pagination as ShopCursorPagination | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
   const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
@@ -95,6 +75,15 @@ export default async function CustomersPage({
         eyebrow="Customers"
         title="Customer relationships"
         description="Track repeat buyers, segment recent activity, and update customer delivery notes without leaving the shop workspace."
+        actions={
+          canWriteCustomers ? (
+            <ShopCustomerSheet
+              shopId={activeShop.id}
+              triggerLabel="Create customer"
+              triggerVariant="default"
+            />
+          ) : undefined
+        }
       />
 
       {notice ? (
@@ -135,270 +124,139 @@ export default async function CustomersPage({
         />
       </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-        <PlatformDataTable
-          title="Customer list"
-          description="Recent buyer activity"
-          rows={rows}
-          emptyMessage="No customers matched the current filters."
-          footer={`Showing ${rows.length} customer${rows.length === 1 ? "" : "s"}`}
-          pagination={
-            pagination
-              ? {
-                  previousHref: previousCursor
+      <PlatformDataTable
+        title="Customer list"
+        description="Recent buyer activity"
+        rows={rows}
+        emptyMessage="No customers matched the current filters."
+        footer={`Showing ${rows.length} customer${rows.length === 1 ? "" : "s"}`}
+        pagination={
+          pagination
+            ? {
+                previousHref: previousCursor
+                  ? buildQueryHref("/dashboard/customers", params, {
+                      cursor: previousCursor,
+                    })
+                  : currentCursor
                     ? buildQueryHref("/dashboard/customers", params, {
-                        cursor: previousCursor,
-                      })
-                    : currentCursor
-                      ? buildQueryHref("/dashboard/customers", params, {
-                          cursor: null,
-                        })
-                      : null,
-                  nextHref: pagination.next_cursor
-                    ? buildQueryHref("/dashboard/customers", params, {
-                        cursor: pagination.next_cursor,
+                        cursor: null,
                       })
                     : null,
-                }
-              : undefined
-          }
-          toolbar={
-            <form method="GET" className="flex flex-wrap gap-2">
-              <Input
-                name="search"
-                defaultValue={search}
-                placeholder="Search customers"
-                className="h-9 w-[220px]"
-              />
-              <select
-                name="segment"
-                defaultValue={segment}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-              >
-                <option value="all">All</option>
-                <option value="vip">VIP</option>
-                <option value="new_this_week">New this week</option>
-                <option value="top_spenders">Top spenders</option>
-              </select>
-              <select
-                name="sort"
-                defaultValue={sort}
-                className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
-              >
-                <option value="recent">Recent</option>
-                <option value="top_spenders">Top spenders</option>
-                <option value="name">Name</option>
-              </select>
-              <input type="hidden" name="limit" value={String(limit)} />
-              <Button type="submit" size="sm" variant="outline">
-                Filter
-              </Button>
-            </form>
-          }
-          columns={[
-            {
-              key: "customer",
-              header: "Customer",
-              render: (customer) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{customer.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {customer.phone}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "location",
-              header: "Location",
-              render: (customer) => (
-                <div className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground">{customer.township ?? "—"}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {customer.address ?? "No saved address"}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "orders",
-              header: "Orders",
-              render: (customer) => (
-                <div className="flex flex-col gap-1 text-sm">
-                  <span className="text-foreground">
-                    {customer.total_orders.toLocaleString()} orders
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Last {formatRelativeDate(customer.last_order_at)}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "spend",
-              header: "Spend",
-              render: (customer) => formatCurrency(customer.total_spent),
-            },
-            {
-              key: "flags",
-              header: "Flags",
-              render: (customer) => (
-                <div className="flex flex-wrap gap-2">
-                  {customer.is_vip ? (
-                    <PlatformStatusBadge status="active" label="VIP" />
-                  ) : null}
-                  {customer.is_new_this_week ? (
-                    <PlatformStatusBadge status="new" label="New this week" />
-                  ) : null}
-                  <PlatformStatusBadge
-                    status={customer.delivered_rate >= 70 ? "active" : "pending"}
-                    label={`${Math.round(customer.delivered_rate)}% delivered`}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (customer) => (
-                <Button asChild size="sm" variant="outline">
-                  <Link
-                    href={buildQueryHref("/dashboard/customers", params, {
-                      edit: customer.id,
-                    })}
-                  >
-                    <PencilLine data-icon="inline-start" />
-                    Edit
-                  </Link>
-                </Button>
-              ),
-              className: "w-[110px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
-            },
-          ]}
-        />
-
-        <div className="flex flex-col gap-3">
-          <Card className="border border-black/6 bg-white shadow-none">
-            <CardHeader className="pb-3">
-              <CardDescription>
-                {selectedCustomer ? `Editing ${selectedCustomer.name}` : "Customer intake"}
-              </CardDescription>
-              <CardTitle>
-                {selectedCustomer ? "Edit customer" : "Create customer"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {canWriteCustomers ? (
-                <form
-                  action={
-                    selectedCustomer
-                      ? updateShopCustomerFromFormAction
-                      : createShopCustomerFromFormAction
-                  }
-                  className="flex flex-col gap-2.5"
-                >
-                  <input type="hidden" name="return_to" value={currentHref} />
-                  <input type="hidden" name="shop_id" value={activeShop.id} />
-                  {selectedCustomer ? (
-                    <input
-                      type="hidden"
-                      name="customer_id"
-                      value={selectedCustomer.id}
-                    />
-                  ) : null}
-                  <Input
-                    name="name"
-                    defaultValue={selectedCustomer?.name ?? ""}
-                    placeholder="Customer name"
-                    className="h-9"
-                  />
-                  <Input
-                    name="phone"
-                    defaultValue={selectedCustomer?.phone ?? ""}
-                    placeholder="Phone"
-                    className="h-9"
-                  />
-                  <Input
-                    name="township"
-                    defaultValue={selectedCustomer?.township ?? ""}
-                    placeholder="Township"
-                    className="h-9"
-                  />
-                  <Input
-                    name="address"
-                    defaultValue={selectedCustomer?.address ?? ""}
-                    placeholder="Address"
-                    className="h-9"
-                  />
-                  <Textarea
-                    name="notes"
-                    defaultValue={selectedCustomer?.notes ?? ""}
-                    placeholder="Internal notes"
-                    className="min-h-[90px]"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="submit" size="sm">
-                      {selectedCustomer ? "Save changes" : "Save customer"}
-                    </Button>
-                    {selectedCustomer ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={buildQueryHref("/dashboard/customers", params, {
-                            edit: null,
-                          })}
-                        >
-                          Close
-                        </Link>
-                      </Button>
-                    ) : null}
-                  </div>
-                </form>
+                nextHref: pagination.next_cursor
+                  ? buildQueryHref("/dashboard/customers", params, {
+                      cursor: pagination.next_cursor,
+                    })
+                  : null,
+              }
+            : undefined
+        }
+        toolbar={
+          <form method="GET" className="flex flex-wrap gap-2">
+            <Input
+              name="search"
+              defaultValue={search}
+              placeholder="Search customers"
+              className="h-9 w-[220px]"
+            />
+            <select
+              name="segment"
+              defaultValue={segment}
+              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="vip">VIP</option>
+              <option value="new_this_week">New this week</option>
+              <option value="top_spenders">Top spenders</option>
+            </select>
+            <select
+              name="sort"
+              defaultValue={sort}
+              className="h-9 rounded-xl border border-black/8 bg-white px-3 text-sm"
+            >
+              <option value="recent">Recent</option>
+              <option value="top_spenders">Top spenders</option>
+              <option value="name">Name</option>
+            </select>
+            <input type="hidden" name="limit" value={String(limit)} />
+            <Button type="submit" size="sm" variant="outline">
+              Filter
+            </Button>
+          </form>
+        }
+        columns={[
+          {
+            key: "customer",
+            header: "Customer",
+            render: (customer) => (
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">{customer.name}</span>
+                <span className="text-xs text-muted-foreground">{customer.phone}</span>
+              </div>
+            ),
+          },
+          {
+            key: "location",
+            header: "Location",
+            render: (customer) => (
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-foreground">{customer.township ?? "—"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {customer.address ?? "No saved address"}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "orders",
+            header: "Orders",
+            render: (customer) => (
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-foreground">
+                  {customer.total_orders.toLocaleString()} orders
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Last {formatRelativeDate(customer.last_order_at)}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "spend",
+            header: "Spend",
+            render: (customer) => formatCurrency(customer.total_spent),
+          },
+          {
+            key: "flags",
+            header: "Flags",
+            render: (customer) => (
+              <div className="flex flex-wrap gap-2">
+                {customer.is_vip ? (
+                  <PlatformStatusBadge status="active" label="VIP" />
+                ) : null}
+                {customer.is_new_this_week ? (
+                  <PlatformStatusBadge status="new" label="New this week" />
+                ) : null}
+                <PlatformStatusBadge
+                  status={customer.delivered_rate >= 70 ? "active" : "pending"}
+                  label={`${Math.round(customer.delivered_rate)}% delivered`}
+                />
+              </div>
+            ),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            render: (customer) =>
+              canWriteCustomers ? (
+                <ShopCustomerSheet shopId={activeShop.id} customer={customer} />
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Your account can review customer records but cannot create or update them.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {selectedCustomer ? (
-            <Card className="border border-black/6 bg-white shadow-none">
-              <CardHeader className="pb-3">
-                <CardDescription>Recent activity</CardDescription>
-                <CardTitle>Latest orders for this customer</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 pt-0">
-                {selectedCustomer.recent_orders && selectedCustomer.recent_orders.length > 0 ? (
-                  selectedCustomer.recent_orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">
-                          {order.order_no}
-                        </p>
-                        <PlatformStatusBadge status={order.status} />
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {order.product_name}
-                      </p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {formatCurrency(order.total_price)} · {formatRelativeDate(order.created_at)}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No recent orders are available for this customer.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
+                <span className="text-xs text-muted-foreground">No actions</span>
+              ),
+            className: "w-[120px] px-4 py-2.5 text-right",
+            cellClassName: "px-4 py-3 text-right",
+          },
+        ]}
+      />
     </div>
   )
 }
