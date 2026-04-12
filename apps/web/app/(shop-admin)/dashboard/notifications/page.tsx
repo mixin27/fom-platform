@@ -238,7 +238,7 @@ export default async function ShopNotificationsPage({
               {preferences.map((preference) => (
                 <div
                   key={preference.category}
-                  className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
+                  className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4"
                 >
                   <div className="space-y-1">
                     <p className="font-medium text-[var(--fom-ink)]">{preference.label}</p>
