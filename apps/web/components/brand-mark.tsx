@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 
 import { cn } from "@workspace/ui/lib/utils"
@@ -15,17 +16,14 @@ export function BrandMark({
 }: BrandMarkProps) {
   const content = (
     <span className="inline-flex items-center gap-3">
-      <span
-        className={cn(
-          "relative flex size-10 items-center justify-center overflow-hidden rounded-2xl",
-          tone === "dark" ? "bg-white/12" : "bg-[rgba(19,26,34,0.06)]"
-        )}
-      >
-        <span className="absolute inset-x-1.5 inset-y-1.5 rounded-[1.1rem] bg-[var(--fom-orange)]/80" />
-        <span className="absolute right-1.5 bottom-1.5 size-4 rounded-full bg-[var(--fom-teal)]" />
-        <span className="relative z-10 text-sm font-semibold tracking-[0.24em] text-white">
-          F
-        </span>
+      <span className="relative flex size-10 items-center justify-center overflow-hidden rounded-2xl">
+        <Image
+          src="/brand/png/logo-mark.png"
+          alt="FOM logo mark"
+          width={40}
+          height={40}
+          className="size-10 rounded-2xl"
+        />
       </span>
       <span className="flex flex-col">
         <span
