@@ -5,7 +5,10 @@ import "package:fom_mobile/features/notifications/domain/repositories/notificati
 
 class UpdateNotificationPreferencesUseCase
     implements
-        UseCase<List<NotificationPreference>, UpdateNotificationPreferencesParams> {
+        UseCase<
+          List<NotificationPreference>,
+          UpdateNotificationPreferencesParams
+        > {
   const UpdateNotificationPreferencesUseCase(this._repository);
 
   final NotificationsRepository _repository;

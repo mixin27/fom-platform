@@ -79,7 +79,9 @@ class NotificationsRemoteDataSourceImpl
 
   @override
   Future<List<NotificationPreferenceModel>> fetchPreferences() async {
-    final payload = await _apiClient.getMap("/users/me/notification-preferences");
+    final payload = await _apiClient.getMap(
+      "/users/me/notification-preferences",
+    );
     return _extractPreferences(payload);
   }
 

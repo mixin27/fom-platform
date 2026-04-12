@@ -27,7 +27,8 @@ class NotificationPreferencesBloc
     on<NotificationPreferencesErrorDismissed>(_onErrorDismissed);
   }
 
-  final FetchNotificationPreferencesUseCase _fetchNotificationPreferencesUseCase;
+  final FetchNotificationPreferencesUseCase
+  _fetchNotificationPreferencesUseCase;
   final UpdateNotificationPreferencesUseCase
   _updateNotificationPreferencesUseCase;
   final AppLogger _logger;

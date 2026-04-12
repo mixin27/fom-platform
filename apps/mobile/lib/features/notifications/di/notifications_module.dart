@@ -36,8 +36,7 @@ class NotificationsModule implements DependencyModule {
         () => MarkNotificationReadUseCase(getIt<NotificationsRepository>()),
       )
       ..putLazySingletonIfAbsent<MarkAllNotificationsReadUseCase>(
-        () =>
-            MarkAllNotificationsReadUseCase(getIt<NotificationsRepository>()),
+        () => MarkAllNotificationsReadUseCase(getIt<NotificationsRepository>()),
       )
       ..putLazySingletonIfAbsent<FetchNotificationPreferencesUseCase>(
         () => FetchNotificationPreferencesUseCase(

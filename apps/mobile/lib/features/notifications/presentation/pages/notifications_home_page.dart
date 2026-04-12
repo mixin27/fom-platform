@@ -91,10 +91,7 @@ class _NotificationsHomeViewState extends State<_NotificationsHomeView> {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    NotificationsHomeState state,
-  ) {
+  Widget _buildHeader(BuildContext context, NotificationsHomeState state) {
     final hasUnread = state.unreadCount > 0;
 
     return Container(
@@ -145,8 +142,10 @@ class _NotificationsHomeViewState extends State<_NotificationsHomeView> {
               duration: const Duration(milliseconds: 180),
               opacity: hasUnread ? 1 : 0.5,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.softOrangeLight,
                   borderRadius: BorderRadius.circular(10),
@@ -168,7 +167,8 @@ class _NotificationsHomeViewState extends State<_NotificationsHomeView> {
   }
 
   Widget _buildBody(BuildContext context, NotificationsHomeState state) {
-    if (state.status == NotificationsHomeStatus.loading && !state.hasNotifications) {
+    if (state.status == NotificationsHomeStatus.loading &&
+        !state.hasNotifications) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -176,7 +176,8 @@ class _NotificationsHomeViewState extends State<_NotificationsHomeView> {
       return const AppEmptyState(
         icon: Icon(Icons.storefront_outlined),
         title: "Shop access is required",
-        message: "Select a shop first to view notifications for that workspace.",
+        message:
+            "Select a shop first to view notifications for that workspace.",
       );
     }
 
@@ -261,7 +262,12 @@ class _NotificationsHomeViewState extends State<_NotificationsHomeView> {
       grouped.putIfAbsent(label, () => <InboxNotification>[]).add(notification);
     }
 
-    const preferredOrder = <String>["Just Now", "Today", "Yesterday", "Earlier"];
+    const preferredOrder = <String>[
+      "Just Now",
+      "Today",
+      "Yesterday",
+      "Earlier",
+    ];
     final orderedLabels = <String>[
       ...preferredOrder.where(grouped.containsKey),
       ...grouped.keys.where((key) => !preferredOrder.contains(key)),

@@ -30,7 +30,10 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<NotificationPreferencesBloc, NotificationPreferencesState>(
+    return BlocListener<
+      NotificationPreferencesBloc,
+      NotificationPreferencesState
+    >(
       bloc: getIt<NotificationPreferencesBloc>(),
       listenWhen: (previous, current) {
         return previous.errorMessage != current.errorMessage &&
@@ -53,7 +56,8 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
         bloc: getIt<AuthBloc>(),
         builder: (context, authState) {
           final activeShop = authState.activeShop;
-          final hasMultipleShops = (authState.user?.shopAccesses.length ?? 0) > 1;
+          final hasMultipleShops =
+              (authState.user?.shopAccesses.length ?? 0) > 1;
 
           return Scaffold(
             backgroundColor: AppColors.background,
@@ -71,120 +75,122 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
                     delegate: SliverChildListDelegate([
                       _buildPlanCard(),
 
-                    // SHOP SETTINGS
-                    const _SectionLabel(label: 'Shop Settings'),
-                    AppSettingGroup(
-                      children: [
-                        if (hasMultipleShops)
-                          AppSettingTile(
-                            iconEmoji: '🏬',
-                            iconBgColor: AppColors.purpleLight,
-                            title: 'Switch Shop',
-                            subtitle:
-                                activeShop?.shopName ?? 'Choose active shop',
-                            showArrow: true,
-                            onTap: () => context.push(
-                              Uri(
-                                path: AppRoutePaths.shopSelection,
-                                queryParameters: <String, String>{
-                                  'from': AppRoutePaths.settings,
-                                },
-                              ).toString(),
+                      // SHOP SETTINGS
+                      const _SectionLabel(label: 'Shop Settings'),
+                      AppSettingGroup(
+                        children: [
+                          if (hasMultipleShops)
+                            AppSettingTile(
+                              iconEmoji: '🏬',
+                              iconBgColor: AppColors.purpleLight,
+                              title: 'Switch Shop',
+                              subtitle:
+                                  activeShop?.shopName ?? 'Choose active shop',
+                              showArrow: true,
+                              onTap: () => context.push(
+                                Uri(
+                                  path: AppRoutePaths.shopSelection,
+                                  queryParameters: <String, String>{
+                                    'from': AppRoutePaths.settings,
+                                  },
+                                ).toString(),
+                              ),
                             ),
+                          AppSettingTile(
+                            iconEmoji: '🏪',
+                            iconBgColor: AppColors.softOrangeLight,
+                            title: 'Shop Profile',
+                            subtitle: 'Name, category, address',
+                            showArrow: true,
+                            onTap: _navigateToEditProfile,
                           ),
-                        AppSettingTile(
-                          iconEmoji: '🏪',
-                          iconBgColor: AppColors.softOrangeLight,
-                          title: 'Shop Profile',
-                          subtitle: 'Name, category, address',
-                          showArrow: true,
-                          onTap: _navigateToEditProfile,
-                        ),
-                        AppSettingTile(
-                          iconEmoji: '🌐',
-                          iconBgColor: AppColors.tealLight,
-                          title: 'Language',
-                          subtitle: 'ဘာသာစကား',
-                          trailingValue: 'မြန်မာ + EN',
-                          showArrow: true,
-                          onTap: () {},
-                        ),
-                        AppSettingTile(
-                          iconEmoji: '💰',
-                          iconBgColor: AppColors.yellowLight,
-                          title: 'Default Delivery Fee',
-                          subtitle: 'Auto-fill when adding orders',
-                          trailingValue: '3,000 MMK',
-                          showArrow: true,
-                          onTap: () {},
-                        ),
-                      ],
-                    ),
+                          AppSettingTile(
+                            iconEmoji: '🌐',
+                            iconBgColor: AppColors.tealLight,
+                            title: 'Language',
+                            subtitle: 'ဘာသာစကား',
+                            trailingValue: 'မြန်မာ + EN',
+                            showArrow: true,
+                            onTap: () {},
+                          ),
+                          AppSettingTile(
+                            iconEmoji: '💰',
+                            iconBgColor: AppColors.yellowLight,
+                            title: 'Default Delivery Fee',
+                            subtitle: 'Auto-fill when adding orders',
+                            trailingValue: '3,000 MMK',
+                            showArrow: true,
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
 
                       // NOTIFICATIONS
                       const _SectionLabel(label: 'Notifications — အသိပေးချက်'),
                       _buildNotificationSettingsGroup(),
 
-                    // DATA & PRIVACY
-                    const _SectionLabel(label: 'Data & Privacy'),
-                    AppSettingGroup(
-                      children: [
-                        AppSettingTile(
-                          iconEmoji: '📤',
-                          iconBgColor: AppColors.greenLight,
-                          title: 'Export All Data',
-                          subtitle: 'Download orders as Excel',
-                          showArrow: true,
-                          onTap: () {},
-                        ),
-                        AppSettingTile(
-                          iconEmoji: '🔒',
-                          iconBgColor: const Color(0xFFE8E8F0),
-                          title: 'Change Password',
-                          subtitle: 'Update your login credentials',
-                          showArrow: true,
-                          onTap: () {},
-                        ),
-                      ],
-                    ),
+                      // DATA & PRIVACY
+                      const _SectionLabel(label: 'Data & Privacy'),
+                      AppSettingGroup(
+                        children: [
+                          AppSettingTile(
+                            iconEmoji: '📤',
+                            iconBgColor: AppColors.greenLight,
+                            title: 'Export All Data',
+                            subtitle: 'Download orders as Excel',
+                            showArrow: true,
+                            onTap: () {},
+                          ),
+                          AppSettingTile(
+                            iconEmoji: '🔒',
+                            iconBgColor: const Color(0xFFE8E8F0),
+                            title: 'Change Password',
+                            subtitle: 'Update your login credentials',
+                            showArrow: true,
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
 
-                    // SUPPORT
-                    const _SectionLabel(label: 'Support'),
-                    AppSettingGroup(
-                      children: [
-                        AppSettingTile(
-                          iconEmoji: '💬',
-                          iconBgColor: AppColors.tealLight,
-                          title: 'Contact Support',
-                          subtitle: 'Message us on Facebook',
-                          showArrow: true,
-                          onTap: () {},
-                        ),
-                        AppSettingTile(
-                          iconEmoji: '⭐',
-                          iconBgColor: AppColors.yellowLight,
-                          title: 'Rate the App',
-                          subtitle: 'Help us grow',
-                          showArrow: true,
-                          onTap: () {},
-                        ),
-                      ],
-                    ),
+                      // SUPPORT
+                      const _SectionLabel(label: 'Support'),
+                      AppSettingGroup(
+                        children: [
+                          AppSettingTile(
+                            iconEmoji: '💬',
+                            iconBgColor: AppColors.tealLight,
+                            title: 'Contact Support',
+                            subtitle: 'Message us on Facebook',
+                            showArrow: true,
+                            onTap: () {},
+                          ),
+                          AppSettingTile(
+                            iconEmoji: '⭐',
+                            iconBgColor: AppColors.yellowLight,
+                            title: 'Rate the App',
+                            subtitle: 'Help us grow',
+                            showArrow: true,
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
 
-                    // LOG OUT
-                    const SizedBox(height: 8),
-                    AppSettingGroup(
-                      marginBottom: 80,
-                      children: [
-                        AppSettingTile(
-                          title: '🚪 Log Out',
-                          titleColor: const Color(0xFFEF4444),
-                          onTap: () {
-                            getIt<AuthBloc>().add(const AuthLogoutRequested());
-                          },
-                        ),
-                      ],
-                    ),
+                      // LOG OUT
+                      const SizedBox(height: 8),
+                      AppSettingGroup(
+                        marginBottom: 80,
+                        children: [
+                          AppSettingTile(
+                            title: '🚪 Log Out',
+                            titleColor: const Color(0xFFEF4444),
+                            onTap: () {
+                              getIt<AuthBloc>().add(
+                                const AuthLogoutRequested(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ]),
                   ),
                 ),
@@ -197,7 +203,10 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
   }
 
   Widget _buildNotificationSettingsGroup() {
-    return BlocBuilder<NotificationPreferencesBloc, NotificationPreferencesState>(
+    return BlocBuilder<
+      NotificationPreferencesBloc,
+      NotificationPreferencesState
+    >(
       bloc: getIt<NotificationPreferencesBloc>(),
       builder: (context, state) {
         final orderPreference = _preferenceOrFallback(
@@ -232,7 +241,8 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
               title: orderPreference.label,
               subtitle:
                   "${orderPreference.description ?? 'New order updates'} · In-app + email",
-              enabled: orderPreference.inAppEnabled && orderPreference.emailEnabled,
+              enabled:
+                  orderPreference.inAppEnabled && orderPreference.emailEnabled,
             ),
             _buildNotificationPreferenceTile(
               state: state,
@@ -243,7 +253,8 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
               subtitle:
                   "${summaryPreference.description ?? 'Daily recap'} · In-app + email",
               enabled:
-                  summaryPreference.inAppEnabled && summaryPreference.emailEnabled,
+                  summaryPreference.inAppEnabled &&
+                  summaryPreference.emailEnabled,
             ),
             _buildNotificationPreferenceTile(
               state: state,
@@ -253,7 +264,8 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
               title: promoPreference.label,
               subtitle:
                   "${promoPreference.description ?? 'Product tips'} · In-app + email",
-              enabled: promoPreference.inAppEnabled && promoPreference.emailEnabled,
+              enabled:
+                  promoPreference.inAppEnabled && promoPreference.emailEnabled,
             ),
           ],
         );

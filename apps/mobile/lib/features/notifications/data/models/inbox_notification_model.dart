@@ -51,6 +51,7 @@ class InboxNotificationModel extends InboxNotification {
 
   static DateTime _asDateTime(dynamic value) {
     final normalized = _asOptionalString(value);
-    return DateTime.tryParse(normalized ?? "") ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return DateTime.tryParse(normalized ?? "") ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 }

@@ -128,7 +128,9 @@ class NotificationsHomeBloc
     NotificationsHomeNotificationReadRequested event,
     Emitter<NotificationsHomeState> emit,
   ) async {
-    final existing = state.notifications.where((item) => item.id == event.notificationId);
+    final existing = state.notifications.where(
+      (item) => item.id == event.notificationId,
+    );
     if (existing.isEmpty || existing.first.isRead) {
       return;
     }
@@ -223,12 +225,7 @@ class NotificationsHomeBloc
         );
       },
       (_) {
-        emit(
-          state.copyWith(
-            isMarkingAllRead: false,
-            clearError: true,
-          ),
-        );
+        emit(state.copyWith(isMarkingAllRead: false, clearError: true));
       },
     );
   }

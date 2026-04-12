@@ -6,12 +6,11 @@ import "package:fom_mobile/features/notifications/domain/entities/notification_p
 import "package:fom_mobile/features/notifications/domain/entities/notification_preference_update.dart";
 import "package:fom_mobile/features/notifications/domain/repositories/notifications_repository.dart";
 
-class NotificationsRepositoryImpl with LoggerMixin
+class NotificationsRepositoryImpl
+    with LoggerMixin
     implements NotificationsRepository {
-  NotificationsRepositoryImpl(
-    this._remoteDataSource, {
-    AppLogger? logger,
-  }) : _logger = logger ?? AppLogger(enabled: false);
+  NotificationsRepositoryImpl(this._remoteDataSource, {AppLogger? logger})
+    : _logger = logger ?? AppLogger(enabled: false);
 
   final NotificationsRemoteDataSource _remoteDataSource;
   final AppLogger _logger;

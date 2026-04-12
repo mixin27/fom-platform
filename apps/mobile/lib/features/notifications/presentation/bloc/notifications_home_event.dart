@@ -24,8 +24,11 @@ class NotificationsHomeRefreshRequested extends NotificationsHomeEvent {
   const NotificationsHomeRefreshRequested();
 }
 
-class NotificationsHomeNotificationReadRequested extends NotificationsHomeEvent {
-  const NotificationsHomeNotificationReadRequested({required this.notificationId});
+class NotificationsHomeNotificationReadRequested
+    extends NotificationsHomeEvent {
+  const NotificationsHomeNotificationReadRequested({
+    required this.notificationId,
+  });
 
   final String notificationId;
 
