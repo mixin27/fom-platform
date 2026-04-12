@@ -89,9 +89,14 @@ Platform notes:
 | POST   | /shops                             | Create shop                 | 201 Single Shop   |
 | GET    | /shops/{shopId}                    | Get shop details            | 200 Single Shop   |
 | PATCH  | /shops/{shopId}                    | Update shop                 | 200 Single Shop   |
+| GET    | /shops/{shopId}/billing            | Get current subscription and recent invoices | 200 Single ShopBilling |
 | GET    | /shops/{shopId}/members            | List staff                  | 200 List Member   |
 | POST   | /shops/{shopId}/members            | Add staff with `role_codes` | 201 Single Member |
 | PATCH  | /shops/{shopId}/members/{memberId} | Update roles or status      | 200 Single Member |
+
+Shop notes:
+
+- `GET /shops/{shopId}/billing` is intended for owner or manager-facing settings surfaces and currently requires `shops.write`.
 
 ## Customers
 

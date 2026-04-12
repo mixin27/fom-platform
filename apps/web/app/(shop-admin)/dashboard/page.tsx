@@ -1,9 +1,23 @@
-import { ArrowRight, PackageCheck, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
+import { ArrowRight, PackageCheck, Truck, TrendingUp, Users } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
-import { Badge } from "@workspace/ui/components/badge"
+import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
+import {
+  getShopDailySummary,
+  getShopDeliveries,
+  getShopPortalContext,
+} from "@/lib/shop/api"
+import { formatCodeLabel } from "@/lib/shop/format"
+import {
+  formatCurrency,
+  formatDate,
+  formatPercent,
+  formatRelativeDate,
+} from "@/lib/platform/format"
+import { getSingleSearchParam, type ShopSearchParams } from "@/lib/shop/query"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -12,29 +26,35 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@workspace/ui/components/table"
 
-const recentOrders = [
-  ["ORD-2403", "Daw Khin Myat", "Silk Longyi x2", "New", "45,000 MMK"],
-  ["ORD-2402", "Ko Zaw Lin", "Men Shirt x1", "On the way", "21,500 MMK"],
-  ["ORD-2401", "Ma Thin Zar", "Handbag x1", "Confirmed", "32,000 MMK"],
-  ["ORD-2398", "Daw Aye Aye", "Summer Dress x3", "Delivered", "54,000 MMK"],
-]
+type ShopDashboardPageProps = {
+  searchParams?: Promise<ShopSearchParams>
+}
 
-export default function ShopDashboardPage() {
+export default async function ShopDashboardPage({
+  searchParams,
+}: ShopDashboardPageProps) {
+  const params = (await searchParams) ?? {}
+  const date = getSingleSearchParam(params.date)
+  const [{ activeShop }, summaryResponse, deliveriesResponse] = await Promise.all([
+    getShopPortalContext(),
+    getShopDailySummary(date ? { date } : undefined, "/dashboard"),
+    getShopDeliveries(
+      { limit: "5", status: "out_for_delivery" },
+      "/dashboard"
+    ),
+  ])
+  const summary = summaryResponse.data
+  const deliveries = deliveriesResponse.data
+  const deliveryRate = summary.delivered_rate / 100
+  const topProduct = summary.top_products[0]
+
   return (
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Dashboard"
-        title="Operate the shop from one high-signal workspace"
-        description="The dashboard is tuned for daily speed: revenue, orders, customer activity, dispatch status, and the next actions all stay visible without a lot of scrolling."
+        title={`Run ${activeShop.name} from one operational workspace`}
+        description="Revenue, order flow, customer momentum, and dispatch progress stay visible without jumping between sections."
         actions={
           <Button
             asChild
@@ -50,154 +70,226 @@ export default function ShopDashboardPage() {
       />
 
       <div className="flex flex-wrap gap-2">
-        <Badge variant="outline">Today</Badge>
-        <Badge variant="outline">23 active orders</Badge>
-        <Badge variant="outline">2 drivers on route</Badge>
-        <Badge variant="outline">34% repeat buyers</Badge>
+        <PlatformStatusBadge status="active" label={formatDate(summary.summary_date)} />
+        <PlatformStatusBadge
+          status="confirmed"
+          label={`${summary.total_orders} orders in focus`}
+        />
+        <PlatformStatusBadge
+          status="out_for_delivery"
+          label={`${deliveries.length} active deliveries`}
+        />
+        {topProduct ? (
+          <PlatformStatusBadge
+            status="active"
+            label={`Top product: ${topProduct.product_name}`}
+          />
+        ) : null}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardStatCard
-          title="Today's revenue"
-          value="485K"
-          detail="MMK collected from delivered and confirmed orders."
-          delta="+72K vs yesterday"
+          title="Daily revenue"
+          value={formatCurrency(summary.total_revenue)}
+          detail={`Average order value ${formatCurrency(summary.average_order_value)}.`}
+          delta={`${summary.revenue_delta_vs_previous_day >= 0 ? "+" : ""}${formatCurrency(summary.revenue_delta_vs_previous_day)}`}
           icon={TrendingUp}
           accent="sunset"
         />
         <DashboardStatCard
-          title="Orders today"
-          value="23"
-          detail="Across new, confirmed, delivery, and completed."
-          delta="+4 vs yesterday"
+          title="Orders created"
+          value={String(summary.total_orders)}
+          detail={`${summary.pending_count} still pending action.`}
+          delta={`${summary.delivered_count} delivered`}
           icon={PackageCheck}
           accent="teal"
         />
         <DashboardStatCard
-          title="Active customers"
-          value="89"
-          detail="Customers with recent order activity and reachable contact info."
-          delta="34% repeat"
+          title="Customers touched"
+          value={String(summary.customer_count)}
+          detail="Distinct customers with orders in the current summary window."
+          delta={`${summary.top_customers.length} top buyers`}
           icon={Users}
           accent="ink"
         />
         <DashboardStatCard
-          title="Delivery rate"
-          value="48%"
-          detail="Orders completed today out of all orders created today."
-          delta="On track"
-          icon={PackageCheck}
+          title="Delivered rate"
+          value={formatPercent(deliveryRate)}
+          detail="Delivered orders as a share of today’s order volume."
+          delta={`${summary.status_breakdown.out_for_delivery} out for delivery`}
+          icon={Truck}
           accent="default"
         />
-      </div>
+      </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="shadow-none">
-          <CardHeader>
+      <section className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
             <CardDescription>Today's pipeline</CardDescription>
             <CardTitle>Order movement by status</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {[
-              ["New", "4 orders", "Need confirmation or customer follow-up"],
-              ["Confirmed", "6 orders", "Ready for packing and dispatch"],
-              ["Out for delivery", "2 orders", "Driver has already picked up"],
-              ["Delivered", "11 orders", "Counted into today's revenue"],
+              {
+                key: "new",
+                count: summary.status_breakdown.new,
+                note: "Needs confirmation or customer follow-up.",
+              },
+              {
+                key: "confirmed",
+                count: summary.status_breakdown.confirmed,
+                note: "Ready for packing, rider assignment, or dispatch.",
+              },
+              {
+                key: "out_for_delivery",
+                count: summary.status_breakdown.out_for_delivery,
+                note: "Currently assigned to a rider or in transit.",
+              },
+              {
+                key: "delivered",
+                count: summary.status_breakdown.delivered,
+                note: "Already landed in collected revenue.",
+              },
             ].map((item) => (
               <div
-                key={item[0]}
+                key={item.key}
                 className="rounded-2xl border border-black/6 bg-[#fcfbf9] p-4"
               >
-                <p className="text-sm font-semibold text-foreground">{item[0]}</p>
-                <p className="mt-1 text-[12px] text-muted-foreground">{item[1]}</p>
-                <p className="mt-2.5 text-[12px] leading-6 text-muted-foreground">
-                  {item[2]}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {formatCodeLabel(item.key)}
+                  </p>
+                  <PlatformStatusBadge status={item.key} />
+                </div>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-foreground">
+                  {item.count}
+                </p>
+                <p className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                  {item.note}
                 </p>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardDescription>Owner actions</CardDescription>
-            <CardTitle>What usually matters next</CardTitle>
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>Top customers</CardDescription>
+            <CardTitle>Who is buying most often</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {[
-              "Confirm chat-derived orders before noon dispatch.",
-              "Use templates for payment and delivery reminders.",
-              "Check customers with repeat COD cancellations.",
-              "Review daily summary before closing the day.",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-black/6 bg-[#fcfbf9] p-4 text-[12px] leading-6 text-muted-foreground"
-              >
-                {item}
+          <CardContent className="flex flex-col gap-3 pt-0">
+            {summary.top_customers.length > 0 ? (
+              summary.top_customers.slice(0, 4).map((customer) => (
+                <div
+                  key={customer.customer_id}
+                  className="flex items-center justify-between rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {customer.customer_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {customer.order_count} orders
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {formatCurrency(customer.total_spent)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3 text-sm text-muted-foreground">
+                No repeat-customer data yet.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardDescription>Recent orders</CardDescription>
-            <CardTitle>Latest activity from the shop portal</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-4">Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.map((order) => (
-                  <TableRow key={order[0]}>
-                    <TableCell className="px-4 font-medium">{order[0]}</TableCell>
-                    <TableCell>{order[1]}</TableCell>
-                    <TableCell>{order[2]}</TableCell>
-                    <TableCell>{order[3]}</TableCell>
-                    <TableCell>{order[4]}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      <section className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+        <PlatformDataTable
+          title="Recent orders"
+          description="Latest shop activity"
+          rows={summary.recent_orders}
+          emptyMessage="No orders have been created yet."
+          footer={`Showing ${summary.recent_orders.length} recent orders`}
+          columns={[
+            {
+              key: "order",
+              header: "Order",
+              render: (order) => (
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-foreground">{order.order_no}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatRelativeDate(order.created_at)}
+                  </span>
+                </div>
+              ),
+            },
+            {
+              key: "customer",
+              header: "Customer",
+              render: (order) => (
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-foreground">
+                    {order.customer_name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {order.product_name}
+                  </span>
+                </div>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              render: (order) => <PlatformStatusBadge status={order.status} />,
+            },
+            {
+              key: "amount",
+              header: "Amount",
+              render: (order) => formatCurrency(order.total_price),
+            },
+          ]}
+        />
 
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardDescription>Performance snapshot</CardDescription>
-            <CardTitle>Today compared with last week</CardTitle>
+        <Card className="border border-black/6 bg-white shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>Dispatch board</CardDescription>
+            <CardTitle>Orders currently on route</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {[
-              ["Revenue pace", "Ahead by 22%"],
-              ["Delivery completion", "48% of today's orders"],
-              ["Customer response time", "12 min median"],
-              ["Best performing channel", "Messenger paste flow"],
-            ].map((item) => (
-              <div
-                key={item[0]}
-                className="flex items-center justify-between rounded-2xl border border-black/6 bg-[#fcfbf9] p-4"
-              >
-                <span className="text-[12px] text-muted-foreground">{item[0]}</span>
-                <span className="text-[12px] font-semibold text-foreground">
-                  {item[1]}
-                </span>
+          <CardContent className="flex flex-col gap-3 pt-0">
+            {deliveries.length > 0 ? (
+              deliveries.map((delivery) => (
+                <div
+                  key={delivery.id}
+                  className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      {delivery.order.order_no}
+                    </p>
+                    <PlatformStatusBadge status={delivery.status} />
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {delivery.order.customer.name}
+                    {delivery.order.customer.township
+                      ? ` · ${delivery.order.customer.township}`
+                      : ""}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Driver: {delivery.driver.name}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-black/6 bg-[#fcfbf9] px-4 py-3 text-sm text-muted-foreground">
+                No deliveries are currently out for delivery.
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   )
 }

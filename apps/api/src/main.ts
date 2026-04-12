@@ -10,9 +10,9 @@ async function bootstrap() {
   const openApiDocument = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle('Facebook Order Manager API')
+      .setTitle('FOM Platform API')
       .setDescription(
-        'Backend API for the Facebook Order Manager mobile application',
+        'Backend API for the FOM Platform ([getfom.com](https://getfom.com))',
       )
       .setVersion('0.1.0')
       .addServer('http://localhost:4000')
@@ -45,7 +45,7 @@ async function bootstrap() {
     .register(scalarApiReference, {
       routePrefix: '/reference',
       configuration: {
-        title: 'Facebook Order Manager API Reference',
+        title: 'FOM Platform API Reference',
         url: '/openapi.json',
       },
     });

@@ -1,6 +1,6 @@
-# Facebook Order Manager API
+# FOM Platform API
 
-NestJS backend for the Facebook Order Manager app. The API is now backed by a local PostgreSQL database through Prisma ORM.
+NestJS backend for the FOM Platform ([getfom.com](https://getfom.com)). The API is now backed by a local PostgreSQL database through Prisma ORM.
 
 ## Stack
 

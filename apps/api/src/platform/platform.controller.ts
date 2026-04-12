@@ -23,6 +23,7 @@ import { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
 import { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
+import { SearchPlatformOwnerAccountsQueryDto } from './dto/search-platform-owner-accounts-query.dto';
 import { UpdatePlatformInvoiceDto } from './dto/update-platform-invoice.dto';
 import { UpdatePlatformPlanDto } from './dto/update-platform-plan.dto';
 import { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings-profile.dto';
@@ -52,6 +53,16 @@ export class PlatformController {
   @ApiOperation({ summary: 'List shops for the platform workspace' })
   listShops(@Query() query: ListPlatformShopsQueryDto) {
     return this.platformService.listShops(query);
+  }
+
+  @Get('owner-accounts')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformShopsRead)
+  @ApiOperation({
+    summary: 'Search existing owner accounts for platform shop assignment',
+  })
+  searchOwnerAccounts(@Query() query: SearchPlatformOwnerAccountsQueryDto) {
+    return ok(this.platformService.searchOwnerAccounts(query));
   }
 
   @Get('shops/:shopId')

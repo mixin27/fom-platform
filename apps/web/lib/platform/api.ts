@@ -87,6 +87,7 @@ export type PlatformShop = {
   id: string
   name: string
   timezone: string
+  owner_user_id: string
   owner_name: string
   owner_email: string | null
   owner_phone: string | null
@@ -107,6 +108,16 @@ export type PlatformShop = {
   active_session_count: number
   current_period_end: string | null
   latest_invoice: PlatformInvoiceSummary | null
+}
+
+export type PlatformOwnerAccount = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  active_shop_count: number
+  owned_shop_count: number
+  has_password_credential: boolean
 }
 
 function buildQueryString(searchParams?: SearchParamsRecord) {
@@ -217,6 +228,17 @@ export async function getPlatformShops(searchParams?: SearchParamsRecord) {
     "/api/v1/platform/shops",
     searchParams,
     retryPath
+  )
+}
+
+export async function searchPlatformOwnerAccounts(query: string, limit = 8) {
+  return platformRequest<Array<PlatformOwnerAccount>>(
+    "/api/v1/platform/owner-accounts",
+    {
+      query,
+      limit: String(limit),
+    },
+    "/platform/shops"
   )
 }
 

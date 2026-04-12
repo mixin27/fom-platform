@@ -151,6 +151,109 @@ export class ShopsService {
     return this.serializeShop(shopId);
   }
 
+  async getBilling(currentUser: AuthenticatedUser, shopId: string) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        subscription: {
+          include: {
+            plan: true,
+            payments: {
+              orderBy: [{ dueAt: 'desc' }, { createdAt: 'desc' }],
+            },
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    const subscription = shop.subscription;
+    const plan = subscription?.plan ?? null;
+    const payments = [...(subscription?.payments ?? [])];
+    const outstandingStatuses = new Set(['pending', 'overdue', 'failed']);
+    const outstandingInvoices = payments.filter((payment) =>
+      outstandingStatuses.has(payment.status),
+    );
+    const latestInvoice = [...payments].sort((left, right) => {
+      const leftDate = left.paidAt ?? left.dueAt ?? left.createdAt;
+      const rightDate = right.paidAt ?? right.dueAt ?? right.createdAt;
+      return rightDate.getTime() - leftDate.getTime();
+    })[0];
+    const latestPaidInvoice = [...payments]
+      .filter((payment) => payment.paidAt)
+      .sort((left, right) => right.paidAt!.getTime() - left.paidAt!.getTime())[0];
+    const nextDueInvoice = [...outstandingInvoices]
+      .filter((payment) => payment.dueAt)
+      .sort((left, right) => left.dueAt!.getTime() - right.dueAt!.getTime())[0];
+
+    return {
+      shop_id: shop.id,
+      shop_name: shop.name,
+      overview: {
+        status: subscription?.status ?? null,
+        auto_renews: subscription?.autoRenews ?? false,
+        plan_code: plan?.code ?? null,
+        plan_name: plan?.name ?? null,
+        plan_price: plan?.price ?? null,
+        plan_currency: plan?.currency ?? null,
+        billing_period: plan?.billingPeriod ?? null,
+        current_period_start: subscription?.startAt?.toISOString() ?? null,
+        current_period_end: subscription?.endAt?.toISOString() ?? null,
+        outstanding_balance: outstandingInvoices.reduce(
+          (sum, payment) => sum + payment.amount,
+          0,
+        ),
+        overdue_invoice_count: payments.filter(
+          (payment) => payment.status === 'overdue',
+        ).length,
+        next_due_at: nextDueInvoice?.dueAt?.toISOString() ?? null,
+        latest_invoice_status: latestInvoice?.status ?? null,
+        latest_paid_at: latestPaidInvoice?.paidAt?.toISOString() ?? null,
+      },
+      subscription: subscription
+        ? {
+            id: subscription.id,
+            status: subscription.status,
+            auto_renews: subscription.autoRenews,
+            start_at: subscription.startAt.toISOString(),
+            end_at: subscription.endAt?.toISOString() ?? null,
+            created_at: subscription.createdAt.toISOString(),
+            updated_at: subscription.updatedAt.toISOString(),
+          }
+        : null,
+      plan: plan
+        ? {
+            id: plan.id,
+            code: plan.code,
+            name: plan.name,
+            description: plan.description,
+            price: plan.price,
+            currency: plan.currency,
+            billing_period: plan.billingPeriod,
+            is_active: plan.isActive,
+          }
+        : null,
+      invoices: payments.map((payment) => ({
+        id: payment.id,
+        invoice_no: payment.invoiceNo,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        payment_method: payment.paymentMethod,
+        provider_ref: payment.providerRef,
+        due_at: payment.dueAt?.toISOString() ?? null,
+        paid_at: payment.paidAt?.toISOString() ?? null,
+        created_at: payment.createdAt.toISOString(),
+        updated_at: payment.updatedAt.toISOString(),
+      })),
+    };
+  }
+
   async updateShop(
     currentUser: AuthenticatedUser,
     shopId: string,

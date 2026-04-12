@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache"
 
 import { AuthApiError } from "@/lib/auth/api"
 import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
+import type { PlatformOwnerAccount } from "@/lib/platform/api"
 
 export type PlatformShopFormInput = {
   name: string
   timezone: string
-  owner_name: string
-  owner_email: string
+  owner_user_id?: string
+  owner_name?: string
+  owner_email?: string
   owner_phone?: string
   owner_password?: string
 }
@@ -23,6 +25,17 @@ export type PlatformShopActionResult =
       ok: false
       message: string
       fieldErrors?: Record<string, string[]>
+    }
+
+export type PlatformOwnerLookupResult =
+  | {
+      ok: true
+      accounts: PlatformOwnerAccount[]
+    }
+  | {
+      ok: false
+      message: string
+      accounts: []
     }
 
 function revalidatePlatformWorkspace() {
@@ -48,6 +61,54 @@ function toActionError(error: unknown, fallbackMessage: string): PlatformShopAct
   return {
     ok: false,
     message: fallbackMessage,
+  }
+}
+
+export async function searchPlatformOwnerAccountsAction(
+  query: string
+): Promise<PlatformOwnerLookupResult> {
+  const normalizedQuery = query.trim()
+
+  if (!normalizedQuery) {
+    return {
+      ok: true,
+      accounts: [],
+    }
+  }
+
+  try {
+    const search = new URLSearchParams({
+      query: normalizedQuery,
+      limit: "8",
+    })
+
+    const response = await requestAuthenticatedActionApiEnvelope<Array<PlatformOwnerAccount>>({
+      path: `/api/v1/platform/owner-accounts?${search.toString()}`,
+      preferFreshSession: true,
+      requiredAccess: "platform",
+      init: {
+        method: "GET",
+      },
+    })
+
+    return {
+      ok: true,
+      accounts: response.data,
+    }
+  } catch (error) {
+    if (error instanceof AuthApiError) {
+      return {
+        ok: false,
+        message: error.message,
+        accounts: [],
+      }
+    }
+
+    return {
+      ok: false,
+      message: "Unable to load owner accounts right now.",
+      accounts: [],
+    }
   }
 }
 

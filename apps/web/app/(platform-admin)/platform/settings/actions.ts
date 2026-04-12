@@ -71,6 +71,8 @@ export async function updatePlatformSettingsProfileFromFormAction(formData: Form
     redirectSettings({ error: "Provide at least one profile field to update." })
   }
 
+  let redirectInput: { notice?: string; error?: string }
+
   try {
     await requestAuthenticatedActionApiEnvelope({
       path: "/api/v1/platform/settings/profile",
@@ -83,12 +85,14 @@ export async function updatePlatformSettingsProfileFromFormAction(formData: Form
     })
 
     revalidatePlatformSettingsWorkspace()
-    redirectSettings({ notice: "Profile settings updated." })
+    redirectInput = { notice: "Profile settings updated." }
   } catch (error) {
-    redirectSettings({
+    redirectInput = {
       error: toActionMessage(error, "Unable to update profile settings right now."),
-    })
+    }
   }
+
+  redirectSettings(redirectInput)
 }
 
 export async function updatePlatformPlanFromFormAction(formData: FormData) {
@@ -127,6 +131,8 @@ export async function updatePlatformPlanFromFormAction(formData: FormData) {
     redirectSettings({ error: "Provide at least one plan field to update." })
   }
 
+  let redirectInput: { notice?: string; error?: string }
+
   try {
     await requestAuthenticatedActionApiEnvelope({
       path: `/api/v1/platform/settings/plans/${planId}`,
@@ -139,10 +145,12 @@ export async function updatePlatformPlanFromFormAction(formData: FormData) {
     })
 
     revalidatePlatformSettingsWorkspace()
-    redirectSettings({ notice: "Plan updated." })
+    redirectInput = { notice: "Plan updated." }
   } catch (error) {
-    redirectSettings({
+    redirectInput = {
       error: toActionMessage(error, "Unable to update plan settings right now."),
-    })
+    }
   }
+
+  redirectSettings(redirectInput)
 }

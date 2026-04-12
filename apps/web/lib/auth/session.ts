@@ -139,7 +139,24 @@ export function getPlatformAdminHint() {
   return getPlatformOwnerEmailHint()
 }
 
-export function buildSessionFromAuth(auth: AuthResponse): AppSession {
+function resolveActiveShopId(
+  shops: AppSession["shops"],
+  preferredActiveShopId?: string | null
+) {
+  if (
+    preferredActiveShopId &&
+    shops.some((shop) => shop.id === preferredActiveShopId)
+  ) {
+    return preferredActiveShopId
+  }
+
+  return shops[0]?.id ?? null
+}
+
+export function buildSessionFromAuth(
+  auth: AuthResponse,
+  preferredActiveShopId?: string | null
+): AppSession {
   const shops = auth.shops.map((shop) => ({
     id: shop.id,
     name: shop.name,
@@ -161,7 +178,7 @@ export function buildSessionFromAuth(auth: AuthResponse): AppSession {
 
   const hasPlatformAccess =
     platformAccess !== null && platformAccess.permissions.length > 0
-  const activeShopId = shops[0]?.id ?? null
+  const activeShopId = resolveActiveShopId(shops, preferredActiveShopId)
 
   return {
     role: hasPlatformAccess ? "platform_owner" : "shop_admin",
@@ -271,21 +288,26 @@ export async function clearSessionIfPossible() {
   }
 }
 
-const refreshSessionByToken = cache(async (refreshToken: string) => {
-  try {
-    const refreshedAuth = await refreshAuthSession(refreshToken)
-    return buildSessionFromAuth(refreshedAuth)
-  } catch {
-    return null
+const refreshSessionByToken = cache(
+  async (refreshToken: string, activeShopId: string | null) => {
+    try {
+      const refreshedAuth = await refreshAuthSession(refreshToken)
+      return buildSessionFromAuth(refreshedAuth, activeShopId)
+    } catch {
+      return null
+    }
   }
-})
+)
 
 export async function refreshSessionForRequest(session: AppSession) {
   if (Date.parse(session.refreshExpiresAt) <= Date.now()) {
     return null
   }
 
-  const refreshedSession = await refreshSessionByToken(session.refreshToken)
+  const refreshedSession = await refreshSessionByToken(
+    session.refreshToken,
+    session.activeShopId
+  )
 
   if (!refreshedSession) {
     return null
