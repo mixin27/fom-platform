@@ -4,13 +4,13 @@
   --fom-teal: #1e9e96;
   --fom-ink: #1c1c1e;
   --fom-slate: #555558;
+  --fom-marketing-bg: #fafaf8;
+  --fom-marketing-fg: var(--fom-ink);
   --fom-marketing-border: #e8e8e4;
-  --fom-admin-bg: #f0edf8;
-  --fom-admin-surface: #f7f8fc;
-  --fom-admin-sidebar: #0c0c18;
-  --fom-portal-bg: #f0ede8;
-  --fom-portal-surface: #f7f4ef;
-  --fom-portal-sidebar: #fffcf8;
+  --fom-marketing-surface: #ffffff;
+  --fom-marketing-muted: var(--fom-slate);
+  --fom-marketing-featured-bg: #1c1c1e;
+  --fom-marketing-featured-fg: #ffffff;
   --font-sans:
     var(--font-web-sans), var(--font-web-myanmar), "Inter", "Segoe UI",
     system-ui, -apple-system, BlinkMacSystemFont,
@@ -27,6 +27,18 @@
     monospace;
 }
 
+.dark .theme-fom-web {
+  --fom-marketing-bg: #0c0c0e;
+  --fom-marketing-fg: #f0f0f2;
+  --fom-marketing-border: #222226;
+  --fom-marketing-surface: #141417;
+  --fom-marketing-muted: #a1a1aa;
+  --fom-marketing-featured-bg: #000000;
+  --fom-marketing-featured-fg: #ffffff;
+  --fom-ink: #f0f0f2;
+  --fom-slate: #a1a1aa;
+}
+
 body {
   min-height: 100vh;
 }
@@ -38,8 +50,12 @@ body {
 .fom-marketing-canvas {
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
-  background: #fafaf8;
-  color: var(--fom-ink);
+  background: var(--fom-marketing-bg);
+  color: var(--fom-marketing-fg);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .fom-admin-canvas {

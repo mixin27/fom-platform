@@ -220,7 +220,7 @@ export default async function LandingPage() {
     ""
 
   return (
-    <div className="bg-[#fafaf8]">
+    <div className="bg-[var(--fom-marketing-bg)] transition-colors duration-300">
       <section className="fom-marketing-hero relative overflow-hidden text-white">
         <div className="fom-marketing-grid absolute inset-0" />
         <div className="fom-marketing-glow absolute inset-0" />
@@ -228,15 +228,24 @@ export default async function LandingPage() {
           <div className="flex max-w-[560px] flex-col gap-7">
             <Badge className="w-fit border border-[rgba(244,98,42,0.28)] bg-[rgba(244,98,42,0.14)] text-[#ffb088] hover:bg-[rgba(244,98,42,0.14)]">
               Order management for Facebook-first shops
+              <span className="ml-2 border-l border-[rgba(244,98,42,0.3)] pl-2 opacity-80">
+                Facebook အခြေပြု အွန်လိုင်းစျေးသည်များအတွက် အော်ဒါစီမံခန့်ခွဲမှုစနစ်
+              </span>
             </Badge>
             <div className="flex flex-col gap-4">
               <h1 className="fom-display text-5xl leading-[1.06] md:text-[4.1rem]">
                 Turn Facebook orders into a real operating workflow.
+                <span className="mt-4 block text-2xl font-medium tracking-tight opacity-70 md:text-4xl">
+                  Facebook အော်ဒါများကို စနစ်တကျ လုပ်ငန်းအဖြစ် ပြောင်းလဲလိုက်ပါ။
+                </span>
               </h1>
               <p className="text-lg leading-8 text-white/56">
                 Capture Messenger orders, track delivery progress, keep customer
                 history, and see daily results from one workspace built for
                 Myanmar shops selling on Facebook.
+                <span className="mt-3 block text-sm leading-relaxed text-white/40 md:text-base">
+                  Messenger အော်ဒါများကို မှတ်တမ်းတင်ခြင်း၊ ပို့ဆောင်မှုကို ခြေရာခံခြင်းနှင့် နေ့စဉ် အရောင်းအနှစ်ချုပ်များကို မြန်မာနိုင်ငံရှိ Facebook စျေးသည်များအတွက် သီးသန့်ထုတ်လုပ်ထားသည့် နေရာတစ်ခုတည်းမှ လုပ်ဆောင်နိုင်ပါသည်။
+                </span>
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -333,7 +342,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="problem" className="border-t border-[var(--fom-marketing-border)] bg-white">
+      <section id="problem" className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="max-w-[520px]">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
@@ -341,6 +350,9 @@ export default async function LandingPage() {
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
               Built for the work that starts after the message arrives.
+              <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
+                မတ်ဆေ့ချ် ရောက်လာပြီးနောက်ပိုင်း လုပ်ဆောင်ရမည့် အလုပ်များအတွက် အထူးပြုလုပ်ထားသည်။
+              </span>
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
               Most Facebook shops already know how to sell. The hard part is
@@ -350,12 +362,12 @@ export default async function LandingPage() {
           </div>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {problemCards.map((problem) => (
-              <Card key={problem.title} className="border border-[var(--fom-marketing-border)] bg-[#fafaf8]">
+              <Card key={problem.title} className="border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]">
                 <CardHeader>
-                  <CardTitle className="text-xl">{problem.title}</CardTitle>
+                  <CardTitle className="text-xl text-[var(--fom-marketing-fg)]">{problem.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-7 text-[var(--fom-slate)]">
+                  <p className="text-sm leading-7 text-[var(--fom-marketing-muted)]">
                     {problem.description}
                   </p>
                 </CardContent>
@@ -365,7 +377,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="bg-[#fafaf8]">
+      <section id="features" className="bg-[var(--fom-marketing-bg)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="max-w-[560px]">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
@@ -373,6 +385,9 @@ export default async function LandingPage() {
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
               Everything a Facebook-first shop needs in one place.
+              <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
+                Facebook စျေးသည်တစ်ယောက် လိုအပ်သမျှ အရာအားလုံး တစ်နေရာတည်းတွင်
+              </span>
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
               FOM keeps order capture, customer memory, delivery follow-up,
@@ -381,7 +396,7 @@ export default async function LandingPage() {
             </p>
           </div>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <Card className="md:col-span-2 border border-[var(--fom-marketing-border)] bg-white">
+            <Card className="md:col-span-2 border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]">
               <CardContent className="grid gap-6 p-6 md:grid-cols-[1fr_220px]">
                 <div className="flex flex-col gap-4">
                   <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/10 text-[var(--fom-orange)]">
@@ -422,7 +437,7 @@ export default async function LandingPage() {
               </CardContent>
             </Card>
             {featureCards.slice(1).map((feature) => (
-              <Card key={feature.title} className="border border-[var(--fom-marketing-border)] bg-white">
+              <Card key={feature.title} className="border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]">
                 <CardHeader>
                   <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/8 text-[var(--fom-orange)]">
                     <feature.icon className="size-5" />
@@ -440,7 +455,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="how" className="bg-white">
+      <section id="how" className="bg-[var(--fom-marketing-surface)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="mx-auto max-w-[520px] text-center">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
@@ -448,6 +463,9 @@ export default async function LandingPage() {
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
               Start fast and keep the day moving
+              <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
+                မြန်မြန်ဆန်ဆန် စတင်ပြီး အလုပ်များကို အရှိန်မပျက် လုပ်ဆောင်ပါ
+              </span>
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
               Set up the shop once, then use the workspace every day for order
@@ -456,15 +474,15 @@ export default async function LandingPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {workflowSteps.map((step, index) => (
-              <Card key={step.title} className="border border-[var(--fom-marketing-border)] bg-[#fafaf8]">
+              <Card key={step.title} className="border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]">
                 <CardHeader>
                   <span className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--fom-orange)] text-white">
                     {index + 1}
                   </span>
-                  <CardTitle className="pt-3 text-xl">{step.title}</CardTitle>
+                  <CardTitle className="pt-3 text-xl text-[var(--fom-marketing-fg)]">{step.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-7 text-[var(--fom-slate)]">
+                  <p className="text-sm leading-7 text-[var(--fom-marketing-muted)]">
                     {step.body}
                   </p>
                 </CardContent>
@@ -474,7 +492,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="bg-[#fafaf8]">
+      <section id="pricing" className="bg-[var(--fom-marketing-bg)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="mx-auto max-w-[520px] text-center">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
@@ -482,6 +500,9 @@ export default async function LandingPage() {
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
               Simple pricing for each shop you run
+              <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
+                ဆိုင်တိုင်းအတွက် ရိုးရှင်းသော စျေးနှုန်းသတ်မှတ်ချက်များ
+              </span>
             </h2>
             <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
               Plans come from the active subscription catalog. One subscription
@@ -502,8 +523,8 @@ export default async function LandingPage() {
                 key={plan.id}
                 className={
                   isFeatured
-                    ? "border-0 bg-[var(--fom-ink)] text-white"
-                    : "border border-[var(--fom-marketing-border)] bg-white"
+                    ? "border-0 bg-[var(--fom-marketing-featured-bg)] text-[var(--fom-marketing-featured-fg)]"
+                    : "border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]"
                 }
               >
                 <CardHeader>
@@ -512,10 +533,10 @@ export default async function LandingPage() {
                       Recommended
                     </Badge>
                   ) : null}
-                  <CardDescription className={isFeatured ? "text-white/58" : ""}>
+                  <CardDescription className={isFeatured ? "text-white/70" : "text-[var(--fom-marketing-muted)]"}>
                     {getPlanPeriodLabel(plan)}
                   </CardDescription>
-                  <CardTitle className={isFeatured ? "text-white" : ""}>
+                  <CardTitle className={isFeatured ? "text-white" : "text-[var(--fom-marketing-fg)]"}>
                     {plan.name}
                   </CardTitle>
                 </CardHeader>
@@ -543,8 +564,8 @@ export default async function LandingPage() {
                     <p
                       className={
                         isFeatured
-                          ? "mt-2 text-white/62"
-                          : "mt-2 text-muted-foreground"
+                          ? "mt-2 text-white/70"
+                          : "mt-2 text-[var(--fom-marketing-muted)]"
                       }
                     >
                       {summary}
@@ -563,8 +584,8 @@ export default async function LandingPage() {
                         <span
                           className={
                             isFeatured
-                              ? "text-white/72"
-                              : "text-[var(--fom-slate)]"
+                              ? "text-white/80"
+                              : "text-[var(--fom-marketing-muted)]"
                           }
                         >
                           {feature}
@@ -595,7 +616,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="faq" className="border-t border-[var(--fom-marketing-border)] bg-[#fafaf8]">
+      <section id="faq" className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
           <div className="mx-auto max-w-[520px] text-center">
             <p className="mb-3 text-xs font-semibold tracking-[0.08em] uppercase text-[var(--fom-orange)]">
@@ -603,6 +624,9 @@ export default async function LandingPage() {
             </p>
             <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
               Common questions from sellers
+              <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
+                စျေးသည်များ မကြာခဏ မေးလေ့ရှိသည့် မေးခွန်းများ
+              </span>
             </h2>
           </div>
           <div className="mx-auto flex w-full max-w-[660px] flex-col">
@@ -614,7 +638,7 @@ export default async function LandingPage() {
                 <h3 className="text-lg font-semibold text-[var(--fom-ink)]">
                   {item.q}
                 </h3>
-                <p className="mt-3 leading-8 text-[var(--fom-slate)]">{item.a}</p>
+                <p className="mt-3 leading-8 text-[var(--fom-marketing-muted)]">{item.a}</p>
               </div>
             ))}
           </div>
@@ -629,9 +653,7 @@ export default async function LandingPage() {
             ) : (
               <>
                 <Button asChild className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-                  <Link href="/sign-in">
-                    Sign in
-                  </Link>
+                  <Link href="/sign-in">Sign in</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link href="/register">Register your shop</Link>
