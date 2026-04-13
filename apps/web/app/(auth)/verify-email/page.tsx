@@ -49,7 +49,7 @@ export default async function VerifyEmailPage({
       : "/sign-in"
 
   return (
-    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
       <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Email verification</CardDescription>
@@ -57,32 +57,32 @@ export default async function VerifyEmailPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {showVerifiedMessage ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-400">
               Your email is verified. You can continue in the portal.
             </div>
           ) : null}
           {status === "sent" ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-400">
               A new verification email has been sent.
             </div>
           ) : null}
           {showAlreadyVerifiedMessage ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-400">
               This account email is already verified.
             </div>
           ) : null}
           {error === "missing_token" ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Verification token is missing.
             </div>
           ) : null}
           {error === "expired" ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               This verification link is invalid or expired.
             </div>
           ) : null}
           {showActionError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Email verification could not be completed right now.
             </div>
           ) : null}

@@ -35,7 +35,7 @@ export default async function ResetPasswordPage({
   const resetFailed = params?.error === "reset_failed"
 
   return (
-    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
       <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Recovery</CardDescription>
@@ -43,22 +43,22 @@ export default async function ResetPasswordPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {missingToken ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               This reset link is incomplete. Request a new one.
             </div>
           ) : null}
           {invalidReset ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Enter matching passwords with at least 8 characters.
             </div>
           ) : null}
           {expired ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               This reset link is invalid or expired. Request a new one.
             </div>
           ) : null}
           {resetFailed ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Password reset could not be completed right now.
             </div>
           ) : null}
@@ -109,7 +109,7 @@ export default async function ResetPasswordPage({
         </CardContent>
       </Card>
 
-      <Card className="border border-black/6 bg-[var(--fom-ink)] text-white">
+      <Card className="border border-white/5 bg-[var(--fom-marketing-featured-bg)] text-white">
         <CardHeader>
           <CardDescription className="text-white/60">
             Security

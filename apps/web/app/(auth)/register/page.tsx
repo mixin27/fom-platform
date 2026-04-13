@@ -45,7 +45,7 @@ export default async function RegisterPage({
   const registrationFailed = params?.error === "registration_failed"
 
   return (
-    <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+    <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
       <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Get started</CardDescription>
@@ -53,27 +53,27 @@ export default async function RegisterPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Fill in all fields with a valid email and a password of at least 8 characters.
             </div>
           ) : null}
           {emailInUse ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               That email is already registered. Sign in instead or use another email.
             </div>
           ) : null}
           {shopSetupFailed ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               Your account was created, but the initial shop setup did not complete. Try signing in and create the shop again later.
             </div>
           ) : null}
           {trialUnavailable ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               Self-serve registration is available, but the free trial plan is currently disabled. Ask the platform owner to enable the trial plan.
             </div>
           ) : null}
           {registrationFailed ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Registration could not be completed right now. Check the API connection and try again.
             </div>
           ) : null}
