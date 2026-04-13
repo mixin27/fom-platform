@@ -1,0 +1,45 @@
+---
+title: Orders & Daily Workflow
+description: The current operational loop for entering orders, updating statuses, and reviewing summaries in FOM.
+keywords:
+  - orders
+  - workflow
+  - daily operations
+---
+
+## Daily operating loop
+
+The current product is optimized around a short, repeatable loop:
+
+<Step>
+  <StepItem title="Capture the order">
+    Create orders manually from Messenger or other shop conversations using the core customer,
+    item, price, and status fields.
+  </StepItem>
+  <StepItem title="Track the order state">
+    Move the order through the current states so the team always sees what still needs action.
+  </StepItem>
+  <StepItem title="Review the day">
+    Use summaries, filters, and exports to understand what was created, delivered, and still
+    pending.
+  </StepItem>
+</Step>
+
+## What the product currently supports
+
+- Manual order entry remains the primary operating path.
+- List filtering is central to the workflow, especially for `today`, `pending`, and delivered work.
+- Status updates are built to reduce friction for high-volume daily operations.
+- The reporting layer is focused on operational visibility, not deep accounting.
+
+## Related platform behavior
+
+- Order APIs are plan-gated through `orders.management`.
+- Messenger parsing already exists as a documented backend capability for a suggested order draft.
+- Notifications and realtime invalidation are designed to keep the web and mobile surfaces current
+  when order state changes.
+
+<Note title="Scope reminder">
+  The manual workflow is still a core product decision, not a temporary gap. The current system is
+  deliberately designed to serve shops that need speed and clarity before automation.
+</Note>

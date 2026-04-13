@@ -1,0 +1,97 @@
+---
+title: Backend API Endpoints
+description: A curated view of the current FOM backend API surface and the main endpoint groups that already exist.
+keywords:
+  - backend API
+  - endpoints
+  - OpenAPI
+  - Scalar
+---
+
+## Conventions
+
+- Base URL: `/api/v1`
+- Authentication: bearer access token
+- Pagination: `limit` and `cursor`
+- Time-sensitive filters: shop-local timezone
+- Response shape: standardized success and error envelopes
+
+## Docs and testing surfaces
+
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/openapi.json`
+- OpenAPI YAML: `/openapi.yaml`
+- Scalar reference: `/reference`
+
+## Main endpoint groups
+
+### Public marketing
+
+- `GET /public/plans`
+
+### Authentication and profile
+
+- register, login, token refresh, logout
+- email verification and password reset
+- social login and phone OTP flows
+- `GET /users/me`
+- `PATCH /users/me`
+
+### Notifications and messaging
+
+- inbox notifications and unread counts
+- mark-as-read and mark-all-read operations
+- category-level notification preferences
+- email provider-backed delivery workflows
+
+### Realtime and push
+
+- websocket ticket issuance
+- push-device registration and deactivation
+
+### Platform workspace
+
+- dashboard metrics
+- shops, users, subscriptions, invoices, and support issues
+- settings for profile and plan catalog management
+
+### Shop operations
+
+- shops and membership management
+- billing visibility
+- customers
+- orders and order items
+- Messenger parsing for suggested order drafts
+- message templates
+- deliveries
+- summaries, reporting, and exports
+
+## Feature-gated areas
+
+Some endpoint groups are explicitly tied to stable plan feature codes.
+
+- customer operations require `customers.management`
+- order operations require `orders.management`
+- Messenger parsing additionally requires `orders.parse_messenger`
+- template management requires `templates.management`
+- deliveries require `deliveries.management`
+- reporting depends on `reports.analytics`
+- member management depends on `team.members`
+- export routes depend on `exports.csv`
+
+## Why this matters for integrations
+
+The current backend surface already exposes the system boundaries that future partner APIs will
+need:
+
+- auth and identity
+- tenant and shop scoping
+- order lifecycle data
+- customer and delivery resources
+- notifications and realtime events
+- plan-aware access enforcement
+
+<Note type="warning" title="Current status">
+  This page is a curated summary of the current backend surface. Treat it as implementation
+  guidance, not as a finalized public partner API contract.
+</Note>

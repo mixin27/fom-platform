@@ -1,0 +1,51 @@
+---
+title: API & Integrations
+description: The current backend API reference and the future direction for third-party integrations on the FOM Platform.
+keywords:
+  - API
+  - integrations
+  - OpenAPI
+  - third-party integration
+---
+
+This section serves two purposes:
+
+- document the current backend API surface
+- frame the future API needed for third-party integrations
+
+## Current state
+
+Today, the platform already has a documented backend surface with:
+
+- authenticated operational routes
+- shop and platform workspaces
+- exports, notifications, realtime tickets, and push-device registration
+- public plan catalog endpoints
+- documented OpenAPI and Scalar reference URLs
+
+## Future plan
+
+Third-party integration is still a forward-looking capability, but the groundwork is visible.
+
+- response envelopes are already standardized
+- resource boundaries are documented
+- feature gating and access control are explicit
+- API-related docs live beside the broader product and platform reference
+
+<CardGrid>
+  <Card
+    title="Backend API Endpoints"
+    description="Browse the currently documented backend surface, route conventions, and feature-gated behaviors."
+    href="/docs/api-integrations/backend-endpoints"
+  />
+  <Card
+    title="Response Envelope"
+    description="See the standard JSON success and error structures expected across the API."
+    href="/docs/api-integrations/response-envelope"
+  />
+</CardGrid>
+
+<Note type="warning" title="Availability">
+  The API documentation here is useful for planning and internal implementation now, but it should
+  not be treated as a public partner API commitment yet.
+</Note>
