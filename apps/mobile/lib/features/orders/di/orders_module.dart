@@ -1,6 +1,7 @@
 import "package:app_database/app_database.dart";
 import "package:app_logger/app_logger.dart";
 import "package:app_network/app_network.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:get_it/get_it.dart";
 
 import "../../../app/di/modules/dependency_module.dart";
@@ -66,6 +67,7 @@ class OrdersModule implements DependencyModule {
           refreshOrdersUseCase: getIt<RefreshOrdersUseCase>(),
           updateOrderStatusUseCase: getIt<UpdateOrderStatusUseCase>(),
           networkConnectionService: getIt<NetworkConnectionService>(),
+          realtimeService: getIt<AppRealtimeService>(),
           logger: getIt<AppLogger>(),
         ),
       )

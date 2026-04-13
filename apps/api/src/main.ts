@@ -2,10 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { RealtimeService } from './realtime/realtime.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, new FastifyAdapter());
   app.enableCors();
+
+  const fastify = app.getHttpAdapter().getInstance();
+  const websocketPlugin = (await import('@fastify/websocket')).default;
+  await fastify.register(websocketPlugin);
+  await app.get(RealtimeService).registerWebsocketRoutes(fastify);
 
   const openApiDocument = SwaggerModule.createDocument(
     app,

@@ -1,10 +1,11 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { Bell, Search, Shield } from "lucide-react"
+import { Search, Shield } from "lucide-react"
 
 import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
+import { PortalRealtimeBellButton } from "@/components/portal-realtime-bell-button"
 import { platformPortalNav } from "@/lib/navigation"
 import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { requirePlatformAdmin } from "@/lib/auth/session"
@@ -96,21 +97,12 @@ export default async function PlatformLayout({
                   placeholder="Search shops or invoices..."
                 />
               </div>
-              <Button
-                asChild
-                variant="outline"
-                size="icon"
-                className="relative size-8 rounded-xl border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] text-muted-foreground"
-              >
-                <Link href="/platform/notifications">
-                  <Bell className="size-4" />
-                  {unreadCount > 0 ? (
-                    <span className="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--fom-orange)] px-1 text-[10px] font-semibold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  ) : null}
-                </Link>
-              </Button>
+              <PortalRealtimeBellButton
+                href="/platform/notifications"
+                initialUnreadCount={unreadCount}
+                scope="platform"
+                surfaceClassName="bg-[var(--fom-admin-surface)]"
+              />
             </div>
           </header>
           {session.user.email && !session.user.emailVerifiedAt ? (

@@ -1,5 +1,6 @@
 import 'package:app_logger/app_logger.dart';
 import 'package:app_network/app_network.dart';
+import 'package:app_push/app_push.dart';
 import 'package:app_storage/app_storage.dart';
 import 'package:get_it/get_it.dart';
 
@@ -65,6 +66,7 @@ class AuthModule implements DependencyModule {
           logoutUseCase: getIt<LogoutUseCase>(),
           readSelectedShopUseCase: getIt<ReadSelectedShopUseCase>(),
           saveSelectedShopUseCase: getIt<SaveSelectedShopUseCase>(),
+          pushRegistrationService: getIt<PushRegistrationService>(),
           logger: getIt<AppLogger>(),
         ),
       );

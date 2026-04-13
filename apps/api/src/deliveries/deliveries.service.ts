@@ -10,6 +10,7 @@ import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { paginate } from '../common/utils/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
 import { CreateDeliveryDto } from './dto/create-delivery.dto';
 import {
@@ -34,6 +35,7 @@ export class DeliveriesService {
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
     private readonly notificationsService: NotificationsService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async listDeliveries(
@@ -208,6 +210,20 @@ export class DeliveriesService {
         );
       });
 
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'deliveries',
+        action: 'created',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish deliveries invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
     return createdDelivery;
   }
 
@@ -373,6 +389,20 @@ export class DeliveriesService {
           );
         });
     }
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'deliveries',
+        action: 'updated',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish deliveries invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
 
     return updatedDelivery;
   }

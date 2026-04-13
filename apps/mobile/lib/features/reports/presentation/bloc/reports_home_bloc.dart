@@ -2,6 +2,7 @@ import "dart:async";
 
 import "package:app_logger/app_logger.dart";
 import "package:app_network/app_network.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 
 import "../../domain/entities/report_period.dart";
@@ -17,10 +18,12 @@ class ReportsHomeBloc extends Bloc<ReportsHomeEvent, ReportsHomeState>
     required WatchReportUseCase watchReportUseCase,
     required RefreshReportUseCase refreshReportUseCase,
     required NetworkConnectionService networkConnectionService,
+    required AppRealtimeService realtimeService,
     AppLogger? logger,
   }) : _watchReportUseCase = watchReportUseCase,
        _refreshReportUseCase = refreshReportUseCase,
        _networkConnectionService = networkConnectionService,
+       _realtimeService = realtimeService,
        _logger = logger ?? AppLogger(enabled: false),
        super(const ReportsHomeState()) {
     on<ReportsHomeStarted>(_onStarted);
@@ -38,10 +41,12 @@ class ReportsHomeBloc extends Bloc<ReportsHomeEvent, ReportsHomeState>
   final WatchReportUseCase _watchReportUseCase;
   final RefreshReportUseCase _refreshReportUseCase;
   final NetworkConnectionService _networkConnectionService;
+  final AppRealtimeService _realtimeService;
   final AppLogger _logger;
 
   StreamSubscription<ShopReportSnapshot?>? _reportSubscription;
   StreamSubscription<NetworkConnectionStatus>? _connectionSubscription;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
   Timer? _backgroundRefreshTimer;
   bool _isRefreshingInFlight = false;
   bool _wasOnline = false;
@@ -100,6 +105,7 @@ class ReportsHomeBloc extends Bloc<ReportsHomeEvent, ReportsHomeState>
     );
 
     _startConnectivitySubscription();
+    _startRealtimeSubscription();
     _startBackgroundRefreshTimer();
     add(const ReportsHomeRefreshRequested());
   }
@@ -412,6 +418,30 @@ class ReportsHomeBloc extends Bloc<ReportsHomeEvent, ReportsHomeState>
     });
   }
 
+  void _startRealtimeSubscription() {
+    if (_realtimeSubscription != null) {
+      return;
+    }
+
+    _realtimeSubscription = _realtimeService.events.listen((event) {
+      final shopId = state.shopId?.trim();
+      if (shopId == null || shopId.isEmpty || !event.matchesShop(shopId)) {
+        return;
+      }
+
+      if (
+        event.invalidatesAny(
+          const <String>{'orders', 'deliveries', 'customers'},
+        )
+      ) {
+        log.debug(
+          'Realtime invalidation received for reports: ${event.resource}/${event.action}',
+        );
+        add(const ReportsHomeRefreshRequested(silent: true));
+      }
+    });
+  }
+
   DateTime _clampAnchorDate({
     required ReportPeriod period,
     required DateTime value,
@@ -464,6 +494,7 @@ class ReportsHomeBloc extends Bloc<ReportsHomeEvent, ReportsHomeState>
     _backgroundRefreshTimer?.cancel();
     await _reportSubscription?.cancel();
     await _connectionSubscription?.cancel();
+    await _realtimeSubscription?.cancel();
     return super.close();
   }
 }

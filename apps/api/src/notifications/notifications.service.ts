@@ -10,6 +10,8 @@ import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ShopsService } from '../shops/shops.service';
 import { EmailOutboxService } from '../email/email-outbox.service';
+import { PushService } from '../push/push.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { GetNotificationUnreadCountQueryDto } from './dto/get-notification-unread-count-query.dto';
 import { ListUserNotificationsQueryDto } from './dto/list-user-notifications-query.dto';
 import { MarkAllNotificationsReadDto } from './dto/mark-all-notifications-read.dto';
@@ -51,6 +53,8 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
     private readonly emailOutbox: EmailOutboxService,
+    private readonly pushService: PushService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async listNotifications(
@@ -119,6 +123,12 @@ export class NotificationsService {
       throw notFoundError('Notification not found');
     }
 
+    await this.realtimeService.emitNotificationRead({
+      userId: currentUser.id,
+      shopId: updated.shopId ?? null,
+      notificationId: updated.id,
+    });
+
     return this.serializeNotificationRecord(updated);
   }
 
@@ -139,6 +149,14 @@ export class NotificationsService {
         readAt: new Date(),
       },
     });
+
+    if (result.count > 0) {
+      await this.realtimeService.emitNotificationRead({
+        userId: currentUser.id,
+        shopId: body.shop_id ?? null,
+        notificationId: 'bulk',
+      });
+    }
 
     return {
       read_count: result.count,
@@ -251,12 +269,16 @@ export class NotificationsService {
       'order_activity',
     );
     const emailMessageIds: string[] = [];
+    const pushPromises: Promise<unknown>[] = [];
 
     for (const recipient of recipients) {
       const resolvedPreference =
         preferences.get(recipient.userId) ??
         this.resolveDefaultPreference('order_activity');
       let notificationId: string | null = null;
+      let serializedNotification: ReturnType<
+        NotificationsService['serializeNotificationRecord']
+      > | null = null;
 
       if (resolvedPreference.in_app_enabled) {
         const created = await this.prisma.notification.create({
@@ -270,9 +292,29 @@ export class NotificationsService {
             actionType: 'order',
             actionTarget: `/orders/${input.orderId}`,
           },
-          select: { id: true },
+          select: {
+            id: true,
+            userId: true,
+            shopId: true,
+            shopNameSnapshot: true,
+            category: true,
+            title: true,
+            body: true,
+            actionType: true,
+            actionTarget: true,
+            readAt: true,
+            createdAt: true,
+          },
         });
         notificationId = created.id;
+        serializedNotification = this.serializeNotificationRecord(created);
+        pushPromises.push(
+          this.realtimeService.emitNotificationCreated({
+            userId: recipient.userId,
+            shopId: input.shopId,
+            notification: serializedNotification,
+          }),
+        );
       }
 
       if (
@@ -294,10 +336,33 @@ export class NotificationsService {
         });
         emailMessageIds.push(createdEmail.id);
       }
+
+      if (resolvedPreference.in_app_enabled) {
+        pushPromises.push(
+          this.pushService.sendNotificationToUser({
+            userId: recipient.userId,
+            title: input.title,
+            body: input.body,
+            data: {
+              category: 'order_activity',
+              ...(notificationId ? { notification_id: notificationId } : {}),
+              ...(input.shopId ? { shop_id: input.shopId } : {}),
+              ...(input.orderId ? { order_id: input.orderId } : {}),
+              ...(serializedNotification?.action_target
+                ? { action_target: serializedNotification.action_target }
+                : {}),
+            },
+          }),
+        );
+      }
     }
 
     if (emailMessageIds.length > 0) {
       await this.emailOutbox.sendQueuedEmails(emailMessageIds);
+    }
+
+    if (pushPromises.length > 0) {
+      await Promise.allSettled(pushPromises);
     }
   }
 

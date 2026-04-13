@@ -37,7 +37,14 @@ import { NotificationsService } from './notifications/notifications.service';
 import { PlatformController } from './platform/platform.controller';
 import { PlatformService } from './platform/platform.service';
 import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.service';
+import { PushController } from './push/push.controller';
+import { PushService } from './push/push.service';
+import { DisabledPushProvider } from './push/providers/disabled-push.provider';
+import { LogPushProvider } from './push/providers/log-push.provider';
+import { PushTransportService } from './push/push-transport.service';
 import { PrismaService } from './common/prisma/prisma.service';
+import { RealtimeController } from './realtime/realtime.controller';
+import { RealtimeService } from './realtime/realtime.service';
 import { ShopsController } from './shops/shops.controller';
 import { ReportsController } from './summaries/reports.controller';
 import { ShopsService } from './shops/shops.service';
@@ -60,6 +67,8 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     UsersController,
     ShopsController,
     PlatformController,
+    RealtimeController,
+    PushController,
     CustomersController,
     OrdersController,
     NotificationsController,
@@ -88,6 +97,11 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     EmailTransportService,
     EmailTemplateService,
     EmailOutboxService,
+    DisabledPushProvider,
+    LogPushProvider,
+    PushTransportService,
+    PushService,
+    RealtimeService,
     NotificationsService,
     DeliveriesService,
     ExportsService,

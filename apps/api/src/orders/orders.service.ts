@@ -11,6 +11,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate } from '../common/utils/dates';
 import { paginate } from '../common/utils/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
@@ -44,6 +45,7 @@ export class OrdersService {
     private readonly shopsService: ShopsService,
     private readonly orderMessageParser: OrderMessageParserService,
     private readonly notificationsService: NotificationsService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async listOrders(
@@ -198,6 +200,20 @@ export class OrdersService {
         );
       });
 
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'created',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish orders invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
     return createdOrder;
   }
 
@@ -276,7 +292,7 @@ export class OrdersService {
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedOrder = await this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
 
       if (
@@ -320,6 +336,22 @@ export class OrdersService {
 
       return this.serializeOrder(order.id, { includeHistory: true }, tx);
     });
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'updated',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish orders invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
+    return updatedOrder;
   }
 
   async changeStatus(
@@ -383,6 +415,20 @@ export class OrdersService {
         );
       });
 
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'status_changed',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish orders invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
     return updatedOrder;
   }
 
@@ -394,7 +440,7 @@ export class OrdersService {
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const createdItem = await this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
       const item = this.toNewOrderItem(body);
 
@@ -419,6 +465,22 @@ export class OrdersService {
 
       return this.serializeItemRecord(created);
     });
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'item_added',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish orders invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
+    return createdItem;
   }
 
   async updateItem(
@@ -430,7 +492,7 @@ export class OrdersService {
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedItem = await this.prisma.$transaction(async (tx) => {
       const order = await this.requireOrderForShop(tx, shopId, orderId);
       const item = await tx.orderItem.findFirst({
         where: {
@@ -483,6 +545,22 @@ export class OrdersService {
 
       return this.serializeItemRecord(updated);
     });
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'item_updated',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish orders invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
+
+    return updatedItem;
   }
 
   async removeItem(
@@ -518,6 +596,20 @@ export class OrdersService {
         },
       });
     });
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'item_removed',
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to publish orders invalidation for shop ${shopId}: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      });
   }
 
   async serializeOrder(

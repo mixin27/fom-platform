@@ -1,5 +1,6 @@
 import 'package:app_core/app_core.dart';
 import 'package:app_logger/app_logger.dart';
+import 'package:app_push/app_push.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/auth_session.dart';
@@ -20,6 +21,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     required LogoutUseCase logoutUseCase,
     required ReadSelectedShopUseCase readSelectedShopUseCase,
     required SaveSelectedShopUseCase saveSelectedShopUseCase,
+    PushRegistrationService? pushRegistrationService,
     AppLogger? logger,
   }) : _restoreAuthSessionUseCase = restoreAuthSessionUseCase,
        _loginUseCase = loginUseCase,
@@ -27,6 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
        _logoutUseCase = logoutUseCase,
        _readSelectedShopUseCase = readSelectedShopUseCase,
        _saveSelectedShopUseCase = saveSelectedShopUseCase,
+       _pushRegistrationService = pushRegistrationService,
        _logger = logger ?? AppLogger(enabled: false),
        super(const AuthState()) {
     on<AuthStarted>(_onStarted);
@@ -44,6 +47,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
   final LogoutUseCase _logoutUseCase;
   final ReadSelectedShopUseCase _readSelectedShopUseCase;
   final SaveSelectedShopUseCase _saveSelectedShopUseCase;
+  final PushRegistrationService? _pushRegistrationService;
   final AppLogger _logger;
 
   @override
@@ -218,6 +222,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     Emitter<AuthState> emit,
   ) async {
     emit(state.copyWith(isSubmitting: true, clearError: true));
+
+    if (_pushRegistrationService != null) {
+      try {
+        await _pushRegistrationService.unregisterCurrentDevice();
+      } catch (error, stackTrace) {
+        log.warning('Push device unregister skipped during logout: $error');
+        log.error(
+          'Push device unregister failed during logout',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
 
     final result = await _logoutUseCase(const NoParams());
 

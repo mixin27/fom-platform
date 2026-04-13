@@ -66,6 +66,7 @@ class OrdersHomePage extends StatelessWidget {
         refreshOrdersUseCase: getIt<RefreshOrdersUseCase>(),
         updateOrderStatusUseCase: getIt<UpdateOrderStatusUseCase>(),
         networkConnectionService: getIt<NetworkConnectionService>(),
+        realtimeService: getIt(),
         logger: getIt<AppLogger>(),
       ),
       child: _OrdersHomeView(

@@ -79,6 +79,37 @@ Notification notes:
 - Auth emails are production-oriented templates for welcome, email verification, forgot password, and password reset success.
 - Platform billing currently emits invoice and billing notice emails when invoices are created or updated. Trial and promotion templates are available through the shared template system for future workflows.
 
+## Realtime
+
+| Method | Path              | Description                                 | Response                                              |
+| ------ | ----------------- | ------------------------------------------- | ----------------------------------------------------- |
+| GET    | /realtime/tickets | Issue a short-lived websocket connection ticket | 200 Single {ticket, expires_at, websocket_path}   |
+
+Realtime notes:
+
+- `GET /realtime/tickets` requires a normal authenticated session and accepts `scope=platform` or `scope=shop`.
+- Shop scope also requires `shop_id`.
+- The websocket endpoint is `/api/v1/realtime/ws?ticket=...`.
+- Realtime tickets are signed separately from normal access tokens and default to a 120-second lifetime. This is controlled by `REALTIME_TICKET_TTL_SECONDS`.
+- `REALTIME_JWT_SECRET` is optional. When omitted, realtime tickets reuse `JWT_ACCESS_SECRET`.
+- Current server events are `connection.ready`, `notification.created`, `notification.read`, `data.invalidate`, and `ping`.
+- `data.invalidate` is used by the web and mobile clients to refresh affected dashboard data after order, customer, delivery, and platform management mutations.
+
+## Push Devices
+
+| Method | Path                     | Description                                 | Response                  |
+| ------ | ------------------------ | ------------------------------------------- | ------------------------- |
+| POST   | /push/devices            | Register or update a push-capable device    | 200 Single PushDevice     |
+| DELETE | /push/devices/{deviceId} | Deactivate a previously registered device   | 200 Single {unregistered} |
+
+Push notes:
+
+- Push device registration is authenticated and linked to the current user, with the current session stored when available.
+- A push device is uniquely identified by `(user_id, device_id, provider)`.
+- Duplicate `push_token` values are evicted from any previous user before the new registration is stored.
+- Current transport providers are `disabled` and `log`, controlled by `PUSH_PROVIDER`.
+- The repo now separates client integration into dedicated mobile packages so the app layer does not own raw push transport logic directly.
+
 ## Platform Workspace
 
 | Method | Path                    | Description                               | Response                            |

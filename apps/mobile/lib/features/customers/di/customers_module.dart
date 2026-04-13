@@ -1,6 +1,7 @@
 import "package:app_database/app_database.dart";
 import "package:app_logger/app_logger.dart";
 import "package:app_network/app_network.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:get_it/get_it.dart";
 
 import "../../../app/di/modules/dependency_module.dart";
@@ -70,6 +71,7 @@ class CustomersModule implements DependencyModule {
           watchCustomersUseCase: getIt<WatchCustomersUseCase>(),
           refreshCustomersUseCase: getIt<RefreshCustomersUseCase>(),
           networkConnectionService: getIt<NetworkConnectionService>(),
+          realtimeService: getIt<AppRealtimeService>(),
           logger: getIt<AppLogger>(),
         ),
       )

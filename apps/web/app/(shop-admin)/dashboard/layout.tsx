@@ -1,10 +1,11 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { Bell, Plus, Search } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 
 import { signOutAction } from "@/app/actions"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
+import { PortalRealtimeBellButton } from "@/components/portal-realtime-bell-button"
 import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { shopPortalNav } from "@/lib/navigation"
 import { getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
@@ -103,21 +104,12 @@ export default async function ShopAppLayout({
                   placeholder="Search orders or customers"
                 />
               </div>
-              <Button
-                asChild
-                variant="outline"
-                size="icon"
-                className="relative size-8 rounded-xl border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] text-muted-foreground"
-              >
-                <Link href="/dashboard/notifications">
-                  <Bell className="size-4" />
-                  {unreadCount > 0 ? (
-                    <span className="absolute -top-1 -right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--fom-orange)] px-1 text-[10px] font-semibold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  ) : null}
-                </Link>
-              </Button>
+              <PortalRealtimeBellButton
+                href="/dashboard/notifications"
+                initialUnreadCount={unreadCount}
+                scope="shop"
+                shopId={activeShop.id}
+              />
             </div>
           </header>
           {session.user.email && !session.user.emailVerifiedAt ? (

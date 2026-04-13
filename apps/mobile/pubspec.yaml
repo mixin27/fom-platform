@@ -9,6 +9,8 @@ workspace:
   - packages/app_storage
   - packages/app_database
   - packages/app_device
+  - packages/app_push
+  - packages/app_realtime
   - packages/app_ui_kit
   - packages/app_ui_kit/gallery
   - packages/app_env
@@ -36,6 +38,10 @@ dependencies:
     path: packages/app_localizations
   app_logger:
     path: packages/app_logger
+  app_push:
+    path: packages/app_push
+  app_realtime:
+    path: packages/app_realtime
   app_storage:
     path: packages/app_storage
   app_ui_kit:
