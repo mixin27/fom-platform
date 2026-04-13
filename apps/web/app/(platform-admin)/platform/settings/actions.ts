@@ -8,6 +8,7 @@ import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 
 function revalidatePlatformSettingsWorkspace() {
   revalidatePath("/platform")
+  revalidatePath("/platform/plans")
   revalidatePath("/platform/settings")
 }
 

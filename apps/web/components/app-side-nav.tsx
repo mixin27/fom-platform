@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   Store,
   Users,
+  WalletCards,
 } from "lucide-react"
 
 import type { NavIconName, NavItem } from "@/lib/navigation"
@@ -31,6 +32,7 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   settings: Settings,
   shops: Store,
   users: Users,
+  plans: WalletCards,
   subscriptions: CreditCard,
   support: LifeBuoy,
 }

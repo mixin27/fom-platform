@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Shield, UserRound, WalletCards } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
@@ -15,7 +16,6 @@ import {
 import {
   updatePlatformSettingsProfileFromFormAction,
 } from "./actions"
-import { PlatformPlanCatalogEditor } from "./_components/platform-plan-catalog-editor"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -66,7 +66,12 @@ export default async function PlatformSettingsPage({
       <PageIntro
         eyebrow="Settings"
         title="Platform settings"
-        description="Review platform owner identity, active access, and the currently configured plan catalog."
+        description="Review platform owner identity, active access, and workspace diagnostics. Commercial plan management now lives on its own route."
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/platform/plans">Manage plans</Link>
+          </Button>
+        }
       />
 
       {notice ? (
@@ -308,7 +313,33 @@ export default async function PlatformSettingsPage({
         </Card>
       </div>
 
-      <PlatformPlanCatalogEditor plans={data.plans} />
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
+        <CardHeader className="pb-3">
+          <CardDescription>Commercial catalog</CardDescription>
+          <CardTitle>Plan management moved to a dedicated workspace</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 pt-0">
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            Pricing, availability, and feature-item management now live on a
+            separate page so the settings workspace stays focused on account and
+            access configuration.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {data.plans.map((plan) => (
+              <PlatformStatusBadge
+                key={plan.id}
+                status={plan.is_active ? "active" : "inactive"}
+                label={`${plan.name} · ${plan.billing_period}`}
+              />
+            ))}
+          </div>
+          <div>
+            <Button asChild size="sm">
+              <Link href="/platform/plans">Open plan manager</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
