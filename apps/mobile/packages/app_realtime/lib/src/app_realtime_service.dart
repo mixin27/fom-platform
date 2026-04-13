@@ -110,7 +110,7 @@ class AppRealtimeService with LoggerMixin {
 
     try {
       final ticketPayload = await _apiClient.getMap(
-        'realtime/tickets',
+        '/realtime/tickets',
         queryParameters: <String, dynamic>{
           'scope': scope == RealtimeScope.platform ? 'platform' : 'shop',
           if (scope == RealtimeScope.shop && shopId != null) 'shop_id': shopId,
