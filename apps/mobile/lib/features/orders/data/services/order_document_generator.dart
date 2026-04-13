@@ -1,4 +1,5 @@
 import "dart:convert";
+import "dart:isolate";
 
 import "package:app_ui_kit/app_ui_kit.dart";
 import "package:flutter/material.dart";
@@ -13,6 +14,9 @@ import "package:screenshot/screenshot.dart";
 const Color _invoiceCanvasColor = Colors.white;
 const String _documentBrandmarkAssetPath = "assets/branding/favicon.png";
 const String _documentBrandLine = "Powered by FOM Order Manager";
+const String _documentBrandWebsite = "https://getfom.com";
+const double _invoicePageWidth = 860;
+const double _invoicePageMinHeight = 1216;
 
 class GeneratedOrderDocument {
   const GeneratedOrderDocument({
@@ -168,7 +172,8 @@ class OrderDocumentGeneratorImpl implements OrderDocumentGenerator {
     buffer
       ..writeln("")
       ..writeln("---")
-      ..writeln(_documentBrandLine);
+      ..writeln(_documentBrandLine)
+      ..writeln(_documentBrandWebsite);
 
     return buffer.toString().trimRight();
   }
@@ -177,59 +182,51 @@ class OrderDocumentGeneratorImpl implements OrderDocumentGenerator {
     required OrderDetails order,
     required String shopName,
   }) async {
-    final invoiceBytes = await _buildInvoiceVisualBytes(
-      order: order,
-      shopName: shopName,
-    );
-    final document = pw.Document();
-    final invoiceImage = pw.MemoryImage(invoiceBytes);
+    final brandmarkBytes = await _loadBrandmarkBytes();
+    final payload = _buildPdfPayload(order: order, shopName: shopName);
 
-    document.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Container(
-            color: PdfColors.white,
-            padding: const pw.EdgeInsets.all(20),
-            child: pw.Center(
-              child: pw.Image(invoiceImage, fit: pw.BoxFit.contain),
-            ),
-          );
-        },
+    final result = await Isolate.run(
+      () => _buildPdfDocumentInIsolate(
+        payload,
+        TransferableTypedData.fromList([brandmarkBytes]),
       ),
     );
 
-    return document.save();
+    return result.materialize().asUint8List();
   }
 
   Future<Uint8List> _buildImage({
     required OrderDetails order,
     required String shopName,
-  }) {
-    return _buildInvoiceVisualBytes(order: order, shopName: shopName);
+  }) async {
+    final brandmarkBytes = await _loadBrandmarkBytes();
+    return _buildInvoiceVisualBytes(
+      order: order,
+      shopName: shopName,
+      brandmarkBytes: brandmarkBytes,
+    );
   }
 
   Future<Uint8List> _buildInvoiceVisualBytes({
     required OrderDetails order,
     required String shopName,
+    required Uint8List brandmarkBytes,
   }) {
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
-    return rootBundle.load(_documentBrandmarkAssetPath).then((asset) {
-      final brandmarkBytes = asset.buffer.asUint8List();
-
-      return _screenshotController.captureFromLongWidget(
-        MediaQuery(
-          data: MediaQueryData.fromView(view),
-          child: Theme(
-            data: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: AppColors.softOrange,
-                brightness: Brightness.light,
-              ),
+    return _screenshotController.captureFromLongWidget(
+      MediaQuery(
+        data: MediaQueryData.fromView(view),
+        child: Theme(
+          data: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: AppColors.softOrange,
+              brightness: Brightness.light,
             ),
-            child: Material(
-              color: _invoiceCanvasColor,
+          ),
+          child: Material(
+            color: AppColors.background,
+            child: Center(
               child: _InvoiceDocumentCanvas(
                 order: order,
                 shopName: shopName,
@@ -238,12 +235,468 @@ class OrderDocumentGeneratorImpl implements OrderDocumentGenerator {
             ),
           ),
         ),
-        delay: const Duration(milliseconds: 48),
-        pixelRatio: 2.5,
-        constraints: const BoxConstraints(maxWidth: 840),
-      );
-    });
+      ),
+      delay: const Duration(milliseconds: 48),
+      pixelRatio: 2.5,
+      constraints: const BoxConstraints(maxWidth: 940),
+    );
   }
+
+  Future<Uint8List> _loadBrandmarkBytes() async {
+    final asset = await rootBundle.load(_documentBrandmarkAssetPath);
+    return asset.buffer.asUint8List();
+  }
+
+  Map<String, Object?> _buildPdfPayload({
+    required OrderDetails order,
+    required String shopName,
+  }) {
+    return <String, Object?>{
+      "shopName": shopName,
+      "status": _statusLabel(order),
+      "orderNo": order.orderNo,
+      "createdAt": _formatDateTime(order.createdAt),
+      "customerName": order.customerName,
+      "customerPhone": order.customerPhone,
+      "customerTownship": order.customerTownship?.trim() ?? "",
+      "customerAddress": order.customerAddress?.trim() ?? "",
+      "note": order.note?.trim() ?? "",
+      "subtotal": _formatMoney(order.subtotal, order.currency),
+      "deliveryFee": _formatMoney(order.deliveryFee, order.currency),
+      "total": _formatMoney(order.totalPrice, order.currency),
+      "items": order.items
+          .map(
+            (item) => <String, Object?>{
+              "productName": item.productName,
+              "quantity": "${item.quantity}",
+              "unitPrice": _formatMoney(item.unitPrice, order.currency),
+              "lineTotal": _formatMoney(item.lineTotal, order.currency),
+            },
+          )
+          .toList(growable: false),
+    };
+  }
+}
+
+Future<TransferableTypedData> _buildPdfDocumentInIsolate(
+  Map<String, Object?> payload,
+  TransferableTypedData brandmarkBytesData,
+) async {
+  final brandmarkBytes = brandmarkBytesData.materialize().asUint8List();
+  final brandmarkImage = pw.MemoryImage(brandmarkBytes);
+  final document = pw.Document();
+  final headerColor = PdfColor.fromHex("#FF6B35");
+  final accentColor = PdfColor.fromHex("#2AA8A0");
+  final softSurface = PdfColor.fromHex("#FFF0EB");
+  final borderColor = PdfColor.fromHex("#EDE8E0");
+  final textDark = PdfColor.fromHex("#1A1A2E");
+  final textMid = PdfColor.fromHex("#5A5A7A");
+  final cream = PdfColor.fromHex("#FDF9F4");
+  final items = (payload["items"] as List<Object?>)
+      .cast<Map<String, Object?>>();
+  final customerTownship = _pdfString(payload, "customerTownship");
+  final customerAddress = _pdfString(payload, "customerAddress");
+  final note = _pdfString(payload, "note");
+
+  document.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
+      footer: (context) => pw.Padding(
+        padding: const pw.EdgeInsets.only(top: 14),
+        child: pw.Center(
+          child: pw.Row(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Image(brandmarkImage, width: 14, height: 14),
+              pw.SizedBox(width: 6),
+              pw.Text(
+                "$_documentBrandLine  •  $_documentBrandWebsite",
+                style: pw.TextStyle(
+                  color: textMid,
+                  fontSize: 9,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      build: (context) => [
+        pw.Container(
+          padding: const pw.EdgeInsets.all(18),
+          decoration: pw.BoxDecoration(
+            color: softSurface,
+            borderRadius: pw.BorderRadius.circular(18),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          _pdfString(payload, "shopName"),
+                          style: pw.TextStyle(
+                            color: headerColor,
+                            fontSize: 24,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          "Customer Invoice",
+                          style: pw.TextStyle(
+                            color: textDark,
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex("#E8F7F6"),
+                      borderRadius: pw.BorderRadius.circular(999),
+                    ),
+                    child: pw.Text(
+                      _pdfString(payload, "status"),
+                      style: pw.TextStyle(
+                        color: accentColor,
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: _pdfInfoBlock(
+                      label: "Order No",
+                      value: _pdfString(payload, "orderNo"),
+                      textDark: textDark,
+                      textMid: textMid,
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  pw.Expanded(
+                    child: _pdfInfoBlock(
+                      label: "Created",
+                      value: _pdfString(payload, "createdAt"),
+                      textDark: textDark,
+                      textMid: textMid,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 18),
+        _pdfSectionTitle("Customer", textDark),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(14),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            border: pw.Border.all(color: borderColor),
+            borderRadius: pw.BorderRadius.circular(14),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _pdfLine(
+                "Name",
+                _pdfString(payload, "customerName"),
+                textDark,
+                textMid,
+              ),
+              _pdfLine(
+                "Phone",
+                _pdfString(payload, "customerPhone"),
+                textDark,
+                textMid,
+              ),
+              if (customerTownship.isNotEmpty)
+                _pdfLine("Township", customerTownship, textDark, textMid),
+              if (customerAddress.isNotEmpty)
+                _pdfLine("Address", customerAddress, textDark, textMid),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 18),
+        _pdfSectionTitle("Items", textDark),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(color: borderColor, width: 0.8),
+          columnWidths: const <int, pw.TableColumnWidth>{
+            0: pw.FlexColumnWidth(3.3),
+            1: pw.FlexColumnWidth(0.9),
+            2: pw.FlexColumnWidth(1.6),
+            3: pw.FlexColumnWidth(1.6),
+          },
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: softSurface),
+              children: [
+                _pdfTableCell(
+                  "Item",
+                  isHeader: true,
+                  textAlign: pw.TextAlign.left,
+                ),
+                _pdfTableCell(
+                  "Qty",
+                  isHeader: true,
+                  textAlign: pw.TextAlign.center,
+                ),
+                _pdfTableCell(
+                  "Unit Price",
+                  isHeader: true,
+                  textAlign: pw.TextAlign.right,
+                ),
+                _pdfTableCell(
+                  "Total",
+                  isHeader: true,
+                  textAlign: pw.TextAlign.right,
+                ),
+              ],
+            ),
+            ...items.map(
+              (item) => pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
+                children: [
+                  _pdfTableCell(
+                    _pdfItemString(item, "productName"),
+                    textAlign: pw.TextAlign.left,
+                  ),
+                  _pdfTableCell(
+                    _pdfItemString(item, "quantity"),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  _pdfTableCell(
+                    _pdfItemString(item, "unitPrice"),
+                    textAlign: pw.TextAlign.right,
+                  ),
+                  _pdfTableCell(
+                    _pdfItemString(item, "lineTotal"),
+                    textAlign: pw.TextAlign.right,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 18),
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Container(
+            width: 220,
+            padding: const pw.EdgeInsets.all(14),
+            decoration: pw.BoxDecoration(
+              color: cream,
+              borderRadius: pw.BorderRadius.circular(14),
+              border: pw.Border.all(color: borderColor),
+            ),
+            child: pw.Column(
+              children: [
+                _pdfTotalRow(
+                  "Subtotal",
+                  _pdfString(payload, "subtotal"),
+                  textDark,
+                  textDark,
+                ),
+                pw.SizedBox(height: 8),
+                _pdfTotalRow(
+                  "Delivery Fee",
+                  _pdfString(payload, "deliveryFee"),
+                  textDark,
+                  textDark,
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 10),
+                  child: pw.Divider(color: borderColor, height: 1),
+                ),
+                _pdfTotalRow(
+                  "Total",
+                  _pdfString(payload, "total"),
+                  textDark,
+                  headerColor,
+                  isEmphasized: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (note.isNotEmpty) ...[
+          pw.SizedBox(height: 18),
+          _pdfSectionTitle("Note", textDark),
+          pw.SizedBox(height: 8),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(14),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.white,
+              borderRadius: pw.BorderRadius.circular(14),
+              border: pw.Border.all(color: borderColor),
+            ),
+            child: pw.Text(
+              note,
+              style: pw.TextStyle(color: textMid, fontSize: 11, lineSpacing: 3),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+
+  final bytes = await document.save();
+  return TransferableTypedData.fromList([bytes]);
+}
+
+String _pdfString(Map<String, Object?> payload, String key) {
+  final value = payload[key];
+  return value is String ? value : "";
+}
+
+String _pdfItemString(Map<String, Object?> payload, String key) {
+  final value = payload[key];
+  return value is String ? value : "";
+}
+
+pw.Widget _pdfSectionTitle(String title, PdfColor textDark) {
+  return pw.Text(
+    title,
+    style: pw.TextStyle(
+      color: textDark,
+      fontSize: 14,
+      fontWeight: pw.FontWeight.bold,
+    ),
+  );
+}
+
+pw.Widget _pdfInfoBlock({
+  required String label,
+  required String value,
+  required PdfColor textDark,
+  required PdfColor textMid,
+}) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.all(12),
+    decoration: pw.BoxDecoration(
+      color: PdfColors.white,
+      borderRadius: pw.BorderRadius.circular(12),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(label, style: pw.TextStyle(color: textMid, fontSize: 10)),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            color: textDark,
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+pw.Widget _pdfLine(
+  String label,
+  String value,
+  PdfColor textDark,
+  PdfColor textMid,
+) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 8),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(
+          width: 62,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(color: textMid, fontSize: 11),
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(
+              color: textDark,
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+pw.Widget _pdfTableCell(
+  String text, {
+  bool isHeader = false,
+  pw.TextAlign textAlign = pw.TextAlign.left,
+}) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    child: pw.Text(
+      text,
+      textAlign: textAlign,
+      style: pw.TextStyle(
+        color: PdfColor.fromHex("#1A1A2E"),
+        fontSize: 11,
+        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+    ),
+  );
+}
+
+pw.Widget _pdfTotalRow(
+  String label,
+  String value,
+  PdfColor leadingColor,
+  PdfColor trailingColor, {
+  bool isEmphasized = false,
+}) {
+  return pw.Row(
+    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+    children: [
+      pw.Text(
+        label,
+        style: pw.TextStyle(
+          color: leadingColor,
+          fontSize: isEmphasized ? 12 : 11,
+          fontWeight: isEmphasized ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+      ),
+      pw.Text(
+        value,
+        style: pw.TextStyle(
+          color: trailingColor,
+          fontSize: isEmphasized ? 13 : 11,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+    ],
+  );
 }
 
 String _formatMoney(int value, String currency) {
@@ -294,20 +747,42 @@ class _InvoiceDocumentCanvas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 794,
-      color: _invoiceCanvasColor,
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _InvoiceImageCard(order: order, shopName: shopName),
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _DocumentWatermarkRow(brandmarkBytes: brandmarkBytes),
+      width: _invoicePageWidth + 56,
+      color: AppColors.background,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Center(
+        child: Container(
+          width: _invoicePageWidth,
+          constraints: const BoxConstraints(minHeight: _invoicePageMinHeight),
+          decoration: BoxDecoration(
+            color: _invoiceCanvasColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
-        ],
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(34, 36, 34, 64),
+                child: _InvoiceImageCard(order: order, shopName: shopName),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 22,
+                child: Center(
+                  child: _DocumentWatermarkRow(brandmarkBytes: brandmarkBytes),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -754,7 +1229,7 @@ class _DocumentWatermarkRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            _documentBrandLine,
+            "$_documentBrandLine  •  $_documentBrandWebsite",
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: AppColors.textLight,
               fontWeight: FontWeight.w800,
