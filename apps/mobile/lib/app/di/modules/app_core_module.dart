@@ -2,6 +2,8 @@ import "package:app_database/app_database.dart";
 import "package:app_device/app_device.dart";
 import "package:app_logger/app_logger.dart";
 import "package:app_network/app_network.dart";
+import "package:app_push/app_push.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:app_storage/app_storage.dart";
 import "package:get_it/get_it.dart";
 
@@ -75,12 +77,28 @@ class AppCoreModule implements DependencyModule {
         ),
       )
       ..putLazySingletonIfAbsent<ApiClient>(() => ApiClient(getIt<Dio>()))
+      ..putLazySingletonIfAbsent<AppRealtimeService>(
+        () => AppRealtimeService(
+          getIt<ApiClient>(),
+          getIt<NetworkConfig>(),
+          logger: getIt<AppLogger>(),
+        ),
+      )
       ..putLazySingletonIfAbsent<NetworkConnectionService>(
         NetworkConnectionService.new,
       )
       ..putLazySingletonIfAbsent<DeviceMetadataService>(
         () => PlatformDeviceMetadataService(
           secureStorageService: getIt<SecureStorageService>(),
+        ),
+      )
+      ..putLazySingletonIfAbsent<PushTokenProvider>(NoopPushTokenProvider.new)
+      ..putLazySingletonIfAbsent<PushRegistrationService>(
+        () => PushRegistrationService(
+          getIt<ApiClient>(),
+          getIt<DeviceMetadataService>(),
+          getIt<PushTokenProvider>(),
+          logger: getIt<AppLogger>(),
         ),
       )
       ..putLazySingletonIfAbsent<AppDatabase>(() => AppDatabase());

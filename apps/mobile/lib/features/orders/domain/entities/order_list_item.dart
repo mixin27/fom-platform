@@ -18,6 +18,7 @@ class OrderListItem extends Equatable {
     required this.items,
     required this.createdAt,
     required this.updatedAt,
+    this.customerId,
   });
 
   final String id;
@@ -33,6 +34,7 @@ class OrderListItem extends Equatable {
   final List<OrderItemBrief> items;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? customerId;
 
   String get primaryProductSummary {
     if (items.isEmpty) {
@@ -63,5 +65,6 @@ class OrderListItem extends Equatable {
     items,
     createdAt,
     updatedAt,
+    customerId,
   ];
 }

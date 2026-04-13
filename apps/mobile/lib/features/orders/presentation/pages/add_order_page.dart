@@ -368,10 +368,27 @@ class _AddOrderViewState extends State<_AddOrderView> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppChip(
+                        label: "Add item",
+                        icon: const Icon(Icons.add_rounded, size: 16),
+                        onTap: parsing || submitting
+                            ? null
+                            : () => _onAddItemTap(context),
+                      ),
+                    ),
                     if (_additionalParsedItems.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.md),
                       _AdditionalItemsPreview(
                         items: _additionalParsedItems,
+                        onAddItem: parsing || submitting
+                            ? null
+                            : () => _onAddItemTap(context),
+                        onRemoveAt: parsing || submitting
+                            ? null
+                            : _removeAdditionalItemAt,
                         onRemoveAll: parsing || submitting
                             ? null
                             : _clearAdditionalParsedItems,
@@ -505,6 +522,26 @@ class _AddOrderViewState extends State<_AddOrderView> {
     _productNameController.text = productName;
   }
 
+  Future<void> _onAddItemTap(BuildContext context) async {
+    final item = await showModalBottomSheet<OrderEntryItemDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _OrderItemSheet(),
+    );
+
+    if (!mounted || item == null) {
+      return;
+    }
+
+    setState(() {
+      _additionalParsedItems = <OrderEntryItemDraft>[
+        ..._additionalParsedItems,
+        item,
+      ];
+    });
+  }
+
   Future<void> _onPasteFromMessengerTap(BuildContext context) async {
     final message = await showModalBottomSheet<String>(
       context: context,
@@ -610,12 +647,22 @@ class _AddOrderViewState extends State<_AddOrderView> {
     });
   }
 
+  void _removeAdditionalItemAt(int index) {
+    if (index < 0 || index >= _additionalParsedItems.length) {
+      return;
+    }
+
+    setState(() {
+      _additionalParsedItems = List<OrderEntryItemDraft>.from(
+        _additionalParsedItems,
+      )..removeAt(index);
+    });
+  }
+
   void _onSaveOrder(BuildContext context) {
     final customerName = _customerNameController.text.trim();
     final phone = _phoneController.text.trim();
-    final productName = _productNameController.text.trim();
-    final qty = _parseQty(_qtyController.text);
-    final unitPrice = _parseMoney(_unitPriceController.text);
+    final effectiveItems = _buildEffectiveItems();
 
     if (customerName.isEmpty) {
       _showValidationError(context, "Customer name is required.");
@@ -625,33 +672,17 @@ class _AddOrderViewState extends State<_AddOrderView> {
       _showValidationError(context, "Phone number is required.");
       return;
     }
-    if (productName.isEmpty) {
-      _showValidationError(context, "Product name is required.");
+    if (_hasIncompletePrimaryItemInput()) {
+      _showValidationError(
+        context,
+        "Complete the current item fields or clear them before saving.",
+      );
       return;
     }
-    if (qty < 1) {
-      _showValidationError(context, "Quantity must be at least 1.");
+    if (effectiveItems.isEmpty) {
+      _showValidationError(context, "Add at least one valid item.");
       return;
     }
-    if (unitPrice <= 0) {
-      _showValidationError(context, "Unit price must be greater than zero.");
-      return;
-    }
-
-    final primaryItem = OrderEntryItemDraft(
-      productName: productName,
-      quantity: qty,
-      unitPrice: unitPrice,
-    );
-
-    final extraItems = _additionalParsedItems
-        .where(
-          (item) =>
-              item.productName.trim().isNotEmpty &&
-              item.quantity > 0 &&
-              item.unitPrice > 0,
-        )
-        .toList(growable: false);
 
     final draft = OrderEntryDraft(
       customer: OrderEntryCustomerDraft(
@@ -660,7 +691,7 @@ class _AddOrderViewState extends State<_AddOrderView> {
         township: _nullableText(_townshipController.text),
         address: _nullableText(_addressController.text),
       ),
-      items: <OrderEntryItemDraft>[primaryItem, ...extraItems],
+      items: effectiveItems,
       status: _selectedStatus,
       source: _isPasteApplied ? OrderSource.messenger : OrderSource.manual,
       deliveryFee: _parseMoney(_deliveryFeeController.text),
@@ -696,6 +727,23 @@ class _AddOrderViewState extends State<_AddOrderView> {
       ),
     );
     return items;
+  }
+
+  bool _hasIncompletePrimaryItemInput() {
+    final name = _productNameController.text.trim();
+    final qty = _parseQty(_qtyController.text);
+    final unitPrice = _parseMoney(_unitPriceController.text);
+    final rawQty = _qtyController.text.trim();
+    final hasAnyPrimaryInput =
+        name.isNotEmpty ||
+        unitPrice > 0 ||
+        (rawQty.isNotEmpty && rawQty != "1");
+
+    if (!hasAnyPrimaryInput) {
+      return false;
+    }
+
+    return name.isEmpty || qty < 1 || unitPrice <= 0;
   }
 
   void _showValidationError(BuildContext context, String message) {
@@ -817,9 +865,16 @@ class _ParseMetaCard extends StatelessWidget {
 }
 
 class _AdditionalItemsPreview extends StatelessWidget {
-  const _AdditionalItemsPreview({required this.items, this.onRemoveAll});
+  const _AdditionalItemsPreview({
+    required this.items,
+    this.onAddItem,
+    this.onRemoveAt,
+    this.onRemoveAll,
+  });
 
   final List<OrderEntryItemDraft> items;
+  final VoidCallback? onAddItem;
+  final ValueChanged<int>? onRemoveAt;
   final VoidCallback? onRemoveAll;
 
   @override
@@ -840,40 +895,89 @@ class _AdditionalItemsPreview extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  "Additional parsed items",
+                  "Additional items",
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: AppColors.textMid,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
+              if (onAddItem != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: AppChip(
+                    label: "Add",
+                    icon: const Icon(Icons.add_rounded, size: 14),
+                    onTap: onAddItem!,
+                  ),
+                ),
               if (onRemoveAll != null)
                 AppChip(label: "Remove extras", onTap: onRemoveAll!),
             ],
           ),
           const SizedBox(height: 8),
-          ...items.map((item) {
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      "${item.productName} x ${item.quantity}",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w700,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warmWhite,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.productName,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textDark,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Qty ${item.quantity} · ${numberFormat.format(item.unitPrice)} MMK",
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textMid,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  Text(
-                    "${numberFormat.format(item.lineTotal)} MMK",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textMid,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "${numberFormat.format(item.lineTotal)} MMK",
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.textMid,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        if (onRemoveAt != null) ...[
+                          const SizedBox(height: 4),
+                          AppChip(
+                            label: "Remove",
+                            icon: const Icon(Icons.close_rounded, size: 14),
+                            onTap: () => onRemoveAt!(index),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }),
@@ -1205,4 +1309,168 @@ class _PasteMessageSheetState extends State<_PasteMessageSheet> {
       );
     });
   }
+}
+
+class _OrderItemSheet extends StatefulWidget {
+  const _OrderItemSheet();
+
+  @override
+  State<_OrderItemSheet> createState() => _OrderItemSheetState();
+}
+
+class _OrderItemSheetState extends State<_OrderItemSheet> {
+  late final TextEditingController _productNameController;
+  late final TextEditingController _qtyController;
+  late final TextEditingController _unitPriceController;
+
+  bool get _canSubmit {
+    return _productNameController.text.trim().isNotEmpty &&
+        _parseQty(_qtyController.text) > 0 &&
+        _parseMoney(_unitPriceController.text) > 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _productNameController = TextEditingController()..addListener(_onChanged);
+    _qtyController = TextEditingController(text: "1")..addListener(_onChanged);
+    _unitPriceController = TextEditingController()..addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    _productNameController
+      ..removeListener(_onChanged)
+      ..dispose();
+    _qtyController
+      ..removeListener(_onChanged)
+      ..dispose();
+    _unitPriceController
+      ..removeListener(_onChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              "Add item",
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Add another product line to this order.",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textMid,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: _productNameController,
+              label: "Product name",
+              hintText: "e.g. Silk Longyi Set",
+              prefixIcon: const Icon(Icons.shopping_bag_outlined),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: AppTextField(
+                    controller: _qtyController,
+                    label: "Qty",
+                    hintText: "1",
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 5,
+                  child: AppTextField(
+                    controller: _unitPriceController,
+                    label: "Unit price (MMK)",
+                    hintText: "25000",
+                    prefixIcon: const Icon(Icons.payments_outlined),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    text: "Cancel",
+                    onPressed: () => Navigator.of(context).pop(),
+                    variant: AppButtonVariant.secondary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: AppButton(
+                    text: "Add item",
+                    onPressed: _canSubmit ? _submit : null,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(
+      OrderEntryItemDraft(
+        productName: _productNameController.text.trim(),
+        quantity: _parseQty(_qtyController.text),
+        unitPrice: _parseMoney(_unitPriceController.text),
+      ),
+    );
+  }
+}
+
+int _parseQty(String value) {
+  final digits = value.replaceAll(RegExp(r"[^0-9]"), "");
+  if (digits.isEmpty) {
+    return 0;
+  }
+  return int.tryParse(digits) ?? 0;
+}
+
+int _parseMoney(String value) {
+  final digits = value.replaceAll(RegExp(r"[^0-9]"), "");
+  if (digits.isEmpty) {
+    return 0;
+  }
+  return int.tryParse(digits) ?? 0;
 }

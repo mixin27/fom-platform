@@ -1,5 +1,6 @@
 import "package:app_logger/app_logger.dart";
 import "package:app_network/app_network.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:fom_mobile/app/di/modules/dependency_module.dart";
 import "package:fom_mobile/app/di/modules/get_it_extensions.dart";
 import "package:fom_mobile/features/notifications/data/datasources/notifications_remote_data_source.dart";
@@ -54,6 +55,7 @@ class NotificationsModule implements DependencyModule {
           markNotificationReadUseCase: getIt<MarkNotificationReadUseCase>(),
           markAllNotificationsReadUseCase:
               getIt<MarkAllNotificationsReadUseCase>(),
+          realtimeService: getIt<AppRealtimeService>(),
           logger: getIt<AppLogger>(),
         ),
       )

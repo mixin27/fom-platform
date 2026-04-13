@@ -20,6 +20,11 @@ abstract class CustomersLocalDataSource {
     required CustomerListItemModel customer,
     required DateTime syncedAt,
   });
+
+  Future<void> deleteCustomer({
+    required String shopId,
+    required String customerId,
+  });
 }
 
 class CustomersLocalDataSourceImpl implements CustomersLocalDataSource {
@@ -87,6 +92,17 @@ class CustomersLocalDataSourceImpl implements CustomersLocalDataSource {
   }) {
     return _customerCacheDao.upsertCustomer(
       customer.toCompanion(syncedAt: syncedAt),
+    );
+  }
+
+  @override
+  Future<void> deleteCustomer({
+    required String shopId,
+    required String customerId,
+  }) {
+    return _customerCacheDao.deleteCustomerById(
+      shopId: shopId,
+      customerId: customerId,
     );
   }
 }

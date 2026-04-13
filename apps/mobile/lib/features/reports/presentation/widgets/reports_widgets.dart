@@ -83,9 +83,7 @@ class ReportsHeader extends StatelessWidget {
                   ),
                 ),
                 icon: const Icon(Icons.ios_share_rounded, size: 16),
-                label: Text(
-                  selectedPeriod == ReportPeriod.daily ? "Share" : "Export",
-                ),
+                label: const Text("Export"),
               ),
             ],
           ),
@@ -844,84 +842,129 @@ String _formatCompact(int amount) {
   return "$amount";
 }
 
-void showReportsShareSheet(BuildContext context) {
+void showReportsExportSheet(
+  BuildContext context, {
+  required void Function(String dataset, String label) onSaveRequested,
+  required void Function(String dataset, String label) onShareRequested,
+}) {
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (context) {
-      return Container(
-        decoration: const BoxDecoration(
-          color: AppColors.warmWhite,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              "Share Report",
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textDark,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "အစီရင်ခံစာ မျှဝေမည်",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textLight,
-                fontFamily: "NotoSansMyanmar",
-              ),
-            ),
-            const SizedBox(height: 14),
-            const _ShareOptionTile(
-              icon: Icons.bar_chart_rounded,
-              iconBackground: AppColors.greenLight,
-              iconColor: AppColors.green,
-              title: "View Analytics",
-              subtitle: "Open interactive dashboard view",
-            ),
-            const _ShareOptionTile(
-              icon: Icons.picture_as_pdf_rounded,
-              iconBackground: Color(0xFFE8F1FF),
-              iconColor: Color(0xFF2563EB),
-              title: "Export PDF",
-              subtitle: "Printable summary report",
-            ),
-            const _ShareOptionTile(
-              icon: Icons.message_rounded,
-              iconBackground: AppColors.softOrangeLight,
-              iconColor: AppColors.softOrange,
-              title: "Share to Message",
-              subtitle: "Send summary as a message",
-            ),
-            const _ShareOptionTile(
-              icon: Icons.image_rounded,
-              iconBackground: AppColors.purpleLight,
-              iconColor: AppColors.purple,
-              title: "Save as Image",
-              subtitle: "Generate social-ready image",
-            ),
-          ],
-        ),
+      return _ReportsExportSheet(
+        onSaveRequested: onSaveRequested,
+        onShareRequested: onShareRequested,
       );
     },
   );
+}
+
+class _ReportsExportSheet extends StatefulWidget {
+  const _ReportsExportSheet({
+    required this.onSaveRequested,
+    required this.onShareRequested,
+  });
+
+  final void Function(String dataset, String label) onSaveRequested;
+  final void Function(String dataset, String label) onShareRequested;
+
+  @override
+  State<_ReportsExportSheet> createState() => _ReportsExportSheetState();
+}
+
+class _ReportsExportSheetState extends State<_ReportsExportSheet> {
+  void _handleSave(String dataset, String label) {
+    widget.onSaveRequested(dataset, label);
+    Navigator.of(context).pop();
+  }
+
+  void _handleShare(String dataset, String label) {
+    widget.onShareRequested(dataset, label);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.warmWhite,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            "Export Data",
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            "အစီရင်ခံစာနှင့် ဆိုင်အချက်အလက် ထုတ်ယူမည်",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textLight,
+              fontFamily: "NotoSansMyanmar",
+            ),
+          ),
+          const SizedBox(height: 14),
+          _ShareOptionTile(
+            icon: Icons.shopping_cart_outlined,
+            iconBackground: AppColors.softOrangeLight,
+            iconColor: AppColors.softOrange,
+            title: "Orders CSV",
+            subtitle: "Download order rows and customer details",
+            onSavePressed: () => _handleSave('orders', 'Orders CSV'),
+            onSharePressed: () => _handleShare('orders', 'Orders CSV'),
+          ),
+          _ShareOptionTile(
+            icon: Icons.people_outline_rounded,
+            iconBackground: AppColors.tealLight,
+            iconColor: AppColors.teal,
+            title: "Customers CSV",
+            subtitle: "Download customer spend and contact records",
+            onSavePressed: () => _handleSave('customers', 'Customers CSV'),
+            onSharePressed: () => _handleShare('customers', 'Customers CSV'),
+          ),
+          _ShareOptionTile(
+            icon: Icons.local_shipping_outlined,
+            iconBackground: AppColors.yellowLight,
+            iconColor: AppColors.yellow,
+            title: "Deliveries CSV",
+            subtitle: "Download dispatch and delivery progress rows",
+            onSavePressed: () => _handleSave('deliveries', 'Deliveries CSV'),
+            onSharePressed: () => _handleShare('deliveries', 'Deliveries CSV'),
+          ),
+          _ShareOptionTile(
+            icon: Icons.badge_outlined,
+            iconBackground: AppColors.purpleLight,
+            iconColor: AppColors.purple,
+            title: "Staffs CSV",
+            subtitle: "Download the staff roster with assigned roles",
+            onSavePressed: () => _handleSave('members', 'Staffs CSV'),
+            onSharePressed: () => _handleShare('members', 'Staffs CSV'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ShareOptionTile extends StatelessWidget {
@@ -931,6 +974,8 @@ class _ShareOptionTile extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    this.onSavePressed,
+    this.onSharePressed,
   });
 
   final IconData icon;
@@ -938,57 +983,68 @@ class _ShareOptionTile extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final VoidCallback? onSavePressed;
+  final VoidCallback? onSharePressed;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => Navigator.of(context).pop(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: iconBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: iconColor, size: 18),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
-                    ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textDark,
                   ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMid,
-                    ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMid,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
+          ),
+          IconButton(
+            tooltip: 'Save file',
+            onPressed: onSavePressed,
+            icon: const Icon(
+              Icons.download_rounded,
               color: AppColors.textLight,
               size: 18,
             ),
-          ],
-        ),
+          ),
+          IconButton(
+            tooltip: 'Share file',
+            onPressed: onSharePressed,
+            icon: const Icon(
+              Icons.ios_share_rounded,
+              color: AppColors.textLight,
+              size: 18,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -7,6 +7,16 @@ import { orderFilterStatuses } from './order.constants';
 
 export class ListOrdersQueryDto extends CursorPaginationQueryDto {
   @ApiPropertyOptional({
+    example: 'cmnnyhqcv003l4kle4634kkfi',
+    description: 'Filter orders for a specific customer id',
+  })
+  @Transform(trimString)
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  customer_id?: string;
+
+  @ApiPropertyOptional({
     enum: orderFilterStatuses,
     example: 'pending',
     description: 'Order status filter. `pending` expands to new, confirmed, and out_for_delivery.',

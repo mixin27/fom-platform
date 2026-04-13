@@ -4,6 +4,7 @@ import { requestApi } from "@/lib/auth/api"
 
 export type MarketingPlanItem = {
   id: string
+  code: string
   label: string
   description: string | null
   availability_status: "available" | "unavailable" | string

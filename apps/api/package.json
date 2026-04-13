@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@fastify/static": "^9.0.0",
+    "@fastify/websocket": "^11.2.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",

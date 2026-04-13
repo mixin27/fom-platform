@@ -14,6 +14,11 @@ import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
 import { DeliveriesController } from './deliveries/deliveries.controller';
 import { DeliveriesService } from './deliveries/deliveries.service';
+import {
+  PlatformExportsController,
+  ShopExportsController,
+} from './exports/exports.controller';
+import { ExportsService } from './exports/exports.service';
 import { AppExceptionFilter } from './common/http/exception.filter';
 import { RequestContextMiddleware } from './common/http/request-context';
 import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.interceptor';
@@ -32,7 +37,14 @@ import { NotificationsService } from './notifications/notifications.service';
 import { PlatformController } from './platform/platform.controller';
 import { PlatformService } from './platform/platform.service';
 import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.service';
+import { PushController } from './push/push.controller';
+import { PushService } from './push/push.service';
+import { DisabledPushProvider } from './push/providers/disabled-push.provider';
+import { LogPushProvider } from './push/providers/log-push.provider';
+import { PushTransportService } from './push/push-transport.service';
 import { PrismaService } from './common/prisma/prisma.service';
+import { RealtimeController } from './realtime/realtime.controller';
+import { RealtimeService } from './realtime/realtime.service';
 import { ShopsController } from './shops/shops.controller';
 import { ReportsController } from './summaries/reports.controller';
 import { ShopsService } from './shops/shops.service';
@@ -44,6 +56,7 @@ import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { AuthGuard } from './common/http/auth.guard';
 import { RbacGuard } from './common/http/rbac.guard';
+import { SubscriptionFeatureGuard } from './common/http/subscription-feature.guard';
 import { createAppValidationPipe } from './common/http/validation-pipe';
 
 @Module({
@@ -54,10 +67,14 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     UsersController,
     ShopsController,
     PlatformController,
+    RealtimeController,
+    PushController,
     CustomersController,
     OrdersController,
     NotificationsController,
     DeliveriesController,
+    ShopExportsController,
+    PlatformExportsController,
     TemplatesController,
     SummariesController,
     ReportsController,
@@ -80,12 +97,19 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     EmailTransportService,
     EmailTemplateService,
     EmailOutboxService,
+    DisabledPushProvider,
+    LogPushProvider,
+    PushTransportService,
+    PushService,
+    RealtimeService,
     NotificationsService,
     DeliveriesService,
+    ExportsService,
     TemplatesService,
     SummariesService,
     AuthGuard,
     RbacGuard,
+    SubscriptionFeatureGuard,
     {
       provide: APP_FILTER,
       useClass: AppExceptionFilter,

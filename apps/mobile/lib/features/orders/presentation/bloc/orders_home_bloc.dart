@@ -2,6 +2,7 @@ import "dart:async";
 
 import "package:app_logger/app_logger.dart";
 import "package:app_network/app_network.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 
 import "../../domain/entities/order_list_item.dart";
@@ -18,11 +19,13 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     required RefreshOrdersUseCase refreshOrdersUseCase,
     required UpdateOrderStatusUseCase updateOrderStatusUseCase,
     required NetworkConnectionService networkConnectionService,
+    required AppRealtimeService realtimeService,
     AppLogger? logger,
   }) : _watchOrdersUseCase = watchOrdersUseCase,
        _refreshOrdersUseCase = refreshOrdersUseCase,
        _updateOrderStatusUseCase = updateOrderStatusUseCase,
        _networkConnectionService = networkConnectionService,
+       _realtimeService = realtimeService,
        _logger = logger ?? AppLogger(enabled: false),
        super(const OrdersHomeState()) {
     on<OrdersHomeStarted>(_onStarted);
@@ -35,17 +38,16 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     on<OrdersHomeErrorDismissed>(_onErrorDismissed);
   }
 
-  static const Duration _backgroundRefreshInterval = Duration(minutes: 2);
-
   final WatchOrdersUseCase _watchOrdersUseCase;
   final RefreshOrdersUseCase _refreshOrdersUseCase;
   final UpdateOrderStatusUseCase _updateOrderStatusUseCase;
   final NetworkConnectionService _networkConnectionService;
+  final AppRealtimeService _realtimeService;
   final AppLogger _logger;
 
   StreamSubscription<List<OrderListItem>>? _ordersSubscription;
   StreamSubscription<NetworkConnectionStatus>? _connectionSubscription;
-  Timer? _backgroundRefreshTimer;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
   bool _isRefreshingInFlight = false;
   bool _wasOnline = false;
 
@@ -108,7 +110,7 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     }
 
     _startConnectivitySubscription();
-    _startBackgroundRefreshTimer();
+    _startRealtimeSubscription();
     add(const OrdersHomeRefreshRequested());
   }
 
@@ -311,22 +313,31 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     );
   }
 
-  void _startBackgroundRefreshTimer() {
-    _backgroundRefreshTimer?.cancel();
-    _backgroundRefreshTimer = Timer.periodic(_backgroundRefreshInterval, (_) {
-      if (isClosed || !state.hasShop) {
+  void _startRealtimeSubscription() {
+    if (_realtimeSubscription != null) {
+      return;
+    }
+
+    _realtimeSubscription = _realtimeService.events.listen((event) {
+      final shopId = state.shopId?.trim();
+      if (shopId == null || shopId.isEmpty || !event.matchesShop(shopId)) {
         return;
       }
 
-      add(const OrdersHomeRefreshRequested(silent: true));
+      if (event.invalidatesAny(const <String>{'orders', 'deliveries'})) {
+        log.debug(
+          'Realtime invalidation received for orders: ${event.resource}/${event.action}',
+        );
+        add(const OrdersHomeRefreshRequested(silent: true));
+      }
     });
   }
 
   @override
   Future<void> close() async {
-    _backgroundRefreshTimer?.cancel();
     await _ordersSubscription?.cancel();
     await _connectionSubscription?.cancel();
+    await _realtimeSubscription?.cancel();
     return super.close();
   }
 }

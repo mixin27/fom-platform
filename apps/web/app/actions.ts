@@ -362,6 +362,8 @@ export async function markNotificationReadAction(formData: FormData) {
     redirect(withStatusQuery(returnTo, "error", "invalid_notification"))
   }
 
+  let nextPath = withStatusQuery(returnTo, "notice", "notification_read")
+
   try {
     await requestAuthenticatedActionApiEnvelope({
       path: `/api/v1/notifications/${encodeURIComponent(notificationId)}/read`,
@@ -370,10 +372,19 @@ export async function markNotificationReadAction(formData: FormData) {
       },
       requiredAccess,
     })
-    redirect(withStatusQuery(returnTo, "notice", "notification_read"))
-  } catch {
-    redirect(withStatusQuery(returnTo, "error", "notification_action_failed"))
+  } catch (error) {
+    if (
+      error instanceof AuthApiError &&
+      (error.code === "UNAUTHORIZED" || error.status === 401)
+    ) {
+      await clearSession()
+      redirect("/sign-in?error=session_expired")
+    }
+
+    nextPath = withStatusQuery(returnTo, "error", "notification_action_failed")
   }
+
+  redirect(nextPath)
 }
 
 export async function markAllNotificationsReadAction(formData: FormData) {
@@ -381,6 +392,8 @@ export async function markAllNotificationsReadAction(formData: FormData) {
   const requiredAccess =
     getFieldValue(formData, "requiredAccess") === "platform" ? "platform" : "shop"
   const shopId = getFieldValue(formData, "shopId") || undefined
+
+  let nextPath = withStatusQuery(returnTo, "notice", "notifications_read")
 
   try {
     await requestAuthenticatedActionApiEnvelope({
@@ -393,10 +406,19 @@ export async function markAllNotificationsReadAction(formData: FormData) {
       },
       requiredAccess,
     })
-    redirect(withStatusQuery(returnTo, "notice", "notifications_read"))
-  } catch {
-    redirect(withStatusQuery(returnTo, "error", "notification_action_failed"))
+  } catch (error) {
+    if (
+      error instanceof AuthApiError &&
+      (error.code === "UNAUTHORIZED" || error.status === 401)
+    ) {
+      await clearSession()
+      redirect("/sign-in?error=session_expired")
+    }
+
+    nextPath = withStatusQuery(returnTo, "error", "notification_action_failed")
   }
+
+  redirect(nextPath)
 }
 
 export async function updateNotificationPreferencesAction(formData: FormData) {
@@ -411,6 +433,8 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
   if (categories.length === 0) {
     redirect(withStatusQuery(returnTo, "error", "invalid_preferences"))
   }
+
+  let nextPath = withStatusQuery(returnTo, "notice", "preferences_saved")
 
   try {
     await requestAuthenticatedActionApiEnvelope({
@@ -427,8 +451,17 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
       },
       requiredAccess,
     })
-    redirect(withStatusQuery(returnTo, "notice", "preferences_saved"))
-  } catch {
-    redirect(withStatusQuery(returnTo, "error", "notification_action_failed"))
+  } catch (error) {
+    if (
+      error instanceof AuthApiError &&
+      (error.code === "UNAUTHORIZED" || error.status === 401)
+    ) {
+      await clearSession()
+      redirect("/sign-in?error=session_expired")
+    }
+
+    nextPath = withStatusQuery(returnTo, "error", "notification_action_failed")
   }
+
+  redirect(nextPath)
 }

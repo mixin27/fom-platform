@@ -8,6 +8,7 @@ import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 
 function revalidatePlatformSettingsWorkspace() {
   revalidatePath("/platform")
+  revalidatePath("/platform/plans")
   revalidatePath("/platform/settings")
 }
 
@@ -156,6 +157,7 @@ export async function updatePlatformPlanFromFormAction(formData: FormData) {
 }
 
 export type PlatformPlanItemInput = {
+  code: string
   label: string
   description?: string | null
   availability_status: "available" | "unavailable"

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_logger/app_logger.dart';
 import 'package:app_network/app_network.dart';
+import 'package:app_realtime/app_realtime.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/customer_list_item.dart';
@@ -16,10 +17,12 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
     required WatchCustomersUseCase watchCustomersUseCase,
     required RefreshCustomersUseCase refreshCustomersUseCase,
     required NetworkConnectionService networkConnectionService,
+    required AppRealtimeService realtimeService,
     AppLogger? logger,
   }) : _watchCustomersUseCase = watchCustomersUseCase,
        _refreshCustomersUseCase = refreshCustomersUseCase,
        _networkConnectionService = networkConnectionService,
+       _realtimeService = realtimeService,
        _logger = logger ?? AppLogger(enabled: false),
        super(const CustomersHomeState()) {
     on<CustomersHomeStarted>(_onStarted);
@@ -31,16 +34,15 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
     on<CustomersHomeErrorDismissed>(_onErrorDismissed);
   }
 
-  static const Duration _backgroundRefreshInterval = Duration(minutes: 2);
-
   final WatchCustomersUseCase _watchCustomersUseCase;
   final RefreshCustomersUseCase _refreshCustomersUseCase;
   final NetworkConnectionService _networkConnectionService;
+  final AppRealtimeService _realtimeService;
   final AppLogger _logger;
 
   StreamSubscription<List<CustomerListItem>>? _customersSubscription;
   StreamSubscription<NetworkConnectionStatus>? _connectionSubscription;
-  Timer? _backgroundRefreshTimer;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
   bool _isRefreshingInFlight = false;
   bool _wasOnline = false;
 
@@ -103,7 +105,7 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
     }
 
     _startConnectivitySubscription();
-    _startBackgroundRefreshTimer();
+    _startRealtimeSubscription();
     add(const CustomersHomeRefreshRequested());
   }
 
@@ -253,22 +255,31 @@ class CustomersHomeBloc extends Bloc<CustomersHomeEvent, CustomersHomeState>
     );
   }
 
-  void _startBackgroundRefreshTimer() {
-    _backgroundRefreshTimer?.cancel();
-    _backgroundRefreshTimer = Timer.periodic(_backgroundRefreshInterval, (_) {
-      if (isClosed || !state.hasShop) {
+  void _startRealtimeSubscription() {
+    if (_realtimeSubscription != null) {
+      return;
+    }
+
+    _realtimeSubscription = _realtimeService.events.listen((event) {
+      final shopId = state.shopId?.trim();
+      if (shopId == null || shopId.isEmpty || !event.matchesShop(shopId)) {
         return;
       }
 
-      add(const CustomersHomeRefreshRequested(silent: true));
+      if (event.invalidatesAny(const <String>{'customers'})) {
+        log.debug(
+          'Realtime invalidation received for customers: ${event.resource}/${event.action}',
+        );
+        add(const CustomersHomeRefreshRequested(silent: true));
+      }
     });
   }
 
   @override
   Future<void> close() async {
-    _backgroundRefreshTimer?.cancel();
     await _customersSubscription?.cancel();
     await _connectionSubscription?.cancel();
+    await _realtimeSubscription?.cancel();
     return super.close();
   }
 }

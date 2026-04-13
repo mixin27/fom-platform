@@ -1,9 +1,13 @@
 export "di/customers_module.dart";
+export "presentation/bloc/customer_orders_bloc.dart";
+export "presentation/bloc/customer_orders_event.dart";
+export "presentation/bloc/customer_orders_state.dart";
 export "presentation/bloc/customer_profile_bloc.dart";
 export "presentation/bloc/customer_profile_event.dart";
 export "presentation/bloc/customer_profile_state.dart";
 export "presentation/bloc/customers_home_bloc.dart";
 export "presentation/bloc/customers_home_event.dart";
 export "presentation/bloc/customers_home_state.dart";
+export "presentation/pages/customer_orders_page.dart";
 export "presentation/pages/customer_profile_page.dart";
 export "presentation/pages/customers_home_page.dart";

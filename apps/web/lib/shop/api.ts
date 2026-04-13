@@ -223,6 +223,14 @@ export type ShopBilling = {
     currency: string
     billing_period: string
     is_active: boolean
+    items: Array<{
+      id: string
+      code: string
+      label: string
+      description: string | null
+      availability_status: "available" | "unavailable" | string
+      sort_order: number
+    }>
   } | null
   invoices: Array<{
     id: string

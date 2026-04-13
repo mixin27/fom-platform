@@ -1,6 +1,7 @@
 import 'package:app_core/app_core.dart';
 import 'package:app_logger/app_logger.dart';
 
+import '../../../orders/domain/entities/order_list_item.dart';
 import '../../domain/entities/customer_draft.dart';
 import '../../domain/entities/customer_list_item.dart';
 import '../../domain/repositories/customers_repository.dart';
@@ -134,6 +135,59 @@ class CustomersRepositoryImpl with LoggerMixin implements CustomersRepository {
         stackTrace: stackTrace,
       );
       return Result<CustomerListItem>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<List<OrderListItem>>> fetchCustomerOrders({
+    required String shopId,
+    required String customerId,
+  }) async {
+    try {
+      final orders = await _remoteDataSource.fetchCustomerOrders(
+        shopId: shopId,
+        customerId: customerId,
+      );
+
+      log.info(
+        'Customer orders fetched: shop=$shopId, customer=$customerId, count=${orders.length}',
+      );
+      return Result<List<OrderListItem>>.success(orders);
+    } catch (error, stackTrace) {
+      log.error(
+        'Failed to fetch customer orders',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<List<OrderListItem>>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<void>> deleteCustomer({
+    required String shopId,
+    required String customerId,
+  }) async {
+    try {
+      await _remoteDataSource.deleteCustomer(
+        shopId: shopId,
+        customerId: customerId,
+      );
+
+      await _localDataSource.deleteCustomer(
+        shopId: shopId,
+        customerId: customerId,
+      );
+
+      log.info('Customer deleted: shop=$shopId, customer=$customerId');
+      return Result<void>.success(null);
+    } catch (error, stackTrace) {
+      log.error(
+        'Failed to delete customer',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<void>.failure(FailureMapper.from(error));
     }
   }
 

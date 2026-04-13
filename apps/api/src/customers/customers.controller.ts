@@ -2,7 +2,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -12,17 +14,21 @@ import {
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
+import { RequirePlanFeatures } from '../common/http/plan-features.decorator';
 import { RequirePermissions } from '../common/http/permissions.decorator';
 import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
+import { SubscriptionFeatureGuard } from '../common/http/subscription-feature.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { ListCustomersQueryDto } from './dto/list-customers-query.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomersService } from './customers.service';
 
 @Controller('api/v1/shops/:shopId/customers')
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
+@RequirePlanFeatures(subscriptionFeatures.customersManagement)
 @ApiTags('Customers')
 @ApiBearerAuth('access-token')
 export class CustomersController {
@@ -82,5 +88,17 @@ export class CustomersController {
         body,
       ),
     );
+  }
+
+  @Delete(':customerId')
+  @HttpCode(204)
+  @RequirePermissions(permissions.customersWrite)
+  @ApiOperation({ summary: 'Delete a customer without order history' })
+  async deleteCustomer(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('customerId') customerId: string,
+  ) {
+    await this.customersService.deleteCustomer(currentUser, shopId, customerId);
   }
 }

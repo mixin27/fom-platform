@@ -1,0 +1,26 @@
+name: app_push
+description: Reusable push registration and device notification plumbing for FOM apps.
+version: 0.1.0
+publish_to: none
+
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  app_core:
+    path: ../app_core
+  app_device:
+    path: ../app_device
+  app_logger:
+    path: ../app_logger
+  app_network:
+    path: ../app_network
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter

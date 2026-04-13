@@ -1,0 +1,1 @@
+enum RealtimeScope { shop, platform }

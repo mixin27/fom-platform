@@ -1,4 +1,7 @@
+import "dart:async";
+
 import "package:app_logger/app_logger.dart";
+import "package:app_realtime/app_realtime.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:fom_mobile/features/notifications/domain/entities/inbox_notification.dart";
 import "package:fom_mobile/features/notifications/domain/usecases/fetch_notifications_use_case.dart";
@@ -14,10 +17,12 @@ class NotificationsHomeBloc
     required FetchNotificationsUseCase fetchNotificationsUseCase,
     required MarkNotificationReadUseCase markNotificationReadUseCase,
     required MarkAllNotificationsReadUseCase markAllNotificationsReadUseCase,
+    required AppRealtimeService realtimeService,
     AppLogger? logger,
   }) : _fetchNotificationsUseCase = fetchNotificationsUseCase,
        _markNotificationReadUseCase = markNotificationReadUseCase,
        _markAllNotificationsReadUseCase = markAllNotificationsReadUseCase,
+       _realtimeService = realtimeService,
        _logger = logger ?? AppLogger(enabled: false),
        super(const NotificationsHomeState()) {
     on<NotificationsHomeStarted>(_onStarted);
@@ -30,7 +35,9 @@ class NotificationsHomeBloc
   final FetchNotificationsUseCase _fetchNotificationsUseCase;
   final MarkNotificationReadUseCase _markNotificationReadUseCase;
   final MarkAllNotificationsReadUseCase _markAllNotificationsReadUseCase;
+  final AppRealtimeService _realtimeService;
   final AppLogger _logger;
+  StreamSubscription<RealtimeEvent>? _realtimeSubscription;
 
   @override
   AppLogger get logger => _logger;
@@ -68,6 +75,7 @@ class NotificationsHomeBloc
       ),
     );
 
+    _startRealtimeSubscription();
     add(const NotificationsHomeRefreshRequested());
   }
 
@@ -237,6 +245,24 @@ class NotificationsHomeBloc
     emit(state.copyWith(clearError: true));
   }
 
+  void _startRealtimeSubscription() {
+    if (_realtimeSubscription != null) {
+      return;
+    }
+
+    _realtimeSubscription = _realtimeService.events.listen((event) {
+      final shopId = state.shopId?.trim();
+      if (shopId == null || shopId.isEmpty || !event.matchesShop(shopId)) {
+        return;
+      }
+
+      if (event.kind == RealtimeEventKind.notificationCreated ||
+          event.kind == RealtimeEventKind.notificationRead) {
+        add(const NotificationsHomeRefreshRequested());
+      }
+    });
+  }
+
   List<InboxNotification> _markNotificationAsRead(
     List<InboxNotification> notifications,
     String notificationId,
@@ -255,5 +281,11 @@ class NotificationsHomeBloc
     return state.updatingNotificationIds
         .where((item) => item != notificationId)
         .toList(growable: false);
+  }
+
+  @override
+  Future<void> close() async {
+    await _realtimeSubscription?.cancel();
+    return super.close();
   }
 }

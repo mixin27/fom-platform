@@ -12,6 +12,7 @@ import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { EmailOutboxService } from '../email/email-outbox.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import type { CreatePlatformPlanDto } from './dto/create-platform-plan.dto';
 import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
@@ -124,6 +125,7 @@ type PlanOptionRow = {
 
 type PlanItemRow = {
   id: string;
+  code: string;
   label: string;
   description: string | null;
   availability_status: string;
@@ -208,6 +210,7 @@ export class PlatformService {
     private readonly prisma: PrismaService,
     private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async getDashboard() {
@@ -617,6 +620,11 @@ export class PlatformService {
       return createdShop;
     });
 
+    void this.emitPlatformInvalidation({
+      resource: 'shops',
+      action: 'created',
+    });
+
     return this.loadTenantSnapshotById(shop.id, new Date());
   }
 
@@ -735,6 +743,11 @@ export class PlatformService {
       }
     });
 
+    void this.emitPlatformInvalidation({
+      resource: 'shops',
+      action: 'updated',
+    });
+
     return this.loadTenantSnapshotById(shopId, new Date());
   }
 
@@ -750,6 +763,11 @@ export class PlatformService {
 
     await this.prisma.shop.delete({
       where: { id: shopId },
+    });
+
+    void this.emitPlatformInvalidation({
+      resource: 'shops',
+      action: 'deleted',
     });
   }
 
@@ -923,6 +941,11 @@ export class PlatformService {
       },
     });
 
+    void this.emitPlatformInvalidation({
+      resource: 'subscriptions',
+      action: 'updated',
+    });
+
     return this.loadSubscriptionRowById(subscriptionId);
   }
 
@@ -974,6 +997,10 @@ export class PlatformService {
 
     const createdInvoice = await this.loadPaymentRowById(createdInvoiceId);
     void this.sendInvoiceNoticeEmail(createdInvoiceId, 'platform.invoice_notice');
+    void this.emitPlatformInvalidation({
+      resource: 'subscriptions',
+      action: 'invoice_created',
+    });
     return createdInvoice;
   }
 
@@ -1049,6 +1076,10 @@ export class PlatformService {
         ? 'platform.billing_notice'
         : 'platform.invoice_notice',
     );
+    void this.emitPlatformInvalidation({
+      resource: 'subscriptions',
+      action: 'invoice_updated',
+    });
     return updatedInvoice;
   }
 
@@ -1115,6 +1146,11 @@ export class PlatformService {
         resolvedAt: isClosed ? now : null,
         createdByUserId: currentUser.id,
       },
+    });
+
+    void this.emitPlatformInvalidation({
+      resource: 'support',
+      action: 'created',
     });
 
     return this.loadSupportIssueById(issue.id);
@@ -1190,6 +1226,11 @@ export class PlatformService {
             }
           : {}),
       },
+    });
+
+    void this.emitPlatformInvalidation({
+      resource: 'support',
+      action: 'updated',
     });
 
     return this.loadSupportIssueById(issueId);
@@ -1276,6 +1317,11 @@ export class PlatformService {
       }
     });
 
+    void this.emitPlatformInvalidation({
+      resource: 'settings',
+      action: 'updated',
+    });
+
     return this.buildSettingsPayload(currentUser);
   }
 
@@ -1343,6 +1389,11 @@ export class PlatformService {
       }
     });
 
+    void this.emitPlatformInvalidation({
+      resource: 'plans',
+      action: 'updated',
+    });
+
     return this.loadPlanSettingsRowById(planId);
   }
 
@@ -1378,6 +1429,11 @@ export class PlatformService {
       return plan;
     });
 
+    void this.emitPlatformInvalidation({
+      resource: 'plans',
+      action: 'created',
+    });
+
     return this.loadPlanSettingsRowById(created.id);
   }
 
@@ -1406,12 +1462,49 @@ export class PlatformService {
     await (this.prisma as any).plan.delete({
       where: { id: planId },
     });
+
+    void this.emitPlatformInvalidation({
+      resource: 'plans',
+      action: 'deleted',
+    });
   }
 
   async getPublicPlans() {
     const plans = await this.loadPlanOptions();
 
     return plans.filter((plan) => plan.is_active);
+  }
+
+  private async emitPlatformInvalidation(input: {
+    resource: string;
+    action: string;
+  }) {
+    const recipientIds = await this.resolvePlatformRecipientIds();
+
+    await Promise.allSettled(
+      recipientIds.map((userId) =>
+        this.realtimeService.broadcastPlatformInvalidation({
+          userId,
+          resource: input.resource,
+          action: input.action,
+        }),
+      ),
+    );
+  }
+
+  private async resolvePlatformRecipientIds() {
+    const assignments = await this.prisma.userRoleAssignment.findMany({
+      where: {
+        role: {
+          scope: 'platform',
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    return Array.from(new Set(assignments.map((assignment) => assignment.userId)));
   }
 
   private async buildSettingsPayload(currentUser: AuthenticatedUser) {
@@ -1550,6 +1643,7 @@ export class PlatformService {
   private serializePlanItem(item: any): PlanItemRow {
     return {
       id: item.id,
+      code: item.code,
       label: item.label,
       description: item.description,
       availability_status: item.availabilityStatus,
@@ -1561,6 +1655,7 @@ export class PlatformService {
     tx: any,
     planId: string,
     items: Array<{
+      code: string;
       label: string;
       description?: string | null;
       availability_status: string;
@@ -1578,6 +1673,7 @@ export class PlatformService {
     await (tx as any).planItem.createMany({
       data: items.map((item, index) => ({
         planId,
+        code: item.code,
         label: item.label,
         description: item.description ?? null,
         availabilityStatus: item.availability_status,

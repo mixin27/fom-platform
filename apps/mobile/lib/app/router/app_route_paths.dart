@@ -18,6 +18,7 @@ abstract final class AppRoutePaths {
   // Customers
   static const String customers = '/customers';
   static const String customerProfile = '/customers/:id';
+  static const String customerOrders = '/customers/:id/orders';
 
   // Reports
   static const String reports = '/reports';
@@ -25,6 +26,7 @@ abstract final class AppRoutePaths {
   // Settings
   static const String settings = '/settings';
   static const String editProfile = '/settings/edit-profile';
+  static const String settingsExports = '/settings/exports';
 
   // Global Application Views
   static const String notifications = '/notifications';

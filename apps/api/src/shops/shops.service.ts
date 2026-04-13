@@ -11,6 +11,7 @@ import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { permissions, type Permission } from '../common/http/rbac.constants';
+import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
@@ -24,6 +25,11 @@ type ShopWithCount = any & {
 };
 
 type MemberWithAccess = any;
+const allowedOperationalSubscriptionStatuses = new Set([
+  'trialing',
+  'active',
+  'overdue',
+]);
 
 @Injectable()
 export class ShopsService {
@@ -148,7 +154,13 @@ export class ShopsService {
       include: {
         subscription: {
           include: {
-            plan: true,
+            plan: {
+              include: {
+                items: {
+                  orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+                },
+              },
+            },
             payments: {
               orderBy: [{ dueAt: 'desc' }, { createdAt: 'desc' }],
             },
@@ -225,6 +237,14 @@ export class ShopsService {
             currency: plan.currency,
             billing_period: plan.billingPeriod,
             is_active: plan.isActive,
+            items: (plan.items ?? []).map((item) => ({
+              id: item.id,
+              code: item.code,
+              label: item.label,
+              description: item.description,
+              availability_status: item.availabilityStatus,
+              sort_order: item.sortOrder,
+            })),
           }
         : null,
       invoices: payments.map((payment) => ({
@@ -575,6 +595,61 @@ export class ShopsService {
     }
 
     return result;
+  }
+
+  async assertPlanFeatures(
+    userId: string,
+    shopId: string,
+    requiredFeatures: SubscriptionFeatureCode | SubscriptionFeatureCode[],
+  ) {
+    const result = await this.assertShopAccess(userId, shopId);
+    const requested = Array.isArray(requiredFeatures)
+      ? requiredFeatures
+      : [requiredFeatures];
+
+    await this.subscriptionLifecycle.expireElapsedTrials();
+
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { shopId },
+      include: {
+        plan: {
+          include: {
+            items: true,
+          },
+        },
+      },
+    });
+
+    if (!subscription?.plan) {
+      throw forbiddenError(
+        'This shop does not have an active subscription plan right now.',
+      );
+    }
+
+    if (!allowedOperationalSubscriptionStatuses.has(subscription.status)) {
+      throw forbiddenError(
+        'This shop subscription is not active for operational access right now.',
+      );
+    }
+
+    const availableFeatures = new Set(
+      subscription.plan.items
+        .filter((item) => item.availabilityStatus === 'available')
+        .map((item) => item.code),
+    );
+    const missing = requested.filter((feature) => !availableFeatures.has(feature));
+
+    if (missing.length > 0) {
+      throw forbiddenError(
+        'This feature is not available on the current subscription plan.',
+      );
+    }
+
+    return {
+      ...result,
+      subscription,
+      availableFeatures: [...availableFeatures],
+    };
   }
 
   async serializeShop(shopId: string) {

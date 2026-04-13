@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import {
   BarChart3,
   CreditCard,
+  Download,
   LayoutDashboard,
   LifeBuoy,
   MessageSquareText,
@@ -13,6 +14,7 @@ import {
   ShoppingCart,
   Store,
   Users,
+  WalletCards,
 } from "lucide-react"
 
 import type { NavIconName, NavItem } from "@/lib/navigation"
@@ -26,9 +28,11 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   deliveries: PackageCheck,
   templates: MessageSquareText,
   reports: BarChart3,
+  exports: Download,
   settings: Settings,
   shops: Store,
   users: Users,
+  plans: WalletCards,
   subscriptions: CreditCard,
   support: LifeBuoy,
 }

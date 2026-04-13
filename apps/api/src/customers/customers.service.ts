@@ -8,6 +8,7 @@ import {
   validationError,
 } from '../common/http/app-http.exception';
 import { paginate } from '../common/utils/pagination';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { ListCustomersQueryDto } from './dto/list-customers-query.dto';
@@ -18,6 +19,7 @@ export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async listCustomers(
@@ -133,7 +135,17 @@ export class CustomersService {
           },
         });
 
-    return this.serializeCustomerRecord(customer);
+    const serialized = this.serializeCustomerRecord(customer);
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'customers',
+        action: existing ? 'updated' : 'created',
+      })
+      .catch(() => undefined);
+
+    return serialized;
   }
 
   async getCustomer(
@@ -226,7 +238,57 @@ export class CustomersService {
       },
     });
 
-    return this.serializeCustomerRecord(updated, { includeHistory: true });
+    const serialized = this.serializeCustomerRecord(updated, { includeHistory: true });
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'customers',
+        action: 'updated',
+      })
+      .catch(() => undefined);
+
+    return serialized;
+  }
+
+  async deleteCustomer(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    customerId: string,
+  ) {
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        _count: {
+          select: {
+            orders: true,
+          },
+        },
+      },
+    });
+
+    if (!customer || customer.shopId !== shopId) {
+      throw notFoundError('Customer not found');
+    }
+
+    if (customer._count.orders > 0) {
+      throw conflictError(
+        'Customers with order history cannot be deleted. Remove only customers with no linked orders.',
+      );
+    }
+
+    await this.prisma.customer.delete({
+      where: { id: customer.id },
+    });
+
+    void this.realtimeService
+      .broadcastShopInvalidation({
+        shopId,
+        resource: 'customers',
+        action: 'deleted',
+      })
+      .catch(() => undefined);
   }
 
   private serializeCustomerRecord(

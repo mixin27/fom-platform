@@ -14,10 +14,13 @@ import {
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
+import { RequirePlanFeatures } from '../common/http/plan-features.decorator';
 import { RequirePermissions } from '../common/http/permissions.decorator';
 import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
+import { SubscriptionFeatureGuard } from '../common/http/subscription-feature.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -28,7 +31,8 @@ import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { OrdersService } from './orders.service';
 
 @Controller('api/v1/shops/:shopId/orders')
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
+@RequirePlanFeatures(subscriptionFeatures.ordersManagement)
 @ApiTags('Orders')
 @ApiBearerAuth('access-token')
 export class OrdersController {
@@ -58,6 +62,7 @@ export class OrdersController {
 
   @Post('parse-message')
   @RequirePermissions(permissions.ordersWrite)
+  @RequirePlanFeatures(subscriptionFeatures.ordersParseMessenger)
   @ApiOperation({
     summary: 'Parse copied Messenger text into a suggested order draft',
   })

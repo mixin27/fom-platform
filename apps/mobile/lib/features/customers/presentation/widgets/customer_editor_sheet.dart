@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/customer_draft.dart';
 import '../../domain/entities/customer_list_item.dart';
 
+enum CustomerEditorSheetResult { saved, deleted }
+
 class CustomerEditorSheet extends StatefulWidget {
   const CustomerEditorSheet({
     required this.title,
@@ -11,12 +13,16 @@ class CustomerEditorSheet extends StatefulWidget {
     required this.onSubmitted,
     super.key,
     this.initialCustomer,
+    this.onDeleteRequested,
+    this.canDelete = false,
   });
 
   final String title;
   final String submitLabel;
   final CustomerListItem? initialCustomer;
   final Future<void> Function(CustomerDraft draft) onSubmitted;
+  final Future<void> Function()? onDeleteRequested;
+  final bool canDelete;
 
   @override
   State<CustomerEditorSheet> createState() => _CustomerEditorSheetState();
@@ -31,6 +37,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
   late final TextEditingController _notesController;
 
   bool _isSubmitting = false;
+  bool _isDeleting = false;
   String? _errorMessage;
 
   @override
@@ -83,7 +90,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                     ),
                     AppIconButton(
                       icon: const Icon(Icons.close_rounded),
-                      onPressed: _isSubmitting
+                      onPressed: _isSubmitting || _isDeleting
                           ? null
                           : () => Navigator.of(context).pop(),
                     ),
@@ -92,7 +99,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                 const SizedBox(height: 16),
                 if ((_errorMessage ?? '').trim().isNotEmpty) ...[
                   AppAlertBanner(
-                    title: 'Could not save customer',
+                    title: 'Could not update customer',
                     message: _errorMessage!,
                   ),
                   const SizedBox(height: 16),
@@ -101,7 +108,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                   label: 'Customer Name',
                   controller: _nameController,
                   hintText: 'Daw Aye Aye',
-                  prefixIcon: const Text('👤', style: TextStyle(fontSize: 16)),
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     final normalized = value?.trim() ?? '';
@@ -117,7 +124,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                   label: 'Phone',
                   controller: _phoneController,
                   hintText: '09 9871 2345',
-                  prefixIcon: const Text('📞', style: TextStyle(fontSize: 16)),
+                  prefixIcon: const Icon(Icons.call_outlined),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   validator: (value) {
@@ -134,7 +141,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                   label: 'Township',
                   controller: _townshipController,
                   hintText: 'Hlaing',
-                  prefixIcon: const Text('📍', style: TextStyle(fontSize: 16)),
+                  prefixIcon: const Icon(Icons.location_on_outlined),
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 14),
@@ -142,7 +149,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                   label: 'Address',
                   controller: _addressController,
                   hintText: 'No. 12, Shwe Taung Gyar St',
-                  prefixIcon: const Text('🏠', style: TextStyle(fontSize: 16)),
+                  prefixIcon: const Icon(Icons.home_outlined),
                   maxLines: 2,
                   textInputAction: TextInputAction.next,
                 ),
@@ -151,10 +158,84 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                   label: 'Internal Note',
                   controller: _notesController,
                   hintText: 'Preferred delivery time or repeat-buyer note',
-                  prefixIcon: const Text('📝', style: TextStyle(fontSize: 16)),
+                  prefixIcon: const Icon(Icons.sticky_note_2_outlined),
                   maxLines: 3,
                   textInputAction: TextInputAction.done,
                 ),
+                if (widget.onDeleteRequested != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xFFFECDD3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Delete customer',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFBE123C),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.canDelete
+                              ? 'Remove this customer profile permanently.'
+                              : 'Customers with order history cannot be deleted.',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMid,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed:
+                                _isSubmitting ||
+                                    _isDeleting ||
+                                    !widget.canDelete
+                                ? null
+                                : _deleteCustomer,
+                            icon: _isDeleting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.delete_outline_rounded),
+                            label: Text(
+                              _isDeleting ? 'Deleting...' : 'Delete customer',
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFBE123C),
+                              side: const BorderSide(
+                                color: Color(0xFFFDA4AF),
+                                width: 1.5,
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              textStyle: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -162,7 +243,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
                       child: AppButton(
                         text: 'Cancel',
                         variant: AppButtonVariant.secondary,
-                        onPressed: _isSubmitting
+                        onPressed: _isSubmitting || _isDeleting
                             ? null
                             : () => Navigator.of(context).pop(),
                       ),
@@ -211,7 +292,7 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
         return;
       }
 
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(CustomerEditorSheetResult.saved);
     } catch (error) {
       if (!mounted) {
         return;
@@ -232,5 +313,65 @@ class _CustomerEditorSheetState extends State<CustomerEditorSheet> {
   String? _normalizeOptional(String value) {
     final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
+  }
+
+  Future<void> _deleteCustomer() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete customer'),
+          content: const Text(
+            'Delete this customer permanently? This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Color(0xFFBE123C)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || widget.onDeleteRequested == null) {
+      return;
+    }
+
+    setState(() {
+      _isDeleting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await widget.onDeleteRequested!();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop(CustomerEditorSheetResult.deleted);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
   }
 }
