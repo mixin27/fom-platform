@@ -1,14 +1,10 @@
-import 'dart:io';
-
 import 'package:app_core/app_core.dart';
 import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:fom_mobile/app/di/injection_container.dart';
+import 'package:fom_mobile/app/support/shop_export_support.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
-import 'package:intl/intl.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
 class ShopExportsPage extends StatefulWidget {
   const ShopExportsPage({super.key});
@@ -35,22 +31,18 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
     setState(() => _activeDataset = dataset);
 
     try {
-      final bytes = await getIt<ApiClient>().getBytes(
-        '/shops/$shopId/exports/$dataset.csv',
+      final export = await downloadShopExportCsv(
+        apiClient: getIt<ApiClient>(),
+        shopId: shopId!,
+        shopName: activeShop?.shopName ?? 'shop',
+        dataset: dataset,
       );
-      final directory = await getApplicationDocumentsDirectory();
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final safeShopName = _slugify(activeShop?.shopName ?? 'shop');
-      final filename = '$safeShopName-$dataset-$timestamp.csv';
-      final file = File(path.join(directory.path, filename));
-
-      await file.writeAsBytes(bytes, flush: true);
 
       if (!mounted) {
         return;
       }
 
-      _showMessage('$label saved to ${file.path}');
+      _showMessage('$label saved to ${export.path}');
     } on AppException catch (error) {
       _showMessage(error.message);
     } catch (_) {
@@ -70,16 +62,6 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
-  }
-
-  String _slugify(String value) {
-    final normalized = value
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
-
-    return normalized.isEmpty ? 'shop' : normalized;
   }
 
   @override
@@ -271,7 +253,11 @@ class _ExportCard extends StatelessWidget {
             text: buttonText,
             onPressed: isLoading ? null : onPressed,
             isLoading: isLoading,
-            icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
+            icon: const Icon(
+              Icons.download_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ],
       ),

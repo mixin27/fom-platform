@@ -55,6 +55,7 @@ export class OrdersService {
       currentUser.id,
       shopId,
     );
+    const requestedCustomerId = query.customer_id?.trim() ?? '';
     const requestedStatus = query.status;
     const requestedDate = query.date;
     const search = query.search?.toLowerCase() ?? '';
@@ -72,6 +73,10 @@ export class OrdersService {
       orders = orders.filter((order) =>
         this.matchesStatus(order.status, requestedStatus),
       );
+    }
+
+    if (requestedCustomerId) {
+      orders = orders.filter((order) => order.customerId === requestedCustomerId);
     }
 
     if (requestedDate) {

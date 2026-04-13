@@ -24,6 +24,8 @@ class AppOrdersHomeHeader extends StatelessWidget {
     this.onNotificationPressed,
     this.onMorePressed,
     this.hasUnreadNotifications = false,
+    this.leading,
+    this.showTrailingActions = true,
   });
 
   final String shopName;
@@ -41,6 +43,8 @@ class AppOrdersHomeHeader extends StatelessWidget {
   final VoidCallback? onNotificationPressed;
   final VoidCallback? onMorePressed;
   final bool hasUnreadNotifications;
+  final Widget? leading;
+  final bool showTrailingActions;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +62,10 @@ class AppOrdersHomeHeader extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
+                      if (leading != null) ...[
+                        leading!,
+                        const SizedBox(width: 8),
+                      ],
                       Container(
                         width: 42,
                         height: 42,
@@ -107,20 +115,21 @@ class AppOrdersHomeHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    AppIconButton(
-                      icon: const Icon(Icons.notifications_none_rounded),
-                      onPressed: onNotificationPressed,
-                      showBadge: hasUnreadNotifications,
-                    ),
-                    const SizedBox(width: 8),
-                    AppIconButton(
-                      icon: const Icon(Icons.more_horiz_rounded),
-                      onPressed: onMorePressed,
-                    ),
-                  ],
-                ),
+                if (showTrailingActions)
+                  Row(
+                    children: [
+                      AppIconButton(
+                        icon: const Icon(Icons.notifications_none_rounded),
+                        onPressed: onNotificationPressed,
+                        showBadge: hasUnreadNotifications,
+                      ),
+                      const SizedBox(width: 8),
+                      AppIconButton(
+                        icon: const Icon(Icons.more_horiz_rounded),
+                        onPressed: onMorePressed,
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

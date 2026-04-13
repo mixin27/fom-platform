@@ -5,6 +5,7 @@ import "package:fom_mobile/app/di/injection_container.dart";
 import "package:fom_mobile/app/router/app_route_paths.dart";
 import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
+import "package:url_launcher/url_launcher.dart";
 
 import "../../domain/entities/customer_draft.dart";
 import "../../domain/entities/customer_list_item.dart";
@@ -106,7 +107,17 @@ class _CustomerProfileView extends StatelessWidget {
                         _buildQuickActions(context, customer),
                         _buildContactInfo(customer),
                         _buildSpendingSummary(customer),
-                        _OrderHistoryCard(customer: customer),
+                        _OrderHistoryCard(
+                          customer: customer,
+                          onSeeAllPressed: () =>
+                              _openCustomerOrders(context, customer),
+                          onOrderPressed: (order) => context.push(
+                            AppRoutePaths.orderDetails.replaceFirst(
+                              ':id',
+                              order.id,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 40),
                       ]),
                     ),
@@ -155,7 +166,7 @@ class _CustomerProfileView extends StatelessWidget {
             child: _QuickActionChip(
               icon: Icons.call_outlined,
               label: "Call",
-              onTap: () {},
+              onTap: () => _callCustomer(context, customer.phone),
             ),
           ),
           const SizedBox(width: 8),
@@ -163,7 +174,7 @@ class _CustomerProfileView extends StatelessWidget {
             child: _QuickActionChip(
               icon: Icons.message_outlined,
               label: "Message",
-              onTap: () {},
+              onTap: () => _messageCustomer(context, customer.phone),
             ),
           ),
           const SizedBox(width: 8),
@@ -180,9 +191,9 @@ class _CustomerProfileView extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _QuickActionChip(
-              icon: Icons.map_outlined,
-              label: "Map",
-              onTap: () {},
+              icon: Icons.receipt_long_outlined,
+              label: "Orders",
+              onTap: () => _openCustomerOrders(context, customer),
             ),
           ),
         ],
@@ -315,6 +326,98 @@ class _CustomerProfileView extends StatelessWidget {
     );
   }
 
+  void _openCustomerOrders(BuildContext context, CustomerListItem customer) {
+    final path = Uri(
+      path: AppRoutePaths.customerOrders.replaceFirst(':id', customer.id),
+      queryParameters: <String, String>{
+        'customer_name': customer.name,
+        'customer_phone': customer.phone,
+      },
+    ).toString();
+
+    context.push(path);
+  }
+
+  Future<void> _callCustomer(BuildContext context, String phone) async {
+    final target = _normalizePhoneTarget(phone);
+    if (target.isEmpty) {
+      _showContactActionUnavailable(
+        context,
+        'Customer phone number is unavailable.',
+      );
+      return;
+    }
+
+    await _launchContactUri(
+      context,
+      Uri(scheme: 'tel', path: target),
+      fallbackMessage: 'Unable to start a phone call right now.',
+    );
+  }
+
+  Future<void> _messageCustomer(BuildContext context, String phone) async {
+    final target = _normalizePhoneTarget(phone);
+    if (target.isEmpty) {
+      _showContactActionUnavailable(
+        context,
+        'Customer phone number is unavailable.',
+      );
+      return;
+    }
+
+    await _launchContactUri(
+      context,
+      Uri(scheme: 'sms', path: target),
+      fallbackMessage: 'Unable to open the messaging app right now.',
+    );
+  }
+
+  Future<void> _launchContactUri(
+    BuildContext context,
+    Uri uri, {
+    required String fallbackMessage,
+  }) async {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (launched || !context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(fallbackMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(fallbackMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  String _normalizePhoneTarget(String value) {
+    final normalized = value.replaceAll(RegExp(r'[^0-9+]'), '');
+    return normalized.isEmpty ? value.trim() : normalized;
+  }
+
+  void _showContactActionUnavailable(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
   CustomerListItem _fallbackCustomer() {
     return CustomerListItem(
       id: "",
@@ -398,9 +501,15 @@ class _QuickActionChip extends StatelessWidget {
 }
 
 class _OrderHistoryCard extends StatelessWidget {
-  const _OrderHistoryCard({required this.customer});
+  const _OrderHistoryCard({
+    required this.customer,
+    required this.onSeeAllPressed,
+    required this.onOrderPressed,
+  });
 
   final CustomerListItem customer;
+  final VoidCallback onSeeAllPressed;
+  final ValueChanged<CustomerRecentOrder> onOrderPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -444,12 +553,22 @@ class _OrderHistoryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                "See all (${customer.totalOrders})",
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.softOrange,
-                  fontSize: 11,
+              InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: onSeeAllPressed,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    "See all (${customer.totalOrders})",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.softOrange,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -471,7 +590,11 @@ class _OrderHistoryCard extends StatelessWidget {
               final index = entry.key;
               final order = entry.value;
               final isLast = index == orders.length - 1;
-              return _MiniOrderRow(order: order, isLast: isLast);
+              return _MiniOrderRow(
+                order: order,
+                isLast: isLast,
+                onTap: () => onOrderPressed(order),
+              );
             }),
         ],
       ),
@@ -480,78 +603,87 @@ class _OrderHistoryCard extends StatelessWidget {
 }
 
 class _MiniOrderRow extends StatelessWidget {
-  const _MiniOrderRow({required this.order, required this.isLast});
+  const _MiniOrderRow({
+    required this.order,
+    required this.isLast,
+    required this.onTap,
+  });
 
   final CustomerRecentOrder order;
   final bool isLast;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(top: 10, bottom: isLast ? 0 : 10),
-      decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : const Border(
-                bottom: BorderSide(color: AppColors.border, width: 1),
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.only(top: 10, bottom: isLast ? 0 : 10),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : const Border(
+                  bottom: BorderSide(color: AppColors.border, width: 1),
+                ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "#${order.orderNo}",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textLight,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: "Courier",
+                      fontSize: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    order.productName,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    DateFormat("MMM d, h:mm a").format(order.createdAt),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textLight,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  "#${order.orderNo}",
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textLight,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: "Courier",
-                    fontSize: 10,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  order.productName,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  NumberFormat.decimalPattern().format(order.totalPrice),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: AppColors.textDark,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  DateFormat("MMM d, h:mm a").format(order.createdAt),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textLight,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
-                  ),
+                const SizedBox(height: 4),
+                AppStatusBadge(
+                  variant: _variantForStatus(order.status),
+                  label: order.statusLabel,
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                NumberFormat.decimalPattern().format(order.totalPrice),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              AppStatusBadge(
-                variant: _variantForStatus(order.status),
-                label: order.statusLabel,
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

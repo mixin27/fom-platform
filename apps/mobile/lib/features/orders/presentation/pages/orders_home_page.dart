@@ -1,3 +1,5 @@
+import 'package:app_logger/app_logger.dart';
+import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +10,9 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/order_list_item.dart';
 import '../../domain/entities/order_status.dart';
+import '../../domain/usecases/refresh_orders_use_case.dart';
+import '../../domain/usecases/update_order_status_use_case.dart';
+import '../../domain/usecases/watch_orders_use_case.dart';
 import '../bloc/orders_home_bloc.dart';
 import '../bloc/orders_home_event.dart';
 import '../bloc/orders_home_state.dart';
@@ -18,18 +23,60 @@ class OrdersHomePage extends StatelessWidget {
     super.key,
     required this.initialShopId,
     required this.initialShopName,
+    this.initialSearchQuery = '',
+    this.headerTitle,
+    this.headerSubtitle,
+    this.showBackButton = false,
+    this.showHeaderActions = true,
+    this.showCreateOrderAction = true,
+    this.useSharedBloc = true,
   });
 
   final String initialShopId;
   final String initialShopName;
+  final String initialSearchQuery;
+  final String? headerTitle;
+  final String? headerSubtitle;
+  final bool showBackButton;
+  final bool showHeaderActions;
+  final bool showCreateOrderAction;
+  final bool useSharedBloc;
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<OrdersHomeBloc>.value(
-      value: getIt<OrdersHomeBloc>(),
+    if (useSharedBloc) {
+      return BlocProvider<OrdersHomeBloc>.value(
+        value: getIt<OrdersHomeBloc>(),
+        child: _OrdersHomeView(
+          initialShopId: initialShopId,
+          initialShopName: initialShopName,
+          initialSearchQuery: initialSearchQuery,
+          headerTitle: headerTitle,
+          headerSubtitle: headerSubtitle,
+          showBackButton: showBackButton,
+          showHeaderActions: showHeaderActions,
+          showCreateOrderAction: showCreateOrderAction,
+        ),
+      );
+    }
+
+    return BlocProvider<OrdersHomeBloc>(
+      create: (_) => OrdersHomeBloc(
+        watchOrdersUseCase: getIt<WatchOrdersUseCase>(),
+        refreshOrdersUseCase: getIt<RefreshOrdersUseCase>(),
+        updateOrderStatusUseCase: getIt<UpdateOrderStatusUseCase>(),
+        networkConnectionService: getIt<NetworkConnectionService>(),
+        logger: getIt<AppLogger>(),
+      ),
       child: _OrdersHomeView(
         initialShopId: initialShopId,
         initialShopName: initialShopName,
+        initialSearchQuery: initialSearchQuery,
+        headerTitle: headerTitle,
+        headerSubtitle: headerSubtitle,
+        showBackButton: showBackButton,
+        showHeaderActions: showHeaderActions,
+        showCreateOrderAction: showCreateOrderAction,
       ),
     );
   }
@@ -39,10 +86,22 @@ class _OrdersHomeView extends StatefulWidget {
   const _OrdersHomeView({
     required this.initialShopId,
     required this.initialShopName,
+    required this.initialSearchQuery,
+    required this.headerTitle,
+    required this.headerSubtitle,
+    required this.showBackButton,
+    required this.showHeaderActions,
+    required this.showCreateOrderAction,
   });
 
   final String initialShopId;
   final String initialShopName;
+  final String initialSearchQuery;
+  final String? headerTitle;
+  final String? headerSubtitle;
+  final bool showBackButton;
+  final bool showHeaderActions;
+  final bool showCreateOrderAction;
 
   @override
   State<_OrdersHomeView> createState() => _OrdersHomeViewState();
@@ -54,7 +113,7 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
+    _searchController = TextEditingController(text: widget.initialSearchQuery);
     _searchController.addListener(_onSearchChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -64,6 +123,11 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
           shopName: widget.initialShopName,
         ),
       );
+      if (widget.initialSearchQuery.trim().isNotEmpty) {
+        context.read<OrdersHomeBloc>().add(
+          OrdersHomeSearchChanged(widget.initialSearchQuery),
+        );
+      }
     });
   }
 
@@ -100,10 +164,12 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          floatingActionButton: AppFAB(
-            onPressed: () => context.push(AppRoutePaths.addOrder),
-            icon: const Icon(Icons.add_rounded),
-          ),
+          floatingActionButton: widget.showCreateOrderAction
+              ? AppFAB(
+                  onPressed: () => context.push(AppRoutePaths.addOrder),
+                  icon: const Icon(Icons.add_rounded),
+                )
+              : null,
           body: RefreshIndicator(
             onRefresh: () => _onRefresh(context),
             color: AppColors.softOrange,
@@ -114,10 +180,12 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: AppOrdersHomeHeader(
-                      shopName: state.shopName,
-                      shopSubtitle: state.selectedTab == OrdersHomeTab.pending
-                          ? '${state.pendingOrdersCount} orders need action'
-                          : '${state.todayOrdersCount} orders today',
+                      shopName: widget.headerTitle ?? state.shopName,
+                      shopSubtitle:
+                          widget.headerSubtitle ??
+                          (state.selectedTab == OrdersHomeTab.pending
+                              ? '${state.pendingOrdersCount} orders need action'
+                              : '${state.todayOrdersCount} orders today'),
                       tabs: tabs,
                       selectedTabIndex: state.selectedTab.index,
                       onTabSelected: (index) {
@@ -141,8 +209,17 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
                       pendingAlertMessage: 'Confirm or update status now',
                       onNotificationPressed: () =>
                           context.push(AppRoutePaths.notifications),
-                      onMorePressed: () {},
-                      hasUnreadNotifications: true,
+                      onMorePressed: widget.showHeaderActions ? () {} : null,
+                      hasUnreadNotifications: widget.showHeaderActions,
+                      leading: widget.showBackButton
+                          ? AppIconButton(
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                              ),
+                              onPressed: () => Navigator.of(context).maybePop(),
+                            )
+                          : null,
+                      showTrailingActions: widget.showHeaderActions,
                     ),
                   ),
                   SliverPadding(
@@ -150,10 +227,14 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
                     sliver: SliverToBoxAdapter(
                       child: AppSearchBar(
                         controller: _searchController,
-                        hintText: state.selectedTab == OrdersHomeTab.pending
+                        hintText: widget.initialSearchQuery.trim().isNotEmpty
+                            ? 'Search this customer\'s orders...'
+                            : state.selectedTab == OrdersHomeTab.pending
                             ? 'Search pending orders...'
                             : 'Search orders, customers...',
-                        filterLabel: state.selectedTab == OrdersHomeTab.pending
+                        filterLabel: widget.initialSearchQuery.trim().isNotEmpty
+                            ? '${state.filteredOrders.length} orders'
+                            : state.selectedTab == OrdersHomeTab.pending
                             ? '${state.filteredOrders.length} results'
                             : 'Filter',
                       ),

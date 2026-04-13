@@ -22,6 +22,7 @@ class OrderListItemModel extends OrderListItem {
     required super.items,
     required super.createdAt,
     required super.updatedAt,
+    super.customerId,
   });
 
   factory OrderListItemModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +51,7 @@ class OrderListItemModel extends OrderListItem {
           _asDateTime(json['updated_at']) ??
           _asDateTime(json['created_at']) ??
           DateTime.now(),
+      customerId: _asNullableString(json['customer_id']),
     );
   }
 
@@ -68,6 +70,7 @@ class OrderListItemModel extends OrderListItem {
       items: _decodeItems(row.itemsJson),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      customerId: null,
     );
   }
 

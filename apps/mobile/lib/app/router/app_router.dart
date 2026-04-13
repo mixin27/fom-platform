@@ -101,6 +101,23 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: AppRoutePaths.customerOrders,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final customerName =
+              state.uri.queryParameters['customer_name']?.trim() ?? 'Customer';
+          final customerPhone =
+              state.uri.queryParameters['customer_phone']?.trim() ?? '';
+          final customerId = state.pathParameters['id'] ?? '';
+          return CustomerOrdersPage(
+            customerId: customerId,
+            customerName: customerName.isEmpty ? 'Customer' : customerName,
+            customerPhone: customerPhone,
+            shopId: _resolveCurrentShopId(),
+          );
+        },
+      ),
+      GoRoute(
         path: AppRoutePaths.addOrder,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => AddOrderPage(
