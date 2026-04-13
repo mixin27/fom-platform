@@ -202,6 +202,7 @@ class ApiClient {
     try {
       final response = await _dio.delete<dynamic>(
         path,
+        data: const <String, dynamic>{},
         queryParameters: queryParameters,
         options: _options(skipAuth: skipAuth, headers: headers),
       );
@@ -226,6 +227,7 @@ class ApiClient {
     try {
       final response = await _dio.delete<dynamic>(
         path,
+        data: const <String, dynamic>{},
         queryParameters: queryParameters,
         options: _options(skipAuth: skipAuth, headers: headers),
       );
