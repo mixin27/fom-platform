@@ -76,7 +76,8 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.reportsAnalytics,
         label: 'Reports and summaries',
-        description: 'Use daily, weekly, and monthly reporting during evaluation.',
+        description:
+          'Use daily, weekly, and monthly reporting during evaluation.',
         availabilityStatus: 'available',
         sortOrder: 6,
       },
@@ -91,14 +92,16 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.csvExports,
         label: 'CSV exports',
-        description: 'Export is held back until the shop moves onto a paid plan.',
+        description:
+          'Export is held back until the shop moves onto a paid plan.',
         availabilityStatus: 'unavailable',
         sortOrder: 20,
       },
       {
         code: subscriptionFeatures.billingAnnualDiscount,
         label: 'Discounted annual billing',
-        description: 'Annual billing is only available on the yearly paid plan.',
+        description:
+          'Annual billing is only available on the yearly paid plan.',
         availabilityStatus: 'unavailable',
         sortOrder: 21,
       },
@@ -151,8 +154,9 @@ export const defaultPlanCatalog = [
   {
     code: 'pro_monthly',
     name: 'Shop Monthly',
-    description: 'Single-shop monthly plan for daily Facebook order operations.',
-    price: 7000,
+    description:
+      'Single-shop monthly plan for daily Facebook order operations.',
+    price: 8000,
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
@@ -233,7 +237,8 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.facebookCommentsIntegration,
         label: 'Facebook comments integration',
-        description: 'Direct Facebook comment capture is planned beyond phase one.',
+        description:
+          'Direct Facebook comment capture is planned beyond phase one.',
         availabilityStatus: 'unavailable',
         sortOrder: 30,
       },
@@ -268,7 +273,8 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.multiShopManagement,
         label: 'Multi-shop management',
-        description: 'Enterprise-style multi-shop controls are not in this plan.',
+        description:
+          'Enterprise-style multi-shop controls are not in this plan.',
         availabilityStatus: 'unavailable',
         sortOrder: 35,
       },
@@ -292,8 +298,9 @@ export const defaultPlanCatalog = [
   {
     code: 'pro_yearly',
     name: 'Shop Yearly',
-    description: 'Discounted yearly plan for shops running the workflow every day.',
-    price: 70000,
+    description:
+      'Discounted yearly plan for shops running the workflow every day.',
+    price: 80000,
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
@@ -361,7 +368,8 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.csvExports,
         label: 'CSV exports',
-        description: 'Export operational records for backup and external reporting.',
+        description:
+          'Export operational records for backup and external reporting.',
         availabilityStatus: 'available',
         sortOrder: 8,
       },
@@ -376,7 +384,8 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.facebookCommentsIntegration,
         label: 'Facebook comments integration',
-        description: 'Direct Facebook comment capture is planned beyond phase one.',
+        description:
+          'Direct Facebook comment capture is planned beyond phase one.',
         availabilityStatus: 'unavailable',
         sortOrder: 30,
       },
