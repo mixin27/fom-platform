@@ -34,9 +34,6 @@ pnpm docker:seed
 pnpm docker:down
 ```
 
-- [x] Buy domain: [getfom.com](https://getfom.com) ($11.25 on Vercel)
-- If you want the next frontend slice, the most obvious remaining work is shop-side deliveries/customers/orders using richer client-side sheets/tables instead of the current server-form edit panes, or billing/subscription visibility inside the shop-owner portal.
-
 `pnpm docker:seed` loads the explicit demo dataset into the Docker PostgreSQL instance. The base API seed remains production-safe and only syncs RBAC roles, permissions, and role-permission assignments.
 
 The API listens on `http://localhost:4000` by default. More API-specific setup notes live in [apps/api/README.md](./apps/api/README.md).
