@@ -1,10 +1,9 @@
-import 'package:app_core/app_core.dart';
-import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fom_mobile/app/di/injection_container.dart';
-import 'package:fom_mobile/app/support/shop_export_support.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
+import 'package:fom_mobile/features/exports/feature_exports.dart';
 
 class ShopExportsPage extends StatefulWidget {
   const ShopExportsPage({super.key});
@@ -14,46 +13,6 @@ class ShopExportsPage extends StatefulWidget {
 }
 
 class _ShopExportsPageState extends State<ShopExportsPage> {
-  String? _activeDataset;
-
-  Future<void> _downloadDataset({
-    required String dataset,
-    required String label,
-  }) async {
-    final activeShop = getIt<AuthBloc>().state.activeShop;
-    final shopId = activeShop?.shopId;
-
-    if ((shopId ?? '').trim().isEmpty) {
-      _showMessage('Choose an active shop before exporting data.');
-      return;
-    }
-
-    setState(() => _activeDataset = dataset);
-
-    try {
-      final export = await downloadShopExportCsv(
-        apiClient: getIt<ApiClient>(),
-        shopId: shopId!,
-        shopName: activeShop?.shopName ?? 'shop',
-        dataset: dataset,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      _showMessage('$label saved to ${export.path}');
-    } on AppException catch (error) {
-      _showMessage(error.message);
-    } catch (_) {
-      _showMessage('Unable to export $label right now.');
-    } finally {
-      if (mounted) {
-        setState(() => _activeDataset = null);
-      }
-    }
-  }
-
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -66,121 +25,239 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final activeShop = getIt<AuthBloc>().state.activeShop;
+    return BlocProvider<ShopExportBloc>(
+      create: (_) => getIt<ShopExportBloc>(),
+      child: BlocListener<ShopExportBloc, ShopExportState>(
+        listenWhen: (previous, current) {
+          return previous.successMessage != current.successMessage ||
+              previous.errorMessage != current.errorMessage;
+        },
+        listener: (context, state) {
+          final message = state.errorMessage ?? state.successMessage;
+          if ((message ?? '').trim().isEmpty) {
+            return;
+          }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Data Exports',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textDark,
+          _showMessage(message!);
+          context.read<ShopExportBloc>().add(
+            const ShopExportFeedbackDismissed(),
+          );
+        },
+        child: BlocBuilder<ShopExportBloc, ShopExportState>(
+          builder: (context, exportState) {
+            final activeShop = getIt<AuthBloc>().state.activeShop;
+
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                bottom: false,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Data Exports',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              activeShop == null
+                                  ? 'Save or share exports from the current active shop.'
+                                  : 'Save exports to a public file location or share them to other apps for ${activeShop.shopName}.',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textLight,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      activeShop == null
-                          ? 'Download CSV exports from the current active shop.'
-                          : 'Download CSV exports for ${activeShop.shopName}. Export availability depends on the current subscription plan.',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textLight,
-                        height: 1.5,
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          if (activeShop == null)
+                            const AppEmptyState(
+                              icon: Icon(Icons.storefront_outlined),
+                              title: 'No active shop selected',
+                              message:
+                                  'Choose a shop first, then return here to export operational data.',
+                            )
+                          else ...[
+                            _ExportCard(
+                              icon: Icons.shopping_cart_outlined,
+                              iconColor: AppColors.softOrange,
+                              iconBackground: AppColors.softOrangeLight,
+                              title: 'Orders CSV',
+                              description:
+                                  'Save or share order rows, customer details, item summary, totals, and timestamps.',
+                              isSaving: exportState.isDatasetBusy(
+                                'orders',
+                                ShopExportActionKind.save,
+                              ),
+                              isSharing: exportState.isDatasetBusy(
+                                'orders',
+                                ShopExportActionKind.share,
+                              ),
+                              onSavePressed: () => _saveDataset(
+                                context,
+                                dataset: 'orders',
+                                label: 'Orders CSV',
+                              ),
+                              onSharePressed: () => _shareDataset(
+                                context,
+                                dataset: 'orders',
+                                label: 'Orders CSV',
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _ExportCard(
+                              icon: Icons.people_outline_rounded,
+                              iconColor: AppColors.teal,
+                              iconBackground: AppColors.tealLight,
+                              title: 'Customers CSV',
+                              description:
+                                  'Save or share customer records with contact details, order count, and spend context.',
+                              isSaving: exportState.isDatasetBusy(
+                                'customers',
+                                ShopExportActionKind.save,
+                              ),
+                              isSharing: exportState.isDatasetBusy(
+                                'customers',
+                                ShopExportActionKind.share,
+                              ),
+                              onSavePressed: () => _saveDataset(
+                                context,
+                                dataset: 'customers',
+                                label: 'Customers CSV',
+                              ),
+                              onSharePressed: () => _shareDataset(
+                                context,
+                                dataset: 'customers',
+                                label: 'Customers CSV',
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _ExportCard(
+                              icon: Icons.local_shipping_outlined,
+                              iconColor: AppColors.yellow,
+                              iconBackground: AppColors.yellowLight,
+                              title: 'Deliveries CSV',
+                              description:
+                                  'Save or share delivery assignments, driver details, and delivery timestamps.',
+                              isSaving: exportState.isDatasetBusy(
+                                'deliveries',
+                                ShopExportActionKind.save,
+                              ),
+                              isSharing: exportState.isDatasetBusy(
+                                'deliveries',
+                                ShopExportActionKind.share,
+                              ),
+                              onSavePressed: () => _saveDataset(
+                                context,
+                                dataset: 'deliveries',
+                                label: 'Deliveries CSV',
+                              ),
+                              onSharePressed: () => _shareDataset(
+                                context,
+                                dataset: 'deliveries',
+                                label: 'Deliveries CSV',
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _ExportCard(
+                              icon: Icons.badge_outlined,
+                              iconColor: AppColors.purple,
+                              iconBackground: AppColors.purpleLight,
+                              title: 'Staffs CSV',
+                              description:
+                                  'Save or share the member roster with roles and account identifiers.',
+                              isSaving: exportState.isDatasetBusy(
+                                'members',
+                                ShopExportActionKind.save,
+                              ),
+                              isSharing: exportState.isDatasetBusy(
+                                'members',
+                                ShopExportActionKind.share,
+                              ),
+                              onSavePressed: () => _saveDataset(
+                                context,
+                                dataset: 'members',
+                                label: 'Staffs CSV',
+                              ),
+                              onSharePressed: () => _shareDataset(
+                                context,
+                                dataset: 'members',
+                                label: 'Staffs CSV',
+                              ),
+                            ),
+                          ],
+                        ]),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  if (activeShop == null)
-                    const AppEmptyState(
-                      icon: Icon(Icons.storefront_outlined),
-                      title: 'No active shop selected',
-                      message:
-                          'Choose a shop first, then return here to export operational data.',
-                    )
-                  else ...[
-                    _ExportCard(
-                      icon: Icons.shopping_cart_outlined,
-                      iconColor: AppColors.softOrange,
-                      iconBackground: AppColors.softOrangeLight,
-                      title: 'Orders CSV',
-                      description:
-                          'Download order rows, customer details, item summary, totals, and timestamps.',
-                      buttonText: 'Download Orders CSV',
-                      isLoading: _activeDataset == 'orders',
-                      onPressed: () => _downloadDataset(
-                        dataset: 'orders',
-                        label: 'Orders CSV',
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _ExportCard(
-                      icon: Icons.people_outline_rounded,
-                      iconColor: AppColors.teal,
-                      iconBackground: AppColors.tealLight,
-                      title: 'Customers CSV',
-                      description:
-                          'Download customer records with contact details, order count, and spend context.',
-                      buttonText: 'Download Customers CSV',
-                      isLoading: _activeDataset == 'customers',
-                      onPressed: () => _downloadDataset(
-                        dataset: 'customers',
-                        label: 'Customers CSV',
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _ExportCard(
-                      icon: Icons.local_shipping_outlined,
-                      iconColor: AppColors.yellow,
-                      iconBackground: AppColors.yellowLight,
-                      title: 'Deliveries CSV',
-                      description:
-                          'Download delivery assignments, driver details, and delivery timestamps.',
-                      buttonText: 'Download Deliveries CSV',
-                      isLoading: _activeDataset == 'deliveries',
-                      onPressed: () => _downloadDataset(
-                        dataset: 'deliveries',
-                        label: 'Deliveries CSV',
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _ExportCard(
-                      icon: Icons.badge_outlined,
-                      iconColor: AppColors.purple,
-                      iconBackground: AppColors.purpleLight,
-                      title: 'Staffs CSV',
-                      description:
-                          'Download the member roster with roles and account identifiers.',
-                      buttonText: 'Download Staffs CSV',
-                      isLoading: _activeDataset == 'members',
-                      onPressed: () => _downloadDataset(
-                        dataset: 'members',
-                        label: 'Staffs CSV',
-                      ),
-                    ),
-                  ],
-                ]),
-              ),
-            ),
-          ],
+            );
+          },
         ),
+      ),
+    );
+  }
+
+  void _saveDataset(
+    BuildContext context, {
+    required String dataset,
+    required String label,
+  }) {
+    final activeShop = getIt<AuthBloc>().state.activeShop;
+    final shopId = activeShop == null ? '' : activeShop.shopId.trim();
+
+    if (shopId.isEmpty) {
+      _showMessage('Choose an active shop before exporting data.');
+      return;
+    }
+
+    context.read<ShopExportBloc>().add(
+      ShopExportSaveRequested(
+        shopId: shopId,
+        shopName: activeShop?.shopName ?? 'shop',
+        dataset: dataset,
+        label: label,
+      ),
+    );
+  }
+
+  void _shareDataset(
+    BuildContext context, {
+    required String dataset,
+    required String label,
+  }) {
+    final activeShop = getIt<AuthBloc>().state.activeShop;
+    final shopId = activeShop == null ? '' : activeShop.shopId.trim();
+
+    if (shopId.isEmpty) {
+      _showMessage('Choose an active shop before exporting data.');
+      return;
+    }
+
+    context.read<ShopExportBloc>().add(
+      ShopExportShareRequested(
+        shopId: shopId,
+        shopName: activeShop?.shopName ?? 'shop',
+        dataset: dataset,
+        label: label,
       ),
     );
   }
@@ -193,9 +270,10 @@ class _ExportCard extends StatelessWidget {
     required this.iconBackground,
     required this.title,
     required this.description,
-    required this.buttonText,
-    required this.isLoading,
-    required this.onPressed,
+    required this.isSaving,
+    required this.isSharing,
+    required this.onSavePressed,
+    required this.onSharePressed,
   });
 
   final IconData icon;
@@ -203,9 +281,10 @@ class _ExportCard extends StatelessWidget {
   final Color iconBackground;
   final String title;
   final String description;
-  final String buttonText;
-  final bool isLoading;
-  final VoidCallback onPressed;
+  final bool isSaving;
+  final bool isSharing;
+  final VoidCallback onSavePressed;
+  final VoidCallback onSharePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -249,15 +328,31 @@ class _ExportCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          AppButton(
-            text: buttonText,
-            onPressed: isLoading ? null : onPressed,
-            isLoading: isLoading,
-            icon: const Icon(
-              Icons.download_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  text: 'Save file',
+                  onPressed: isSaving || isSharing ? null : onSavePressed,
+                  isLoading: isSaving,
+                  icon: const Icon(
+                    Icons.download_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppButton(
+                  text: 'Share',
+                  variant: AppButtonVariant.secondary,
+                  onPressed: isSaving || isSharing ? null : onSharePressed,
+                  isLoading: isSharing,
+                  icon: const Icon(Icons.ios_share_rounded, size: 18),
+                ),
+              ),
+            ],
           ),
         ],
       ),

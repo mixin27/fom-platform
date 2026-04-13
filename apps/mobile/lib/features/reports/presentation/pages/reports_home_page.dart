@@ -1,10 +1,9 @@
-import "package:app_core/app_core.dart";
-import "package:app_network/app_network.dart";
 import "package:app_ui_kit/app_ui_kit.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:fom_mobile/app/di/injection_container.dart";
-import "package:fom_mobile/app/support/shop_export_support.dart";
+import "package:fom_mobile/features/auth/feature_auth.dart";
+import "package:fom_mobile/features/exports/feature_exports.dart";
 import "package:intl/intl.dart";
 
 import "../../domain/entities/report_period.dart";
@@ -26,8 +25,11 @@ class ReportsHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ReportsHomeBloc>.value(
-      value: getIt<ReportsHomeBloc>(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ReportsHomeBloc>.value(value: getIt<ReportsHomeBloc>()),
+        BlocProvider<ShopExportBloc>(create: (_) => getIt<ShopExportBloc>()),
+      ],
       child: _ReportsHomeView(
         initialShopId: initialShopId,
         initialShopName: initialShopName,
@@ -65,64 +67,92 @@ class _ReportsHomeViewState extends State<_ReportsHomeView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<ReportsHomeBloc, ReportsHomeState>(
-      listenWhen: (previous, current) {
-        return previous.errorMessage != current.errorMessage &&
-            current.errorMessage != null;
-      },
-      listener: (context, state) {
-        final message = state.errorMessage;
-        if (message == null || message.isEmpty) {
-          return;
-        }
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ReportsHomeBloc, ReportsHomeState>(
+          listenWhen: (previous, current) {
+            return previous.errorMessage != current.errorMessage &&
+                current.errorMessage != null;
+          },
+          listener: (context, state) {
+            final message = state.errorMessage;
+            if (message == null || message.isEmpty) {
+              return;
+            }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-        );
-        context.read<ReportsHomeBloc>().add(const ReportsHomeErrorDismissed());
-      },
-      builder: (context, state) {
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: RefreshIndicator(
-            onRefresh: () => _onRefresh(context),
-            color: AppColors.softOrange,
-            child: SafeArea(
-              bottom: false,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: ReportsHeader(
-                      selectedPeriod: state.selectedPeriod,
-                      dateTitle: _dateTitle(state),
-                      dateSubtitle: _dateSubtitle(state),
-                      canNavigateNext: state.canNavigateNext,
-                      onSharePressed: () => _openExportSheet(),
-                      onPeriodChanged: (period) {
-                        context.read<ReportsHomeBloc>().add(
-                          ReportsHomePeriodChanged(period),
-                        );
-                      },
-                      onPreviousPressed: () {
-                        context.read<ReportsHomeBloc>().add(
-                          const ReportsHomePreviousRequested(),
-                        );
-                      },
-                      onNextPressed: () {
-                        context.read<ReportsHomeBloc>().add(
-                          const ReportsHomeNextRequested(),
-                        );
-                      },
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            context.read<ReportsHomeBloc>().add(
+              const ReportsHomeErrorDismissed(),
+            );
+          },
+        ),
+        BlocListener<ShopExportBloc, ShopExportState>(
+          listenWhen: (previous, current) {
+            return previous.successMessage != current.successMessage ||
+                previous.errorMessage != current.errorMessage;
+          },
+          listener: (context, state) {
+            final message = state.errorMessage ?? state.successMessage;
+            if ((message ?? '').trim().isEmpty) {
+              return;
+            }
+
+            _showMessage(message!);
+            context.read<ShopExportBloc>().add(
+              const ShopExportFeedbackDismissed(),
+            );
+          },
+        ),
+      ],
+      child: BlocBuilder<ReportsHomeBloc, ReportsHomeState>(
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: RefreshIndicator(
+              onRefresh: () => _onRefresh(context),
+              color: AppColors.softOrange,
+              child: SafeArea(
+                bottom: false,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: ReportsHeader(
+                        selectedPeriod: state.selectedPeriod,
+                        dateTitle: _dateTitle(state),
+                        dateSubtitle: _dateSubtitle(state),
+                        canNavigateNext: state.canNavigateNext,
+                        onSharePressed: () => _openExportSheet(context),
+                        onPeriodChanged: (period) {
+                          context.read<ReportsHomeBloc>().add(
+                            ReportsHomePeriodChanged(period),
+                          );
+                        },
+                        onPreviousPressed: () {
+                          context.read<ReportsHomeBloc>().add(
+                            const ReportsHomePreviousRequested(),
+                          );
+                        },
+                        onNextPressed: () {
+                          context.read<ReportsHomeBloc>().add(
+                            const ReportsHomeNextRequested(),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  ..._buildContentSlivers(state),
-                ],
+                    ..._buildContentSlivers(state),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -499,37 +529,13 @@ class _ReportsHomeViewState extends State<_ReportsHomeView> {
     await Future<void>.delayed(const Duration(milliseconds: 800));
   }
 
-  Future<void> _downloadDataset({
-    required String dataset,
-    required String label,
-  }) async {
-    final normalizedShopId = widget.initialShopId.trim();
-    if (normalizedShopId.isEmpty) {
-      _showMessage("Choose an active shop before exporting data.");
-      return;
-    }
-
-    try {
-      final export = await downloadShopExportCsv(
-        apiClient: getIt<ApiClient>(),
-        shopId: normalizedShopId,
-        shopName: widget.initialShopName,
-        dataset: dataset,
-      );
-
-      _showMessage("$label saved to ${export.path}");
-    } on AppException catch (error) {
-      _showMessage(error.message);
-    } catch (_) {
-      _showMessage("Unable to export $label right now.");
-    }
-  }
-
-  void _openExportSheet() {
+  void _openExportSheet(BuildContext context) {
     showReportsExportSheet(
       context,
-      onExportRequested: (dataset, label) =>
-          _downloadDataset(dataset: dataset, label: label),
+      onSaveRequested: (dataset, label) =>
+          _saveDataset(context, dataset: dataset, label: label),
+      onShareRequested: (dataset, label) =>
+          _shareDataset(context, dataset: dataset, label: label),
     );
   }
 
@@ -540,6 +546,56 @@ class _ReportsHomeViewState extends State<_ReportsHomeView> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  void _saveDataset(
+    BuildContext context, {
+    required String dataset,
+    required String label,
+  }) {
+    final activeShop = getIt<AuthBloc>().state.activeShop;
+    final shopId = activeShop == null
+        ? widget.initialShopId.trim()
+        : activeShop.shopId.trim();
+
+    if (shopId.isEmpty) {
+      _showMessage('Choose an active shop before exporting data.');
+      return;
+    }
+
+    context.read<ShopExportBloc>().add(
+      ShopExportSaveRequested(
+        shopId: shopId,
+        shopName: activeShop?.shopName ?? widget.initialShopName,
+        dataset: dataset,
+        label: label,
+      ),
+    );
+  }
+
+  void _shareDataset(
+    BuildContext context, {
+    required String dataset,
+    required String label,
+  }) {
+    final activeShop = getIt<AuthBloc>().state.activeShop;
+    final shopId = activeShop == null
+        ? widget.initialShopId.trim()
+        : activeShop.shopId.trim();
+
+    if (shopId.isEmpty) {
+      _showMessage('Choose an active shop before exporting data.');
+      return;
+    }
+
+    context.read<ShopExportBloc>().add(
+      ShopExportShareRequested(
+        shopId: shopId,
+        shopName: activeShop?.shopName ?? widget.initialShopName,
+        dataset: dataset,
+        label: label,
+      ),
     );
   }
 }

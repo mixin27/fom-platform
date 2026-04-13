@@ -1,17 +1,16 @@
-import 'package:app_core/app_core.dart';
-import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fom_mobile/app/di/injection_container.dart';
 import 'package:fom_mobile/app/router/app_route_paths.dart';
-import 'package:fom_mobile/features/orders/data/models/order_list_item_model.dart';
+import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/orders/domain/entities/order_list_item.dart';
 import 'package:fom_mobile/features/orders/domain/entities/order_status.dart';
 import 'package:fom_mobile/features/orders/presentation/models/orders_home_tab.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-class CustomerOrdersPage extends StatefulWidget {
+class CustomerOrdersPage extends StatelessWidget {
   const CustomerOrdersPage({
     super.key,
     required this.customerId,
@@ -26,22 +25,37 @@ class CustomerOrdersPage extends StatefulWidget {
   final String shopId;
 
   @override
-  State<CustomerOrdersPage> createState() => _CustomerOrdersPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider<CustomerOrdersBloc>(
+      create: (_) => getIt<CustomerOrdersBloc>()
+        ..add(
+          CustomerOrdersStarted(
+            shopId: shopId,
+            shopName: '',
+            customerId: customerId,
+            customerName: customerName,
+            customerPhone: customerPhone,
+          ),
+        ),
+      child: const _CustomerOrdersView(),
+    );
+  }
 }
 
-class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
-  late final TextEditingController _searchController;
+class _CustomerOrdersView extends StatefulWidget {
+  const _CustomerOrdersView();
 
-  List<OrderListItem> _orders = const <OrderListItem>[];
-  OrdersHomeTab _selectedTab = OrdersHomeTab.all;
-  bool _isLoading = true;
-  String? _errorMessage;
+  @override
+  State<_CustomerOrdersView> createState() => _CustomerOrdersViewState();
+}
+
+class _CustomerOrdersViewState extends State<_CustomerOrdersView> {
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController()..addListener(_onSearchChanged);
-    _fetchOrders();
   }
 
   @override
@@ -54,72 +68,96 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = kOrdersHomeTabs
-        .map((tab) => '${tab.title} (${_countForTab(tab)})')
-        .toList(growable: false);
-    final filteredOrders = _filteredOrders;
+    return BlocConsumer<CustomerOrdersBloc, CustomerOrdersState>(
+      listenWhen: (previous, current) {
+        return previous.errorMessage != current.errorMessage &&
+            current.errorMessage != null;
+      },
+      listener: (context, state) {
+        final message = state.errorMessage;
+        if (message == null || message.isEmpty) {
+          return;
+        }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: RefreshIndicator(
-        onRefresh: _fetchOrders,
-        color: AppColors.softOrange,
-        child: SafeArea(
-          bottom: false,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: AppOrdersHomeHeader(
-                  shopName: widget.customerName.trim().isEmpty
-                      ? 'Customer'
-                      : widget.customerName,
-                  shopSubtitle: _buildSubtitle(),
-                  tabs: tabs,
-                  selectedTabIndex: _selectedTab.index,
-                  onTabSelected: (index) {
-                    setState(() {
-                      _selectedTab = kOrdersHomeTabs[index];
-                    });
-                  },
-                  todayOrdersCount: _countForTab(OrdersHomeTab.today),
-                  todayRevenueText: _formatCompactAmount(_todayRevenue),
-                  pendingCount: _countForTab(OrdersHomeTab.pending),
-                  showSummaryCards: true,
-                  showPendingAlert:
-                      _selectedTab == OrdersHomeTab.pending &&
-                      _countForTab(OrdersHomeTab.pending) > 0,
-                  pendingAlertTitle:
-                      '${_countForTab(OrdersHomeTab.pending)} orders need attention',
-                  pendingAlertMessage:
-                      'These orders are linked to this customer.',
-                  leading: AppIconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                    onPressed: () => Navigator.of(context).maybePop(),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+        context.read<CustomerOrdersBloc>().add(
+          const CustomerOrdersErrorDismissed(),
+        );
+      },
+      builder: (context, state) {
+        final tabs = kOrdersHomeTabs
+            .map((tab) => '${tab.title} (${state.countForTab(tab)})')
+            .toList(growable: false);
+        final filteredOrders = state.filteredOrders;
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: RefreshIndicator(
+            onRefresh: () => _onRefresh(context),
+            color: AppColors.softOrange,
+            child: SafeArea(
+              bottom: false,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: AppOrdersHomeHeader(
+                      shopName: state.customerName,
+                      shopSubtitle: _buildSubtitle(state),
+                      tabs: tabs,
+                      selectedTabIndex: state.selectedTab.index,
+                      onTabSelected: (index) {
+                        context.read<CustomerOrdersBloc>().add(
+                          CustomerOrdersTabChanged(kOrdersHomeTabs[index]),
+                        );
+                      },
+                      todayOrdersCount: state.countForTab(OrdersHomeTab.today),
+                      todayRevenueText: _formatCompactAmount(
+                        state.todayRevenue,
+                      ),
+                      pendingCount: state.countForTab(OrdersHomeTab.pending),
+                      showSummaryCards: true,
+                      showPendingAlert:
+                          state.selectedTab == OrdersHomeTab.pending &&
+                          state.countForTab(OrdersHomeTab.pending) > 0,
+                      pendingAlertTitle:
+                          '${state.countForTab(OrdersHomeTab.pending)} orders need attention',
+                      pendingAlertMessage:
+                          'These orders are linked to this customer.',
+                      leading: AppIconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                      showTrailingActions: false,
+                    ),
                   ),
-                  showTrailingActions: false,
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                sliver: SliverToBoxAdapter(
-                  child: AppSearchBar(
-                    controller: _searchController,
-                    hintText: 'Search this customer\'s orders...',
-                    filterLabel: '${filteredOrders.length} orders',
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: AppSearchBar(
+                        controller: _searchController,
+                        hintText: 'Search this customer\'s orders...',
+                        filterLabel: '${filteredOrders.length} orders',
+                      ),
+                    ),
                   ),
-                ),
+                  ..._buildContentSlivers(state, filteredOrders),
+                ],
               ),
-              ..._buildContentSlivers(filteredOrders),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  List<Widget> _buildContentSlivers(List<OrderListItem> filteredOrders) {
-    if (_isLoading && _orders.isEmpty) {
+  List<Widget> _buildContentSlivers(
+    CustomerOrdersState state,
+    List<OrderListItem> filteredOrders,
+  ) {
+    if (state.status == CustomerOrdersStatus.loading && !state.hasOrders) {
       return const <Widget>[
         SliverFillRemaining(
           hasScrollBody: false,
@@ -128,14 +166,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
       ];
     }
 
-    if (_errorMessage != null && _orders.isEmpty) {
+    if (state.status == CustomerOrdersStatus.error && !state.hasOrders) {
       return <Widget>[
         SliverFillRemaining(
           hasScrollBody: false,
           child: AppEmptyState(
             icon: const Icon(Icons.receipt_long_outlined),
             title: 'Unable to load orders',
-            message: _errorMessage!,
+            message: state.errorMessage ?? 'Unable to load customer orders.',
           ),
         ),
       ];
@@ -158,7 +196,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
       ];
     }
 
-    final sections = _buildSections(filteredOrders);
+    final sections = _buildSections(filteredOrders, state.selectedTab);
     final children = <Widget>[];
 
     for (final section in sections) {
@@ -198,140 +236,22 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
     ];
   }
 
-  Future<void> _fetchOrders() async {
-    final normalizedShopId = widget.shopId.trim();
-    final normalizedCustomerId = widget.customerId.trim();
-
-    if (normalizedShopId.isEmpty || normalizedCustomerId.isEmpty) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _orders = const <OrderListItem>[];
-        _isLoading = false;
-        _errorMessage = 'Customer orders are unavailable right now.';
-      });
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-    }
-
-    try {
-      final payload = await getIt<ApiClient>().getList(
-        '/shops/$normalizedShopId/orders',
-        queryParameters: <String, dynamic>{
-          'customer_id': normalizedCustomerId,
-          'limit': 200,
-        },
-      );
-      final orders = payload
-          .map(OrderListItemModel.fromJson)
-          .where((order) => order.id.isNotEmpty)
-          .toList(growable: false);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _orders = orders;
-        _isLoading = false;
-        _errorMessage = null;
-      });
-    } on AppException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isLoading = false;
-        _errorMessage = error.message;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Unable to load orders right now.';
-      });
-    }
+  Future<void> _onRefresh(BuildContext context) async {
+    context.read<CustomerOrdersBloc>().add(
+      const CustomerOrdersRefreshRequested(),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 800));
   }
 
   void _onSearchChanged() {
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {});
+    context.read<CustomerOrdersBloc>().add(
+      CustomerOrdersSearchChanged(_searchController.text),
+    );
   }
 
-  List<OrderListItem> get _filteredOrders {
-    final query = _searchController.text.trim().toLowerCase();
-
-    return _orders
-        .where((order) {
-          if (!_matchesTab(order, _selectedTab)) {
-            return false;
-          }
-
-          if (query.isEmpty) {
-            return true;
-          }
-
-          final searchValues = <String>[
-            order.orderNo,
-            order.customerName,
-            order.customerPhone,
-            order.customerTownship ?? '',
-            order.customerAddress ?? '',
-            order.primaryProductSummary,
-            ...order.items.map((item) => item.productName),
-          ];
-
-          return searchValues.any(
-            (value) => value.toLowerCase().contains(query),
-          );
-        })
-        .toList(growable: false);
-  }
-
-  int _countForTab(OrdersHomeTab tab) {
-    final now = DateTime.now();
-
-    switch (tab) {
-      case OrdersHomeTab.all:
-        return _orders.length;
-      case OrdersHomeTab.today:
-        return _orders
-            .where((order) => _isSameDay(order.createdAt, now))
-            .length;
-      case OrdersHomeTab.pending:
-        return _orders.where((order) => order.status.isPending).length;
-      case OrdersHomeTab.delivered:
-        return _orders
-            .where((order) => order.status == OrderStatus.delivered)
-            .length;
-    }
-  }
-
-  int get _todayRevenue {
-    final now = DateTime.now();
-    return _orders
-        .where((order) => _isSameDay(order.createdAt, now))
-        .fold<int>(0, (sum, order) => sum + order.totalPrice);
-  }
-
-  String _buildSubtitle() {
-    final phone = widget.customerPhone.trim();
-    final count = _orders.length;
+  String _buildSubtitle(CustomerOrdersState state) {
+    final phone = state.customerPhone.trim();
+    final count = state.orders.length;
     final countLabel = '$count ${count == 1 ? 'order' : 'orders'}';
 
     if (phone.isEmpty) {
@@ -341,7 +261,10 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
     return '$phone · $countLabel';
   }
 
-  List<_OrderSection> _buildSections(List<OrderListItem> orders) {
+  List<_OrderSection> _buildSections(
+    List<OrderListItem> orders,
+    OrdersHomeTab selectedTab,
+  ) {
     if (orders.isEmpty) {
       return const <_OrderSection>[];
     }
@@ -349,7 +272,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
     final sorted = <OrderListItem>[...orders]
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
 
-    if (_selectedTab == OrdersHomeTab.pending) {
+    if (selectedTab == OrdersHomeTab.pending) {
       final needsConfirmation = sorted
           .where((order) => order.status == OrderStatus.newOrder)
           .toList(growable: false);
@@ -390,21 +313,6 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
           ),
         )
         .toList(growable: false);
-  }
-
-  bool _matchesTab(OrderListItem order, OrdersHomeTab tab) {
-    final now = DateTime.now();
-
-    switch (tab) {
-      case OrdersHomeTab.all:
-        return true;
-      case OrdersHomeTab.today:
-        return _isSameDay(order.createdAt, now);
-      case OrdersHomeTab.pending:
-        return order.status.isPending;
-      case OrdersHomeTab.delivered:
-        return order.status == OrderStatus.delivered;
-    }
   }
 
   String _formatDaySectionLabel(DateTime day) {

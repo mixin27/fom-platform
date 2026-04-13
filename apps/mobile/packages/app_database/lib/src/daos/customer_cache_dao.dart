@@ -55,6 +55,16 @@ class CustomerCacheDao extends DatabaseAccessor<AppDatabase>
     await into(customerCacheRecords).insertOnConflictUpdate(customer);
   }
 
+  Future<void> deleteCustomerById({
+    required String shopId,
+    required String customerId,
+  }) async {
+    await (delete(customerCacheRecords)..where(
+          (table) => table.shopId.equals(shopId) & table.id.equals(customerId),
+        ))
+        .go();
+  }
+
   Future<void> clearCustomersForShop(String shopId) async {
     await (delete(
       customerCacheRecords,

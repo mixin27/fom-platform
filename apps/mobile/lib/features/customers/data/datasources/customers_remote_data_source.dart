@@ -1,5 +1,6 @@
 import 'package:app_network/app_network.dart';
 
+import '../../../orders/data/models/order_list_item_model.dart';
 import '../../domain/entities/customer_draft.dart';
 import '../models/customer_list_item_model.dart';
 
@@ -23,6 +24,17 @@ abstract class CustomersRemoteDataSource {
     required String shopId,
     required String customerId,
     required CustomerDraft draft,
+  });
+
+  Future<List<OrderListItemModel>> fetchCustomerOrders({
+    required String shopId,
+    required String customerId,
+    int limit,
+  });
+
+  Future<void> deleteCustomer({
+    required String shopId,
+    required String customerId,
   });
 }
 
@@ -90,6 +102,34 @@ class CustomersRemoteDataSourceImpl implements CustomersRemoteDataSource {
     );
 
     return CustomerListItemModel.fromJson(payload);
+  }
+
+  @override
+  Future<List<OrderListItemModel>> fetchCustomerOrders({
+    required String shopId,
+    required String customerId,
+    int limit = _defaultListLimit,
+  }) async {
+    final payload = await _apiClient.getList(
+      '/shops/$shopId/orders',
+      queryParameters: <String, dynamic>{
+        'customer_id': customerId,
+        'limit': limit,
+      },
+    );
+
+    return payload
+        .map(OrderListItemModel.fromJson)
+        .where((order) => order.id.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> deleteCustomer({
+    required String shopId,
+    required String customerId,
+  }) {
+    return _apiClient.deleteVoid('/shops/$shopId/customers/$customerId');
   }
 
   Map<String, dynamic> _draftToPayload(CustomerDraft draft) {

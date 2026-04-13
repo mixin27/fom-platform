@@ -844,36 +844,43 @@ String _formatCompact(int amount) {
 
 void showReportsExportSheet(
   BuildContext context, {
-  required Future<void> Function(String dataset, String label)
-  onExportRequested,
+  required void Function(String dataset, String label) onSaveRequested,
+  required void Function(String dataset, String label) onShareRequested,
 }) {
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     builder: (context) {
-      return _ReportsExportSheet(onExportRequested: onExportRequested);
+      return _ReportsExportSheet(
+        onSaveRequested: onSaveRequested,
+        onShareRequested: onShareRequested,
+      );
     },
   );
 }
 
 class _ReportsExportSheet extends StatefulWidget {
-  const _ReportsExportSheet({required this.onExportRequested});
+  const _ReportsExportSheet({
+    required this.onSaveRequested,
+    required this.onShareRequested,
+  });
 
-  final Future<void> Function(String dataset, String label) onExportRequested;
+  final void Function(String dataset, String label) onSaveRequested;
+  final void Function(String dataset, String label) onShareRequested;
 
   @override
   State<_ReportsExportSheet> createState() => _ReportsExportSheetState();
 }
 
 class _ReportsExportSheetState extends State<_ReportsExportSheet> {
-  String? _activeDataset;
+  void _handleSave(String dataset, String label) {
+    widget.onSaveRequested(dataset, label);
+    Navigator.of(context).pop();
+  }
 
-  Future<void> _handleExport(String dataset, String label) async {
-    setState(() => _activeDataset = dataset);
-    await widget.onExportRequested(dataset, label);
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
+  void _handleShare(String dataset, String label) {
+    widget.onShareRequested(dataset, label);
+    Navigator.of(context).pop();
   }
 
   @override
@@ -924,8 +931,8 @@ class _ReportsExportSheetState extends State<_ReportsExportSheet> {
             iconColor: AppColors.softOrange,
             title: "Orders CSV",
             subtitle: "Download order rows and customer details",
-            isLoading: _activeDataset == 'orders',
-            onTap: () => _handleExport('orders', 'Orders CSV'),
+            onSavePressed: () => _handleSave('orders', 'Orders CSV'),
+            onSharePressed: () => _handleShare('orders', 'Orders CSV'),
           ),
           _ShareOptionTile(
             icon: Icons.people_outline_rounded,
@@ -933,8 +940,8 @@ class _ReportsExportSheetState extends State<_ReportsExportSheet> {
             iconColor: AppColors.teal,
             title: "Customers CSV",
             subtitle: "Download customer spend and contact records",
-            isLoading: _activeDataset == 'customers',
-            onTap: () => _handleExport('customers', 'Customers CSV'),
+            onSavePressed: () => _handleSave('customers', 'Customers CSV'),
+            onSharePressed: () => _handleShare('customers', 'Customers CSV'),
           ),
           _ShareOptionTile(
             icon: Icons.local_shipping_outlined,
@@ -942,8 +949,8 @@ class _ReportsExportSheetState extends State<_ReportsExportSheet> {
             iconColor: AppColors.yellow,
             title: "Deliveries CSV",
             subtitle: "Download dispatch and delivery progress rows",
-            isLoading: _activeDataset == 'deliveries',
-            onTap: () => _handleExport('deliveries', 'Deliveries CSV'),
+            onSavePressed: () => _handleSave('deliveries', 'Deliveries CSV'),
+            onSharePressed: () => _handleShare('deliveries', 'Deliveries CSV'),
           ),
           _ShareOptionTile(
             icon: Icons.badge_outlined,
@@ -951,8 +958,8 @@ class _ReportsExportSheetState extends State<_ReportsExportSheet> {
             iconColor: AppColors.purple,
             title: "Staffs CSV",
             subtitle: "Download the staff roster with assigned roles",
-            isLoading: _activeDataset == 'members',
-            onTap: () => _handleExport('members', 'Staffs CSV'),
+            onSavePressed: () => _handleSave('members', 'Staffs CSV'),
+            onSharePressed: () => _handleShare('members', 'Staffs CSV'),
           ),
         ],
       ),
@@ -967,8 +974,8 @@ class _ShareOptionTile extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.subtitle,
-    this.onTap,
-    this.isLoading = false,
+    this.onSavePressed,
+    this.onSharePressed,
   });
 
   final IconData icon;
@@ -976,66 +983,68 @@ class _ShareOptionTile extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
-  final VoidCallback? onTap;
-  final bool isLoading;
+  final VoidCallback? onSavePressed;
+  final VoidCallback? onSharePressed;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: isLoading ? null : onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: iconBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, color: iconColor, size: 18),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
-                    ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textDark,
                   ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMid,
-                    ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMid,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            if (isLoading)
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2.2),
-              )
-            else
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textLight,
-                size: 18,
-              ),
-          ],
-        ),
+          ),
+          IconButton(
+            tooltip: 'Save file',
+            onPressed: onSavePressed,
+            icon: const Icon(
+              Icons.download_rounded,
+              color: AppColors.textLight,
+              size: 18,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Share file',
+            onPressed: onSharePressed,
+            icon: const Icon(
+              Icons.ios_share_rounded,
+              color: AppColors.textLight,
+              size: 18,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -2,7 +2,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -86,5 +88,17 @@ export class CustomersController {
         body,
       ),
     );
+  }
+
+  @Delete(':customerId')
+  @HttpCode(204)
+  @RequirePermissions(permissions.customersWrite)
+  @ApiOperation({ summary: 'Delete a customer without order history' })
+  async deleteCustomer(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('customerId') customerId: string,
+  ) {
+    await this.customersService.deleteCustomer(currentUser, shopId, customerId);
   }
 }

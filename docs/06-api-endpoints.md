@@ -150,6 +150,7 @@ Shop notes:
 | POST   | /shops/{shopId}/customers              | Create customer | 201 Single Customer |
 | GET    | /shops/{shopId}/customers/{customerId} | Get customer    | 200 Single Customer |
 | PATCH  | /shops/{shopId}/customers/{customerId} | Update customer | 200 Single Customer |
+| DELETE | /shops/{shopId}/customers/{customerId} | Delete customer | 204 No Content      |
 
 Customer list filters:
 
@@ -162,6 +163,7 @@ Customer write notes:
 
 - `POST /shops/{shopId}/customers` uses `phone` as the per-shop uniqueness key and merges into the existing customer when the phone already exists.
 - `PATCH /shops/{shopId}/customers/{customerId}` requires at least one field and accepts `null` for `township`, `address`, and `notes` to clear those values.
+- `DELETE /shops/{shopId}/customers/{customerId}` only succeeds when the customer has no order history. Customers linked to orders return a conflict response instead of being hard-deleted.
 - Customer APIs require the `customers.management` plan feature in addition to RBAC permissions.
 
 ## Orders

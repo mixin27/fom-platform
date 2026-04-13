@@ -1128,6 +1128,38 @@ export async function updateShopCustomerAction(
   }
 }
 
+export async function deleteShopCustomerAction(
+  shopId: string,
+  customerId: string
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !customerId) {
+    return {
+      ok: false,
+      message: "Customer context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/customers/${customerId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Customer deleted.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to delete the customer right now.")
+  }
+}
+
 export async function createShopTemplateAction(
   shopId: string,
   input: ShopTemplateInput

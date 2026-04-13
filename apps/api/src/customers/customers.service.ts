@@ -229,6 +229,38 @@ export class CustomersService {
     return this.serializeCustomerRecord(updated, { includeHistory: true });
   }
 
+  async deleteCustomer(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    customerId: string,
+  ) {
+    await this.shopsService.assertShopAccess(currentUser.id, shopId);
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        _count: {
+          select: {
+            orders: true,
+          },
+        },
+      },
+    });
+
+    if (!customer || customer.shopId !== shopId) {
+      throw notFoundError('Customer not found');
+    }
+
+    if (customer._count.orders > 0) {
+      throw conflictError(
+        'Customers with order history cannot be deleted. Remove only customers with no linked orders.',
+      );
+    }
+
+    await this.prisma.customer.delete({
+      where: { id: customer.id },
+    });
+  }
+
   private serializeCustomerRecord(
     customer: any,
     options?: { includeHistory?: boolean },

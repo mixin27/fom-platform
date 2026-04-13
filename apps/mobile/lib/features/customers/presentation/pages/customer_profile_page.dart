@@ -10,6 +10,7 @@ import "package:url_launcher/url_launcher.dart";
 import "../../domain/entities/customer_draft.dart";
 import "../../domain/entities/customer_list_item.dart";
 import "../../domain/entities/customer_recent_order.dart";
+import "../../domain/usecases/delete_customer_use_case.dart";
 import "../../domain/usecases/update_customer_use_case.dart";
 import "../bloc/customer_profile_bloc.dart";
 import "../bloc/customer_profile_event.dart";
@@ -280,7 +281,7 @@ class _CustomerProfileView extends StatelessWidget {
     BuildContext context,
     CustomerListItem customer,
   ) async {
-    final result = await showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<CustomerEditorSheetResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -291,6 +292,7 @@ class _CustomerProfileView extends StatelessWidget {
         title: 'Edit Customer',
         submitLabel: 'Save Changes',
         initialCustomer: customer,
+        canDelete: customer.totalOrders == 0,
         onSubmitted: (draft) async {
           final updateResult = await getIt<UpdateCustomerUseCase>().call(
             UpdateCustomerParams(
@@ -311,10 +313,34 @@ class _CustomerProfileView extends StatelessWidget {
             throw Exception(failure.message);
           }
         },
+        onDeleteRequested: () async {
+          final deleteResult = await getIt<DeleteCustomerUseCase>().call(
+            DeleteCustomerParams(
+              shopId: customer.shopId,
+              customerId: customer.id,
+            ),
+          );
+          final failure = deleteResult.failureOrNull;
+
+          if (failure != null) {
+            throw Exception(failure.message);
+          }
+        },
       ),
     );
 
-    if (!context.mounted || result != true) {
+    if (!context.mounted || result == null) {
+      return;
+    }
+
+    if (result == CustomerEditorSheetResult.deleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Customer deleted successfully.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop();
       return;
     }
 

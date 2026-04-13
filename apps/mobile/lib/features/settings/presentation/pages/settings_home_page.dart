@@ -267,8 +267,9 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
                                     subtitle:
                                         'Download orders, customers, deliveries, and staffs as CSV',
                                     showArrow: true,
-                                    onTap: () =>
-                                        context.push(AppRoutePaths.settingsExports),
+                                    onTap: () => context.push(
+                                      AppRoutePaths.settingsExports,
+                                    ),
                                   ),
                                 ],
                               ),
