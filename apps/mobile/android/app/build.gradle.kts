@@ -29,7 +29,7 @@ val hasReleaseSigning =
         .all { !keystoreProperties.getProperty(it).isNullOrBlank() }
 
 android {
-    namespace = "dev.mixin27.fom_mobile"
+    namespace = "com.getfom.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
     flavorDimensions += "environment"
@@ -44,7 +44,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dev.mixin27.fom_mobile"
+        applicationId = "com.getfom.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

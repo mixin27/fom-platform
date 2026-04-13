@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "dev.mixin27" "\0"
+            VALUE "CompanyName", "com.getfom" "\0"
             VALUE "FileDescription", "fom_mobile" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "fom_mobile" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 dev.mixin27. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.getfom. All rights reserved." "\0"
             VALUE "OriginalFilename", "fom_mobile.exe" "\0"
             VALUE "ProductName", "fom_mobile" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
