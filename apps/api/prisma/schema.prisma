@@ -136,6 +136,7 @@ model Plan {
 model PlanItem {
   id                 String   @id @default(cuid())
   planId             String
+  code               String
   label              String
   description        String?
   availabilityStatus String   @default("available")
@@ -146,6 +147,7 @@ model PlanItem {
 
   @@index([planId, sortOrder])
   @@index([planId, availabilityStatus])
+  @@unique([planId, code])
   @@map("plan_items")
 }
 

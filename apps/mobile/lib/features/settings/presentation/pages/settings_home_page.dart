@@ -256,6 +256,20 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
                                     showArrow: true,
                                     onTap: _navigateToEditProfile,
                                   ),
+                                  AppSettingTile(
+                                    leading: const Icon(
+                                      Icons.download_rounded,
+                                      size: 18,
+                                      color: AppColors.softOrange,
+                                    ),
+                                    iconBgColor: AppColors.softOrangeLight,
+                                    title: 'Data Exports',
+                                    subtitle:
+                                        'Download orders, customers, deliveries, and staffs as CSV',
+                                    showArrow: true,
+                                    onTap: () =>
+                                        context.push(AppRoutePaths.settingsExports),
+                                  ),
                                 ],
                               ),
                               const _SectionLabel(label: 'Account'),

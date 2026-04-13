@@ -125,6 +125,11 @@ class AppRouter {
         builder: (context, state) => const EditShopProfilePage(),
       ),
       GoRoute(
+        path: AppRoutePaths.settingsExports,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ShopExportsPage(),
+      ),
+      GoRoute(
         path: notificationsPath,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const NotificationsHomePage(),

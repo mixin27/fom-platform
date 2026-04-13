@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import {
   BarChart3,
   CreditCard,
+  Download,
   LayoutDashboard,
   LifeBuoy,
   MessageSquareText,
@@ -26,6 +27,7 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   deliveries: PackageCheck,
   templates: MessageSquareText,
   reports: BarChart3,
+  exports: Download,
   settings: Settings,
   shops: Store,
   users: Users,

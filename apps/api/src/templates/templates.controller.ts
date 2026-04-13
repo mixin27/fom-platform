@@ -12,17 +12,21 @@ import {
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
+import { RequirePlanFeatures } from '../common/http/plan-features.decorator';
 import { RequirePermissions } from '../common/http/permissions.decorator';
 import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
+import { SubscriptionFeatureGuard } from '../common/http/subscription-feature.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { CreateMessageTemplateDto } from './dto/create-message-template.dto';
 import { ListMessageTemplatesQueryDto } from './dto/list-message-templates-query.dto';
 import { UpdateMessageTemplateDto } from './dto/update-message-template.dto';
 import { TemplatesService } from './templates.service';
 
 @Controller('api/v1/shops/:shopId/templates')
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
+@RequirePlanFeatures(subscriptionFeatures.templatesManagement)
 @ApiTags('Message Templates')
 @ApiBearerAuth('access-token')
 export class TemplatesController {

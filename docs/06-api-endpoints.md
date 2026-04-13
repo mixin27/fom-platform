@@ -118,8 +118,9 @@ Platform notes:
 - `POST /platform/support/issues` creates a manual issue with `kind`, `severity`, `title`, and `detail`; optional `shop_id`, `assigned_to_user_id`, and `occurred_at` are supported.
 - `PATCH /platform/support/issues/{issueId}` updates issue status (`open`, `in_progress`, `resolved`, `dismissed`), assignee, severity, and resolution note.
 - `PATCH /platform/settings/profile` updates platform owner profile (`name`, `email`, `phone`, `locale`) and optional password credential reset.
-- `PATCH /platform/settings/plans/{planId}` updates plan catalog metadata (code, name, description, price, billing period, active flag, sort order).
+- `PATCH /platform/settings/plans/{planId}` updates plan catalog metadata (code, name, description, price, billing period, active flag, sort order) plus dynamic feature items (`code`, `label`, `description`, `availability_status`, `sort_order`).
 - The current platform billing catalog uses `trial`, `pro_monthly`, and `pro_yearly`.
+- Current launch feature enforcement is driven by stable plan item codes, while future enterprise-oriented codes remain seeded but unavailable for later expansion.
 
 ## Shops and Staff
 
@@ -139,6 +140,7 @@ Shop notes:
 - `GET /shops/{shopId}/billing` is intended for owner or manager-facing settings surfaces and currently requires `shops.write`.
 - `POST /shops` starts the new self-serve shop on the default free trial plan when the trial plan is active.
 - Trial subscriptions expire automatically once `end_at` passes. The default trial length is controlled by `DEFAULT_TRIAL_DAYS` and defaults to 7 days.
+- Shop member management routes are plan-gated by `team.members`.
 
 ## Customers
 
@@ -160,6 +162,7 @@ Customer write notes:
 
 - `POST /shops/{shopId}/customers` uses `phone` as the per-shop uniqueness key and merges into the existing customer when the phone already exists.
 - `PATCH /shops/{shopId}/customers/{customerId}` requires at least one field and accepts `null` for `township`, `address`, and `notes` to clear those values.
+- Customer APIs require the `customers.management` plan feature in addition to RBAC permissions.
 
 ## Orders
 
@@ -186,6 +189,7 @@ Order write notes:
 - The parser can return multiple `items` when the message contains separate item lines, repeated labeled product blocks, comma-separated or semicolon-separated inline item segments, or per-item color/size sub-lines inside labeled product blocks.
 - `PATCH /shops/{shopId}/orders/{orderId}` requires at least one field and accepts `note: null` to clear the note.
 - `POST /shops/{shopId}/orders/{orderId}/status` expects `{ "status": "...", "note": "..." }`.
+- Order APIs require the `orders.management` plan feature, and `POST /shops/{shopId}/orders/parse-message` additionally requires `orders.parse_messenger`.
 
 ## Order Items
 
@@ -215,6 +219,7 @@ Message template notes:
 - `title` must be unique within the shop.
 - `shortcut` is optional, must also be unique within the shop when present, and may be cleared with `null` on update.
 - `PATCH /shops/{shopId}/templates/{templateId}` requires at least one field to update.
+- Template APIs require the `templates.management` plan feature.
 
 ## Deliveries
 
@@ -233,6 +238,7 @@ Delivery notes:
 - `driver_user_id` must belong to an active member of the same shop.
 - Delivery status updates sync the related order status forward to `confirmed`, `out_for_delivery`, or `delivered`.
 - `address_snapshot` falls back to the current order customer address when omitted on create or reset with `null` on update.
+- Delivery APIs require the `deliveries.management` plan feature.
 
 ## Summaries and Reports
 
@@ -249,6 +255,38 @@ Summary query notes:
 - `GET /shops/{shopId}/reports/weekly` accepts an anchor `date=YYYY-MM-DD` and returns the Monday-start week containing that date.
 - `GET /shops/{shopId}/reports/monthly` accepts `month=YYYY-MM` and returns the full month report.
 - When report query parameters are omitted, the API uses the latest shop order period.
+- Daily summaries and reporting APIs require the `reports.analytics` plan feature.
+
+## Exports
+
+### Shop Exports
+
+| Method | Path                                   | Description                 | Response     |
+| ------ | -------------------------------------- | --------------------------- | ------------ |
+| GET    | /shops/{shopId}/exports/orders.csv     | Export shop orders as CSV   | 200 text/csv |
+| GET    | /shops/{shopId}/exports/customers.csv  | Export shop customers as CSV | 200 text/csv |
+| GET    | /shops/{shopId}/exports/deliveries.csv | Export shop deliveries as CSV | 200 text/csv |
+| GET    | /shops/{shopId}/exports/members.csv    | Export shop staffs as CSV   | 200 text/csv |
+
+Shop export notes:
+
+- All shop export endpoints require the `exports.csv` plan feature.
+- `GET /shops/{shopId}/exports/members.csv` also requires `team.members`.
+- Export routes return raw CSV downloads instead of the standard JSON response envelope.
+
+### Platform Exports
+
+| Method | Path                                  | Description                        | Response     |
+| ------ | ------------------------------------- | ---------------------------------- | ------------ |
+| GET    | /platform/exports/shops.csv           | Export platform shops as CSV       | 200 text/csv |
+| GET    | /platform/exports/users.csv           | Export platform users as CSV       | 200 text/csv |
+| GET    | /platform/exports/subscriptions.csv   | Export subscriptions as CSV        | 200 text/csv |
+| GET    | /platform/exports/invoices.csv        | Export invoices/payments as CSV    | 200 text/csv |
+
+Platform export notes:
+
+- Platform exports require the usual platform RBAC permissions for the corresponding dataset.
+- These routes are intended for the internal platform owner workspace only.
 
 ## Example: Create Order Request
 

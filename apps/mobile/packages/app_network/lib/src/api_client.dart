@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:app_core/app_core.dart';
 import 'package:dio/dio.dart';
 
@@ -53,6 +55,39 @@ class ApiClient {
 
       final data = _unwrapData(response.data);
       return _normalizeMap(data);
+    } on DioException catch (error) {
+      throw _mapDioException(error);
+    } on FormatException catch (error) {
+      throw ParseException(error.message);
+    } catch (error) {
+      throw UnknownException(error.toString());
+    }
+  }
+
+  Future<Uint8List> getBytes(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    bool skipAuth = false,
+    Map<String, dynamic>? headers,
+  }) async {
+    try {
+      final options =
+          (_options(skipAuth: skipAuth, headers: headers) ?? Options())
+              .copyWith(responseType: ResponseType.bytes);
+      final response = await _dio.get<List<int>>(
+        path,
+        queryParameters: queryParameters,
+        options: options,
+      );
+
+      _assertSuccessStatus(response.statusCode);
+
+      final data = response.data;
+      if (data == null) {
+        throw const ParseException('Response payload is empty.');
+      }
+
+      return Uint8List.fromList(data);
     } on DioException catch (error) {
       throw _mapDioException(error);
     } on FormatException catch (error) {

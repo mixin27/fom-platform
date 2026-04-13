@@ -124,6 +124,7 @@ type PlanOptionRow = {
 
 type PlanItemRow = {
   id: string;
+  code: string;
   label: string;
   description: string | null;
   availability_status: string;
@@ -1550,6 +1551,7 @@ export class PlatformService {
   private serializePlanItem(item: any): PlanItemRow {
     return {
       id: item.id,
+      code: item.code,
       label: item.label,
       description: item.description,
       availability_status: item.availabilityStatus,
@@ -1561,6 +1563,7 @@ export class PlatformService {
     tx: any,
     planId: string,
     items: Array<{
+      code: string;
       label: string;
       description?: string | null;
       availability_status: string;
@@ -1578,6 +1581,7 @@ export class PlatformService {
     await (tx as any).planItem.createMany({
       data: items.map((item, index) => ({
         planId,
+        code: item.code,
         label: item.label,
         description: item.description ?? null,
         availabilityStatus: item.availability_status,

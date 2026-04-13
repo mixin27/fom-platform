@@ -6,6 +6,7 @@ export type NavIconName =
   | "deliveries"
   | "templates"
   | "reports"
+  | "exports"
   | "settings"
   | "shops"
   | "users"
@@ -35,6 +36,7 @@ export const shopPortalNav: NavItem[] = [
     icon: "templates",
   },
   { href: "/dashboard/reports", label: "Reports", icon: "reports" },
+  { href: "/dashboard/exports", label: "Exports", icon: "exports" },
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ]
 
@@ -47,6 +49,7 @@ export const platformPortalNav: NavItem[] = [
     label: "Subscriptions",
     icon: "subscriptions",
   },
+  { href: "/platform/exports", label: "Exports", icon: "exports" },
   { href: "/platform/support", label: "Support", icon: "support" },
   { href: "/platform/settings", label: "Settings", icon: "settings" },
 ]

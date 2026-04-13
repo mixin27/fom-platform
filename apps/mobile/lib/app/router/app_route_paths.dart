@@ -25,6 +25,7 @@ abstract final class AppRoutePaths {
   // Settings
   static const String settings = '/settings';
   static const String editProfile = '/settings/edit-profile';
+  static const String settingsExports = '/settings/exports';
 
   // Global Application Views
   static const String notifications = '/notifications';

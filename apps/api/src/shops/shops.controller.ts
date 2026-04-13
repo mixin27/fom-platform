@@ -13,10 +13,13 @@ import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
+import { RequirePlanFeatures } from '../common/http/plan-features.decorator';
 import { RequirePermissions } from '../common/http/permissions.decorator';
 import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
+import { SubscriptionFeatureGuard } from '../common/http/subscription-feature.guard';
 import type { AuthenticatedUser } from '../common/http/request-context';
+import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
@@ -83,8 +86,9 @@ export class ShopsController {
   }
 
   @Get(':shopId/members')
-  @UseGuards(RbacGuard)
+  @UseGuards(RbacGuard, SubscriptionFeatureGuard)
   @RequirePermissions(permissions.membersRead)
+  @RequirePlanFeatures(subscriptionFeatures.teamMembers)
   @ApiOperation({ summary: 'List shop members' })
   listMembers(
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -95,8 +99,9 @@ export class ShopsController {
   }
 
   @Post(':shopId/members')
-  @UseGuards(RbacGuard)
+  @UseGuards(RbacGuard, SubscriptionFeatureGuard)
   @RequirePermissions(permissions.membersManage)
+  @RequirePlanFeatures(subscriptionFeatures.teamMembers)
   @ApiOperation({ summary: 'Add or invite a shop member' })
   addMember(
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -107,8 +112,9 @@ export class ShopsController {
   }
 
   @Patch(':shopId/members/:memberId')
-  @UseGuards(RbacGuard)
+  @UseGuards(RbacGuard, SubscriptionFeatureGuard)
   @RequirePermissions(permissions.membersManage)
+  @RequirePlanFeatures(subscriptionFeatures.teamMembers)
   @ApiOperation({ summary: 'Update shop member status or roles' })
   updateMember(
     @CurrentUser() currentUser: AuthenticatedUser,

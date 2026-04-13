@@ -42,6 +42,7 @@ import { Textarea } from "@workspace/ui/components/textarea"
 
 type PlanDraftItem = {
   id: string
+  code: string
   label: string
   description: string
   availability_status: "available" | "unavailable"
@@ -67,11 +68,21 @@ type PlatformPlanCatalogEditorProps = {
 function createEmptyItem(index: number): PlanDraftItem {
   return {
     id: `new-${Date.now()}-${index}`,
+    code: "",
     label: "",
     description: "",
     availability_status: "available",
     sort_order: index,
   }
+}
+
+function slugifyFeatureCode(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+    .replace(/\.{2,}/g, ".")
 }
 
 function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
@@ -101,6 +112,7 @@ function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
     items:
       plan.items.map((item, index) => ({
         id: item.id,
+        code: item.code,
         label: item.label,
         description: item.description ?? "",
         availability_status:
@@ -113,12 +125,13 @@ function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
 function normalizePlanItems(items: PlanDraftItem[]): PlatformPlanItemInput[] {
   return items
     .map((item, index) => ({
+      code: item.code.trim() || slugifyFeatureCode(item.label),
       label: item.label.trim(),
       description: item.description.trim() || null,
       availability_status: item.availability_status,
       sort_order: Number.isFinite(item.sort_order) ? item.sort_order : index,
     }))
-    .filter((item) => item.label.length > 0)
+    .filter((item) => item.label.length > 0 && item.code.length > 0)
     .sort((left, right) => left.sort_order - right.sort_order)
 }
 
@@ -164,6 +177,10 @@ function validateDraft(draft: PlanDraft): string | null {
     return "Add at least one plan item before saving."
   }
 
+  if (items.some((item) => !/^[a-z0-9._-]+$/.test(item.code))) {
+    return "Plan item codes can only use lowercase letters, numbers, dots, hyphens, and underscores."
+  }
+
   return null
 }
 
@@ -200,7 +217,7 @@ function PlanItemEditorRow({
 }) {
   return (
     <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-4">
-      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_auto]">
+      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr_0.8fr_auto]">
         <Input
           value={item.label}
           onChange={(event) =>
@@ -210,6 +227,16 @@ function PlanItemEditorRow({
             })
           }
           placeholder="Feature or limit label"
+        />
+        <Input
+          value={item.code}
+          onChange={(event) =>
+            onChange({
+              ...item,
+              code: slugifyFeatureCode(event.target.value),
+            })
+          }
+          placeholder="feature.code"
         />
         <Select
           value={item.availability_status}

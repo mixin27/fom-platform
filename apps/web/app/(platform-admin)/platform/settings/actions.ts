@@ -156,6 +156,7 @@ export async function updatePlatformPlanFromFormAction(formData: FormData) {
 }
 
 export type PlatformPlanItemInput = {
+  code: string
   label: string
   description?: string | null
   availability_status: "available" | "unavailable"

@@ -14,6 +14,15 @@ import { trimString } from '../../auth/dto/transforms';
 
 export class PlatformPlanItemInputDto {
   @ApiProperty({
+    example: 'exports.csv',
+  })
+  @Transform(trimString)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  code!: string;
+
+  @ApiProperty({
     example: 'Manual and paste-from-Messenger order capture',
   })
   @Transform(trimString)

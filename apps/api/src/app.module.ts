@@ -14,6 +14,11 @@ import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
 import { DeliveriesController } from './deliveries/deliveries.controller';
 import { DeliveriesService } from './deliveries/deliveries.service';
+import {
+  PlatformExportsController,
+  ShopExportsController,
+} from './exports/exports.controller';
+import { ExportsService } from './exports/exports.service';
 import { AppExceptionFilter } from './common/http/exception.filter';
 import { RequestContextMiddleware } from './common/http/request-context';
 import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.interceptor';
@@ -44,6 +49,7 @@ import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { AuthGuard } from './common/http/auth.guard';
 import { RbacGuard } from './common/http/rbac.guard';
+import { SubscriptionFeatureGuard } from './common/http/subscription-feature.guard';
 import { createAppValidationPipe } from './common/http/validation-pipe';
 
 @Module({
@@ -58,6 +64,8 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     OrdersController,
     NotificationsController,
     DeliveriesController,
+    ShopExportsController,
+    PlatformExportsController,
     TemplatesController,
     SummariesController,
     ReportsController,
@@ -82,10 +90,12 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     EmailOutboxService,
     NotificationsService,
     DeliveriesService,
+    ExportsService,
     TemplatesService,
     SummariesService,
     AuthGuard,
     RbacGuard,
+    SubscriptionFeatureGuard,
     {
       provide: APP_FILTER,
       useClass: AppExceptionFilter,

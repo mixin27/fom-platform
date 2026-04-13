@@ -82,6 +82,7 @@ async function seedPlanCatalog() {
       await prisma.planItem.createMany({
         data: plan.items.map((item) => ({
           planId: record.id,
+          code: item.code,
           label: item.label,
           description: item.description,
           availabilityStatus: item.availabilityStatus,

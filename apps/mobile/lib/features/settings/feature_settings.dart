@@ -15,3 +15,4 @@ export 'presentation/bloc/settings_event.dart';
 export 'presentation/bloc/settings_state.dart';
 export 'presentation/pages/edit_shop_profile_page.dart';
 export 'presentation/pages/settings_home_page.dart';
+export 'presentation/pages/shop_exports_page.dart';
