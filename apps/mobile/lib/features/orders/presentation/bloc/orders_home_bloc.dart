@@ -38,8 +38,6 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     on<OrdersHomeErrorDismissed>(_onErrorDismissed);
   }
 
-  static const Duration _backgroundRefreshInterval = Duration(minutes: 2);
-
   final WatchOrdersUseCase _watchOrdersUseCase;
   final RefreshOrdersUseCase _refreshOrdersUseCase;
   final UpdateOrderStatusUseCase _updateOrderStatusUseCase;
@@ -50,7 +48,6 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
   StreamSubscription<List<OrderListItem>>? _ordersSubscription;
   StreamSubscription<NetworkConnectionStatus>? _connectionSubscription;
   StreamSubscription<RealtimeEvent>? _realtimeSubscription;
-  Timer? _backgroundRefreshTimer;
   bool _isRefreshingInFlight = false;
   bool _wasOnline = false;
 
@@ -114,7 +111,6 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
 
     _startConnectivitySubscription();
     _startRealtimeSubscription();
-    _startBackgroundRefreshTimer();
     add(const OrdersHomeRefreshRequested());
   }
 
@@ -317,17 +313,6 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
     );
   }
 
-  void _startBackgroundRefreshTimer() {
-    _backgroundRefreshTimer?.cancel();
-    _backgroundRefreshTimer = Timer.periodic(_backgroundRefreshInterval, (_) {
-      if (isClosed || !state.hasShop) {
-        return;
-      }
-
-      add(const OrdersHomeRefreshRequested(silent: true));
-    });
-  }
-
   void _startRealtimeSubscription() {
     if (_realtimeSubscription != null) {
       return;
@@ -350,7 +335,6 @@ class OrdersHomeBloc extends Bloc<OrdersHomeEvent, OrdersHomeState>
 
   @override
   Future<void> close() async {
-    _backgroundRefreshTimer?.cancel();
     await _ordersSubscription?.cancel();
     await _connectionSubscription?.cancel();
     await _realtimeSubscription?.cancel();

@@ -131,20 +131,24 @@ export class RealtimeService {
     fastify.get(
       '/api/v1/realtime/ws',
       { websocket: true },
-      async (connection: any, request: any) => {
-        const requestUrl = new URL(request.url, 'http://localhost');
+      async (socketOrConnection: any, request: any) => {
+        const socket = this.resolveSocket(socketOrConnection);
+        const requestUrl = new URL(
+          request?.url ?? request?.raw?.url ?? '/api/v1/realtime/ws',
+          'http://localhost',
+        );
         const ticket = requestUrl.searchParams.get('ticket')?.trim() || '';
 
         try {
           const context = await this.authenticateTicket(ticket);
-          this.acceptSocket(connection.socket, context);
+          this.acceptSocket(socket, context);
         } catch (error) {
           this.logger.warn(
             `Rejected realtime connection: ${
               error instanceof Error ? error.message : 'unauthorized'
             }`,
           );
-          connection.socket.close(4001, 'unauthorized');
+          this.closeSocket(socket, 4001, 'unauthorized');
         }
       },
     );
@@ -228,6 +232,10 @@ export class RealtimeService {
       shopId: string | null;
     },
   ) {
+    if (!this.isSocketLike(socket)) {
+      throw new Error('Invalid websocket socket');
+    }
+
     const connectionId = generateId('rtc');
     const heartbeatTimer = setInterval(() => {
       this.sendRaw(socket, {
@@ -330,11 +338,52 @@ export class RealtimeService {
     socket: RealtimeConnectionRecord['socket'],
     payload: Record<string, unknown>,
   ) {
+    if (!this.isSocketLike(socket)) {
+      return;
+    }
+
     if (socket.readyState !== undefined && socket.readyState !== 1) {
       return;
     }
 
     socket.send(JSON.stringify(payload));
+  }
+
+  private resolveSocket(candidate: any): RealtimeConnectionRecord['socket'] {
+    if (this.isSocketLike(candidate)) {
+      return candidate;
+    }
+
+    if (this.isSocketLike(candidate?.socket)) {
+      return candidate.socket;
+    }
+
+    return candidate?.socket;
+  }
+
+  private isSocketLike(candidate: any): candidate is RealtimeConnectionRecord['socket'] {
+    return Boolean(
+      candidate &&
+        typeof candidate.send === 'function' &&
+        typeof candidate.close === 'function' &&
+        typeof candidate.on === 'function',
+    );
+  }
+
+  private closeSocket(
+    socket: RealtimeConnectionRecord['socket'],
+    code?: number,
+    data?: string,
+  ) {
+    if (!this.isSocketLike(socket)) {
+      return;
+    }
+
+    try {
+      socket.close(code, data);
+    } catch {
+      return;
+    }
   }
 
   private async authenticateTicket(ticket: string) {
