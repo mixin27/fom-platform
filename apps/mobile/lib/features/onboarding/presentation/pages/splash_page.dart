@@ -65,173 +65,179 @@ class _SplashViewState extends State<_SplashView> {
               );
             }
 
-        return Scaffold(
-          backgroundColor: AppColors.warmWhite,
-          body: Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFFFF8F4),
-                        AppColors.warmWhite,
-                        Color(0xFFF0F9F8),
-                      ],
-                      stops: [0.0, 0.5, 1.0],
+            return Scaffold(
+              backgroundColor: AppColors.warmWhite,
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFFF8F4),
+                            AppColors.warmWhite,
+                            Color(0xFFF0F9F8),
+                          ],
+                          stops: [0.0, 0.5, 1.0],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: -60,
-                right: -60,
-                child: Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFCDB8).withValues(alpha: 0.4),
-                    shape: BoxShape.circle,
+                  Positioned(
+                    top: -60,
+                    right: -60,
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFCDB8).withValues(alpha: 0.4),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                bottom: 80,
-                left: -60,
-                child: Container(
-                  width: 180,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC8EDEA).withValues(alpha: 0.4),
-                    shape: BoxShape.circle,
+                  Positioned(
+                    bottom: 80,
+                    left: -60,
+                    child: Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFC8EDEA).withValues(alpha: 0.4),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xxl,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Spacer(),
-                      Center(
-                        child: Container(
-                          width: 88,
-                          height: 88,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [AppColors.softOrange, Color(0xFFFF8C5A)],
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xxl,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Spacer(),
+                          Center(
+                            child: Container(
+                              width: 88,
+                              height: 88,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.softOrange,
+                                    Color(0xFFFF8C5A),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(26),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.orangeShadow,
+                                    blurRadius: 32,
+                                    offset: Offset(0, 12),
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.inventory_2_rounded,
+                                  size: 46,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(26),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: AppColors.orangeShadow,
-                                blurRadius: 32,
-                                offset: Offset(0, 12),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          Text.rich(
+                            TextSpan(
+                              children: const [
+                                TextSpan(text: 'Order '),
+                                TextSpan(
+                                  text: 'Manager',
+                                  style: TextStyle(color: AppColors.softOrange),
+                                ),
+                              ],
+                              style: Theme.of(context).textTheme.headlineLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.textDark,
+                                    fontSize: 26,
+                                  ),
+                            ),
+                            textAlign: TextAlign.center,
+                            textScaler: TextScaler.noScaling,
+                            textDirection: TextDirection.ltr,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'For Facebook Sellers',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textMid,
+                                ),
+                          ),
+                          Text(
+                            'ဖေ့ဘုတ်ရောင်းသူများအတွက်',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.teal,
+                                ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _FeatureChip(
+                                icon: Icons.inventory_2_outlined,
+                                label: 'Orders',
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              _FeatureChip(
+                                icon: Icons.local_shipping_outlined,
+                                label: 'Delivery',
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              _FeatureChip(
+                                icon: Icons.bar_chart_rounded,
+                                label: 'Reports',
                               ),
                             ],
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.inventory_2_rounded,
-                              size: 46,
-                              color: Colors.white,
-                            ),
+                          const Spacer(),
+                          AppButton(
+                            text: 'စတင်မည် — Get Started',
+                            onPressed:
+                                onboardingState.status ==
+                                    OnboardingStatus.loading
+                                ? null
+                                : () => _onGetStartedPressed(
+                                    context,
+                                    onboardingState,
+                                  ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text.rich(
-                        TextSpan(
-                          children: const [
-                            TextSpan(text: 'Order '),
-                            TextSpan(
-                              text: 'Manager',
-                              style: TextStyle(color: AppColors.softOrange),
-                            ),
-                          ],
-                          style: Theme.of(context).textTheme.headlineLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textDark,
-                                fontSize: 26,
-                              ),
-                        ),
-                        textAlign: TextAlign.center,
-                        textScaler: TextScaler.noScaling,
-                        textDirection: TextDirection.ltr,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'For Facebook Sellers',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMid,
-                        ),
-                      ),
-                      Text(
-                        'ဖေ့ဘုတ်ရောင်းသူများအတွက်',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.teal,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _FeatureChip(
-                            icon: Icons.inventory_2_outlined,
-                            label: 'Orders',
+                          const SizedBox(height: AppSpacing.md),
+                          AppButton(
+                            text: 'Login to Existing Account',
+                            variant: AppButtonVariant.secondary,
+                            onPressed: () {
+                              context.go(AppRouter.authPath);
+                            },
                           ),
-                          SizedBox(width: AppSpacing.sm),
-                          _FeatureChip(
-                            icon: Icons.local_shipping_outlined,
-                            label: 'Delivery',
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          _FeatureChip(
-                            icon: Icons.bar_chart_rounded,
-                            label: 'Reports',
-                          ),
+                          const SizedBox(height: AppSpacing.md),
                         ],
                       ),
-                      const Spacer(),
-                      AppButton(
-                        text: 'စတင်မည် — Get Started',
-                        onPressed: onboardingState.status ==
-                                OnboardingStatus.loading
-                            ? null
-                            : () => _onGetStartedPressed(
-                                context,
-                                onboardingState,
-                              ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppButton(
-                        text: 'Login to Existing Account',
-                        variant: AppButtonVariant.secondary,
-                        onPressed: () {
-                          context.go(AppRouter.authPath);
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        );
+            );
           },
         );
       },
@@ -290,10 +296,7 @@ class _FeatureChip extends StatelessWidget {
 }
 
 class _InitializationScaffold extends StatelessWidget {
-  const _InitializationScaffold({
-    required this.title,
-    required this.subtitle,
-  });
+  const _InitializationScaffold({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -323,9 +326,7 @@ class _InitializationScaffold extends StatelessWidget {
           SafeArea(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xxl,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -336,10 +337,7 @@ class _InitializationScaffold extends StatelessWidget {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.softOrange,
-                            Color(0xFFFF8C5A),
-                          ],
+                          colors: [AppColors.softOrange, Color(0xFFFF8C5A)],
                         ),
                         borderRadius: BorderRadius.circular(26),
                         boxShadow: const [

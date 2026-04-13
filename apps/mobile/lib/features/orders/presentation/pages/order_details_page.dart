@@ -2,14 +2,20 @@ import "package:app_ui_kit/app_ui_kit.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:fom_mobile/app/di/injection_container.dart";
+import "package:fom_mobile/features/auth/feature_auth.dart";
 import "package:intl/intl.dart";
 
+import "../../domain/entities/order_details.dart";
 import "../../domain/entities/order_source.dart";
 import "../../domain/entities/order_status.dart";
 import "../bloc/order_details_bloc.dart";
 import "../bloc/order_details_event.dart";
 import "../bloc/order_details_state.dart";
+import "../bloc/order_document_export_bloc.dart";
+import "../bloc/order_document_export_event.dart";
+import "../bloc/order_document_export_state.dart";
 import "../widgets/order_details_widgets.dart";
+import "../widgets/order_document_export_bottom_sheet.dart";
 import "../widgets/update_status_bottom_sheet.dart";
 
 class OrderDetailsPage extends StatelessWidget {
@@ -24,10 +30,16 @@ class OrderDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<OrderDetailsBloc>(
-      create: (_) =>
-          getIt<OrderDetailsBloc>()
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<OrderDetailsBloc>(
+          create: (_) => getIt<OrderDetailsBloc>()
             ..add(OrderDetailsStarted(shopId: initialShopId, orderId: orderId)),
+        ),
+        BlocProvider<OrderDocumentExportBloc>(
+          create: (_) => getIt<OrderDocumentExportBloc>(),
+        ),
+      ],
       child: const _OrderDetailsView(),
     );
   }
@@ -38,43 +50,111 @@ class _OrderDetailsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<OrderDetailsBloc, OrderDetailsState>(
-      listenWhen: (previous, current) {
-        return previous.errorMessage != current.errorMessage &&
-            (current.errorMessage ?? "").trim().isNotEmpty;
-      },
-      listener: (context, state) {
-        final message = state.errorMessage;
-        if ((message ?? "").trim().isEmpty) {
-          return;
-        }
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<OrderDetailsBloc, OrderDetailsState>(
+          listenWhen: (previous, current) {
+            return previous.errorMessage != current.errorMessage &&
+                (current.errorMessage ?? "").trim().isNotEmpty;
+          },
+          listener: (context, state) {
+            final message = state.errorMessage;
+            if ((message ?? "").trim().isEmpty) {
+              return;
+            }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message!),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        context.read<OrderDetailsBloc>().add(
-          const OrderDetailsErrorDismissed(),
-        );
-      },
-      builder: (context, state) {
-        final order = state.effectiveOrder;
-        final currentStatus = state.currentStatus;
-
-        if (state.isLoadingInitial) {
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.softOrange),
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message!),
+                behavior: SnackBarBehavior.floating,
               ),
-            ),
-          );
-        }
+            );
+            context.read<OrderDetailsBloc>().add(
+              const OrderDetailsErrorDismissed(),
+            );
+          },
+        ),
+        BlocListener<OrderDocumentExportBloc, OrderDocumentExportState>(
+          listenWhen: (previous, current) {
+            return previous.successMessage != current.successMessage ||
+                previous.errorMessage != current.errorMessage;
+          },
+          listener: (context, state) {
+            final message = state.errorMessage ?? state.successMessage;
+            if ((message ?? "").trim().isEmpty) {
+              return;
+            }
 
-        if (order == null || currentStatus == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message!),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            context.read<OrderDocumentExportBloc>().add(
+              const OrderDocumentExportFeedbackDismissed(),
+            );
+          },
+        ),
+      ],
+      child: BlocBuilder<OrderDetailsBloc, OrderDetailsState>(
+        builder: (context, state) {
+          final exportState = context.watch<OrderDocumentExportBloc>().state;
+          final order = state.effectiveOrder;
+          final currentStatus = state.currentStatus;
+
+          if (state.isLoadingInitial) {
+            return const Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.softOrange),
+                ),
+              ),
+            );
+          }
+
+          if (order == null || currentStatus == null) {
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              appBar: AppBar(
+                backgroundColor: AppColors.warmWhite,
+                elevation: 0,
+                leadingWidth: 70,
+                leading: Center(
+                  child: AppIconButton(
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(1.5),
+                  child: Container(color: AppColors.border, height: 1.5),
+                ),
+              ),
+              body: Center(
+                child: AppEmptyState(
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  title: "Order not found",
+                  message: "Unable to load this order details.",
+                  action: AppButton(
+                    text: "Retry",
+                    onPressed: () => context.read<OrderDetailsBloc>().add(
+                      const OrderDetailsRefreshRequested(),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final details = state.orderDetails;
+          final createdAtText = DateFormat(
+            "MMM d, h:mm a",
+          ).format(order.createdAt);
+          final currentStep = _stepForStatus(currentStatus);
+          final primaryAction = _primaryActionForStatus(currentStatus);
+
           return Scaffold(
             backgroundColor: AppColors.background,
             appBar: AppBar(
@@ -87,163 +167,191 @@ class _OrderDetailsView extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Order Detail",
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    "${order.orderNo} · $createdAtText",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textLight,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: AppIconButton(
+                    icon: exportState.isBusy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.softOrange,
+                            ),
+                          )
+                        : const Icon(Icons.ios_share_rounded),
+                    onPressed: exportState.isBusy
+                        ? null
+                        : () => _openExportSheet(context, details),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.md),
+                  child: AppIconButton(
+                    icon: const Icon(Icons.refresh_rounded),
+                    onPressed: state.isRefreshing
+                        ? null
+                        : () => context.read<OrderDetailsBloc>().add(
+                            const OrderDetailsRefreshRequested(),
+                          ),
+                  ),
+                ),
+              ],
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(1.5),
                 child: Container(color: AppColors.border, height: 1.5),
               ),
             ),
-            body: Center(
-              child: AppEmptyState(
-                icon: const Icon(Icons.receipt_long_outlined),
-                title: "Order not found",
-                message: "Unable to load this order details.",
-                action: AppButton(
-                  text: "Retry",
-                  onPressed: () => context.read<OrderDetailsBloc>().add(
-                    const OrderDetailsRefreshRequested(),
+            body: RefreshIndicator(
+              onRefresh: () async {
+                context.read<OrderDetailsBloc>().add(
+                  const OrderDetailsRefreshRequested(),
+                );
+              },
+              color: AppColors.softOrange,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                children: [
+                  OrderDetailsStatusHero(
+                    status: currentStatus,
+                    currentStep: currentStep,
                   ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        final details = state.orderDetails;
-        final createdAtText = DateFormat(
-          "MMM d, h:mm a",
-        ).format(order.createdAt);
-        final currentStep = _stepForStatus(currentStatus);
-        final primaryAction = _primaryActionForStatus(currentStatus);
-
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            backgroundColor: AppColors.warmWhite,
-            elevation: 0,
-            leadingWidth: 70,
-            leading: Center(
-              child: AppIconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Order Detail",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  "${order.orderNo} · $createdAtText",
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textLight,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.md),
-                child: AppIconButton(
-                  icon: const Icon(Icons.refresh_rounded),
-                  onPressed: state.isRefreshing
-                      ? null
-                      : () => context.read<OrderDetailsBloc>().add(
-                          const OrderDetailsRefreshRequested(),
-                        ),
-                ),
-              ),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1.5),
-              child: Container(color: AppColors.border, height: 1.5),
-            ),
-          ),
-          body: RefreshIndicator(
-            onRefresh: () async {
-              context.read<OrderDetailsBloc>().add(
-                const OrderDetailsRefreshRequested(),
-              );
-            },
-            color: AppColors.softOrange,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-              children: [
-                OrderDetailsStatusHero(
-                  status: currentStatus,
-                  currentStep: currentStep,
-                ),
-                if (currentStatus == OrderStatus.outForDelivery) ...[
+                  if (currentStatus == OrderStatus.outForDelivery) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    OrderDetailsShippingBanner(
+                      isLoading: state.isUpdatingStatus,
+                      onMarkDelivered: () =>
+                          context.read<OrderDetailsBloc>().add(
+                            const OrderDetailsStatusChangeRequested(
+                              nextStatus: OrderStatus.delivered,
+                            ),
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
-                  OrderDetailsShippingBanner(
-                    isLoading: state.isUpdatingStatus,
-                    onMarkDelivered: () => context.read<OrderDetailsBloc>().add(
-                      const OrderDetailsStatusChangeRequested(
-                        nextStatus: OrderStatus.delivered,
-                      ),
+                  const AppSectionHeader(
+                    icon: Icon(Icons.refresh_rounded),
+                    title: "Update Status",
+                    subtitle: "အခြေအနေ ပြောင်းမည်",
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  StatusUpdateGrid(
+                    currentStatus: currentStatus,
+                    onUpdate: (nextStatus) => _onRequestStatusChange(
+                      context,
+                      currentStatus: currentStatus,
+                      requestedStatus: nextStatus,
                     ),
                   ),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                const AppSectionHeader(
-                  icon: Icon(Icons.refresh_rounded),
-                  title: "Update Status",
-                  subtitle: "အခြေအနေ ပြောင်းမည်",
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                StatusUpdateGrid(
-                  currentStatus: currentStatus,
-                  onUpdate: (nextStatus) => _onRequestStatusChange(
-                    context,
-                    currentStatus: currentStatus,
-                    requestedStatus: nextStatus,
+                  const SizedBox(height: AppSpacing.md),
+                  CustomerInfoCard(
+                    order: order,
+                    onCallTap: () => _showComingSoon(context, "Call"),
+                    onMessageTap: () => _showComingSoon(context, "Message"),
+                    onMapTap: () => _showComingSoon(context, "Map"),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                CustomerInfoCard(
-                  order: order,
-                  onCallTap: () => _showComingSoon(context, "Call"),
-                  onMessageTap: () => _showComingSoon(context, "Message"),
-                  onMapTap: () => _showComingSoon(context, "Map"),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ProductPaymentCard(order: order, details: details),
-                const SizedBox(height: AppSpacing.md),
-                ActivityLogCard(
-                  history: details?.statusHistory ?? const [],
-                  createdAt: order.createdAt,
-                  currentStatus: currentStatus,
-                  source: details?.source ?? OrderSource.manual,
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.md),
+                  ProductPaymentCard(order: order, details: details),
+                  const SizedBox(height: AppSpacing.md),
+                  ActivityLogCard(
+                    history: details?.statusHistory ?? const [],
+                    createdAt: order.createdAt,
+                    currentStatus: currentStatus,
+                    source: details?.source ?? OrderSource.manual,
+                  ),
+                ],
+              ),
             ),
-          ),
-          bottomNavigationBar: OrderDetailsBottomBar(
-            secondaryLabel: "Update Status",
-            onSecondaryPressed: () =>
-                _openStatusSheet(context, currentStatus: currentStatus),
-            primaryLabel: primaryAction.label,
-            primaryEnabled: primaryAction.nextStatus != null,
-            onPrimaryPressed: () {
-              final nextStatus = primaryAction.nextStatus;
-              if (nextStatus == null) {
-                return;
-              }
+            bottomNavigationBar: OrderDetailsBottomBar(
+              secondaryLabel: "Update Status",
+              onSecondaryPressed: () =>
+                  _openStatusSheet(context, currentStatus: currentStatus),
+              primaryLabel: primaryAction.label,
+              primaryEnabled: primaryAction.nextStatus != null,
+              onPrimaryPressed: () {
+                final nextStatus = primaryAction.nextStatus;
+                if (nextStatus == null) {
+                  return;
+                }
 
-              context.read<OrderDetailsBloc>().add(
-                OrderDetailsStatusChangeRequested(nextStatus: nextStatus),
-              );
-            },
-            isPrimaryLoading: state.isUpdatingStatus,
+                context.read<OrderDetailsBloc>().add(
+                  OrderDetailsStatusChangeRequested(nextStatus: nextStatus),
+                );
+              },
+              isPrimaryLoading: state.isUpdatingStatus,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openExportSheet(
+    BuildContext context,
+    OrderDetails? orderDetails,
+  ) async {
+    if (orderDetails == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Order information is still loading. Try again shortly.",
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final selection = await OrderDocumentExportBottomSheet.show(context);
+    if (!context.mounted || selection == null) {
+      return;
+    }
+
+    final activeShop = getIt<AuthBloc>().state.activeShop;
+    final shopName = activeShop == null || activeShop.shopName.trim().isEmpty
+        ? "Shop"
+        : activeShop.shopName.trim();
+
+    switch (selection.action) {
+      case OrderDocumentExportAction.save:
+        context.read<OrderDocumentExportBloc>().add(
+          OrderDocumentSaveRequested(
+            order: orderDetails,
+            shopName: shopName,
+            format: selection.format,
           ),
         );
-      },
-    );
+        return;
+      case OrderDocumentExportAction.share:
+        context.read<OrderDocumentExportBloc>().add(
+          OrderDocumentShareRequested(
+            order: orderDetails,
+            shopName: shopName,
+            format: selection.format,
+          ),
+        );
+        return;
+    }
   }
 
   Future<void> _openStatusSheet(
