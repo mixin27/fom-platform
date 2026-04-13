@@ -15,6 +15,8 @@ const Color _invoiceCanvasColor = Colors.white;
 const String _documentBrandmarkAssetPath = "assets/branding/favicon.png";
 const String _documentBrandLine = "Powered by FOM Order Manager";
 const String _documentBrandWebsite = "https://getfom.com";
+const String _documentBrandFooter =
+    "$_documentBrandLine | $_documentBrandWebsite";
 const double _invoicePageWidth = 860;
 const double _invoicePageMinHeight = 1216;
 
@@ -225,20 +227,18 @@ class OrderDocumentGeneratorImpl implements OrderDocumentGenerator {
             ),
           ),
           child: Material(
-            color: AppColors.background,
-            child: Center(
-              child: _InvoiceDocumentCanvas(
-                order: order,
-                shopName: shopName,
-                brandmarkBytes: brandmarkBytes,
-              ),
+            color: Colors.white,
+            child: _InvoiceDocumentCanvas(
+              order: order,
+              shopName: shopName,
+              brandmarkBytes: brandmarkBytes,
             ),
           ),
         ),
       ),
       delay: const Duration(milliseconds: 48),
       pixelRatio: 2.5,
-      constraints: const BoxConstraints(maxWidth: 940),
+      constraints: const BoxConstraints(maxWidth: _invoicePageWidth),
     );
   }
 
@@ -311,7 +311,7 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
               pw.Image(brandmarkImage, width: 14, height: 14),
               pw.SizedBox(width: 6),
               pw.Text(
-                "$_documentBrandLine  •  $_documentBrandWebsite",
+                _documentBrandFooter,
                 style: pw.TextStyle(
                   color: textMid,
                   fontSize: 9,
@@ -327,7 +327,7 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
           padding: const pw.EdgeInsets.all(18),
           decoration: pw.BoxDecoration(
             color: softSurface,
-            borderRadius: pw.BorderRadius.circular(18),
+            border: pw.Border.all(color: borderColor),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -366,7 +366,7 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
                     ),
                     decoration: pw.BoxDecoration(
                       color: PdfColor.fromHex("#E8F7F6"),
-                      borderRadius: pw.BorderRadius.circular(999),
+                      border: pw.Border.all(color: accentColor),
                     ),
                     child: pw.Text(
                       _pdfString(payload, "status"),
@@ -413,7 +413,6 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
           decoration: pw.BoxDecoration(
             color: PdfColors.white,
             border: pw.Border.all(color: borderColor),
-            borderRadius: pw.BorderRadius.circular(14),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -507,7 +506,6 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
             padding: const pw.EdgeInsets.all(14),
             decoration: pw.BoxDecoration(
               color: cream,
-              borderRadius: pw.BorderRadius.circular(14),
               border: pw.Border.all(color: borderColor),
             ),
             child: pw.Column(
@@ -549,7 +547,6 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
             padding: const pw.EdgeInsets.all(14),
             decoration: pw.BoxDecoration(
               color: PdfColors.white,
-              borderRadius: pw.BorderRadius.circular(14),
               border: pw.Border.all(color: borderColor),
             ),
             child: pw.Text(
@@ -597,7 +594,7 @@ pw.Widget _pdfInfoBlock({
     padding: const pw.EdgeInsets.all(12),
     decoration: pw.BoxDecoration(
       color: PdfColors.white,
-      borderRadius: pw.BorderRadius.circular(12),
+      border: pw.Border.all(color: PdfColor.fromHex("#EDE8E0")),
     ),
     child: pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -747,42 +744,27 @@ class _InvoiceDocumentCanvas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: _invoicePageWidth + 56,
-      color: AppColors.background,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Center(
-        child: Container(
-          width: _invoicePageWidth,
-          constraints: const BoxConstraints(minHeight: _invoicePageMinHeight),
-          decoration: BoxDecoration(
-            color: _invoiceCanvasColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 18,
-                offset: Offset(0, 8),
-              ),
-            ],
+      width: _invoicePageWidth,
+      constraints: const BoxConstraints(minHeight: _invoicePageMinHeight),
+      decoration: BoxDecoration(
+        color: _invoiceCanvasColor,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(34, 36, 34, 64),
+            child: _InvoiceImageCard(order: order, shopName: shopName),
           ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(34, 36, 34, 64),
-                child: _InvoiceImageCard(order: order, shopName: shopName),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 22,
-                child: Center(
-                  child: _DocumentWatermarkRow(brandmarkBytes: brandmarkBytes),
-                ),
-              ),
-            ],
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 22,
+            child: Center(
+              child: _DocumentWatermarkRow(brandmarkBytes: brandmarkBytes),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -806,7 +788,7 @@ class _InvoiceImageCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppColors.softOrangeLight,
-            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
           ),
           child: Column(
             children: [
@@ -842,7 +824,7 @@ class _InvoiceImageCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.tealLight,
-                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.teal),
                     ),
                     child: Text(
                       _statusLabel(order),
@@ -908,7 +890,6 @@ class _InvoiceImageCard extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.cream,
-              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border),
             ),
             child: Column(
@@ -967,7 +948,6 @@ class _ImageSectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: child,
@@ -987,7 +967,7 @@ class _ImageInfoPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1229,7 +1209,7 @@ class _DocumentWatermarkRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            "$_documentBrandLine  •  $_documentBrandWebsite",
+            _documentBrandFooter,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: AppColors.textLight,
               fontWeight: FontWeight.w800,
