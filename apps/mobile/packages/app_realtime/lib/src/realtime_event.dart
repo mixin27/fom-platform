@@ -98,16 +98,16 @@ class RealtimeEvent extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-        kind,
-        type,
-        scope,
-        shopId,
-        unreadCount,
-        notificationId,
-        notificationTitle,
-        notificationBody,
-        resource,
-        action,
-        rawData,
-      ];
+    kind,
+    type,
+    scope,
+    shopId,
+    unreadCount,
+    notificationId,
+    notificationTitle,
+    notificationBody,
+    resource,
+    action,
+    rawData,
+  ];
 }

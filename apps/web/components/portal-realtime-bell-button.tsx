@@ -138,7 +138,7 @@ export function PortalRealtimeBellButton({
       }
 
       if (
-        message.type === "notification.created" &&
+        (message.type === "notification.created" || message.type === "notification.read") &&
         pathname &&
         pathname.includes("/notifications")
       ) {

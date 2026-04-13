@@ -414,11 +414,11 @@ class ReportsHomeBloc extends Bloc<ReportsHomeEvent, ReportsHomeState>
         return;
       }
 
-      if (
-        event.invalidatesAny(
-          const <String>{'orders', 'deliveries', 'customers'},
-        )
-      ) {
+      if (event.invalidatesAny(const <String>{
+        'orders',
+        'deliveries',
+        'customers',
+      })) {
         log.debug(
           'Realtime invalidation received for reports: ${event.resource}/${event.action}',
         );

@@ -49,6 +49,7 @@ class _AppRuntimeBindingsState extends State<AppRuntimeBindings> {
     await realtimeService.connect(
       scope: RealtimeScope.shop,
       shopId: activeShop.shopId,
+      accessToken: state.session?.accessToken,
     );
 
     unawaited(

@@ -11,11 +11,8 @@ import 'realtime_event.dart';
 import 'realtime_scope.dart';
 
 class AppRealtimeService with LoggerMixin {
-  AppRealtimeService(
-    this._apiClient,
-    this._networkConfig, {
-    AppLogger? logger,
-  }) : _logger = logger ?? AppLogger(enabled: false);
+  AppRealtimeService(this._apiClient, this._networkConfig, {AppLogger? logger})
+    : _logger = logger ?? AppLogger(enabled: false);
 
   final ApiClient _apiClient;
   final NetworkConfig _networkConfig;
@@ -34,6 +31,7 @@ class AppRealtimeService with LoggerMixin {
   int _reconnectAttempt = 0;
   RealtimeScope? _desiredScope;
   String? _desiredShopId;
+  String? _desiredAccessToken;
 
   @override
   AppLogger get logger => _logger;
@@ -49,9 +47,11 @@ class AppRealtimeService with LoggerMixin {
   Future<void> connect({
     required RealtimeScope scope,
     String? shopId,
+    String? accessToken,
   }) async {
     _desiredScope = scope;
     _desiredShopId = scope == RealtimeScope.shop ? shopId?.trim() : null;
+    _desiredAccessToken = accessToken?.trim();
 
     if (_desiredScope == RealtimeScope.shop &&
         (_desiredShopId ?? '').trim().isEmpty) {
@@ -65,6 +65,7 @@ class AppRealtimeService with LoggerMixin {
   Future<void> disconnect() async {
     _desiredScope = null;
     _desiredShopId = null;
+    _desiredAccessToken = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     await _channelSubscription?.cancel();
@@ -93,6 +94,7 @@ class AppRealtimeService with LoggerMixin {
 
     final scope = _desiredScope!;
     final shopId = _desiredShopId;
+    final accessToken = _desiredAccessToken?.trim();
 
     _reconnectTimer?.cancel();
     _emitConnectionState(
@@ -108,20 +110,22 @@ class AppRealtimeService with LoggerMixin {
 
     try {
       final ticketPayload = await _apiClient.getMap(
-        '/realtime/tickets',
+        'realtime/tickets',
         queryParameters: <String, dynamic>{
           'scope': scope == RealtimeScope.platform ? 'platform' : 'shop',
           if (scope == RealtimeScope.shop && shopId != null) 'shop_id': shopId,
         },
+        headers: accessToken != null && accessToken.isNotEmpty
+            ? <String, dynamic>{'Authorization': 'Bearer $accessToken'}
+            : null,
       );
       final ticket = (ticketPayload['ticket'] ?? '').toString().trim();
-      final websocketPath =
-          (ticketPayload['websocket_path'] ?? '').toString().trim();
+      final websocketPath = (ticketPayload['websocket_path'] ?? '')
+          .toString()
+          .trim();
 
       if (ticket.isEmpty || websocketPath.isEmpty) {
-        throw const ParseException(
-          'Realtime ticket response is incomplete.',
-        );
+        throw const ParseException('Realtime ticket response is incomplete.');
       }
 
       final uri = _buildWebsocketUri(websocketPath, ticket);
@@ -164,9 +168,12 @@ class AppRealtimeService with LoggerMixin {
   Uri _buildWebsocketUri(String websocketPath, String ticket) {
     final baseUri = Uri.parse(_networkConfig.baseUrl);
     final normalizedScheme = baseUri.scheme == 'https' ? 'wss' : 'ws';
-    final pathSegments = websocketPath.split('/').where((segment) {
-      return segment.trim().isNotEmpty;
-    }).toList(growable: false);
+    final pathSegments = websocketPath
+        .split('/')
+        .where((segment) {
+          return segment.trim().isNotEmpty;
+        })
+        .toList(growable: false);
 
     return baseUri.replace(
       scheme: normalizedScheme,
@@ -213,9 +220,7 @@ class AppRealtimeService with LoggerMixin {
     _channel = null;
     _channelSubscription = null;
     _emitConnectionState(
-      _state.copyWith(
-        status: RealtimeConnectionStatus.disconnected,
-      ),
+      _state.copyWith(status: RealtimeConnectionStatus.disconnected),
     );
     _scheduleReconnect();
   }
