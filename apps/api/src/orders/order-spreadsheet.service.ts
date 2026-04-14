@@ -153,15 +153,12 @@ export class OrderSpreadsheetService {
       : workbook.SheetNames[0];
 
     if (!targetSheetName) {
-      throw validationError(
-        [
-          {
-            field: 'file',
-            errors: ['The uploaded spreadsheet does not contain any sheets.'],
-          },
-        ],
-        'Unable to import orders from spreadsheet',
-      );
+      this.throwImportValidationError([
+        {
+          field: 'file',
+          errors: ['The uploaded spreadsheet does not contain any sheets.'],
+        },
+      ]);
     }
 
     const worksheet = workbook.Sheets[targetSheetName];
@@ -172,15 +169,12 @@ export class OrderSpreadsheetService {
     });
 
     if (rawRows.length === 0) {
-      throw validationError(
-        [
-          {
-            field: 'file',
-            errors: ['The uploaded spreadsheet does not contain any order rows.'],
-          },
-        ],
-        'Unable to import orders from spreadsheet',
-      );
+      this.throwImportValidationError([
+        {
+          field: 'file',
+          errors: ['The uploaded spreadsheet does not contain any order rows.'],
+        },
+      ]);
     }
 
     const errors: ErrorDetail[] = [];
@@ -318,10 +312,7 @@ export class OrderSpreadsheetService {
     });
 
     if (errors.length > 0) {
-      throw validationError(
-        errors.slice(0, maxReportedErrors),
-        'Unable to import orders from spreadsheet',
-      );
+      this.throwImportValidationError(errors);
     }
 
     return {
@@ -349,27 +340,21 @@ export class OrderSpreadsheetService {
 
     const bytes = Buffer.from(normalized, 'base64');
     if (bytes.length === 0) {
-      throw validationError(
-        [
-          {
-            field: 'content_base64',
-            errors: ['The uploaded file content is empty.'],
-          },
-        ],
-        'Unable to import orders from spreadsheet',
-      );
+      this.throwImportValidationError([
+        {
+          field: 'content_base64',
+          errors: ['The uploaded file content is empty.'],
+        },
+      ]);
     }
 
     if (bytes.length > maxImportFileBytes) {
-      throw validationError(
-        [
-          {
-            field: 'content_base64',
-            errors: ['The uploaded file is too large. Please keep it under 5 MB.'],
-          },
-        ],
-        'Unable to import orders from spreadsheet',
-      );
+      this.throwImportValidationError([
+        {
+          field: 'content_base64',
+          errors: ['The uploaded file is too large. Please keep it under 5 MB.'],
+        },
+      ]);
     }
 
     return bytes;
@@ -607,7 +592,14 @@ export class OrderSpreadsheetService {
     errors: ErrorDetail[],
     label: string,
   ) {
-    const normalized = value.trim() || fallback;
+    const normalized = value.trim();
+    if (!normalized) {
+      if (!order[field]) {
+        order[field] = fallback;
+      }
+      return;
+    }
+
     if (!order[field]) {
       order[field] = normalized;
       return;
@@ -631,13 +623,16 @@ export class OrderSpreadsheetService {
     label: string,
     options: { min: number },
   ) {
-    const parsed = value.trim()
-      ? this.parseInteger(value, {
-          field: `row:${rowNumber}.${label}`,
-          errors,
-          min: options.min,
-        })
-      : fallback;
+    const normalized = value.trim();
+    if (!normalized) {
+      return;
+    }
+
+    const parsed = this.parseInteger(normalized, {
+      field: `row:${rowNumber}.${label}`,
+      errors,
+      min: options.min,
+    });
 
     if (parsed === null) {
       return;
@@ -761,5 +756,43 @@ export class OrderSpreadsheetService {
     }
 
     return parsed;
+  }
+
+  private throwImportValidationError(details: ErrorDetail[]): never {
+    const limitedDetails = details.slice(0, maxReportedErrors);
+    const primaryDetail = limitedDetails[0];
+    const primaryMessage = primaryDetail
+      ? `${this.formatFieldLabel(primaryDetail.field)}: ${
+          primaryDetail.errors[0] ?? 'Invalid value.'
+        }`
+      : 'Unable to import orders from spreadsheet.';
+
+    throw validationError(
+      limitedDetails,
+      `Unable to import orders from spreadsheet. ${primaryMessage}`,
+    );
+  }
+
+  private formatFieldLabel(field: string): string {
+    const normalized = field.trim();
+    if (!normalized) {
+      return 'File';
+    }
+
+    const rowMatch = normalized.match(/^row:(\d+)\.(.+)$/);
+    if (rowMatch) {
+      const rowNumber = rowMatch[1] ?? '?';
+      const column = (rowMatch[2] ?? 'field').replaceAll('_', ' ');
+      return `Row ${rowNumber}, ${column}`;
+    }
+
+    const rowsMatch = normalized.match(/^rows:([\d,]+)\.(.+)$/);
+    if (rowsMatch) {
+      const rowNumbers = rowsMatch[1] ?? '?';
+      const column = (rowsMatch[2] ?? 'field').replaceAll('_', ' ');
+      return `Rows ${rowNumbers}, ${column}`;
+    }
+
+    return normalized.replaceAll('_', ' ');
   }
 }
