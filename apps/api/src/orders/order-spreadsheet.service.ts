@@ -44,6 +44,12 @@ export type ParsedOrdersSpreadsheet = {
   orders: SpreadsheetImportOrder[];
 };
 
+export type PreparedOrdersImportFile = {
+  filename: string;
+  format: 'csv' | 'xlsx';
+  bytes: Buffer;
+};
+
 @Injectable()
 export class OrderSpreadsheetService {
   buildImportTemplate(shopName: string) {
@@ -140,10 +146,23 @@ export class OrderSpreadsheetService {
   }
 
   parseImportFile(input: ImportOrdersSpreadsheetDto): ParsedOrdersSpreadsheet {
+    const prepared = this.prepareImportFile(input);
+    return this.parsePreparedImportFile(prepared);
+  }
+
+  prepareImportFile(input: ImportOrdersSpreadsheetDto): PreparedOrdersImportFile {
     const filename = input.filename.trim();
-    const bytes = this.decodeBase64Content(input.content_base64);
-    const format = this.resolveFormat(filename);
-    const workbook = XLSX.read(bytes, {
+    return {
+      filename,
+      format: this.resolveFormat(filename),
+      bytes: this.decodeBase64Content(input.content_base64),
+    };
+  }
+
+  parsePreparedImportFile(
+    prepared: PreparedOrdersImportFile,
+  ): ParsedOrdersSpreadsheet {
+    const workbook = XLSX.read(prepared.bytes, {
       type: 'buffer',
       raw: false,
       cellDates: false,
@@ -316,8 +335,8 @@ export class OrderSpreadsheetService {
     }
 
     return {
-      filename,
-      format,
+      filename: prepared.filename,
+      format: prepared.format,
       sourceRowCount: rawRows.length,
       orders: parsedOrders,
     };

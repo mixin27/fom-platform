@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import {
   conflictError,
@@ -14,6 +15,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
+import { Prisma } from '../generated/prisma/client';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -262,80 +264,133 @@ export class OrdersService {
       subscriptionFeatures.ordersImportSpreadsheet,
     );
 
-    const parsedFile = this.orderSpreadsheetService.parseImportFile(body);
+    const preparedFile = this.orderSpreadsheetService.prepareImportFile(body);
+    const fileHash = createHash('sha256')
+      .update(preparedFile.bytes)
+      .digest('hex');
+    const existingBatch = await this.prisma.orderImportBatch.findUnique({
+      where: {
+        shopId_fileHash: {
+          shopId,
+          fileHash,
+        },
+      },
+      include: {
+        importedByUser: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (existingBatch) {
+      throw conflictError(
+        `This file was already imported on ${existingBatch.createdAt.toISOString()}${
+          existingBatch.importedByUser?.name
+            ? ` by ${existingBatch.importedByUser.name}`
+            : ''
+        }.`,
+      );
+    }
+
+    const parsedFile =
+      this.orderSpreadsheetService.parsePreparedImportFile(preparedFile);
     const orderCount = parsedFile.orders.length;
     const itemCount = parsedFile.orders.reduce(
       (sum, order) => sum + order.items.length,
       0,
     );
 
-    const importedOrderIds = await this.prisma.$transaction(async (tx) => {
-      let nextOrderSequence = (await this.readMaxOrderSequence(tx, shopId)) + 1;
-      const createdOrderIds: string[] = [];
-
-      for (const order of parsedFile.orders) {
-        const customer = await this.resolveCustomer(
-          tx,
-          shopId,
-          {
-            customer: {
-              name: order.customerName,
-              phone: order.customerPhone,
-              township: order.customerTownship,
-              address: order.customerAddress,
-            },
-          } as CreateOrderDto,
-        );
-        const subtotal = order.items.reduce(
-          (sum, item) => sum + item.qty * item.unitPrice,
-          0,
-        );
-        const importedAt = order.orderedAt ?? undefined;
-        const createdOrder = await tx.order.create({
+    let importedOrderIds: string[];
+    try {
+      importedOrderIds = await this.prisma.$transaction(async (tx) => {
+        await tx.orderImportBatch.create({
           data: {
             shopId,
-            customerId: customer.id,
-            orderNo: this.formatOrderNumber(nextOrderSequence),
-            status: order.status,
-            totalPrice: subtotal + order.deliveryFee,
-            currency: order.currency,
-            deliveryFee: order.deliveryFee,
-            note: order.note,
-            source: order.source,
-            ...(importedAt
-              ? {
-                  createdAt: importedAt,
-                  updatedAt: importedAt,
-                }
-              : {}),
-            items: {
-              create: order.items.map((item) => ({
-                productId: item.productId ?? null,
-                productName: item.productName,
-                qty: item.qty,
-                unitPrice: item.unitPrice,
-                lineTotal: item.qty * item.unitPrice,
-              })),
-            },
-            statusEvents: {
-              create: {
-                fromStatus: null,
-                toStatus: order.status,
-                changedByUserId: currentUser.id,
-                note: 'Imported from spreadsheet',
-                ...(importedAt ? { changedAt: importedAt } : {}),
-              },
-            },
+            importedByUserId: currentUser.id,
+            filename: parsedFile.filename,
+            format: parsedFile.format,
+            fileHash,
+            sourceRowCount: parsedFile.sourceRowCount,
+            importedOrderCount: orderCount,
+            importedItemCount: itemCount,
           },
-          select: { id: true },
         });
 
-        createdOrderIds.push(createdOrder.id);
-        nextOrderSequence += 1;
+        let nextOrderSequence = (await this.readMaxOrderSequence(tx, shopId)) + 1;
+        const createdOrderIds: string[] = [];
+
+        for (const order of parsedFile.orders) {
+          const customer = await this.resolveCustomer(
+            tx,
+            shopId,
+            {
+              customer: {
+                name: order.customerName,
+                phone: order.customerPhone,
+                township: order.customerTownship,
+                address: order.customerAddress,
+              },
+            } as CreateOrderDto,
+          );
+          const subtotal = order.items.reduce(
+            (sum, item) => sum + item.qty * item.unitPrice,
+            0,
+          );
+          const importedAt = order.orderedAt ?? undefined;
+          const createdOrder = await tx.order.create({
+            data: {
+              shopId,
+              customerId: customer.id,
+              orderNo: this.formatOrderNumber(nextOrderSequence),
+              status: order.status,
+              totalPrice: subtotal + order.deliveryFee,
+              currency: order.currency,
+              deliveryFee: order.deliveryFee,
+              note: order.note,
+              source: order.source,
+              ...(importedAt
+                ? {
+                    createdAt: importedAt,
+                    updatedAt: importedAt,
+                  }
+                : {}),
+              items: {
+                create: order.items.map((item) => ({
+                  productId: item.productId ?? null,
+                  productName: item.productName,
+                  qty: item.qty,
+                  unitPrice: item.unitPrice,
+                  lineTotal: item.qty * item.unitPrice,
+                })),
+              },
+              statusEvents: {
+                create: {
+                  fromStatus: null,
+                  toStatus: order.status,
+                  changedByUserId: currentUser.id,
+                  note: 'Imported from spreadsheet',
+                  ...(importedAt ? { changedAt: importedAt } : {}),
+                },
+              },
+            },
+            select: { id: true },
+          });
+
+          createdOrderIds.push(createdOrder.id);
+          nextOrderSequence += 1;
+        }
+
+        return createdOrderIds;
+      });
+    } catch (error) {
+      if (this.isDuplicateImportBatchError(error)) {
+        throw conflictError('This file was already imported for this shop.');
       }
 
-      return createdOrderIds;
-    });
+      throw error;
+    }
 
     void Promise.allSettled([
       this.realtimeService.broadcastShopInvalidation({
@@ -1075,6 +1130,31 @@ export class OrdersService {
 
   private formatOrderNumber(sequence: number): string {
     return `ORD-${String(sequence).padStart(4, '0')}`;
+  }
+
+  private isDuplicateImportBatchError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code !== 'P2002') {
+      return false;
+    }
+
+    const rawTarget = error.meta?.target;
+    const target = Array.isArray(rawTarget)
+      ? rawTarget.map((value) => String(value))
+      : typeof rawTarget === 'string'
+        ? [rawTarget]
+        : [];
+
+    const exactMatch =
+      target.includes('shopId') && target.includes('fileHash');
+    const partialMatch =
+      target.some((value) => value.includes('shopId')) &&
+      target.some((value) => value.includes('fileHash'));
+
+    return exactMatch || partialMatch;
   }
 
   private matchesStatus(

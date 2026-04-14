@@ -63,6 +63,7 @@ model User {
   notificationPreferences NotificationPreference[]
   emailMessages      EmailMessage[]
   pushDevices        PushDevice[]
+  importedOrderBatches OrderImportBatch[]
   assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
 }
@@ -82,6 +83,7 @@ model Shop {
   supportIssues    PlatformSupportIssue[]
   notifications    Notification[]
   emailMessages    EmailMessage[]
+  orderImportBatches OrderImportBatch[]
 
   @@index([ownerUserId])
 }
@@ -402,6 +404,26 @@ model OrderStatusEvent {
   changedByUser   User         @relation("ChangedByUser", fields: [changedByUserId], references: [id], onDelete: Restrict)
 
   @@index([orderId, changedAt])
+}
+
+model OrderImportBatch {
+  id                 String   @id @default(cuid())
+  shopId             String
+  importedByUserId   String
+  filename           String
+  format             String
+  fileHash           String
+  sourceRowCount     Int
+  importedOrderCount Int
+  importedItemCount  Int
+  createdAt          DateTime @default(now())
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  importedByUser     User     @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([shopId, fileHash])
+  @@index([shopId, createdAt])
+  @@index([importedByUserId, createdAt])
+  @@map("order_import_batches")
 }
 
 model AuthChallenge {
