@@ -8,6 +8,7 @@ const datasetToPath = {
   customers: "/api/v1/shops/:shopId/exports/customers.csv",
   deliveries: "/api/v1/shops/:shopId/exports/deliveries.csv",
   members: "/api/v1/shops/:shopId/exports/members.csv",
+  "orders-import-template": "/api/v1/shops/:shopId/orders/import-template.xlsx",
 } as const
 
 export async function GET(

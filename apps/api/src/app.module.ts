@@ -24,6 +24,7 @@ import { RequestContextMiddleware } from './common/http/request-context';
 import { ResponseEnvelopeInterceptor } from './common/http/response-envelope.interceptor';
 import { OrdersController } from './orders/orders.controller';
 import { OrderMessageParserService } from './orders/order-message-parser.service';
+import { OrderSpreadsheetService } from './orders/order-spreadsheet.service';
 import { OrdersService } from './orders/orders.service';
 import { EmailOutboxService } from './email/email-outbox.service';
 import { EmailTemplateService } from './email/email-template.service';
@@ -89,6 +90,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     SubscriptionLifecycleService,
     CustomersService,
     OrderMessageParserService,
+    OrderSpreadsheetService,
     OrdersService,
     DisabledEmailProvider,
     LogEmailProvider,

@@ -52,6 +52,14 @@ export const defaultPlanCatalog = [
         sortOrder: 2,
       },
       {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description:
+          'Historical order import is held back until the shop moves onto a paid plan.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 8,
+      },
+      {
         code: subscriptionFeatures.customersManagement,
         label: 'Customer management',
         description: 'Manage customer records inside the same workspace.',
@@ -184,40 +192,48 @@ export const defaultPlanCatalog = [
         sortOrder: 2,
       },
       {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description:
+          'Import historical orders from Excel or CSV migration files.',
+        availabilityStatus: 'available',
+        sortOrder: 3,
+      },
+      {
         code: subscriptionFeatures.customersManagement,
         label: 'Customer management',
         description:
           'Keep customer records, phones, notes, and addresses organized.',
         availabilityStatus: 'available',
-        sortOrder: 3,
+        sortOrder: 4,
       },
       {
         code: subscriptionFeatures.deliveriesManagement,
         label: 'Delivery management',
         description: 'Track delivery assignments and dispatch state.',
         availabilityStatus: 'available',
-        sortOrder: 4,
+        sortOrder: 5,
       },
       {
         code: subscriptionFeatures.templatesManagement,
         label: 'Message templates',
         description: 'Save reusable replies and follow-up templates.',
         availabilityStatus: 'available',
-        sortOrder: 5,
+        sortOrder: 6,
       },
       {
         code: subscriptionFeatures.reportsAnalytics,
         label: 'Daily, weekly, and monthly reporting',
         description: 'Monitor orders, revenue, and delivery performance.',
         availabilityStatus: 'available',
-        sortOrder: 6,
+        sortOrder: 7,
       },
       {
         code: subscriptionFeatures.teamMembers,
         label: 'Staff accounts with roles and permissions',
         description: 'Invite staff members and control access per shop.',
         availabilityStatus: 'available',
-        sortOrder: 7,
+        sortOrder: 8,
       },
       {
         code: subscriptionFeatures.csvExports,
@@ -225,7 +241,7 @@ export const defaultPlanCatalog = [
         description:
           'Export orders, customers, deliveries, and operational records.',
         availabilityStatus: 'available',
-        sortOrder: 8,
+        sortOrder: 9,
       },
       {
         code: subscriptionFeatures.billingAnnualDiscount,
@@ -329,11 +345,19 @@ export const defaultPlanCatalog = [
         sortOrder: 2,
       },
       {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description:
+          'Import historical orders from Excel or CSV migration files.',
+        availabilityStatus: 'available',
+        sortOrder: 3,
+      },
+      {
         code: subscriptionFeatures.customersManagement,
         label: 'Customer management',
         description: 'Keep customer records organized for long-running shops.',
         availabilityStatus: 'available',
-        sortOrder: 3,
+        sortOrder: 4,
       },
       {
         code: subscriptionFeatures.deliveriesManagement,
@@ -341,21 +365,21 @@ export const defaultPlanCatalog = [
         description:
           'Manage dispatch and delivery workflows inside the same workspace.',
         availabilityStatus: 'available',
-        sortOrder: 4,
+        sortOrder: 5,
       },
       {
         code: subscriptionFeatures.templatesManagement,
         label: 'Message templates',
         description: 'Save reusable customer communication templates.',
         availabilityStatus: 'available',
-        sortOrder: 5,
+        sortOrder: 6,
       },
       {
         code: subscriptionFeatures.reportsAnalytics,
         label: 'Daily, weekly, and monthly reporting',
         description: 'Includes the full launch workflow for operational teams.',
         availabilityStatus: 'available',
-        sortOrder: 6,
+        sortOrder: 7,
       },
       {
         code: subscriptionFeatures.teamMembers,
@@ -363,7 +387,7 @@ export const defaultPlanCatalog = [
         description:
           'Owners can manage team access inside the same shop workspace.',
         availabilityStatus: 'available',
-        sortOrder: 7,
+        sortOrder: 8,
       },
       {
         code: subscriptionFeatures.csvExports,
@@ -371,7 +395,7 @@ export const defaultPlanCatalog = [
         description:
           'Export operational records for backup and external reporting.',
         availabilityStatus: 'available',
-        sortOrder: 8,
+        sortOrder: 9,
       },
       {
         code: subscriptionFeatures.billingAnnualDiscount,
@@ -379,7 +403,7 @@ export const defaultPlanCatalog = [
         description:
           'Annual billing lowers the total cost compared with paying monthly for a year.',
         availabilityStatus: 'available',
-        sortOrder: 9,
+        sortOrder: 10,
       },
       {
         code: subscriptionFeatures.facebookCommentsIntegration,

@@ -18,12 +18,15 @@ class SettingsBillingOverviewModel extends SettingsBillingOverview {
     required super.latestPaidAt,
     required super.invoiceCount,
     required super.latestInvoiceNumber,
+    required super.availableFeatures,
   });
 
   factory SettingsBillingOverviewModel.fromJson(Map<String, dynamic> json) {
     final overview = _asNullableMap(json['overview']) ?? json;
     final invoices = _asMapList(json['invoices']);
     final latestInvoice = invoices.isEmpty ? null : invoices.first;
+    final plan = _asNullableMap(json['plan']);
+    final planItems = _asMapList(plan?['items']);
 
     return SettingsBillingOverviewModel(
       status: _asNullableString(overview['status']),
@@ -48,6 +51,14 @@ class SettingsBillingOverviewModel extends SettingsBillingOverview {
             ? overview['latest_invoice_number']
             : latestInvoice['invoice_no'],
       ),
+      availableFeatures: planItems
+          .where(
+            (item) =>
+                _asNullableString(item['availability_status']) == 'available',
+          )
+          .map((item) => _asString(item['code']))
+          .where((code) => code.isNotEmpty)
+          .toList(growable: false),
     );
   }
 }

@@ -9,6 +9,16 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../domain/entities/shop_export_file.dart';
 
+class PickedImportFile {
+  const PickedImportFile({
+    required this.fileName,
+    required this.bytes,
+  });
+
+  final String fileName;
+  final Uint8List bytes;
+}
+
 abstract class ShopExportsLocalDataSource {
   Future<ShopExportFile> savePublicFile({
     required Uint8List bytes,
@@ -22,6 +32,10 @@ abstract class ShopExportsLocalDataSource {
     required String mimeType,
     required String subject,
     String? text,
+  });
+
+  Future<PickedImportFile> pickImportFile({
+    required List<String> allowedExtensions,
   });
 }
 
@@ -69,6 +83,48 @@ class ShopExportsLocalDataSourceImpl implements ShopExportsLocalDataSource {
         subject: subject,
         text: text,
       ),
+    );
+  }
+
+  @override
+  Future<PickedImportFile> pickImportFile({
+    required List<String> allowedExtensions,
+  }) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: allowedExtensions,
+      withData: true,
+    );
+
+    final files = result?.files ?? const <PlatformFile>[];
+    if (files.isEmpty) {
+      throw const CacheException('Order import was cancelled.');
+    }
+    final pickedFile = files.first;
+
+    final normalizedName = (pickedFile.name).trim();
+    if (normalizedName.isEmpty) {
+      throw const CacheException('The selected import file is missing a name.');
+    }
+
+    final bytes = pickedFile.bytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return PickedImportFile(fileName: normalizedName, bytes: bytes);
+    }
+
+    final normalizedPath = (pickedFile.path ?? '').trim();
+    if (normalizedPath.isEmpty) {
+      throw const CacheException('The selected import file could not be read.');
+    }
+
+    final file = File(normalizedPath);
+    if (!await file.exists()) {
+      throw const CacheException('The selected import file no longer exists.');
+    }
+
+    return PickedImportFile(
+      fileName: normalizedName,
+      bytes: await file.readAsBytes(),
     );
   }
 }
