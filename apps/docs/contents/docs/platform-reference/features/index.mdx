@@ -1,0 +1,56 @@
+---
+title: Feature Set
+description: The current platform feature areas that shape the docs and user guidance.
+keywords:
+  - features
+  - exports
+  - subscriptions
+  - notifications
+---
+
+## Current feature areas
+
+### Core operations
+
+- order creation and status progression
+- customer management
+- delivery coordination
+- template management
+- summaries and reporting
+
+### Platform capabilities
+
+- subscription-aware access control
+- stable plan feature codes for runtime enforcement
+- CSV export across shop and platform workflows
+- inbox notifications and realtime invalidation
+- web and mobile surfaces for operators
+
+### Access model
+
+The platform uses both RBAC permissions and plan-gated feature codes.
+
+- backend guards remain the source of truth for protected actions
+- client surfaces can still make informed access decisions using JWT claims and plan visibility
+- billing and recovery flows remain reachable even when operational access is restricted
+
+## Documentation implications
+
+The docs site needs to explain more than UI behavior.
+
+- some features depend on shop subscription state
+- some features are available only to specific roles
+- some capabilities already exist internally before they become public integration commitments
+
+<CardGrid>
+  <Card
+    title="User Manual"
+    description="Operator guidance for features that already exist in the current product."
+    href="/docs/user-manual"
+  />
+  <Card
+    title="API & Integrations"
+    description="Reference material for the backend capabilities that support those features."
+    href="/docs/api-integrations"
+  />
+</CardGrid>

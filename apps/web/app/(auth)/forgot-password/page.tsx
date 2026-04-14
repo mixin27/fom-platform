@@ -33,7 +33,7 @@ export default async function ForgotPasswordPage({
   const notice = params?.notice === "check_email"
 
   return (
-    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+    <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
       <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Recovery</CardDescription>
@@ -41,17 +41,17 @@ export default async function ForgotPasswordPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {invalidEmail ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Enter a valid email address to continue.
             </div>
           ) : null}
           {requestFailed ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Password reset could not be requested right now. Try again shortly.
             </div>
           ) : null}
           {notice ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-400">
               If the account exists, a reset email is on the way.
             </div>
           ) : null}

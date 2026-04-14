@@ -1,0 +1,55 @@
+---
+title: Product Overview
+description: A current summary of what the FOM Platform ships today and how the product is positioned.
+keywords:
+  - product overview
+  - FOM Platform
+  - scope
+---
+
+## Summary
+
+FOM Order Manager is an operational platform for Facebook-first shops.
+
+The current platform focuses on the workflows that matter most for day-to-day shop execution:
+
+- orders
+- customers
+- deliveries
+- message templates
+- summaries and reports
+- exports
+- notifications
+- billing visibility
+- RBAC-backed team access
+
+## Product position
+
+The platform is intentionally narrower than a full ERP.
+
+- It is designed for fast operational use instead of broad back-office complexity.
+- It keeps manual workflows where that improves speed and clarity for local teams.
+- It already includes the foundations for subscription-aware feature access and future
+  integrations.
+
+## Current application surface
+
+The monorepo currently contains four main applications:
+
+| Application | Role |
+| --- | --- |
+| `apps/api` | NestJS backend for auth, RBAC, subscriptions, exports, notifications, and operational APIs |
+| `apps/web` | Marketing site plus platform-owner and shop-owner web workspaces |
+| `apps/mobile` | Flutter mobile app for shop-owner operations |
+| `apps/docs` | This documentation site |
+
+## Operational principles
+
+- fast entry and status visibility matter more than broad automation
+- feature access must be enforceable at runtime, not only described in UI copy
+- the platform should support both internal operations and future external-facing API work
+
+<Note type="success" title="Documentation focus">
+  The docs site is now structured to cover operator guidance, API reference, and broader platform
+  context from the same surface.
+</Note>

@@ -42,8 +42,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const passwordReset = params?.notice === "password_reset"
 
   return (
-    <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-      <Card className="border border-black/6 bg-[var(--fom-ink)] text-white">
+    <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr] transition-all duration-300">
+      <Card className="border border-white/5 bg-[var(--fom-marketing-featured-bg)] text-white">
         <CardHeader>
           <CardDescription className="text-white/60">
             Shop access
@@ -91,27 +91,27 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Email or password is incorrect.
             </div>
           ) : null}
           {noAccess ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               This account exists, but it does not have platform or shop access yet.
             </div>
           ) : null}
           {authFailed ? (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               Sign-in could not be completed right now. Check the API connection and try again.
             </div>
           ) : null}
           {sessionExpired ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
               Your session expired. Sign in again to continue.
             </div>
           ) : null}
           {passwordReset ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-400">
               Password updated. Sign in with the new password.
             </div>
           ) : null}

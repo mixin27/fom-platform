@@ -68,6 +68,8 @@ dependencies:
   url_launcher: ^6.3.2
   file_picker: ^11.0.2
   share_plus: ^12.0.2
+  pdf: ^3.12.0
+  screenshot: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -77,4 +79,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/branding/
     - assets/illustrations/onboarding/

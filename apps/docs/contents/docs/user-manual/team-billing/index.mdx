@@ -1,0 +1,39 @@
+---
+title: Team Access & Billing
+description: How roles, subscription state, and plan-gated capabilities affect operational access in FOM.
+keywords:
+  - team
+  - billing
+  - subscription
+  - roles
+---
+
+## Team access
+
+The platform already models access at two levels:
+
+- platform-scoped permissions for the internal owner workspace
+- shop-scoped roles and permissions for day-to-day tenant operations
+
+This matters in practice because operational pages, exports, and member management are not just
+UI toggles. They map to stable capability checks in the backend.
+
+## Subscription behavior
+
+- Trialing, active, and overdue subscriptions currently keep the operational workspace available.
+- Expired, cancelled, and inactive states block plan-gated features.
+- Billing and recovery surfaces stay reachable so a shop can inspect status and restore access.
+
+## Why this matters for documentation
+
+Operator documentation needs to explain not only what a page does, but also why a user may or may
+not be able to access it.
+
+- `team.members` affects member management routes.
+- export access depends on the relevant plan items.
+- shop billing pages are part of the operational recovery path.
+
+<Note type="warning" title="Implementation detail">
+  Feature access is enforced through stable feature codes, so display labels can change over time
+  without breaking authorization logic.
+</Note>

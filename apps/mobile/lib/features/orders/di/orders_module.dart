@@ -6,18 +6,25 @@ import "package:get_it/get_it.dart";
 
 import "../../../app/di/modules/dependency_module.dart";
 import "../../../app/di/modules/get_it_extensions.dart";
+import "../data/datasources/order_document_local_data_source.dart";
 import "../data/datasources/orders_local_data_source.dart";
 import "../data/datasources/orders_remote_data_source.dart";
+import "../data/repositories/order_document_repository_impl.dart";
 import "../data/repositories/orders_repository_impl.dart";
+import "../data/services/order_document_generator.dart";
+import "../domain/repositories/order_document_repository.dart";
 import "../domain/repositories/orders_repository.dart";
 import "../domain/usecases/create_order_use_case.dart";
 import "../domain/usecases/get_order_details_use_case.dart";
 import "../domain/usecases/parse_order_message_use_case.dart";
 import "../domain/usecases/refresh_orders_use_case.dart";
+import "../domain/usecases/save_order_document_use_case.dart";
+import "../domain/usecases/share_order_document_use_case.dart";
 import "../domain/usecases/update_order_status_use_case.dart";
 import "../domain/usecases/watch_order_by_id_use_case.dart";
 import "../domain/usecases/watch_orders_use_case.dart";
 import "../presentation/bloc/order_details_bloc.dart";
+import "../presentation/bloc/order_document_export_bloc.dart";
 import "../presentation/bloc/order_entry_bloc.dart";
 import "../presentation/bloc/orders_home_bloc.dart";
 
@@ -33,10 +40,23 @@ class OrdersModule implements DependencyModule {
       ..putLazySingletonIfAbsent<OrdersRemoteDataSource>(
         () => OrdersRemoteDataSourceImpl(getIt<ApiClient>()),
       )
+      ..putLazySingletonIfAbsent<OrderDocumentLocalDataSource>(
+        () => OrderDocumentLocalDataSourceImpl(),
+      )
+      ..putLazySingletonIfAbsent<OrderDocumentGenerator>(
+        () => OrderDocumentGeneratorImpl(),
+      )
       ..putLazySingletonIfAbsent<OrdersRepository>(
         () => OrdersRepositoryImpl(
           getIt<OrdersLocalDataSource>(),
           getIt<OrdersRemoteDataSource>(),
+          logger: getIt<AppLogger>(),
+        ),
+      )
+      ..putLazySingletonIfAbsent<OrderDocumentRepository>(
+        () => OrderDocumentRepositoryImpl(
+          getIt<OrderDocumentGenerator>(),
+          getIt<OrderDocumentLocalDataSource>(),
           logger: getIt<AppLogger>(),
         ),
       )
@@ -61,6 +81,12 @@ class OrdersModule implements DependencyModule {
       ..putLazySingletonIfAbsent<UpdateOrderStatusUseCase>(
         () => UpdateOrderStatusUseCase(getIt<OrdersRepository>()),
       )
+      ..putLazySingletonIfAbsent<SaveOrderDocumentUseCase>(
+        () => SaveOrderDocumentUseCase(getIt<OrderDocumentRepository>()),
+      )
+      ..putLazySingletonIfAbsent<ShareOrderDocumentUseCase>(
+        () => ShareOrderDocumentUseCase(getIt<OrderDocumentRepository>()),
+      )
       ..putLazySingletonIfAbsent<OrdersHomeBloc>(
         () => OrdersHomeBloc(
           watchOrdersUseCase: getIt<WatchOrdersUseCase>(),
@@ -83,6 +109,13 @@ class OrdersModule implements DependencyModule {
           watchOrderByIdUseCase: getIt<WatchOrderByIdUseCase>(),
           getOrderDetailsUseCase: getIt<GetOrderDetailsUseCase>(),
           updateOrderStatusUseCase: getIt<UpdateOrderStatusUseCase>(),
+          logger: getIt<AppLogger>(),
+        ),
+      )
+      ..putFactoryIfAbsent<OrderDocumentExportBloc>(
+        () => OrderDocumentExportBloc(
+          saveOrderDocumentUseCase: getIt<SaveOrderDocumentUseCase>(),
+          shareOrderDocumentUseCase: getIt<ShareOrderDocumentUseCase>(),
           logger: getIt<AppLogger>(),
         ),
       );

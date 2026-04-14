@@ -1,0 +1,38 @@
+---
+title: Customers, Deliveries & Exports
+description: How customer management, delivery handling, and export workflows fit into the current FOM experience.
+keywords:
+  - customers
+  - deliveries
+  - exports
+---
+
+## Customers
+
+Customer management stays lightweight and operational.
+
+- Customer records are tied closely to order history.
+- Search and segmentation are intended to support fast lookup rather than CRM-heavy workflows.
+- Per-shop customer write access is already enforced through plan features and permissions.
+
+## Deliveries
+
+The delivery flow is structured for assignment and status visibility.
+
+- Delivery routes sit alongside orders instead of acting as a separate disconnected tool.
+- Driver assignment and delivery progression are designed to feed back into the order workflow.
+- Current documentation already covers the delivery API surface and the shop-scoped access rules.
+
+## Exports
+
+CSV export is already part of the platform story across API, web, and mobile surfaces.
+
+- Operational exports help owners save records without leaving the current workflow.
+- Shop exports are plan-aware, so actions can be disabled when the active subscription does not
+  allow them.
+- Platform exports extend the same pattern to internal administrative use cases.
+
+<Note type="success" title="Practical use">
+  For many shops, exports are the bridge between daily operations inside FOM and any offline
+  reporting or reconciliation that still happens outside the product.
+</Note>

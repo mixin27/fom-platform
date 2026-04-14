@@ -50,10 +50,10 @@ export default async function SetupShopPage({
   const setupFailed = params?.error === "shop_setup_failed"
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#fcfaf6_0%,#f4efe7_100%)]">
+    <div className="min-h-screen bg-[var(--fom-portal-bg)] transition-colors duration-300">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10">
         <div className="flex flex-1 items-center justify-center py-10">
-          <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
             <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
               <CardHeader>
                 <CardDescription>Initial shop setup</CardDescription>
@@ -61,25 +61,25 @@ export default async function SetupShopPage({
               </CardHeader>
               <CardContent className="flex flex-col gap-5">
                 {invalidSetup ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                     Shop name is required.
                   </div>
                 ) : null}
                 {shopNameUnavailable ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
                     That shop name is already in use. Choose a different name
                     and try again.
                   </div>
                 ) : null}
                 {trialUnavailable ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
                     The self-serve free trial plan is currently disabled. Ask
                     the platform owner to enable the trial plan before creating
                     the first shop.
                   </div>
                 ) : null}
                 {setupFailed ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                     Shop setup could not be completed right now. Check the API
                     connection and try again.
                   </div>

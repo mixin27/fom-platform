@@ -352,7 +352,7 @@ class _CustomersHomeViewState extends State<_CustomersHomeView> {
       return;
     }
 
-    final result = await showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<CustomerEditorSheetResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -375,7 +375,7 @@ class _CustomersHomeViewState extends State<_CustomersHomeView> {
       ),
     );
 
-    if (!context.mounted || result != true) {
+    if (!context.mounted || result != CustomerEditorSheetResult.saved) {
       return;
     }
 

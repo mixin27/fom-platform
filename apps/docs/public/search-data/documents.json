@@ -1,0 +1,394 @@
+[
+  {
+    "slug": "/api-integrations/backend-endpoints",
+    "title": "Backend API Endpoints",
+    "description": "A curated view of the current FOM backend API surface and the main endpoint groups that already exist.",
+    "content": "## Conventions\n\n* Base URL: `/api/v1`\n* Authentication: bearer access token\n* Pagination: `limit` and `cursor`\n* Time-sensitive filters: shop-local timezone\n* Response shape: standardized success and error envelopes\n\n## Docs and testing surfaces\n\n* Swagger UI: `/docs`\n* OpenAPI JSON: `/openapi.json`\n* OpenAPI YAML: `/openapi.yaml`\n* Scalar reference: `/reference`\n\n## Main endpoint groups\n\n### Public marketing\n\n* `GET /public/plans`\n\n### Authentication and profile\n\n* register, login, token refresh, logout\n* email verification and password reset\n* social login and phone OTP flows\n* `GET /users/me`\n* `PATCH /users/me`\n\n### Notifications and messaging\n\n* inbox notifications and unread counts\n* mark-as-read and mark-all-read operations\n* category-level notification preferences\n* email provider-backed delivery workflows\n\n### Realtime and push\n\n* websocket ticket issuance\n* push-device registration and deactivation\n\n### Platform workspace\n\n* dashboard metrics\n* shops, users, subscriptions, invoices, and support issues\n* settings for profile and plan catalog management\n\n### Shop operations\n\n* shops and membership management\n* billing visibility\n* customers\n* orders and order items\n* Messenger parsing for suggested order drafts\n* message templates\n* deliveries\n* summaries, reporting, and exports\n\n## Feature-gated areas\n\nSome endpoint groups are explicitly tied to stable plan feature codes.\n\n* customer operations require `customers.management`\n* order operations require `orders.management`\n* Messenger parsing additionally requires `orders.parse_messenger`\n* template management requires `templates.management`\n* deliveries require `deliveries.management`\n* reporting depends on `reports.analytics`\n* member management depends on `team.members`\n* export routes depend on `exports.csv`\n\n## Why this matters for integrations\n\nThe current backend surface already exposes the system boundaries that future partner APIs will\nneed:\n\n* auth and identity\n* tenant and shop scoping\n* order lifecycle data\n* customer and delivery resources\n* notifications and realtime events\n* plan-aware access enforcement\n",
+    "_searchMeta": {
+      "cleanContent": "conventions base url: api v1 authentication: bearer access token pagination: limit and cursor time-sensitive filters: shop-local timezone response shape: standardized success and error envelopes docs and testing surfaces swagger ui: docs openapi json: openapi json openapi yaml: openapi yaml scalar reference: reference main endpoint groups public marketing get public plans authentication and profile register login token refresh logout email verification and password reset social login and phone otp flows get users me patch users me notifications and messaging inbox notifications and unread counts mark-as-read and mark-all-read operations category-level notification preferences email provider-backed delivery workflows realtime and push websocket ticket issuance push-device registration and deactivation platform workspace dashboard metrics shops users subscriptions invoices and support issues settings for profile and plan catalog management shop operations shops and membership management billing visibility customers orders and order items messenger parsing for suggested order drafts message templates deliveries summaries reporting and exports feature-gated areas some endpoint groups are explicitly tied to stable plan feature codes customer operations require customers management order operations require orders management messenger parsing additionally requires orders parse_messenger template management requires templates management deliveries require deliveries management reporting depends on reports analytics member management depends on team members export routes depend on exports csv why this matters for integrations the current backend surface already exposes the system boundaries that future partner apis will need: auth and identity tenant and shop scoping order lifecycle data customer and delivery resources notifications and realtime events plan-aware access enforcement",
+      "headings": [
+        "Conventions",
+        "Docs and testing surfaces",
+        "Main endpoint groups",
+        "Feature-gated areas",
+        "Why this matters for integrations"
+      ],
+      "keywords": [
+        "backend API",
+        "endpoints",
+        "OpenAPI",
+        "Scalar",
+        "Conventions",
+        "Docs and testing surfaces",
+        "Main endpoint groups",
+        "Feature-gated areas",
+        "Why this matters for integrations",
+        "/api/v1",
+        "limit",
+        "cursor",
+        "/docs",
+        "/openapi.json",
+        "/openapi.yaml",
+        "/reference",
+        "GET /public/plans",
+        "GET /users/me",
+        "PATCH /users/me",
+        "customers.management",
+        "orders.management",
+        "orders.parse_messenger",
+        "templates.management",
+        "deliveries.management",
+        "reports.analytics",
+        "team.members",
+        "exports.csv"
+      ]
+    }
+  },
+  {
+    "slug": "/api-integrations",
+    "title": "API & Integrations",
+    "description": "The current backend API reference and the future direction for third-party integrations on the FOM Platform.",
+    "content": "This section serves two purposes:\n\n* document the current backend API surface\n* frame the future API needed for third-party integrations\n\n## Current state\n\nToday, the platform already has a documented backend surface with:\n\n* authenticated operational routes\n* shop and platform workspaces\n* exports, notifications, realtime tickets, and push-device registration\n* public plan catalog endpoints\n* documented OpenAPI and Scalar reference URLs\n\n## Future plan\n\nThird-party integration is still a forward-looking capability, but the groundwork is visible.\n\n* response envelopes are already standardized\n* resource boundaries are documented\n* feature gating and access control are explicit\n* API-related docs live beside the broader product and platform reference\n\n<Note type=\"warning\" title=\"Availability\">\n  The API documentation here is useful for planning and internal implementation now, but it should\n  not be treated as a public partner API commitment yet.\n</Note>\n",
+    "_searchMeta": {
+      "cleanContent": "this section serves two purposes: document the current backend api surface frame the future api needed for third-party integrations current state today the platform already has a documented backend surface with: authenticated operational routes shop and platform workspaces exports notifications realtime tickets and push-device registration public plan catalog endpoints documented openapi and scalar reference urls future plan third-party integration is still a forward-looking capability but the groundwork is visible response envelopes are already standardized resource boundaries are documented feature gating and access control are explicit api-related docs live beside the broader product and platform reference the api documentation here is useful for planning and internal implementation now but it should not be treated as a public partner api commitment yet",
+      "headings": [
+        "Current state",
+        "Future plan"
+      ],
+      "keywords": [
+        "API",
+        "integrations",
+        "OpenAPI",
+        "third-party integration",
+        "Current state",
+        "Future plan"
+      ]
+    }
+  },
+  {
+    "slug": "/api-integrations/response-envelope",
+    "title": "Response Envelope",
+    "description": "",
+    "content": "# Standard REST API Response Structure\n\n## Goals\n\n* Consistent response shape for all endpoints\n* Easy client parsing for success and errors\n* Clear error codes for localization\n\n## Common Headers\n\n* `X-Request-Id`: unique request identifier\n* `Content-Type: application/json`\n\n## Success (200, 201)\n\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"ord_123\",\n    \"status\": \"new\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## List Response with Pagination (200)\n\n```json\n{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"ord_123\",\n      \"status\": \"new\"\n    }\n  ],\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\",\n    \"pagination\": {\n      \"limit\": 50,\n      \"cursor\": \"cur_001\",\n      \"next_cursor\": \"cur_002\",\n      \"total\": 120\n    }\n  }\n}\n```\n\n## Empty List (200)\n\n```json\n{\n  \"success\": true,\n  \"data\": [],\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\",\n    \"pagination\": {\n      \"limit\": 50,\n      \"cursor\": null,\n      \"next_cursor\": null,\n      \"total\": 0\n    }\n  }\n}\n```\n\n## Validation Error (422)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"Invalid request data\",\n    \"details\": {\n      \"customer_id\": [\"Customer is required\"],\n      \"items.0.qty\": [\"Quantity must be at least 1\"]\n    }\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## Authentication Error (401)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"UNAUTHORIZED\",\n    \"message\": \"Authentication required\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## Forbidden (403)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"message\": \"You do not have permission to perform this action\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## Not Found (404)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"NOT_FOUND\",\n    \"message\": \"Order not found\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## Conflict (409)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"CONFLICT\",\n    \"message\": \"Order status already delivered\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## Rate Limited (429)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"RATE_LIMITED\",\n    \"message\": \"Too many requests. Try again later\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\",\n    \"retry_after_seconds\": 30\n  }\n}\n```\n\n## Server Error (500)\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"SERVER_ERROR\",\n    \"message\": \"Unexpected error\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}\n```\n\n## Recommended Error Codes\n\n| Code | HTTP | When |\n| --- | --- | --- |\n| VALIDATION\\_ERROR | 422 | Input validation failed |\n| UNAUTHORIZED | 401 | No or invalid token |\n| FORBIDDEN | 403 | User lacks permission |\n| NOT\\_FOUND | 404 | Resource missing |\n| CONFLICT | 409 | Invalid state transition |\n| RATE\\_LIMITED | 429 | Too many requests |\n| SERVER\\_ERROR | 500 | Unhandled error |\n\n## Notes for Laravel\n\n* Use a global exception handler to map exceptions to the standard format\n* Return `request_id` from middleware for tracing\n* Keep `message` user-friendly, and use `code` for client logic\n",
+    "_searchMeta": {
+      "cleanContent": "standard rest api response structure goals consistent response shape for all endpoints easy client parsing for success and errors clear error codes for localization common headers x-request-id: unique request identifier content-type: application json success 200 201 list response with pagination 200 empty list 200 validation error 422 authentication error 401 forbidden 403 not found 404 conflict 409 rate limited 429 server error 500 recommended error codes code http when--- --- ---validation _error 422 input validation failedunauthorized 401 no or invalid tokenforbidden 403 user lacks permissionnot _found 404 resource missingconflict 409 invalid state transitionrate _limited 429 too many requestsserver _error 500 unhandled error notes for laravel use a global exception handler to map exceptions to the standard format return request_id from middleware for tracing keep message user-friendly and use code for client logic",
+      "headings": [
+        "Goals",
+        "Common Headers",
+        "Success (200, 201)",
+        "List Response with Pagination (200)",
+        "Empty List (200)",
+        "Validation Error (422)",
+        "Authentication Error (401)",
+        "Forbidden (403)",
+        "Not Found (404)",
+        "Conflict (409)",
+        "Rate Limited (429)",
+        "Server Error (500)",
+        "Recommended Error Codes",
+        "Notes for Laravel"
+      ],
+      "keywords": [
+        "Goals",
+        "Common Headers",
+        "Success (200, 201)",
+        "List Response with Pagination (200)",
+        "Empty List (200)",
+        "Validation Error (422)",
+        "Authentication Error (401)",
+        "Forbidden (403)",
+        "Not Found (404)",
+        "Conflict (409)",
+        "Rate Limited (429)",
+        "Server Error (500)",
+        "Recommended Error Codes",
+        "Notes for Laravel",
+        "X-Request-Id",
+        "Content-Type: application/json",
+        "json\n{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"ord_123\",\n    \"status\": \"new\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## List Response with Pagination (200)",
+        "json\n{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"ord_123\",\n      \"status\": \"new\"\n    }\n  ],\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\",\n    \"pagination\": {\n      \"limit\": 50,\n      \"cursor\": \"cur_001\",\n      \"next_cursor\": \"cur_002\",\n      \"total\": 120\n    }\n  }\n}",
+        "## Empty List (200)",
+        "json\n{\n  \"success\": true,\n  \"data\": [],\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\",\n    \"pagination\": {\n      \"limit\": 50,\n      \"cursor\": null,\n      \"next_cursor\": null,\n      \"total\": 0\n    }\n  }\n}",
+        "## Validation Error (422)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"VALIDATION_ERROR\",\n    \"message\": \"Invalid request data\",\n    \"details\": {\n      \"customer_id\": [\"Customer is required\"],\n      \"items.0.qty\": [\"Quantity must be at least 1\"]\n    }\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## Authentication Error (401)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"UNAUTHORIZED\",\n    \"message\": \"Authentication required\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## Forbidden (403)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"FORBIDDEN\",\n    \"message\": \"You do not have permission to perform this action\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## Not Found (404)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"NOT_FOUND\",\n    \"message\": \"Order not found\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## Conflict (409)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"CONFLICT\",\n    \"message\": \"Order status already delivered\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## Rate Limited (429)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"RATE_LIMITED\",\n    \"message\": \"Too many requests. Try again later\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\",\n    \"retry_after_seconds\": 30\n  }\n}",
+        "## Server Error (500)",
+        "json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"SERVER_ERROR\",\n    \"message\": \"Unexpected error\"\n  },\n  \"meta\": {\n    \"request_id\": \"req_abc123\",\n    \"timestamp\": \"2026-03-24T10:15:00Z\"\n  }\n}",
+        "## Recommended Error Codes\n\n| Code | HTTP | When |\n| --- | --- | --- |\n| VALIDATION\\_ERROR | 422 | Input validation failed |\n| UNAUTHORIZED | 401 | No or invalid token |\n| FORBIDDEN | 403 | User lacks permission |\n| NOT\\_FOUND | 404 | Resource missing |\n| CONFLICT | 409 | Invalid state transition |\n| RATE\\_LIMITED | 429 | Too many requests |\n| SERVER\\_ERROR | 500 | Unhandled error |\n\n## Notes for Laravel\n\n* Use a global exception handler to map exceptions to the standard format\n* Return",
+        "from middleware for tracing\n* Keep",
+        "user-friendly, and use"
+      ]
+    }
+  },
+  {
+    "slug": "/getting-started",
+    "title": "Getting Started",
+    "description": "Start here to understand what FOM Docs covers, who it serves, and how the documentation is organized.",
+    "content": "This documentation site is the new home for the FOM Platform knowledge base.\n\nIt is organized around three needs:\n\n## What is available today\n\n* A docs-first UI built from the Vercel `Documents` starter structure.\n* Searchable markdown and MDX content.\n* A seeded `User Manual` section for operational guidance.\n* Reference pages pulled from the platform's existing documentation set.\n\n## How to use this site\n\n<Note type=\"warning\" title=\"Current scope\">\n  Third-party integration APIs are still a future plan. The API section currently documents the\n  backend surface and the response conventions that will support that future work.\n</Note>\n",
+    "_searchMeta": {
+      "cleanContent": "this documentation site is the new home for the fom platform knowledge base it is organized around three needs: what is available today a docs-first ui built from the vercel documents starter structure searchable markdown and mdx content a seeded user manual section for operational guidance reference pages pulled from the platform s existing documentation set how to use this site third-party integration apis are still a future plan the api section currently documents the backend surface and the response conventions that will support that future work",
+      "headings": [
+        "What is available today",
+        "How to use this site"
+      ],
+      "keywords": [
+        "FOM Docs",
+        "Getting Started",
+        "User Manual",
+        "API Integration",
+        "What is available today",
+        "How to use this site",
+        "Documents"
+      ]
+    }
+  },
+  {
+    "slug": "/platform-reference/architecture",
+    "title": "Architecture",
+    "description": "The current application and deployment shape of the FOM Platform monorepo.",
+    "content": "## High-level architecture\n\n```mermaid\nflowchart LR\n  Docs[\"Docs App (Next.js)\"] --> Repo[\"Monorepo\"]\n  Web[\"Web App (Next.js)\"] --> Repo\n  Mobile[\"Mobile App (Flutter)\"] --> API[\"API (NestJS)\"]\n  Web --> API\n  API --> DB[(\"PostgreSQL\")]\n  API --> Cache[\"Redis / background workflows\"]\n  API --> Mail[\"Email + notification adapters\"]\n```\n\n## Current monorepo shape\n\n| Area | Technology | Purpose |\n| --- | --- | --- |\n| `apps/api` | NestJS | Auth, shops, orders, billing, notifications, exports, and platform APIs |\n| `apps/web` | Next.js | Marketing, platform-owner workspace, shop-owner workspace |\n| `apps/mobile` | Flutter | Mobile operational workflow for active shops |\n| `apps/docs` | Next.js | Product, operator, and API documentation |\n| `packages/*` | Shared configs and UI | Reusable TypeScript, ESLint, and UI utilities |\n\n## Design choices\n\n* The workspace is organized as a Turborepo so builds, linting, and type checks stay package-based.\n* The docs app is now a standalone Next.js site that uses MDX content and static search data.\n* The API is the enforcement layer for permissions and plan-gated features.\n* Web and mobile clients consume the same core backend surface while presenting different\n  operational experiences.\n\n## Why this matters\n\nThe documentation site is no longer a single hardcoded page. It now mirrors the platform structure\nclosely enough to explain:\n\n* how operator workflows map to backend capabilities\n* where future third-party integration work fits\n* how the different applications in the monorepo relate to one another\n",
+    "_searchMeta": {
+      "cleanContent": "high-level architecture current monorepo shape area technology purpose--- --- ---apps api nestjs auth shops orders billing notifications exports and platform apisapps web next js marketing platform-owner workspace shop-owner workspaceapps mobile flutter mobile operational workflow for active shopsapps docs next js product operator and api documentationpackages shared configs and ui reusable typescript eslint and ui utilities design choices the workspace is organized as a turborepo so builds linting and type checks stay package-based the docs app is now a standalone next js site that uses mdx content and static search data the api is the enforcement layer for permissions and plan-gated features web and mobile clients consume the same core backend surface while presenting different operational experiences why this matters the documentation site is no longer a single hardcoded page it now mirrors the platform structure closely enough to explain: how operator workflows map to backend capabilities where future third-party integration work fits how the different applications in the monorepo relate to one another",
+      "headings": [
+        "High-level architecture",
+        "Current monorepo shape",
+        "Design choices",
+        "Why this matters"
+      ],
+      "keywords": [
+        "architecture",
+        "monorepo",
+        "NestJS",
+        "Next.js",
+        "Flutter",
+        "High-level architecture",
+        "Current monorepo shape",
+        "Design choices",
+        "Why this matters",
+        "mermaid\nflowchart LR\n  Docs[\"Docs App (Next.js)\"] --> Repo[\"Monorepo\"]\n  Web[\"Web App (Next.js)\"] --> Repo\n  Mobile[\"Mobile App (Flutter)\"] --> API[\"API (NestJS)\"]\n  Web --> API\n  API --> DB[(\"PostgreSQL\")]\n  API --> Cache[\"Redis / background workflows\"]\n  API --> Mail[\"Email + notification adapters\"]",
+        "## Current monorepo shape\n\n| Area | Technology | Purpose |\n| --- | --- | --- |\n|",
+        "| NestJS | Auth, shops, orders, billing, notifications, exports, and platform APIs |\n|",
+        "| Next.js | Marketing, platform-owner workspace, shop-owner workspace |\n|",
+        "| Flutter | Mobile operational workflow for active shops |\n|",
+        "| Next.js | Product, operator, and API documentation |\n|"
+      ]
+    }
+  },
+  {
+    "slug": "/platform-reference/features",
+    "title": "Feature Set",
+    "description": "The current platform feature areas that shape the docs and user guidance.",
+    "content": "## Current feature areas\n\n### Core operations\n\n* order creation and status progression\n* customer management\n* delivery coordination\n* template management\n* summaries and reporting\n\n### Platform capabilities\n\n* subscription-aware access control\n* stable plan feature codes for runtime enforcement\n* CSV export across shop and platform workflows\n* inbox notifications and realtime invalidation\n* web and mobile surfaces for operators\n\n### Access model\n\nThe platform uses both RBAC permissions and plan-gated feature codes.\n\n* backend guards remain the source of truth for protected actions\n* client surfaces can still make informed access decisions using JWT claims and plan visibility\n* billing and recovery flows remain reachable even when operational access is restricted\n\n## Documentation implications\n\nThe docs site needs to explain more than UI behavior.\n\n* some features depend on shop subscription state\n* some features are available only to specific roles\n* some capabilities already exist internally before they become public integration commitments\n",
+    "_searchMeta": {
+      "cleanContent": "current feature areas core operations order creation and status progression customer management delivery coordination template management summaries and reporting platform capabilities subscription-aware access control stable plan feature codes for runtime enforcement csv export across shop and platform workflows inbox notifications and realtime invalidation web and mobile surfaces for operators access model the platform uses both rbac permissions and plan-gated feature codes backend guards remain the source of truth for protected actions client surfaces can still make informed access decisions using jwt claims and plan visibility billing and recovery flows remain reachable even when operational access is restricted documentation implications the docs site needs to explain more than ui behavior some features depend on shop subscription state some features are available only to specific roles some capabilities already exist internally before they become public integration commitments",
+      "headings": [
+        "Current feature areas",
+        "Documentation implications"
+      ],
+      "keywords": [
+        "features",
+        "exports",
+        "subscriptions",
+        "notifications",
+        "Current feature areas",
+        "Documentation implications"
+      ]
+    }
+  },
+  {
+    "slug": "/platform-reference",
+    "title": "Platform Reference",
+    "description": "Product, architecture, roadmap, and security context collected from the platform's existing repository documentation.",
+    "content": "This section pulls together the deeper reference material that already existed in the repository\nbefore the docs app was replaced.\n\n## Why keep this here\n\nThe user manual helps operators. The platform reference helps builders, reviewers, and decision\nmakers keep the broader system context in view while the product evolves.\n",
+    "_searchMeta": {
+      "cleanContent": "this section pulls together the deeper reference material that already existed in the repository before the docs app was replaced why keep this here the user manual helps operators the platform reference helps builders reviewers and decision makers keep the broader system context in view while the product evolves",
+      "headings": [
+        "Why keep this here"
+      ],
+      "keywords": [
+        "platform reference",
+        "architecture",
+        "roadmap",
+        "security",
+        "Why keep this here"
+      ]
+    }
+  },
+  {
+    "slug": "/platform-reference/product-overview",
+    "title": "Product Overview",
+    "description": "A current summary of what the FOM Platform ships today and how the product is positioned.",
+    "content": "## Summary\n\nFOM Order Manager is an operational platform for Facebook-first shops.\n\nThe current platform focuses on the workflows that matter most for day-to-day shop execution:\n\n* orders\n* customers\n* deliveries\n* message templates\n* summaries and reports\n* exports\n* notifications\n* billing visibility\n* RBAC-backed team access\n\n## Product position\n\nThe platform is intentionally narrower than a full ERP.\n\n* It is designed for fast operational use instead of broad back-office complexity.\n* It keeps manual workflows where that improves speed and clarity for local teams.\n* It already includes the foundations for subscription-aware feature access and future\n  integrations.\n\n## Current application surface\n\nThe monorepo currently contains four main applications:\n\n| Application | Role |\n| --- | --- |\n| `apps/api` | NestJS backend for auth, RBAC, subscriptions, exports, notifications, and operational APIs |\n| `apps/web` | Marketing site plus platform-owner and shop-owner web workspaces |\n| `apps/mobile` | Flutter mobile app for shop-owner operations |\n| `apps/docs` | This documentation site |\n\n## Operational principles\n\n* fast entry and status visibility matter more than broad automation\n* feature access must be enforceable at runtime, not only described in UI copy\n* the platform should support both internal operations and future external-facing API work\n",
+    "_searchMeta": {
+      "cleanContent": "summary fom order manager is an operational platform for facebook-first shops the current platform focuses on the workflows that matter most for day-to-day shop execution: orders customers deliveries message templates summaries and reports exports notifications billing visibility rbac-backed team access product position the platform is intentionally narrower than a full erp it is designed for fast operational use instead of broad back-office complexity it keeps manual workflows where that improves speed and clarity for local teams it already includes the foundations for subscription-aware feature access and future integrations current application surface the monorepo currently contains four main applications: application role--- ---apps api nestjs backend for auth rbac subscriptions exports notifications and operational apisapps web marketing site plus platform-owner and shop-owner web workspacesapps mobile flutter mobile app for shop-owner operationsapps docs this documentation site operational principles fast entry and status visibility matter more than broad automation feature access must be enforceable at runtime not only described in ui copy the platform should support both internal operations and future external-facing api work",
+      "headings": [
+        "Summary",
+        "Product position",
+        "Current application surface",
+        "Operational principles"
+      ],
+      "keywords": [
+        "product overview",
+        "FOM Platform",
+        "scope",
+        "Summary",
+        "Product position",
+        "Current application surface",
+        "Operational principles",
+        "apps/api",
+        "apps/web",
+        "apps/mobile",
+        "apps/docs"
+      ]
+    }
+  },
+  {
+    "slug": "/platform-reference/roadmap",
+    "title": "Roadmap",
+    "description": "",
+    "content": "# Roadmap\n\n## Phase 0: MVP\n\nTimeframe: 5 to 7 days\n\n* Manual order entry\n* Order list and filters\n* Status updates\n* Daily summary\n* Burmese UI\n\n## Phase 1: Early Feedback\n\nTimeframe: 2 to 4 weeks\n\n* Fix friction points in order entry\n* Improve list speed and filtering\n* Onboarding and tips in Burmese\n\n## Phase 2: Version 2\n\nTimeframe: 1 to 2 months\n\n* Delivery tracking\n* Message templates\n* Weekly and monthly reports\n* Multi-user staff accounts\n\n## Phase 3: Growth\n\nTimeframe: 3 months\n\n* Subscription billing\n* Customer segmentation\n* CSV import\n",
+    "_searchMeta": {
+      "cleanContent": "roadmap phase 0: mvp timeframe: 5 to 7 days manual order entry order list and filters status updates daily summary burmese ui phase 1: early feedback timeframe: 2 to 4 weeks fix friction points in order entry improve list speed and filtering onboarding and tips in burmese phase 2: version 2 timeframe: 1 to 2 months delivery tracking message templates weekly and monthly reports multi-user staff accounts phase 3: growth timeframe: 3 months subscription billing customer segmentation csv import",
+      "headings": [
+        "Phase 0: MVP",
+        "Phase 1: Early Feedback",
+        "Phase 2: Version 2",
+        "Phase 3: Growth"
+      ],
+      "keywords": [
+        "Phase 0: MVP",
+        "Phase 1: Early Feedback",
+        "Phase 2: Version 2",
+        "Phase 3: Growth"
+      ]
+    }
+  },
+  {
+    "slug": "/platform-reference/security-privacy",
+    "title": "Security & Privacy",
+    "description": "",
+    "content": "# Security and Privacy\n\n## Access Control\n\n* Shop data is scoped by `shop_id`\n* Owner role has full access\n* Staff role limited to orders and delivery updates\n\n## Data Protection\n\n* Encrypt data in transit using HTTPS\n* Use database encryption at rest from the hosting provider\n* Avoid storing sensitive data beyond phone and address\n\n## Privacy Practices\n\n* Provide consent text for storing customer phone numbers\n* Allow deletion of customer records\n* Allow export of orders for the shop owner\n\n## Audit and Monitoring\n\n* Record status changes in order\\_status\\_events\n* Store audit logs for key changes\n* Alert on repeated failed login attempts\n\n## Backups and Retention\n\n* Daily backups for core collections\n* Archive completed orders after 90 days\n* Retain audit logs for at least 6 months\n",
+    "_searchMeta": {
+      "cleanContent": "security and privacy access control shop data is scoped by shop_id owner role has full access staff role limited to orders and delivery updates data protection encrypt data in transit using https use database encryption at rest from the hosting provider avoid storing sensitive data beyond phone and address privacy practices provide consent text for storing customer phone numbers allow deletion of customer records allow export of orders for the shop owner audit and monitoring record status changes in order status events store audit logs for key changes alert on repeated failed login attempts backups and retention daily backups for core collections archive completed orders after 90 days retain audit logs for at least 6 months",
+      "headings": [
+        "Access Control",
+        "Data Protection",
+        "Privacy Practices",
+        "Audit and Monitoring",
+        "Backups and Retention"
+      ],
+      "keywords": [
+        "Access Control",
+        "Data Protection",
+        "Privacy Practices",
+        "Audit and Monitoring",
+        "Backups and Retention",
+        "shop_id"
+      ]
+    }
+  },
+  {
+    "slug": "/user-manual/customers-deliveries",
+    "title": "Customers, Deliveries & Exports",
+    "description": "How customer management, delivery handling, and export workflows fit into the current FOM experience.",
+    "content": "## Customers\n\nCustomer management stays lightweight and operational.\n\n* Customer records are tied closely to order history.\n* Search and segmentation are intended to support fast lookup rather than CRM-heavy workflows.\n* Per-shop customer write access is already enforced through plan features and permissions.\n\n## Deliveries\n\nThe delivery flow is structured for assignment and status visibility.\n\n* Delivery routes sit alongside orders instead of acting as a separate disconnected tool.\n* Driver assignment and delivery progression are designed to feed back into the order workflow.\n* Current documentation already covers the delivery API surface and the shop-scoped access rules.\n\n## Exports\n\nCSV export is already part of the platform story across API, web, and mobile surfaces.\n\n* Operational exports help owners save records without leaving the current workflow.\n* Shop exports are plan-aware, so actions can be disabled when the active subscription does not\n  allow them.\n* Platform exports extend the same pattern to internal administrative use cases.\n",
+    "_searchMeta": {
+      "cleanContent": "customers customer management stays lightweight and operational customer records are tied closely to order history search and segmentation are intended to support fast lookup rather than crm-heavy workflows per-shop customer write access is already enforced through plan features and permissions deliveries the delivery flow is structured for assignment and status visibility delivery routes sit alongside orders instead of acting as a separate disconnected tool driver assignment and delivery progression are designed to feed back into the order workflow current documentation already covers the delivery api surface and the shop-scoped access rules exports csv export is already part of the platform story across api web and mobile surfaces operational exports help owners save records without leaving the current workflow shop exports are plan-aware so actions can be disabled when the active subscription does not allow them platform exports extend the same pattern to internal administrative use cases",
+      "headings": [
+        "Customers",
+        "Deliveries",
+        "Exports"
+      ],
+      "keywords": [
+        "customers",
+        "deliveries",
+        "exports",
+        "Customers",
+        "Deliveries",
+        "Exports"
+      ]
+    }
+  },
+  {
+    "slug": "/user-manual",
+    "title": "User Manual",
+    "description": "Operator guidance for the current FOM workflow across orders, customers, deliveries, roles, and billing.",
+    "content": "Use this section when the goal is operating the product, not implementing the platform.\n\n## Who this section is for\n\n* Shop owners managing orders and staff activity.\n* Managers reviewing deliveries, exports, and billing state.\n* Team members who need a quick understanding of the daily workflow.\n\n## Current coverage\n\n## Product stance\n\nFOM is designed around Facebook-first shops that need a reliable operational system before they\nneed complex automation.\n\n* Manual input still matters because it keeps the workflow fast and locally understandable.\n* Daily visibility matters more than broad ERP scope.\n* Access control and plan gating are already part of the product model, even while the platform is\n  still expanding.\n",
+    "_searchMeta": {
+      "cleanContent": "use this section when the goal is operating the product not implementing the platform who this section is for shop owners managing orders and staff activity managers reviewing deliveries exports and billing state team members who need a quick understanding of the daily workflow current coverage product stance fom is designed around facebook-first shops that need a reliable operational system before they need complex automation manual input still matters because it keeps the workflow fast and locally understandable daily visibility matters more than broad erp scope access control and plan gating are already part of the product model even while the platform is still expanding",
+      "headings": [
+        "Who this section is for",
+        "Current coverage",
+        "Product stance"
+      ],
+      "keywords": [
+        "User Manual",
+        "Orders",
+        "Deliveries",
+        "Billing",
+        "Who this section is for",
+        "Current coverage",
+        "Product stance"
+      ]
+    }
+  },
+  {
+    "slug": "/user-manual/orders",
+    "title": "Orders & Daily Workflow",
+    "description": "The current operational loop for entering orders, updating statuses, and reviewing summaries in FOM.",
+    "content": "## Daily operating loop\n\nThe current product is optimized around a short, repeatable loop:\n\n## What the product currently supports\n\n* Manual order entry remains the primary operating path.\n* List filtering is central to the workflow, especially for `today`, `pending`, and delivered work.\n* Status updates are built to reduce friction for high-volume daily operations.\n* The reporting layer is focused on operational visibility, not deep accounting.\n\n## Related platform behavior\n\n* Order APIs are plan-gated through `orders.management`.\n* Messenger parsing already exists as a documented backend capability for a suggested order draft.\n* Notifications and realtime invalidation are designed to keep the web and mobile surfaces current\n  when order state changes.\n",
+    "_searchMeta": {
+      "cleanContent": "daily operating loop the current product is optimized around a short repeatable loop: what the product currently supports manual order entry remains the primary operating path list filtering is central to the workflow especially for today pending and delivered work status updates are built to reduce friction for high-volume daily operations the reporting layer is focused on operational visibility not deep accounting related platform behavior order apis are plan-gated through orders management messenger parsing already exists as a documented backend capability for a suggested order draft notifications and realtime invalidation are designed to keep the web and mobile surfaces current when order state changes",
+      "headings": [
+        "Daily operating loop",
+        "What the product currently supports",
+        "Related platform behavior"
+      ],
+      "keywords": [
+        "orders",
+        "workflow",
+        "daily operations",
+        "Daily operating loop",
+        "What the product currently supports",
+        "Related platform behavior",
+        "today",
+        "pending",
+        "orders.management"
+      ]
+    }
+  },
+  {
+    "slug": "/user-manual/team-billing",
+    "title": "Team Access & Billing",
+    "description": "How roles, subscription state, and plan-gated capabilities affect operational access in FOM.",
+    "content": "## Team access\n\nThe platform already models access at two levels:\n\n* platform-scoped permissions for the internal owner workspace\n* shop-scoped roles and permissions for day-to-day tenant operations\n\nThis matters in practice because operational pages, exports, and member management are not just\nUI toggles. They map to stable capability checks in the backend.\n\n## Subscription behavior\n\n* Trialing, active, and overdue subscriptions currently keep the operational workspace available.\n* Expired, cancelled, and inactive states block plan-gated features.\n* Billing and recovery surfaces stay reachable so a shop can inspect status and restore access.\n\n## Why this matters for documentation\n\nOperator documentation needs to explain not only what a page does, but also why a user may or may\nnot be able to access it.\n\n* `team.members` affects member management routes.\n* export access depends on the relevant plan items.\n* shop billing pages are part of the operational recovery path.\n",
+    "_searchMeta": {
+      "cleanContent": "team access the platform already models access at two levels: platform-scoped permissions for the internal owner workspace shop-scoped roles and permissions for day-to-day tenant operations this matters in practice because operational pages exports and member management are not just ui toggles they map to stable capability checks in the backend subscription behavior trialing active and overdue subscriptions currently keep the operational workspace available expired cancelled and inactive states block plan-gated features billing and recovery surfaces stay reachable so a shop can inspect status and restore access why this matters for documentation operator documentation needs to explain not only what a page does but also why a user may or may not be able to access it team members affects member management routes export access depends on the relevant plan items shop billing pages are part of the operational recovery path",
+      "headings": [
+        "Team access",
+        "Subscription behavior",
+        "Why this matters for documentation"
+      ],
+      "keywords": [
+        "team",
+        "billing",
+        "subscription",
+        "roles",
+        "Team access",
+        "Subscription behavior",
+        "Why this matters for documentation",
+        "team.members"
+      ]
+    }
+  }
+]
