@@ -17,9 +17,7 @@ class ImportShopOrdersUseCase
 }
 
 class ImportShopOrdersParams extends Equatable {
-  const ImportShopOrdersParams({
-    required this.shopId,
-  });
+  const ImportShopOrdersParams({required this.shopId});
 
   final String shopId;
 

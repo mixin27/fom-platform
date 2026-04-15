@@ -123,7 +123,8 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
                                 activeShop.shopId.trim(),
                               ),
                               builder: (context, snapshot) {
-                                final billing = snapshot.data?.dataOrNull?.billing;
+                                final billing =
+                                    snapshot.data?.dataOrNull?.billing;
                                 final billingFailure =
                                     snapshot.data?.failureOrNull;
                                 final exportEnabled =
@@ -149,8 +150,8 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
                                     importEnabled;
                                 final importReason =
                                     activeShop.permissions.contains(
-                                          'orders.write',
-                                        )
+                                      'orders.write',
+                                    )
                                     ? importEnabled
                                           ? null
                                           : 'Spreadsheet import is available on paid plans.'
@@ -177,16 +178,15 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
                                       const SizedBox(height: 14),
                                     ],
                                     _ImportCard(
-                                      isDownloadingTemplate:
-                                          exportState.isDatasetBusy(
+                                      isDownloadingTemplate: exportState
+                                          .isDatasetBusy(
                                             'orders-import-template',
                                             ShopExportActionKind.save,
                                           ),
-                                      isImporting:
-                                          exportState.isDatasetBusy(
-                                            'orders-import',
-                                            ShopExportActionKind.importFile,
-                                          ),
+                                      isImporting: exportState.isDatasetBusy(
+                                        'orders-import',
+                                        ShopExportActionKind.importFile,
+                                      ),
                                       isEnabled: canImport,
                                       onDownloadTemplate: () => _saveDataset(
                                         context,
@@ -196,9 +196,8 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
                                         mimeType:
                                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                       ),
-                                      onImportPressed: () => _importOrders(
-                                        context,
-                                      ),
+                                      onImportPressed: () =>
+                                          _importOrders(context),
                                     ),
                                     const SizedBox(height: 14),
                                     _ExportCard(
@@ -402,10 +401,7 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
     }
 
     context.read<ShopExportBloc>().add(
-      ShopOrdersImportRequested(
-        shopId: shopId,
-        label: 'Order spreadsheet',
-      ),
+      ShopOrdersImportRequested(shopId: shopId, label: 'Order spreadsheet'),
     );
   }
 }
@@ -495,10 +491,9 @@ class _ExportCard extends StatelessWidget {
               Expanded(
                 child: AppButton(
                   text: 'Save file',
-                  onPressed:
-                      !isEnabled || isSaving || isSharing
-                          ? null
-                          : onSavePressed,
+                  onPressed: !isEnabled || isSaving || isSharing
+                      ? null
+                      : onSavePressed,
                   isLoading: isSaving,
                   icon: const Icon(
                     Icons.download_rounded,
@@ -512,10 +507,9 @@ class _ExportCard extends StatelessWidget {
                 child: AppButton(
                   text: 'Share',
                   variant: AppButtonVariant.secondary,
-                  onPressed:
-                      !isEnabled || isSaving || isSharing
-                          ? null
-                          : onSharePressed,
+                  onPressed: !isEnabled || isSaving || isSharing
+                      ? null
+                      : onSharePressed,
                   isLoading: isSharing,
                   icon: const Icon(Icons.ios_share_rounded, size: 18),
                 ),
@@ -594,10 +588,9 @@ class _ImportCard extends StatelessWidget {
               Expanded(
                 child: AppButton(
                   text: 'Template',
-                  onPressed:
-                      !isEnabled || isDownloadingTemplate || isImporting
-                          ? null
-                          : onDownloadTemplate,
+                  onPressed: !isEnabled || isDownloadingTemplate || isImporting
+                      ? null
+                      : onDownloadTemplate,
                   isLoading: isDownloadingTemplate,
                   icon: const Icon(
                     Icons.download_rounded,
@@ -611,10 +604,9 @@ class _ImportCard extends StatelessWidget {
                 child: AppButton(
                   text: 'Import file',
                   variant: AppButtonVariant.secondary,
-                  onPressed:
-                      !isEnabled || isDownloadingTemplate || isImporting
-                          ? null
-                          : onImportPressed,
+                  onPressed: !isEnabled || isDownloadingTemplate || isImporting
+                      ? null
+                      : onImportPressed,
                   isLoading: isImporting,
                   icon: const Icon(Icons.upload_file_rounded, size: 18),
                 ),
@@ -628,9 +620,7 @@ class _ImportCard extends StatelessWidget {
 }
 
 class _FeatureNoticeCard extends StatelessWidget {
-  const _FeatureNoticeCard({
-    required this.message,
-  });
+  const _FeatureNoticeCard({required this.message});
 
   final String message;
 

@@ -64,10 +64,7 @@ class ShopExportShareRequested extends ShopExportEvent {
 }
 
 class ShopOrdersImportRequested extends ShopExportEvent {
-  const ShopOrdersImportRequested({
-    required this.shopId,
-    required this.label,
-  });
+  const ShopOrdersImportRequested({required this.shopId, required this.label});
 
   final String shopId;
   final String label;

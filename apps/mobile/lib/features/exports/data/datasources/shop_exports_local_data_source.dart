@@ -10,10 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../domain/entities/shop_export_file.dart';
 
 class PickedImportFile {
-  const PickedImportFile({
-    required this.fileName,
-    required this.bytes,
-  });
+  const PickedImportFile({required this.fileName, required this.bytes});
 
   final String fileName;
   final Uint8List bytes;
