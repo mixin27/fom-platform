@@ -121,6 +121,7 @@ type PlanOptionRow = {
   is_active: boolean;
   sort_order: number;
   items: PlanItemRow[];
+  limits: PlanLimitRow[];
 };
 
 type PlanItemRow = {
@@ -129,6 +130,15 @@ type PlanItemRow = {
   label: string;
   description: string | null;
   availability_status: string;
+  sort_order: number;
+};
+
+type PlanLimitRow = {
+  id: string;
+  code: string;
+  label: string;
+  description: string | null;
+  value: number | null;
   sort_order: number;
 };
 
@@ -1344,7 +1354,8 @@ export class PlatformService {
       body.billing_period === undefined &&
       body.is_active === undefined &&
       body.sort_order === undefined &&
-      body.items === undefined
+      body.items === undefined &&
+      body.limits === undefined
     ) {
       throw validationError([
         {
@@ -1387,6 +1398,10 @@ export class PlatformService {
       if (body.items !== undefined) {
         await this.syncPlanItems(tx, planId, body.items);
       }
+
+      if (body.limits !== undefined) {
+        await this.syncPlanLimits(tx, planId, body.limits);
+      }
     });
 
     void this.emitPlatformInvalidation({
@@ -1424,6 +1439,10 @@ export class PlatformService {
 
       if (body.items && body.items.length > 0) {
         await this.syncPlanItems(tx, plan.id, body.items);
+      }
+
+      if (body.limits && body.limits.length > 0) {
+        await this.syncPlanLimits(tx, plan.id, body.limits);
       }
 
       return plan;
@@ -1581,6 +1600,9 @@ export class PlatformService {
         items: {
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         },
+        limits: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
         subscriptions: {
           include: {
             payments: true,
@@ -1597,6 +1619,9 @@ export class PlatformService {
       where: { id: planId },
       include: {
         items: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        limits: {
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         },
         subscriptions: {
@@ -1637,6 +1662,9 @@ export class PlatformService {
       shop_count: plan.subscriptions.length,
       collected_revenue: paidRevenue,
       items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
+      limits: (plan.limits ?? []).map((limit: any) =>
+        this.serializePlanLimit(limit),
+      ),
     };
   }
 
@@ -1648,6 +1676,17 @@ export class PlatformService {
       description: item.description,
       availability_status: item.availabilityStatus,
       sort_order: item.sortOrder,
+    };
+  }
+
+  private serializePlanLimit(limit: any): PlanLimitRow {
+    return {
+      id: limit.id,
+      code: limit.code,
+      label: limit.label,
+      description: limit.description,
+      value: limit.value ?? null,
+      sort_order: limit.sortOrder,
     };
   }
 
@@ -1678,6 +1717,37 @@ export class PlatformService {
         description: item.description ?? null,
         availabilityStatus: item.availability_status,
         sortOrder: item.sort_order ?? index,
+      })),
+    });
+  }
+
+  private async syncPlanLimits(
+    tx: any,
+    planId: string,
+    limits: Array<{
+      code: string;
+      label: string;
+      description?: string | null;
+      value?: number | null;
+      sort_order?: number;
+    }>,
+  ) {
+    await (tx as any).planLimit.deleteMany({
+      where: { planId },
+    });
+
+    if (limits.length === 0) {
+      return;
+    }
+
+    await (tx as any).planLimit.createMany({
+      data: limits.map((limit, index) => ({
+        planId,
+        code: limit.code,
+        label: limit.label,
+        description: limit.description ?? null,
+        value: limit.value ?? null,
+        sortOrder: limit.sort_order ?? index,
       })),
     });
   }
@@ -2656,6 +2726,9 @@ export class PlatformService {
         items: {
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         },
+        limits: {
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
       },
     });
 
@@ -2670,6 +2743,9 @@ export class PlatformService {
       is_active: plan.isActive,
       sort_order: plan.sortOrder,
       items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
+      limits: (plan.limits ?? []).map((limit: any) =>
+        this.serializePlanLimit(limit),
+      ),
     }));
   }
 

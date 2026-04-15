@@ -164,6 +164,14 @@ export type PlatformPlanItemInput = {
   sort_order?: number
 }
 
+export type PlatformPlanLimitInput = {
+  code: string
+  label: string
+  description?: string | null
+  value?: number | null
+  sort_order?: number
+}
+
 export type PlatformPlanEditorInput = {
   code: string
   name: string
@@ -174,6 +182,7 @@ export type PlatformPlanEditorInput = {
   is_active: boolean
   sort_order: number
   items: PlatformPlanItemInput[]
+  limits: PlatformPlanLimitInput[]
 }
 
 export type PlatformPlanActionResult =

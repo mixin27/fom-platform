@@ -1,4 +1,5 @@
 import { subscriptionFeatures } from './subscription-feature.constants';
+import { subscriptionLimits } from './subscription-limit.constants';
 
 export const DEFAULT_TRIAL_PLAN_CODE = 'trial';
 
@@ -91,10 +92,10 @@ export const defaultPlanCatalog = [
       },
       {
         code: subscriptionFeatures.teamMembers,
-        label: 'Staff accounts with role-based access',
+        label: 'Owner-only onboarding access',
         description:
-          'Owners can invite staff and assign shop roles during the trial.',
-        availabilityStatus: 'available',
+          'Trial shops stay owner-only until the shop upgrades to a paid plan.',
+        availabilityStatus: 'unavailable',
         sortOrder: 7,
       },
       {
@@ -158,13 +159,23 @@ export const defaultPlanCatalog = [
         sortOrder: 35,
       },
     ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Trial shops stay owner-only and cannot activate additional staff accounts.',
+        value: 0,
+        sortOrder: 0,
+      },
+    ],
   },
   {
     code: 'pro_monthly',
     name: 'Shop Monthly',
     description:
       'Single-shop monthly plan for daily Facebook order operations.',
-    price: 8000,
+    price: 15000,
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
@@ -230,8 +241,9 @@ export const defaultPlanCatalog = [
       },
       {
         code: subscriptionFeatures.teamMembers,
-        label: 'Staff accounts with roles and permissions',
-        description: 'Invite staff members and control access per shop.',
+        label: 'Up to 3 active staff seats with roles and permissions',
+        description:
+          'Add up to 3 non-owner active staff accounts per paid shop.',
         availabilityStatus: 'available',
         sortOrder: 8,
       },
@@ -310,13 +322,23 @@ export const defaultPlanCatalog = [
         sortOrder: 37,
       },
     ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Maximum number of non-owner active staff accounts allowed on the monthly plan.',
+        value: 3,
+        sortOrder: 0,
+      },
+    ],
   },
   {
     code: 'pro_yearly',
     name: 'Shop Yearly',
     description:
       'Discounted yearly plan for shops running the workflow every day.',
-    price: 80000,
+    price: 150000,
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
@@ -383,9 +405,9 @@ export const defaultPlanCatalog = [
       },
       {
         code: subscriptionFeatures.teamMembers,
-        label: 'Staff accounts with roles and permissions',
+        label: 'Up to 3 active staff seats with roles and permissions',
         description:
-          'Owners can manage team access inside the same shop workspace.',
+          'Add up to 3 non-owner active staff accounts per paid shop.',
         availabilityStatus: 'available',
         sortOrder: 8,
       },
@@ -463,6 +485,16 @@ export const defaultPlanCatalog = [
           'Priority support belongs to future enterprise-oriented plans.',
         availabilityStatus: 'unavailable',
         sortOrder: 37,
+      },
+    ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Maximum number of non-owner active staff accounts allowed on the yearly plan.',
+        value: 3,
+        sortOrder: 0,
       },
     ],
   },

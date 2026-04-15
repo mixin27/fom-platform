@@ -78,6 +78,12 @@ async function seedPlanCatalog() {
       },
     });
 
+    await prisma.planLimit.deleteMany({
+      where: {
+        planId: record.id,
+      },
+    });
+
     if (plan.items.length > 0) {
       await prisma.planItem.createMany({
         data: plan.items.map((item) => ({
@@ -87,6 +93,19 @@ async function seedPlanCatalog() {
           description: item.description,
           availabilityStatus: item.availabilityStatus,
           sortOrder: item.sortOrder,
+        })),
+      });
+    }
+
+    if ((plan.limits ?? []).length > 0) {
+      await prisma.planLimit.createMany({
+        data: plan.limits.map((limit) => ({
+          planId: record.id,
+          code: limit.code,
+          label: limit.label,
+          description: limit.description,
+          value: limit.value ?? null,
+          sortOrder: limit.sortOrder,
         })),
       });
     }
@@ -381,7 +400,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
       data: {
         subscriptionId: subscription.id,
         invoiceNo: 'INV-0089',
-        amount: 7000,
+        amount: 15000,
         currency: 'MMK',
         status: 'paid',
         paymentMethod: 'KBZ Pay',
@@ -1216,7 +1235,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     paymentData.push({
       subscriptionId: aungSubscriptionId,
       invoiceNo: 'INV-0084',
-      amount: 70000,
+      amount: 150000,
       currency: 'MMK',
       status: 'paid',
       paymentMethod: 'KBZ Pay',
@@ -1233,7 +1252,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     paymentData.push({
       subscriptionId: phyoSubscriptionId,
       invoiceNo: 'INV-0086',
-      amount: 7000,
+      amount: 15000,
       currency: 'MMK',
       status: 'overdue',
       paymentMethod: null,
@@ -1250,7 +1269,7 @@ async function seedDemoData(roleIds: Map<string, { id: string }>) {
     paymentData.push({
       subscriptionId: thidaSubscriptionId,
       invoiceNo: 'INV-0088',
-      amount: 7000,
+      amount: 15000,
       currency: 'MMK',
       status: 'paid',
       paymentMethod: 'Wave Money',

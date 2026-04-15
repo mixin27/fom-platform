@@ -132,6 +132,7 @@ model Plan {
   updatedAt     DateTime       @updatedAt
   subscriptions Subscription[]
   items         PlanItem[]
+  limits        PlanLimit[]
 
   @@map("plans")
 }
@@ -152,6 +153,23 @@ model PlanItem {
   @@index([planId, availabilityStatus])
   @@unique([planId, code])
   @@map("plan_items")
+}
+
+model PlanLimit {
+  id          String   @id @default(cuid())
+  planId      String
+  code        String
+  label       String
+  description String?
+  value       Int?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  plan        Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, sortOrder])
+  @@unique([planId, code])
+  @@map("plan_limits")
 }
 
 model Subscription {
