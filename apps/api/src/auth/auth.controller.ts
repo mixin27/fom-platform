@@ -15,6 +15,7 @@ import {
   type RequestWithContext,
 } from '../common/http/request-context';
 import { LoginDto } from './dto/login.dto';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { ConfirmEmailVerificationDto } from './dto/confirm-email-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RefreshSessionDto } from './dto/refresh-session.dto';
@@ -109,6 +110,24 @@ export class AuthController {
   ) {
     return ok(
       this.authService.resetPassword(body, getSessionRequestMetadata(request)),
+    );
+  }
+
+  @Post('invitations/accept')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Accept a shop staff invitation, set a password, and create a session',
+  })
+  acceptInvitation(
+    @Body() body: AcceptInvitationDto,
+    @Req() request: RequestWithContext,
+  ) {
+    return ok(
+      this.authService.acceptInvitation(
+        body,
+        getSessionRequestMetadata(request),
+      ),
     );
   }
 

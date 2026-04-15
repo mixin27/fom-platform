@@ -1,6 +1,7 @@
 export type EmailTemplateKey =
   | 'auth.welcome'
   | 'auth.verify_email'
+  | 'auth.staff_invitation'
   | 'auth.forgot_password'
   | 'auth.password_reset_success'
   | 'platform.invoice_notice'

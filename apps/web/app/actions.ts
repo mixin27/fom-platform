@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 
 import {
+  acceptInvitationWithToken,
   AuthApiError,
   confirmEmailVerification,
   createShop,
@@ -357,6 +358,40 @@ export async function resetPasswordAction(formData: FormData) {
 
     redirect(`/reset-password?token=${encodeURIComponent(token)}&error=reset_failed`)
   }
+}
+
+export async function acceptInvitationAction(formData: FormData) {
+  const token = getFieldValue(formData, "token")
+  const password = getFieldValue(formData, "password")
+  const confirmPassword = getFieldValue(formData, "confirmPassword")
+
+  if (!token || password.length < 8 || password !== confirmPassword) {
+    redirect(`/accept-invite?token=${encodeURIComponent(token)}&error=invalid_invite`)
+  }
+
+  let nextPath = `/accept-invite?token=${encodeURIComponent(token)}&error=invite_failed`
+
+  try {
+    const clientHeaders = await ensureWebClientHeaders()
+    const auth = await acceptInvitationWithToken({
+      token,
+      password,
+      headers: clientHeaders,
+    })
+    const session = buildSessionFromAuth(auth)
+
+    await persistSession(session)
+    nextPath = defaultPathForSession(session)
+  } catch (error) {
+    if (
+      error instanceof AuthApiError &&
+      (error.code === "UNAUTHORIZED" || error.status === 401)
+    ) {
+      nextPath = `/accept-invite?token=${encodeURIComponent(token)}&error=expired`
+    }
+  }
+
+  redirect(nextPath)
 }
 
 export async function confirmEmailVerificationAction(formData: FormData) {

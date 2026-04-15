@@ -22,6 +22,7 @@ import { ShopsService } from '../shops/shops.service';
 import type { ConfirmEmailVerificationDto } from './dto/confirm-email-verification.dto';
 import type { ForgotPasswordDto } from './dto/forgot-password.dto';
 import type { LoginDto } from './dto/login.dto';
+import type { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import type { RefreshSessionDto } from './dto/refresh-session.dto';
 import type { RegisterDto } from './dto/register.dto';
 import type { ResetPasswordDto } from './dto/reset-password.dto';
@@ -463,6 +464,106 @@ export class AuthService {
       email: user.email,
       reset_at: resetAt.toISOString(),
     };
+  }
+
+  async acceptInvitation(
+    body: AcceptInvitationDto,
+    metadata: SessionRequestMetadata,
+  ) {
+    const actionToken = await this.resolveEmailActionToken(
+      body.token,
+      'staff_invitation',
+    );
+    const user = await this.prisma.user.findUnique({
+      where: { id: actionToken.userId },
+      include: {
+        passwordCredential: true,
+      },
+    });
+
+    if (!user || !user.email || user.email !== actionToken.email) {
+      throw unauthorizedError('Invitation token is invalid or expired');
+    }
+
+    const invitedMemberships = await this.prisma.shopMember.findMany({
+      where: {
+        userId: user.id,
+        status: 'invited',
+      },
+      include: {
+        roleAssignments: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (invitedMemberships.length === 0) {
+      throw conflictError(
+        'This invitation is no longer pending. Ask the shop owner to resend it if needed.',
+      );
+    }
+
+    for (const membership of invitedMemberships) {
+      await this.shopsService.assertInvitedMemberCanActivate(
+        membership.shopId,
+        membership.id,
+      );
+    }
+
+    const passwordHash = await hashPassword(body.password);
+    const acceptedAt = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.passwordCredential.upsert({
+        where: { userId: user.id },
+        update: {
+          passwordHash,
+        },
+        create: {
+          userId: user.id,
+          passwordHash,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifiedAt: user.emailVerifiedAt ?? acceptedAt,
+        },
+      });
+
+      await tx.emailActionToken.update({
+        where: { id: actionToken.id },
+        data: {
+          consumedAt: acceptedAt,
+        },
+      });
+
+      await tx.shopMember.updateMany({
+        where: {
+          id: {
+            in: invitedMemberships.map((membership) => membership.id),
+          },
+          status: 'invited',
+        },
+        data: {
+          status: 'active',
+        },
+      });
+    });
+
+    await this.upsertIdentity(user.id, {
+      provider: 'password',
+      providerUserId: user.email,
+      email: user.email,
+      phone: user.phone,
+      displayName: user.name,
+    });
+
+    const issuedSession = await this.issueSessionForUser(user.id, metadata);
+    return this.buildAuthResponse(issuedSession);
   }
 
   async startPhoneChallenge(body: StartPhoneChallengeDto) {
@@ -1263,7 +1364,7 @@ export class AuthService {
 
   private async issueEmailActionToken(
     user: User,
-    purpose: 'verify_email' | 'reset_password',
+    purpose: 'verify_email' | 'reset_password' | 'staff_invitation',
     ttlMs: number,
     metadata: SessionRequestMetadata,
   ) {
@@ -1314,7 +1415,7 @@ export class AuthService {
 
   private async resolveEmailActionToken(
     rawToken: string,
-    purpose: 'verify_email' | 'reset_password',
+    purpose: 'verify_email' | 'reset_password' | 'staff_invitation',
   ) {
     const tokenHash = this.hashEmailActionToken(rawToken);
     const actionToken = await this.prisma.emailActionToken.findUnique({
@@ -1331,7 +1432,9 @@ export class AuthService {
       throw unauthorizedError(
         purpose === 'verify_email'
           ? 'Email verification token is invalid or expired'
-          : 'Password reset token is invalid or expired',
+          : purpose === 'reset_password'
+            ? 'Password reset token is invalid or expired'
+            : 'Invitation token is invalid or expired',
       );
     }
 

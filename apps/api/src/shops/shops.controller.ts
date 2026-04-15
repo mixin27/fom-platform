@@ -8,12 +8,14 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
+import { getSessionRequestMetadata, type RequestWithContext } from '../common/http/request-context';
 import { RequirePlanFeatures } from '../common/http/plan-features.decorator';
 import { RequirePermissions } from '../common/http/permissions.decorator';
 import { permissions } from '../common/http/rbac.constants';
@@ -110,8 +112,16 @@ export class ShopsController {
     @CurrentUser() currentUser: AuthenticatedUser,
     @Param('shopId') shopId: string,
     @Body() body: AddShopMemberDto,
+    @Req() request: RequestWithContext,
   ) {
-    return ok(this.shopsService.addMember(currentUser, shopId, body));
+    return ok(
+      this.shopsService.addMember(
+        currentUser,
+        shopId,
+        body,
+        getSessionRequestMetadata(request),
+      ),
+    );
   }
 
   @Patch(':shopId/members/:memberId')
@@ -127,6 +137,26 @@ export class ShopsController {
   ) {
     return ok(
       this.shopsService.updateMember(currentUser, shopId, memberId, body),
+    );
+  }
+
+  @Post(':shopId/members/:memberId/invite')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.membersManage)
+  @ApiOperation({ summary: 'Resend a pending staff invitation email' })
+  resendMemberInvitation(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('memberId') memberId: string,
+    @Req() request: RequestWithContext,
+  ) {
+    return ok(
+      this.shopsService.resendMemberInvitation(
+        currentUser,
+        shopId,
+        memberId,
+        getSessionRequestMetadata(request),
+      ),
     );
   }
 

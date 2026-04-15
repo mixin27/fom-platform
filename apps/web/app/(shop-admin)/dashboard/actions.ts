@@ -2003,6 +2003,38 @@ export async function updateShopMemberAction(
   }
 }
 
+export async function resendShopMemberInvitationAction(
+  shopId: string,
+  memberId: string
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !memberId) {
+    return {
+      ok: false,
+      message: "Member context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/members/${memberId}/invite`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Invitation email sent.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to resend the invitation right now.")
+  }
+}
+
 export async function createShopRoleAction(
   shopId: string,
   input: ShopRoleInput

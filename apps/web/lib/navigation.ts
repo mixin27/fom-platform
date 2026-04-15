@@ -1,5 +1,6 @@
 export type NavIconName =
   | "dashboard"
+  | "workspace"
   | "orders"
   | "customers"
   | "staffs"
@@ -23,6 +24,7 @@ export type NavItem = {
 
 export const shopPortalNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
+  { href: "/dashboard/workspace", label: "Workspace", icon: "workspace" },
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
   { href: "/dashboard/customers", label: "Customers", icon: "customers" },
   { href: "/dashboard/staffs", label: "Staffs", icon: "staffs" },

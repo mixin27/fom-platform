@@ -1,7 +1,11 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
-import type { AuthenticatedUser } from '../common/http/request-context';
+import type {
+  AuthenticatedUser,
+  SessionRequestMetadata,
+} from '../common/http/request-context';
 import {
   conflictError,
   forbiddenError,
@@ -11,6 +15,7 @@ import {
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EmailOutboxService } from '../email/email-outbox.service';
 import {
   permissionCatalog,
   permissions,
@@ -42,11 +47,13 @@ const allowedOperationalSubscriptionStatuses = new Set([
   'overdue',
 ]);
 const ownerRoleCode = 'owner';
+const STAFF_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class ShopsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
   ) {}
 
@@ -649,6 +656,7 @@ export class ShopsService {
     currentUser: AuthenticatedUser,
     shopId: string,
     body: AddShopMemberDto,
+    metadata?: SessionRequestMetadata,
   ) {
     await this.assertPermission(
       currentUser.id,
@@ -692,14 +700,26 @@ export class ShopsService {
       (userId &&
         (await this.prisma.user.findUnique({
           where: { id: userId },
+          include: {
+            passwordCredential: true,
+            authIdentities: true,
+          },
         }))) ||
       (email &&
         (await this.prisma.user.findUnique({
           where: { email: email.trim().toLowerCase() },
+          include: {
+            passwordCredential: true,
+            authIdentities: true,
+          },
         }))) ||
       (phone &&
         (await this.prisma.user.findUnique({
           where: { phone: phone.replace(/\s+/g, ' ').trim() },
+          include: {
+            passwordCredential: true,
+            authIdentities: true,
+          },
         })));
 
     if (!targetUser) {
@@ -720,8 +740,18 @@ export class ShopsService {
           email: email?.trim().toLowerCase() ?? null,
           phone: phone?.replace(/\s+/g, ' ').trim() ?? null,
         },
+        include: {
+          passwordCredential: true,
+          authIdentities: true,
+        },
       });
     }
+
+    const requiresInvitation =
+      Boolean(targetUser.email) && !this.userCanAuthenticateDirectly(targetUser);
+    const memberStatus: 'active' | 'invited' = requiresInvitation
+      ? 'invited'
+      : 'active';
 
     const existingMember = await this.prisma.shopMember.findUnique({
       where: {
@@ -739,7 +769,7 @@ export class ShopsService {
         data: {
           shopId,
           userId: targetUser.id,
-          status: 'active',
+          status: memberStatus,
         },
       });
 
@@ -763,7 +793,7 @@ export class ShopsService {
           target_user_name: targetUser.name,
           role_ids: roles.map((role) => role.id),
           role_codes: roles.map((role) => role.code),
-          status: 'active',
+          status: memberStatus,
         },
       });
 
@@ -788,7 +818,107 @@ export class ShopsService {
       });
     });
 
-    return this.serializeMemberRecord(member);
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    let invitationSent = false;
+
+    if (requiresInvitation && targetUser.email) {
+      invitationSent = await this.queueStaffInvitationEmail(
+        targetUser,
+        member.shopId,
+        member.id,
+        roles.map((role) => role.name),
+        metadata,
+      );
+    }
+
+    return {
+      ...this.serializeMemberRecord(member),
+      invitation_sent: invitationSent,
+    };
+  }
+
+  async resendMemberInvitation(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    memberId: string,
+    metadata?: SessionRequestMetadata,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+
+    const member = await this.prisma.shopMember.findFirst({
+      where: {
+        id: memberId,
+        shopId,
+      },
+      include: {
+        shop: true,
+        user: {
+          include: {
+            passwordCredential: true,
+            authIdentities: true,
+          },
+        },
+        roleAssignments: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    if (member.status !== 'invited') {
+      throw conflictError('Only invited members can receive a new invitation link.');
+    }
+
+    if (!member.user.email) {
+      throw conflictError(
+        'This member does not have an email address that can receive an invitation.',
+      );
+    }
+
+    const sent = await this.queueStaffInvitationEmail(
+      member.user,
+      shopId,
+      member.id,
+      member.roleAssignments.map((assignment) => assignment.role.name),
+      metadata,
+    );
+
+    if (!sent) {
+      throw conflictError('Invitation email could not be queued right now.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.recordAuditLog(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'shop.member.invitation_resent',
+        entityType: 'shop_member',
+        entityId: member.id,
+        summary: `Resent invitation to ${member.user.name}.`,
+        metadata: {
+          member_id: member.id,
+          target_user_id: member.userId,
+          target_user_name: member.user.name,
+        },
+      });
+    });
+
+    return {
+      id: member.id,
+      invitation_sent: true,
+    };
   }
 
   async updateMember(
@@ -1136,6 +1266,34 @@ export class ShopsService {
     }
   }
 
+  async assertInvitedMemberCanActivate(shopId: string, memberId: string) {
+    const member = await this.prisma.shopMember.findFirst({
+      where: {
+        id: memberId,
+        shopId,
+      },
+      include: {
+        roleAssignments: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!member) {
+      throw notFoundError('Shop member not found');
+    }
+
+    const roleCodes = member.roleAssignments.map((assignment) => assignment.role.code);
+    if (this.countsTowardActiveStaffSeat('active', roleCodes)) {
+      await this.assertStaffSeatAvailability(shopId, {
+        excludeMemberId: member.id,
+        additionalSeats: 1,
+      });
+    }
+  }
+
   async serializeShop(shopId: string) {
     await this.subscriptionLifecycle.expireElapsedTrials();
 
@@ -1188,6 +1346,19 @@ export class ShopsService {
       scope: 'shop',
       OR: [{ isSystem: true, shopId: null }, { shopId }],
     };
+  }
+
+  private userCanAuthenticateDirectly(user: {
+    email?: string | null;
+    phone?: string | null;
+    passwordCredential?: unknown | null;
+    authIdentities?: Array<unknown>;
+  }) {
+    return (
+      Boolean(user.passwordCredential) ||
+      Boolean(user.phone) ||
+      (user.authIdentities?.length ?? 0) > 0
+    );
   }
 
   private async requireRolesByCodes(roleCodes: string[], shopId: string) {
@@ -1594,6 +1765,149 @@ export class ShopsService {
           : {}),
       },
     });
+  }
+
+  private async queueStaffInvitationEmail(
+    user: {
+      id: string;
+      name: string;
+      email: string | null;
+    },
+    shopId: string,
+    memberId: string,
+    roleNames: string[],
+    metadata?: SessionRequestMetadata,
+  ) {
+    if (!user.email) {
+      return false;
+    }
+
+    try {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: {
+          name: true,
+        },
+      });
+
+      const issuedToken = await this.issueEmailActionTokenForInvite(
+        user,
+        metadata,
+      );
+
+      await this.emailOutbox.queueAndSendTemplatedEmail({
+        userId: user.id,
+        shopId,
+        toEmail: user.email,
+        recipientName: user.name,
+        templateKey: 'auth.staff_invitation',
+        variables: {
+          recipientName: user.name,
+          shopName: shop?.name ?? 'shop workspace',
+          roleNames: roleNames.join(', '),
+          roleLine:
+            roleNames.length > 0
+              ? `Assigned roles: ${roleNames.join(', ')}`
+              : null,
+          ctaLabel: 'Set password and join',
+          ctaUrl: `${this.getWebAppBaseUrl()}/accept-invite?token=${encodeURIComponent(
+            issuedToken.rawToken,
+          )}`,
+          expiryText: `This invitation link expires in ${this.describeDuration(
+            STAFF_INVITATION_TTL_MS,
+          )}.`,
+        },
+        metadata: {
+          purpose: 'staff_invitation',
+          shop_id: shopId,
+          member_id: memberId,
+        },
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async issueEmailActionTokenForInvite(
+    user: {
+      id: string;
+      email: string | null;
+    },
+    metadata?: SessionRequestMetadata,
+  ) {
+    if (!user.email) {
+      throw conflictError('An email address is required for invitation delivery');
+    }
+
+    const rawToken = randomBytes(32).toString('base64url');
+    const tokenHash = this.hashEmailActionToken(rawToken);
+    const expiresAt = new Date(Date.now() + STAFF_INVITATION_TTL_MS);
+
+    const token = await this.prisma.$transaction(async (tx) => {
+      await tx.emailActionToken.updateMany({
+        where: {
+          userId: user.id,
+          email: user.email!,
+          purpose: 'staff_invitation',
+          consumedAt: null,
+          revokedAt: null,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      return tx.emailActionToken.create({
+        data: {
+          userId: user.id,
+          email: user.email!,
+          purpose: 'staff_invitation',
+          tokenHash,
+          expiresAt,
+          requestedIpAddress: metadata?.ipAddress ?? null,
+          requestedUserAgent: metadata?.userAgent ?? null,
+        },
+      });
+    });
+
+    return {
+      rawToken,
+      record: token,
+    };
+  }
+
+  private hashEmailActionToken(rawToken: string) {
+    return createHash('sha256').update(rawToken).digest('hex');
+  }
+
+  private getWebAppBaseUrl() {
+    return (
+      process.env.WEB_APP_BASE_URL?.trim() ||
+      process.env.APP_WEB_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+  }
+
+  private describeDuration(valueMs: number) {
+    const minutes = Math.floor(valueMs / 60_000);
+
+    if (minutes % (24 * 60) === 0) {
+      const days = minutes / (24 * 60);
+      return `${days} day${days === 1 ? '' : 's'}`;
+    }
+
+    if (minutes % 60 === 0) {
+      const hours = minutes / 60;
+      return `${hours} hour${hours === 1 ? '' : 's'}`;
+    }
+
+    return `${minutes} minute${minutes === 1 ? '' : 's'}`;
   }
 
   private normalizePhone(value: string | undefined): string | null {

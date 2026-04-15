@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { PencilLine, Plus } from "lucide-react"
+import { Mail, PencilLine, Plus } from "lucide-react"
 
 import type { ShopMember, ShopRole } from "@/lib/shop/api"
 import {
   createShopMemberAction,
+  resendShopMemberInvitationAction,
   updateShopMemberAction,
 } from "../../actions"
 import { Button } from "@workspace/ui/components/button"
@@ -90,6 +91,9 @@ export function ShopMemberSheet({
 
   const assignableRoles = useMemo(() => getAssignableRoles(roles), [roles])
   const isEdit = Boolean(member)
+  const canResendInvitation = Boolean(
+    member && member.status === "invited" && member.user.email
+  )
 
   useEffect(() => {
     if (!open) {
@@ -144,6 +148,26 @@ export function ShopMemberSheet({
       }
 
       setOpen(false)
+      router.refresh()
+    })
+  }
+
+  function handleResendInvitation() {
+    if (!member) {
+      return
+    }
+
+    setFormError(null)
+
+    startTransition(async () => {
+      const result = await resendShopMemberInvitationAction(shopId, member.id)
+
+      if (!result.ok) {
+        setFormError(result.message)
+        return
+      }
+
+      setFormError("Invitation email sent.")
       router.refresh()
     })
   }
@@ -236,6 +260,26 @@ export function ShopMemberSheet({
                 </select>
                 <FieldError>{getFieldError("status")}</FieldError>
               </Field>
+            ) : null}
+
+            {canResendInvitation ? (
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-background px-3 py-3">
+                <div className="text-sm font-semibold text-foreground">Invitation pending</div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This member still needs to open the email link and set a password before access becomes active.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={handleResendInvitation}
+                  disabled={isPending}
+                >
+                  <Mail data-icon="inline-start" />
+                  Resend invitation
+                </Button>
+              </div>
             ) : null}
 
             <Field data-invalid={!!getFieldError("role_ids") || !!getFieldError("role_codes")}>

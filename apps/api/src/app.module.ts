@@ -14,6 +14,8 @@ import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
 import { DeliveriesController } from './deliveries/deliveries.controller';
 import { DeliveriesService } from './deliveries/deliveries.service';
+import { EnterpriseController } from './enterprise/enterprise.controller';
+import { EnterpriseService } from './enterprise/enterprise.service';
 import {
   PlatformExportsController,
   ShopExportsController,
@@ -74,6 +76,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     OrdersController,
     NotificationsController,
     DeliveriesController,
+    EnterpriseController,
     ShopExportsController,
     PlatformExportsController,
     TemplatesController,
@@ -106,6 +109,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     RealtimeService,
     NotificationsService,
     DeliveriesService,
+    EnterpriseService,
     ExportsService,
     TemplatesService,
     SummariesService,

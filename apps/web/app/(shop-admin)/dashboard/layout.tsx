@@ -19,6 +19,10 @@ export default async function ShopAppLayout({
 }) {
   const portalContext = await getShopPortalContext()
   const { session, activeShop } = portalContext
+  const navItems =
+    session.shops.length > 1
+      ? shopPortalNav
+      : shopPortalNav.filter((item) => item.href !== "/dashboard/workspace")
   const [profileResponse, unreadResponse] = await Promise.all([
     getCurrentUserProfile("/dashboard"),
     getNotificationUnreadCount({
@@ -60,7 +64,7 @@ export default async function ShopAppLayout({
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-3">
-              <AppSideNav items={shopPortalNav} tone="shop" />
+              <AppSideNav items={navItems} tone="shop" />
             </div>
 
             <div className="border-t border-[var(--fom-border-subtle)] px-4 py-3">
