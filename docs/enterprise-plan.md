@@ -1,226 +1,178 @@
-# 🔷 CORE FEATURE MODULES (Your System Architecture)
+# Subscription Packaging Strategy
 
-Before tiers, structure features into modules:
+This document should reflect what the product can actually sell now, while leaving room for a real enterprise tier later.
 
-1. **Order Management**
-2. **Facebook Integration** (comments, inbox)
-3. **Customer Management** (CRM-lite)
-4. **Automation** (auto reply, tagging)
-5. **Analytics & Reports**
-6. **Team & Permissions**
-7. **Integrations** (delivery, export, API)
+## Core Modules
 
-👉 Tiers will “unlock” these progressively.
+1. Order Management
+2. Customer Management
+3. Deliveries
+4. Message Templates
+5. Reports and Exports
+6. Team and Permissions
+7. Integrations and Automation
+
+Tiers should unlock these in a way that creates clear upgrade pressure without overpromising future integrations.
 
 ---
 
-## 🟢 FREE PLAN (Acquisition Layer)
+## Phase One Recommendation
 
-👉 **Goal:** New / small sellers testing your platform
+Launch with only three commercial states:
+
+1. Free Trial
+2. Pro Monthly
+3. Pro Yearly
+4. Enterprise / Custom Quote
+
+Do not ship a permanent free plan in phase one. A trial is enough for acquisition and avoids low-value support load.
+
+---
+
+## Free Trial
+
+Goal: let a new shop validate the workflow quickly.
 
 ### Limits
 
-- 1 Facebook Page
-- 30 Orders / month
-- 1 user only
+- 1 shop
+- 7 days
+- basic owner access
 
-### Features
+### Included
 
-- ✅ Basic order dashboard
-- ✅ Manual order creation
-- ✅ Comment → Order (manual trigger)
-- ✅ Basic customer list
-- ✅ Order status tracking (Pending / Confirmed / Delivered)
-- ✅ Basic search & filter
+- Order management
+- Paste from Messenger
+- Customer management
+- Deliveries
+- Message templates
+- Reports and summaries
+- Staff accounts and RBAC during evaluation
 
-### Restrictions
+### Restricted
 
-- ❌ No auto-reply
-- ❌ No analytics
-- ❌ No export
-- ❌ No delivery integration
-- ❌ Branding watermark (important for growth)
+- CSV exports
+- Spreadsheet import
+- Advanced automation
+- Native Facebook integrations
+- API access
+- Multi-shop controls
 
-> [!TIP]
-> **Strategy:** Make it usable but slightly painful → push upgrade
-
----
-
-## 🔵 STARTER PLAN (MMK ~7,000)
-
-👉 **Goal:** Small but active sellers
-
-### Limits
-
-- 2 Facebook Pages
-- 300 Orders / month
-- 1–2 users
-
-### Features
-
-- ✅ Everything in Free +
-- ✅ Auto capture comments → orders
-- ✅ Basic auto-reply (keywords)
-- ✅ Customer profiles (phone, address, notes)
-- ✅ Order notes & tags
-- ✅ Basic reports:
-  - Daily orders
-  - Total sales
-- ✅ Remove watermark
-
-### Still Limited
-
-- ❌ No team roles
-- ❌ No advanced analytics
-- ❌ Limited automation
-
-> [!TIP]
-> **Upgrade trigger:** Need more automation, Need insights
+Strategy: enough value to prove the workflow, but not enough for long-term operation.
 
 ---
 
-## 🟣 PRO PLAN (MMK ~20,000) ⭐ CORE REVENUE
+## Pro Monthly
 
-👉 **Goal:** Serious sellers / growing shops
+Goal: single-shop operators who run daily sales operations and want one system for orders, customers, delivery, and reporting.
 
-### Limits
+### Price
 
-- 5 Facebook Pages
-- Unlimited orders
-- 3–5 users
+- 15,000 MMK per shop per month
 
-### Features
+### Included
 
-- ✅ Everything in Starter +
+- 1 subscription = 1 shop
+- Full shop workspace
+- Order management
+- Paste from Messenger
+- Spreadsheet import
+- Customer management
+- Deliveries
+- Message templates
+- Reports and summaries
+- Staff accounts and RBAC
+- CSV exports
 
-**🔥 Automation (KEY SELLING POINT)**
+### Not Included
 
-- ✅ Advanced auto-reply:
-  - Keyword + conditions
-  - Comment + Messenger triggers
-- ✅ Auto tagging customers
-- ✅ Auto order status update rules
+- Native Facebook comments/inbox sync
+- Advanced automation
+- Advanced analytics
+- Delivery API integrations
+- Public API / webhooks
+- Multi-shop management
+- Priority support
 
-**📊 Analytics**
-
-- ✅ Sales dashboard (daily / weekly / monthly)
-- ✅ Best-selling products
-- ✅ Conversion tracking (comment → order)
-- ✅ Customer repeat rate
-
-**👥 Team**
-
-- ✅ Multi-user access
-- ✅ Basic roles (Admin / Staff)
-
-**🚚 Operations**
-
-- ✅ Delivery integration (manual or API-ready)
-- ✅ Export to Excel / CSV
-
-**📦 Productivity**
-
-- ✅ Bulk order actions
-- ✅ Order timeline/history
-
-> [!NOTE]
-> 💡 This plan must feel like: 👉 **“I can run my whole business here”**
+Positioning: "Run the whole shop in one place."
 
 ---
 
-## 🔴 BUSINESS / ENTERPRISE (MMK 40,000+ or Custom)
+## Pro Yearly
 
-👉 **Goal:** Large shops / agencies / multi-brand sellers
+Goal: committed operators who want lower annual cost and predictable billing.
 
-### Limits
+### Price
 
-- Unlimited pages
-- Unlimited orders
-- Unlimited users
+- 150,000 MMK per shop per year
 
-### Features
+### Included
 
-- ✅ Everything in Pro +
+- Everything in Pro Monthly
+- Annual billing discount
 
-**⚙️ Advanced Control**
-
-- ✅ Advanced roles & permissions
-- ✅ Multi-shop management (important for agencies)
-
-**🔗 Integrations**
-
-- ✅ Delivery APIs (real integrations)
-- ✅ Webhook / API access
-- ✅ Shopify / website sync (future-ready)
-
-**📊 Advanced Analytics**
-
-- ✅ Custom reports
-- ✅ Export automation
-- ✅ Sales forecasting (optional future AI)
-
-**⚡ Priority**
-
-- ✅ Priority support
-- ✅ Dedicated onboarding
-
-> [!NOTE]
-> 💡 Position as: 👉 **“Business infrastructure, not just a tool”**
+Positioning: same workflow, better annual commitment economics.
 
 ---
 
-## 🧩 ADD-ONS (Revenue Expansion)
+## Enterprise / Custom
 
-These should NOT be locked strictly by tier:
+Goal: larger operators, multi-brand sellers, agencies, or clients with operational and governance complexity.
 
-- **💬 Automation Add-ons**
-  - Advanced chatbot flows → +5,000 MMK
-- **📩 SMS Notifications**
-  - Pay per SMS (usage-based)
-- **🤖 AI Reply (future)**
-  - GPT-based auto response → premium
-- **👥 Extra Users**
-  - +2,000 MMK per user
-- **📄 Extra Pages**
-  - +3,000 MMK per page
+### Pricing
 
----
+- Custom quote only
 
-## ⚖️ Feature Unlock Strategy (Very Important)
+### Future Enterprise Capabilities
 
-You must design pain points → upgrade triggers
+- Multi-shop management
+- Advanced roles and permissions
+- Approval workflows and auditability
+- Delivery API integrations
+- Public API and webhooks
+- Native Facebook comments and inbox sync
+- Advanced automation
+- Advanced analytics and custom reporting
+- Priority support
+- Dedicated onboarding
 
-| Need Trigger       | Plan Upgrade   |
-| :----------------- | :------------- |
-| Too many orders    | Free → Starter |
-| Want automation    | Starter → Pro  |
-| Team collaboration | Starter → Pro  |
-| Scaling business   | Pro → Business |
+Positioning: business infrastructure, not a lightweight tool.
 
 ---
 
-## 🚨 Common Mistakes (Avoid These)
+## Add-Ons
 
-- ❌ Giving automation in Free → kills upgrades
-- ❌ Too many limits → users quit early
-- ❌ No clear difference between Starter & Pro
-- ❌ Locking basic features (like search, status)
+Keep these separate from the core single-shop plan when they become ready:
+
+- Advanced chatbot and automation flows
+- SMS notifications
+- AI reply
+- Extra users if you later choose to meter seats
+- Extra pages or channels if native Facebook integration becomes productized
 
 ---
 
-## 🧠 Final Strategic Advice
+## Upgrade Triggers
 
-Your real product is not features:
+| Need Trigger | Upgrade Path |
+| :----------- | :----------- |
+| Trial ends and the shop wants to keep operating | Trial → Pro |
+| Owner needs reliable exports and import tools | Trial → Pro |
+| Owner needs multi-shop control | Pro → Enterprise |
+| Client needs integrations, governance, or API access | Pro → Enterprise |
 
-👉 **It’s:**
+---
 
-- Faster response to customers
-- More orders
-- Less manual work
+## Strategic Notes
 
-So your tiers should feel like:
+- Do not anchor the product too cheap. Low launch pricing is hard to reverse later.
+- Do not sell direct Facebook-native features until they are truly production ready.
+- Keep one commercial rule clear: one subscription belongs to one shop.
+- Keep the middle paid plan strong enough that most real customers can operate without needing custom sales.
 
-- **Free** → “ทดลอง”
-- **Starter** → “Organize my orders”
-- **Pro** → “Grow my business”
-- **Business** → “Scale operations”
+The real promise is not "more features". The real promise is:
+
+- faster customer response
+- less manual work
+- clearer day-to-day operations
+- more consistent order handling

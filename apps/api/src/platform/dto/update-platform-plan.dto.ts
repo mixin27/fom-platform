@@ -15,6 +15,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { trimString } from '../../auth/dto/transforms';
+import { PlatformPlanLimitInputDto } from './platform-plan-limit-input.dto';
 import { PlatformPlanItemInputDto } from './platform-plan-item-input.dto';
 
 export class UpdatePlatformPlanDto {
@@ -51,7 +52,7 @@ export class UpdatePlatformPlanDto {
   description?: string | null;
 
   @ApiPropertyOptional({
-    example: 7000,
+    example: 15000,
   })
   @IsOptional()
   @IsInt()
@@ -104,4 +105,14 @@ export class UpdatePlatformPlanDto {
   @ValidateNested({ each: true })
   @Type(() => PlatformPlanItemInputDto)
   items?: PlatformPlanItemInputDto[];
+
+  @ApiPropertyOptional({
+    type: [PlatformPlanLimitInputDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => PlatformPlanLimitInputDto)
+  limits?: PlatformPlanLimitInputDto[];
 }

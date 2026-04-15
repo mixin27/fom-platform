@@ -2,6 +2,7 @@ export const subscriptionFeatures = {
   shopWorkspace: 'shop.workspace',
   ordersManagement: 'orders.management',
   ordersParseMessenger: 'orders.parse_messenger',
+  ordersImportSpreadsheet: 'orders.import_spreadsheet',
   customersManagement: 'customers.management',
   deliveriesManagement: 'deliveries.management',
   templatesManagement: 'templates.management',
@@ -49,6 +50,14 @@ export const subscriptionFeatureCatalog: ReadonlyArray<{
     category: 'core',
     name: 'Paste from Messenger',
     description: 'Parse copied Messenger conversations into order drafts.',
+    launchPhase: 'phase_one',
+  },
+  {
+    code: subscriptionFeatures.ordersImportSpreadsheet,
+    category: 'operations',
+    name: 'Spreadsheet order import',
+    description:
+      'Import historical orders from Excel-compatible spreadsheets.',
     launchPhase: 'phase_one',
   },
   {

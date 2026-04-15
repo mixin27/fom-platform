@@ -6,6 +6,31 @@ import '../../domain/entities/auth_user.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
+class AuthSessionConflict extends Equatable {
+  const AuthSessionConflict({
+    required this.platform,
+    required this.activeSessionCount,
+    required this.deviceName,
+    this.lastSeenAt,
+    this.ipAddress,
+  });
+
+  final String platform;
+  final int activeSessionCount;
+  final String deviceName;
+  final DateTime? lastSeenAt;
+  final String? ipAddress;
+
+  @override
+  List<Object?> get props => <Object?>[
+    platform,
+    activeSessionCount,
+    deviceName,
+    lastSeenAt,
+    ipAddress,
+  ];
+}
+
 class AuthState extends Equatable {
   const AuthState({
     this.status = AuthStatus.unknown,
@@ -13,6 +38,7 @@ class AuthState extends Equatable {
     this.activeShopId,
     this.isSubmitting = false,
     this.errorMessage,
+    this.sessionConflict,
   });
 
   final AuthStatus status;
@@ -20,6 +46,7 @@ class AuthState extends Equatable {
   final String? activeShopId;
   final bool isSubmitting;
   final String? errorMessage;
+  final AuthSessionConflict? sessionConflict;
 
   AuthUser? get user => session?.user;
 
@@ -76,6 +103,8 @@ class AuthState extends Equatable {
     bool? isSubmitting,
     String? errorMessage,
     bool clearError = false,
+    AuthSessionConflict? sessionConflict,
+    bool clearSessionConflict = false,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -87,6 +116,9 @@ class AuthState extends Equatable {
           : (activeShopId ?? this.activeShopId),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      sessionConflict: clearSessionConflict
+          ? null
+          : (sessionConflict ?? this.sessionConflict),
     );
   }
 
@@ -97,5 +129,6 @@ class AuthState extends Equatable {
     activeShopId,
     isSubmitting,
     errorMessage,
+    sessionConflict,
   ];
 }

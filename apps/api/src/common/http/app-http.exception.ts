@@ -9,6 +9,7 @@ type AppHttpExceptionPayload = {
   code: string;
   message: string;
   details?: ErrorDetail[];
+  context?: Record<string, unknown>;
 };
 
 export class AppHttpException extends HttpException {
@@ -53,9 +54,24 @@ export function notFoundError(message: string): AppHttpException {
   });
 }
 
-export function conflictError(message: string): AppHttpException {
+export function conflictError(
+  message: string,
+  context?: Record<string, unknown>,
+): AppHttpException {
   return new AppHttpException(HttpStatus.CONFLICT, {
     code: 'CONFLICT',
     message,
+    ...(context ? { context } : {}),
+  });
+}
+
+export function sessionConflictError(
+  message: string,
+  context?: Record<string, unknown>,
+): AppHttpException {
+  return new AppHttpException(HttpStatus.CONFLICT, {
+    code: 'SESSION_ACTIVE_ON_ANOTHER_DEVICE',
+    message,
+    ...(context ? { context } : {}),
   });
 }

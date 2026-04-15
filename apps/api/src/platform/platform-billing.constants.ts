@@ -1,4 +1,5 @@
 import { subscriptionFeatures } from './subscription-feature.constants';
+import { subscriptionLimits } from './subscription-limit.constants';
 
 export const DEFAULT_TRIAL_PLAN_CODE = 'trial';
 
@@ -52,6 +53,14 @@ export const defaultPlanCatalog = [
         sortOrder: 2,
       },
       {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description:
+          'Historical order import is held back until the shop moves onto a paid plan.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 8,
+      },
+      {
         code: subscriptionFeatures.customersManagement,
         label: 'Customer management',
         description: 'Manage customer records inside the same workspace.',
@@ -83,10 +92,10 @@ export const defaultPlanCatalog = [
       },
       {
         code: subscriptionFeatures.teamMembers,
-        label: 'Staff accounts with role-based access',
+        label: 'Owner-only onboarding access',
         description:
-          'Owners can invite staff and assign shop roles during the trial.',
-        availabilityStatus: 'available',
+          'Trial shops stay owner-only until the shop upgrades to a paid plan.',
+        availabilityStatus: 'unavailable',
         sortOrder: 7,
       },
       {
@@ -150,13 +159,23 @@ export const defaultPlanCatalog = [
         sortOrder: 35,
       },
     ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Trial shops stay owner-only and cannot activate additional staff accounts.',
+        value: 0,
+        sortOrder: 0,
+      },
+    ],
   },
   {
     code: 'pro_monthly',
     name: 'Shop Monthly',
     description:
       'Single-shop monthly plan for daily Facebook order operations.',
-    price: 8000,
+    price: 15000,
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
@@ -184,40 +203,49 @@ export const defaultPlanCatalog = [
         sortOrder: 2,
       },
       {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description:
+          'Import historical orders from Excel or CSV migration files.',
+        availabilityStatus: 'available',
+        sortOrder: 3,
+      },
+      {
         code: subscriptionFeatures.customersManagement,
         label: 'Customer management',
         description:
           'Keep customer records, phones, notes, and addresses organized.',
         availabilityStatus: 'available',
-        sortOrder: 3,
+        sortOrder: 4,
       },
       {
         code: subscriptionFeatures.deliveriesManagement,
         label: 'Delivery management',
         description: 'Track delivery assignments and dispatch state.',
         availabilityStatus: 'available',
-        sortOrder: 4,
+        sortOrder: 5,
       },
       {
         code: subscriptionFeatures.templatesManagement,
         label: 'Message templates',
         description: 'Save reusable replies and follow-up templates.',
         availabilityStatus: 'available',
-        sortOrder: 5,
+        sortOrder: 6,
       },
       {
         code: subscriptionFeatures.reportsAnalytics,
         label: 'Daily, weekly, and monthly reporting',
         description: 'Monitor orders, revenue, and delivery performance.',
         availabilityStatus: 'available',
-        sortOrder: 6,
+        sortOrder: 7,
       },
       {
         code: subscriptionFeatures.teamMembers,
-        label: 'Staff accounts with roles and permissions',
-        description: 'Invite staff members and control access per shop.',
+        label: 'Up to 3 active staff seats with roles and permissions',
+        description:
+          'Add up to 3 non-owner active staff accounts per paid shop.',
         availabilityStatus: 'available',
-        sortOrder: 7,
+        sortOrder: 8,
       },
       {
         code: subscriptionFeatures.csvExports,
@@ -225,7 +253,7 @@ export const defaultPlanCatalog = [
         description:
           'Export orders, customers, deliveries, and operational records.',
         availabilityStatus: 'available',
-        sortOrder: 8,
+        sortOrder: 9,
       },
       {
         code: subscriptionFeatures.billingAnnualDiscount,
@@ -294,13 +322,23 @@ export const defaultPlanCatalog = [
         sortOrder: 37,
       },
     ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Maximum number of non-owner active staff accounts allowed on the monthly plan.',
+        value: 3,
+        sortOrder: 0,
+      },
+    ],
   },
   {
     code: 'pro_yearly',
     name: 'Shop Yearly',
     description:
       'Discounted yearly plan for shops running the workflow every day.',
-    price: 80000,
+    price: 150000,
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
@@ -329,11 +367,19 @@ export const defaultPlanCatalog = [
         sortOrder: 2,
       },
       {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description:
+          'Import historical orders from Excel or CSV migration files.',
+        availabilityStatus: 'available',
+        sortOrder: 3,
+      },
+      {
         code: subscriptionFeatures.customersManagement,
         label: 'Customer management',
         description: 'Keep customer records organized for long-running shops.',
         availabilityStatus: 'available',
-        sortOrder: 3,
+        sortOrder: 4,
       },
       {
         code: subscriptionFeatures.deliveriesManagement,
@@ -341,29 +387,29 @@ export const defaultPlanCatalog = [
         description:
           'Manage dispatch and delivery workflows inside the same workspace.',
         availabilityStatus: 'available',
-        sortOrder: 4,
+        sortOrder: 5,
       },
       {
         code: subscriptionFeatures.templatesManagement,
         label: 'Message templates',
         description: 'Save reusable customer communication templates.',
         availabilityStatus: 'available',
-        sortOrder: 5,
+        sortOrder: 6,
       },
       {
         code: subscriptionFeatures.reportsAnalytics,
         label: 'Daily, weekly, and monthly reporting',
         description: 'Includes the full launch workflow for operational teams.',
         availabilityStatus: 'available',
-        sortOrder: 6,
+        sortOrder: 7,
       },
       {
         code: subscriptionFeatures.teamMembers,
-        label: 'Staff accounts with roles and permissions',
+        label: 'Up to 3 active staff seats with roles and permissions',
         description:
-          'Owners can manage team access inside the same shop workspace.',
+          'Add up to 3 non-owner active staff accounts per paid shop.',
         availabilityStatus: 'available',
-        sortOrder: 7,
+        sortOrder: 8,
       },
       {
         code: subscriptionFeatures.csvExports,
@@ -371,7 +417,7 @@ export const defaultPlanCatalog = [
         description:
           'Export operational records for backup and external reporting.',
         availabilityStatus: 'available',
-        sortOrder: 8,
+        sortOrder: 9,
       },
       {
         code: subscriptionFeatures.billingAnnualDiscount,
@@ -379,7 +425,7 @@ export const defaultPlanCatalog = [
         description:
           'Annual billing lowers the total cost compared with paying monthly for a year.',
         availabilityStatus: 'available',
-        sortOrder: 9,
+        sortOrder: 10,
       },
       {
         code: subscriptionFeatures.facebookCommentsIntegration,
@@ -439,6 +485,16 @@ export const defaultPlanCatalog = [
           'Priority support belongs to future enterprise-oriented plans.',
         availabilityStatus: 'unavailable',
         sortOrder: 37,
+      },
+    ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Maximum number of non-owner active staff accounts allowed on the yearly plan.',
+        value: 3,
+        sortOrder: 0,
       },
     ],
   },

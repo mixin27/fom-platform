@@ -17,7 +17,7 @@ import { platformInvoiceStatuses } from '../platform-billing.constants';
 export class CreatePlatformInvoiceDto {
   @ApiPropertyOptional({
     description: 'Invoice amount. Defaults to the current plan price.',
-    example: 7000,
+    example: 15000,
     minimum: 0,
   })
   @Type(() => Number)

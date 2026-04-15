@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ok } from '../common/http/api-result';
@@ -24,11 +25,17 @@ import { subscriptionFeatures } from '../platform/subscription-feature.constants
 import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ImportOrdersSpreadsheetDto } from './dto/import-orders-spreadsheet.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { ParseOrderMessageDto } from './dto/parse-order-message.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { OrdersService } from './orders.service';
+
+type BinaryReply = {
+  header(name: string, value: string): BinaryReply;
+  send(payload: Buffer): unknown;
+};
 
 @Controller('api/v1/shops/:shopId/orders')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
@@ -58,6 +65,45 @@ export class OrdersController {
     @Body() body: CreateOrderDto,
   ) {
     return ok(this.ordersService.createOrder(currentUser, shopId, body));
+  }
+
+  @Get('import-template.xlsx')
+  @RequirePermissions(permissions.ordersWrite)
+  @RequirePlanFeatures(subscriptionFeatures.ordersImportSpreadsheet)
+  @ApiOperation({ summary: 'Download the spreadsheet template for order import' })
+  async downloadImportTemplate(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Res() reply: BinaryReply,
+  ) {
+    const file = await this.ordersService.downloadImportTemplate(
+      currentUser,
+      shopId,
+    );
+
+    reply.header(
+      'content-type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    reply.header(
+      'content-disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    return reply.send(file.content);
+  }
+
+  @Post('import-spreadsheet')
+  @RequirePermissions(permissions.ordersWrite)
+  @RequirePlanFeatures(subscriptionFeatures.ordersImportSpreadsheet)
+  @ApiOperation({ summary: 'Import orders from an Excel-compatible spreadsheet' })
+  importSpreadsheet(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: ImportOrdersSpreadsheetDto,
+  ) {
+    return ok(
+      this.ordersService.importOrdersFromSpreadsheet(currentUser, shopId, body),
+    );
   }
 
   @Post('parse-message')

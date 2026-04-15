@@ -14,6 +14,7 @@ import {
   resetPasswordWithToken,
   sendEmailVerification,
 } from "@/lib/auth/api"
+import { ensureWebClientHeaders } from "@/lib/auth/device"
 import {
   buildSessionFromAuth,
   clearSession,
@@ -38,32 +39,113 @@ function withStatusQuery(path: string, key: string, value: string) {
   return `${path}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
 }
 
-export async function signInAction(formData: FormData) {
+type SignInActionState = {
+  errorMessage: string | null
+  sessionConflict: {
+    platform: string
+    activeSessionCount: number
+    activeSession: {
+      deviceName: string
+      lastSeenAt: string
+      ipAddress: string | null
+    } | null
+  } | null
+}
+
+function parseSignInSessionConflict(error: AuthApiError): SignInActionState["sessionConflict"] {
+  const rawConflict = error.context?.session_conflict
+  if (!rawConflict || typeof rawConflict !== "object") {
+    return null
+  }
+
+  const conflict = rawConflict as Record<string, unknown>
+  const rawActiveSession =
+    conflict.active_session && typeof conflict.active_session === "object"
+      ? (conflict.active_session as Record<string, unknown>)
+      : null
+
+  const activeSessionCount =
+    typeof conflict.active_session_count === "number"
+      ? conflict.active_session_count
+      : 1
+
+  const lastSeenAt =
+    typeof rawActiveSession?.last_seen_at === "string"
+      ? rawActiveSession.last_seen_at
+      : ""
+
+  return {
+    platform:
+      typeof conflict.platform === "string" ? conflict.platform : "unknown",
+    activeSessionCount,
+    activeSession:
+      rawActiveSession && lastSeenAt
+        ? {
+            deviceName:
+              typeof rawActiveSession.device_name === "string" &&
+              rawActiveSession.device_name.trim().length > 0
+                ? rawActiveSession.device_name
+                : "Another device",
+            lastSeenAt,
+            ipAddress:
+              typeof rawActiveSession.ip_address === "string" &&
+              rawActiveSession.ip_address.trim().length > 0
+                ? rawActiveSession.ip_address
+                : null,
+          }
+        : null,
+  }
+}
+
+export async function submitSignInAction(
+  _previousState: SignInActionState,
+  formData: FormData
+) {
   const email = getFieldValue(formData, "email").toLowerCase()
   const password = getFieldValue(formData, "password")
+  const logoutOtherDevice = getFieldValue(formData, "logoutOtherDevice") === "true"
 
   if (!ensureEmail(email) || password.length < 8) {
-    redirect("/sign-in?error=invalid_credentials")
+    return {
+      errorMessage: "Email or password is incorrect.",
+      sessionConflict: null,
+    } satisfies SignInActionState
   }
 
   try {
+    const clientHeaders = await ensureWebClientHeaders()
     const auth = await loginWithPassword({
       email,
       password,
+      logout_other_device: logoutOtherDevice,
+      headers: clientHeaders,
     })
     const session = buildSessionFromAuth(auth)
 
     await persistSession(session)
     redirect(defaultPathForSession(session))
   } catch (error) {
-    if (
-      error instanceof AuthApiError &&
-      (error.code === "UNAUTHORIZED" || error.status === 401)
-    ) {
-      redirect("/sign-in?error=invalid_credentials")
+    if (error instanceof AuthApiError) {
+      if (error.code === "SESSION_ACTIVE_ON_ANOTHER_DEVICE") {
+        return {
+          errorMessage: error.message,
+          sessionConflict: parseSignInSessionConflict(error),
+        } satisfies SignInActionState
+      }
+
+      if (error.code === "UNAUTHORIZED" || error.status === 401) {
+        return {
+          errorMessage: "Email or password is incorrect.",
+          sessionConflict: null,
+        } satisfies SignInActionState
+      }
     }
 
-    redirect("/sign-in?error=auth_failed")
+    return {
+      errorMessage:
+        "Sign-in could not be completed right now. Check the API connection and try again.",
+      sessionConflict: null,
+    } satisfies SignInActionState
   }
 }
 
@@ -78,11 +160,13 @@ export async function registerAction(formData: FormData) {
   }
 
   try {
+    const clientHeaders = await ensureWebClientHeaders()
     const auth = await registerWithPassword({
       name: fullName,
       email,
       password,
       locale: "my",
+      headers: clientHeaders,
     })
 
     try {

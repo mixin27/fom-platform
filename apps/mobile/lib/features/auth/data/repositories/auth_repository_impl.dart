@@ -29,9 +29,14 @@ class AuthRepositoryImpl with LoggerMixin implements AuthRepository {
   Future<Result<AuthSession>> login({
     required String email,
     required String password,
+    bool logoutOtherDevice = false,
   }) {
     return _runSessionFlow(
-      action: () => _remoteDataSource.login(email: email, password: password),
+      action: () => _remoteDataSource.login(
+        email: email,
+        password: password,
+        logoutOtherDevice: logoutOtherDevice,
+      ),
       actionLabel: 'login',
     );
   }

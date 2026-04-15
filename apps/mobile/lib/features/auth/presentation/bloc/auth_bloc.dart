@@ -34,10 +34,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
        super(const AuthState()) {
     on<AuthStarted>(_onStarted);
     on<AuthLoginSubmitted>(_onLoginSubmitted);
+    on<AuthLoginTakeoverRequested>(_onLoginTakeoverRequested);
     on<AuthRegisterSubmitted>(_onRegisterSubmitted);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthShopSelected>(_onShopSelected);
     on<AuthSessionRefreshRequested>(_onSessionRefreshRequested);
+    on<AuthSessionExpiredDetected>(_onSessionExpiredDetected);
     on<AuthErrorDismissed>(_onErrorDismissed);
   }
 
@@ -49,6 +51,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
   final SaveSelectedShopUseCase _saveSelectedShopUseCase;
   final PushRegistrationService? _pushRegistrationService;
   final AppLogger _logger;
+  String? _pendingLoginEmail;
+  String? _pendingLoginPassword;
 
   @override
   AppLogger get logger => _logger;
@@ -75,6 +79,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     await _restoreSessionAndEmit(emit);
   }
 
+  void _onSessionExpiredDetected(
+    AuthSessionExpiredDetected event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        status: AuthStatus.unauthenticated,
+        isSubmitting: false,
+        removeSession: true,
+        removeActiveShop: true,
+        errorMessage: 'Your session ended. Please sign in again.',
+        clearSessionConflict: true,
+      ),
+    );
+  }
+
   Future<void> _restoreSessionAndEmit(Emitter<AuthState> emit) async {
     final result = await _restoreAuthSessionUseCase(
       const RestoreAuthSessionParams(),
@@ -89,6 +109,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
           removeSession: true,
           removeActiveShop: true,
           errorMessage: failure.message,
+          clearSessionConflict: true,
         ),
       );
       return;
@@ -102,6 +123,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
           removeSession: true,
           removeActiveShop: true,
           clearError: true,
+          clearSessionConflict: true,
         ),
       );
       return;
@@ -115,6 +137,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
         activeShopId: activeShopId,
         isSubmitting: false,
         clearError: true,
+        clearSessionConflict: true,
       ),
     );
   }
@@ -123,45 +146,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     AuthLoginSubmitted event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, clearError: true));
-
-    final result = await _loginUseCase(
-      LoginParams(email: event.email, password: event.password),
+    await _submitLogin(
+      email: event.email,
+      password: event.password,
+      logoutOtherDevice: false,
+      emit: emit,
     );
+  }
 
-    final failure = result.failureOrNull;
-    if (failure != null) {
+  Future<void> _onLoginTakeoverRequested(
+    AuthLoginTakeoverRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final email = _pendingLoginEmail?.trim() ?? '';
+    final password = _pendingLoginPassword ?? '';
+
+    if (email.isEmpty || password.isEmpty) {
       emit(
         state.copyWith(
-          status: AuthStatus.unauthenticated,
-          isSubmitting: false,
-          errorMessage: failure.message,
+          errorMessage: 'Sign in again to continue on this device.',
+          clearSessionConflict: true,
         ),
       );
       return;
     }
 
-    final session = result.dataOrNull;
-    if (session == null) {
-      emit(
-        state.copyWith(
-          status: AuthStatus.unauthenticated,
-          isSubmitting: false,
-          errorMessage: 'Login did not return a valid session.',
-        ),
-      );
-      return;
-    }
-
-    final activeShopId = await _resolveActiveShopId(session);
-    emit(
-      state.copyWith(
-        status: AuthStatus.authenticated,
-        session: session,
-        activeShopId: activeShopId,
-        isSubmitting: false,
-        clearError: true,
-      ),
+    await _submitLogin(
+      email: email,
+      password: password,
+      logoutOtherDevice: true,
+      emit: emit,
     );
   }
 
@@ -169,7 +183,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     AuthRegisterSubmitted event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, clearError: true));
+    emit(
+      state.copyWith(
+        isSubmitting: true,
+        clearError: true,
+        clearSessionConflict: true,
+      ),
+    );
 
     final result = await _registerUseCase(
       RegisterParams(
@@ -188,6 +208,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
           status: AuthStatus.unauthenticated,
           isSubmitting: false,
           errorMessage: failure.message,
+          clearSessionConflict: true,
         ),
       );
       return;
@@ -200,6 +221,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
           status: AuthStatus.unauthenticated,
           isSubmitting: false,
           errorMessage: 'Registration did not return a valid session.',
+          clearSessionConflict: true,
         ),
       );
       return;
@@ -213,6 +235,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
         activeShopId: activeShopId,
         isSubmitting: false,
         clearError: true,
+        clearSessionConflict: true,
       ),
     );
   }
@@ -221,7 +244,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(isSubmitting: true, clearError: true));
+    emit(
+      state.copyWith(
+        isSubmitting: true,
+        clearError: true,
+        clearSessionConflict: true,
+      ),
+    );
 
     if (_pushRegistrationService != null) {
       try {
@@ -247,6 +276,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
             removeSession: true,
             removeActiveShop: true,
             errorMessage: failure.message,
+            clearSessionConflict: true,
           ),
         );
       },
@@ -258,6 +288,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
             removeSession: true,
             removeActiveShop: true,
             clearError: true,
+            clearSessionConflict: true,
           ),
         );
       },
@@ -282,6 +313,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
       emit(
         state.copyWith(
           errorMessage: 'This shop is not available for the current account.',
+          clearSessionConflict: true,
         ),
       );
       return;
@@ -293,15 +325,154 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     final failure = saveResult.failureOrNull;
 
     if (failure != null) {
-      emit(state.copyWith(errorMessage: failure.message));
+      emit(
+        state.copyWith(
+          errorMessage: failure.message,
+          clearSessionConflict: true,
+        ),
+      );
       return;
     }
 
-    emit(state.copyWith(activeShopId: shopId, clearError: true));
+    emit(
+      state.copyWith(
+        activeShopId: shopId,
+        clearError: true,
+        clearSessionConflict: true,
+      ),
+    );
   }
 
   void _onErrorDismissed(AuthErrorDismissed event, Emitter<AuthState> emit) {
     emit(state.copyWith(clearError: true));
+  }
+
+  Future<void> _submitLogin({
+    required String email,
+    required String password,
+    required bool logoutOtherDevice,
+    required Emitter<AuthState> emit,
+  }) async {
+    emit(state.copyWith(isSubmitting: true, clearError: true));
+
+    final result = await _loginUseCase(
+      LoginParams(
+        email: email,
+        password: password,
+        logoutOtherDevice: logoutOtherDevice,
+      ),
+    );
+
+    final failure = result.failureOrNull;
+    if (failure != null) {
+      final sessionConflict = _resolveSessionConflict(failure);
+      if (sessionConflict != null) {
+        _pendingLoginEmail = email;
+        _pendingLoginPassword = password;
+        emit(
+          state.copyWith(
+            status: AuthStatus.unauthenticated,
+            isSubmitting: false,
+            clearError: true,
+            sessionConflict: sessionConflict,
+          ),
+        );
+        return;
+      }
+
+      _pendingLoginEmail = null;
+      _pendingLoginPassword = null;
+      emit(
+        state.copyWith(
+          status: AuthStatus.unauthenticated,
+          isSubmitting: false,
+          errorMessage: failure.message,
+          clearSessionConflict: true,
+        ),
+      );
+      return;
+    }
+
+    final session = result.dataOrNull;
+    if (session == null) {
+      _pendingLoginEmail = null;
+      _pendingLoginPassword = null;
+      emit(
+        state.copyWith(
+          status: AuthStatus.unauthenticated,
+          isSubmitting: false,
+          errorMessage: 'Login did not return a valid session.',
+          clearSessionConflict: true,
+        ),
+      );
+      return;
+    }
+
+    _pendingLoginEmail = null;
+    _pendingLoginPassword = null;
+    final activeShopId = await _resolveActiveShopId(session);
+    emit(
+      state.copyWith(
+        status: AuthStatus.authenticated,
+        session: session,
+        activeShopId: activeShopId,
+        isSubmitting: false,
+        clearError: true,
+        clearSessionConflict: true,
+      ),
+    );
+  }
+
+  AuthSessionConflict? _resolveSessionConflict(Failure failure) {
+    if (failure is! ServerFailure ||
+        failure.code != 'SESSION_ACTIVE_ON_ANOTHER_DEVICE') {
+      return null;
+    }
+
+    final errorPayload = failure.payload?['error'];
+    if (errorPayload is! Map) {
+      return null;
+    }
+
+    final context = errorPayload['context'];
+    if (context is! Map) {
+      return null;
+    }
+
+    final sessionConflict = context['session_conflict'];
+    if (sessionConflict is! Map) {
+      return null;
+    }
+
+    final activeSession = sessionConflict['active_session'];
+    final rawLastSeenAt = activeSession is Map
+        ? activeSession['last_seen_at']?.toString().trim()
+        : null;
+
+    return AuthSessionConflict(
+      platform:
+          sessionConflict['platform']?.toString().trim().isNotEmpty == true
+          ? sessionConflict['platform'].toString().trim()
+          : 'unknown',
+      activeSessionCount: switch (sessionConflict['active_session_count']) {
+        final int count => count,
+        final num count => count.toInt(),
+        _ => 1,
+      },
+      deviceName:
+          activeSession is Map &&
+              activeSession['device_name']?.toString().trim().isNotEmpty == true
+          ? activeSession['device_name'].toString().trim()
+          : 'Another device',
+      lastSeenAt: rawLastSeenAt == null || rawLastSeenAt.isEmpty
+          ? null
+          : DateTime.tryParse(rawLastSeenAt),
+      ipAddress:
+          activeSession is Map &&
+              activeSession['ip_address']?.toString().trim().isNotEmpty == true
+          ? activeSession['ip_address'].toString().trim()
+          : null,
+    );
   }
 
   Future<String?> _resolveActiveShopId(AuthSession session) async {

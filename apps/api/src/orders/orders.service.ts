@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import {
   conflictError,
@@ -11,11 +12,14 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate } from '../common/utils/dates';
 import { paginate } from '../common/utils/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
+import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
+import { Prisma } from '../generated/prisma/client';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ImportOrdersSpreadsheetDto } from './dto/import-orders-spreadsheet.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import {
   orderStatuses,
@@ -25,6 +29,7 @@ import { ParseOrderMessageDto } from './dto/parse-order-message.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { OrderMessageParserService } from './order-message-parser.service';
+import { OrderSpreadsheetService } from './order-spreadsheet.service';
 
 type DbClient = PrismaService | any;
 
@@ -44,6 +49,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
     private readonly orderMessageParser: OrderMessageParserService,
+    private readonly orderSpreadsheetService: OrderSpreadsheetService,
     private readonly notificationsService: NotificationsService,
     private readonly realtimeService: RealtimeService,
   ) {}
@@ -215,6 +221,215 @@ export class OrdersService {
       });
 
     return createdOrder;
+  }
+
+  async downloadImportTemplate(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+  ) {
+    await this.shopsService.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.ordersWrite,
+    );
+    await this.shopsService.assertPlanFeatures(
+      currentUser.id,
+      shopId,
+      subscriptionFeatures.ordersImportSpreadsheet,
+    );
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { name: true },
+    });
+
+    return this.orderSpreadsheetService.buildImportTemplate(
+      shop?.name ?? 'shop',
+    );
+  }
+
+  async importOrdersFromSpreadsheet(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: ImportOrdersSpreadsheetDto,
+  ) {
+    await this.shopsService.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.ordersWrite,
+    );
+    await this.shopsService.assertPlanFeatures(
+      currentUser.id,
+      shopId,
+      subscriptionFeatures.ordersImportSpreadsheet,
+    );
+
+    const preparedFile = this.orderSpreadsheetService.prepareImportFile(body);
+    const fileHash = createHash('sha256')
+      .update(preparedFile.bytes)
+      .digest('hex');
+    const existingBatch = await this.prisma.orderImportBatch.findUnique({
+      where: {
+        shopId_fileHash: {
+          shopId,
+          fileHash,
+        },
+      },
+      include: {
+        importedByUser: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (existingBatch) {
+      throw conflictError(
+        `This file was already imported on ${existingBatch.createdAt.toISOString()}${
+          existingBatch.importedByUser?.name
+            ? ` by ${existingBatch.importedByUser.name}`
+            : ''
+        }.`,
+      );
+    }
+
+    const parsedFile =
+      this.orderSpreadsheetService.parsePreparedImportFile(preparedFile);
+    const orderCount = parsedFile.orders.length;
+    const itemCount = parsedFile.orders.reduce(
+      (sum, order) => sum + order.items.length,
+      0,
+    );
+
+    let importedOrderIds: string[];
+    try {
+      importedOrderIds = await this.prisma.$transaction(async (tx) => {
+        await tx.orderImportBatch.create({
+          data: {
+            shopId,
+            importedByUserId: currentUser.id,
+            filename: parsedFile.filename,
+            format: parsedFile.format,
+            fileHash,
+            sourceRowCount: parsedFile.sourceRowCount,
+            importedOrderCount: orderCount,
+            importedItemCount: itemCount,
+          },
+        });
+
+        let nextOrderSequence = (await this.readMaxOrderSequence(tx, shopId)) + 1;
+        const createdOrderIds: string[] = [];
+
+        for (const order of parsedFile.orders) {
+          const customer = await this.resolveCustomer(
+            tx,
+            shopId,
+            {
+              customer: {
+                name: order.customerName,
+                phone: order.customerPhone,
+                township: order.customerTownship,
+                address: order.customerAddress,
+              },
+            } as CreateOrderDto,
+          );
+          const subtotal = order.items.reduce(
+            (sum, item) => sum + item.qty * item.unitPrice,
+            0,
+          );
+          const importedAt = order.orderedAt ?? undefined;
+          const createdOrder = await tx.order.create({
+            data: {
+              shopId,
+              customerId: customer.id,
+              orderNo: this.formatOrderNumber(nextOrderSequence),
+              status: order.status,
+              totalPrice: subtotal + order.deliveryFee,
+              currency: order.currency,
+              deliveryFee: order.deliveryFee,
+              note: order.note,
+              source: order.source,
+              ...(importedAt
+                ? {
+                    createdAt: importedAt,
+                    updatedAt: importedAt,
+                  }
+                : {}),
+              items: {
+                create: order.items.map((item) => ({
+                  productId: item.productId ?? null,
+                  productName: item.productName,
+                  qty: item.qty,
+                  unitPrice: item.unitPrice,
+                  lineTotal: item.qty * item.unitPrice,
+                })),
+              },
+              statusEvents: {
+                create: {
+                  fromStatus: null,
+                  toStatus: order.status,
+                  changedByUserId: currentUser.id,
+                  note: 'Imported from spreadsheet',
+                  ...(importedAt ? { changedAt: importedAt } : {}),
+                },
+              },
+            },
+            select: { id: true },
+          });
+
+          createdOrderIds.push(createdOrder.id);
+          nextOrderSequence += 1;
+        }
+
+        return createdOrderIds;
+      });
+    } catch (error) {
+      if (this.isDuplicateImportBatchError(error)) {
+        throw conflictError('This file was already imported for this shop.');
+      }
+
+      throw error;
+    }
+
+    void Promise.allSettled([
+      this.realtimeService.broadcastShopInvalidation({
+        shopId,
+        resource: 'orders',
+        action: 'imported',
+      }),
+      this.realtimeService.broadcastShopInvalidation({
+        shopId,
+        resource: 'customers',
+        action: 'imported',
+      }),
+    ]).then((results) => {
+      for (const result of results) {
+        if (result.status !== 'rejected') {
+          continue;
+        }
+
+        this.logger.warn(
+          `Failed to publish spreadsheet import invalidation for shop ${shopId}: ${
+            result.reason instanceof Error
+              ? result.reason.message
+              : 'unknown error'
+          }`,
+        );
+      }
+    });
+
+    return {
+      filename: parsedFile.filename,
+      format: parsedFile.format,
+      imported_orders: importedOrderIds.length,
+      imported_items: itemCount,
+      processed_rows: parsedFile.sourceRowCount,
+      summary:
+        importedOrderIds.length === orderCount
+          ? `Imported ${importedOrderIds.length} orders from ${parsedFile.filename}.`
+          : `Imported ${importedOrderIds.length} of ${orderCount} orders from ${parsedFile.filename}.`,
+    };
   }
 
   async parseOrderMessage(
@@ -892,19 +1107,54 @@ export class OrdersService {
   }
 
   private async nextOrderNumber(db: DbClient, shopId: string): Promise<string> {
+    const maxOrderSequence = await this.readMaxOrderSequence(db, shopId);
+    return this.formatOrderNumber(maxOrderSequence + 1);
+  }
+
+  private async readMaxOrderSequence(
+    db: DbClient,
+    shopId: string,
+  ): Promise<number> {
     const orders = await db.order.findMany({
       where: { shopId },
       select: { orderNo: true },
     });
-    const maxOrderSequence = orders.reduce((max, order) => {
+    return orders.reduce((max, order) => {
       const match = order.orderNo.match(/ORD-(\d+)/);
       if (!match) {
         return max;
       }
       return Math.max(max, Number.parseInt(match[1] ?? '0', 10));
     }, 240);
+  }
 
-    return `ORD-${String(maxOrderSequence + 1).padStart(4, '0')}`;
+  private formatOrderNumber(sequence: number): string {
+    return `ORD-${String(sequence).padStart(4, '0')}`;
+  }
+
+  private isDuplicateImportBatchError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    if (error.code !== 'P2002') {
+      return false;
+    }
+
+    const rawTarget = error.meta?.target;
+    const target = Array.isArray(rawTarget)
+      ? rawTarget.map((value) => String(value))
+      : typeof rawTarget === 'string'
+        ? [rawTarget]
+        : [];
+
+    const exactMatch =
+      target.includes('shopId') && target.includes('fileHash');
+    const partialMatch =
+      target.some((value) => value.includes('shopId')) &&
+      target.some((value) => value.includes('fileHash'));
+
+    return exactMatch || partialMatch;
   }
 
   private matchesStatus(

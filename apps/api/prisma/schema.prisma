@@ -63,6 +63,7 @@ model User {
   notificationPreferences NotificationPreference[]
   emailMessages      EmailMessage[]
   pushDevices        PushDevice[]
+  importedOrderBatches OrderImportBatch[]
   assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
 }
@@ -82,6 +83,7 @@ model Shop {
   supportIssues    PlatformSupportIssue[]
   notifications    Notification[]
   emailMessages    EmailMessage[]
+  orderImportBatches OrderImportBatch[]
 
   @@index([ownerUserId])
 }
@@ -130,6 +132,7 @@ model Plan {
   updatedAt     DateTime       @updatedAt
   subscriptions Subscription[]
   items         PlanItem[]
+  limits        PlanLimit[]
 
   @@map("plans")
 }
@@ -150,6 +153,23 @@ model PlanItem {
   @@index([planId, availabilityStatus])
   @@unique([planId, code])
   @@map("plan_items")
+}
+
+model PlanLimit {
+  id          String   @id @default(cuid())
+  planId      String
+  code        String
+  label       String
+  description String?
+  value       Int?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  plan        Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, sortOrder])
+  @@unique([planId, code])
+  @@map("plan_limits")
 }
 
 model Subscription {
@@ -404,6 +424,26 @@ model OrderStatusEvent {
   @@index([orderId, changedAt])
 }
 
+model OrderImportBatch {
+  id                 String   @id @default(cuid())
+  shopId             String
+  importedByUserId   String
+  filename           String
+  format             String
+  fileHash           String
+  sourceRowCount     Int
+  importedOrderCount Int
+  importedItemCount  Int
+  createdAt          DateTime @default(now())
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  importedByUser     User     @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([shopId, fileHash])
+  @@index([shopId, createdAt])
+  @@index([importedByUserId, createdAt])
+  @@map("order_import_batches")
+}
+
 model AuthChallenge {
   id         String    @id @default(cuid())
   phone      String
@@ -422,6 +462,9 @@ model AuthChallenge {
 model Session {
   id                String    @id @default(cuid())
   userId            String
+  platform          String    @default("unknown")
+  deviceId          String?
+  deviceName        String?
   accessToken       String    @unique
   refreshToken      String    @unique
   accessExpiresAt   DateTime
@@ -437,6 +480,8 @@ model Session {
   pushDevices       PushDevice[]
 
   @@index([userId, revokedAt])
+  @@index([userId, platform, revokedAt])
+  @@index([userId, platform, deviceId, revokedAt])
   @@index([accessExpiresAt])
   @@index([refreshExpiresAt])
   @@map("sessions")

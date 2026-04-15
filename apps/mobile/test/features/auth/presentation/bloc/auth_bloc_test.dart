@@ -116,6 +116,7 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Result<AuthSession>> login({
     required String email,
     required String password,
+    bool logoutOtherDevice = false,
   }) async {
     return _loginResult;
   }

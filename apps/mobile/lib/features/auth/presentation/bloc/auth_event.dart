@@ -21,6 +21,10 @@ final class AuthLoginSubmitted extends AuthEvent {
   List<Object?> get props => <Object?>[email, password];
 }
 
+final class AuthLoginTakeoverRequested extends AuthEvent {
+  const AuthLoginTakeoverRequested();
+}
+
 final class AuthRegisterSubmitted extends AuthEvent {
   const AuthRegisterSubmitted({
     required this.name,
@@ -55,6 +59,10 @@ final class AuthShopSelected extends AuthEvent {
 
 final class AuthSessionRefreshRequested extends AuthEvent {
   const AuthSessionRefreshRequested();
+}
+
+final class AuthSessionExpiredDetected extends AuthEvent {
+  const AuthSessionExpiredDetected();
 }
 
 final class AuthErrorDismissed extends AuthEvent {

@@ -1,7 +1,14 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { trimLowercaseString, trimString } from './transforms';
+import { toBoolean, trimLowercaseString, trimString } from './transforms';
 
 export class LoginDto {
   @ApiProperty({
@@ -20,4 +27,15 @@ export class LoginDto {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description:
+      'Revoke the currently active session on the same platform and continue on this device.',
+  })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  logout_other_device?: boolean;
 }

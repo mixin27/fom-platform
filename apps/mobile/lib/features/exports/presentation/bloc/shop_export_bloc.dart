@@ -1,6 +1,7 @@
 import 'package:app_logger/app_logger.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/usecases/import_shop_orders_use_case.dart';
 import '../../domain/usecases/save_shop_dataset_use_case.dart';
 import '../../domain/usecases/share_shop_dataset_use_case.dart';
 import 'shop_export_event.dart';
@@ -9,18 +10,22 @@ import 'shop_export_state.dart';
 class ShopExportBloc extends Bloc<ShopExportEvent, ShopExportState>
     with LoggerMixin {
   ShopExportBloc({
+    required ImportShopOrdersUseCase importShopOrdersUseCase,
     required SaveShopDatasetUseCase saveShopDatasetUseCase,
     required ShareShopDatasetUseCase shareShopDatasetUseCase,
     AppLogger? logger,
-  }) : _saveShopDatasetUseCase = saveShopDatasetUseCase,
+  }) : _importShopOrdersUseCase = importShopOrdersUseCase,
+       _saveShopDatasetUseCase = saveShopDatasetUseCase,
        _shareShopDatasetUseCase = shareShopDatasetUseCase,
        _logger = logger ?? AppLogger(enabled: false),
        super(const ShopExportState()) {
+    on<ShopOrdersImportRequested>(_onImportRequested);
     on<ShopExportSaveRequested>(_onSaveRequested);
     on<ShopExportShareRequested>(_onShareRequested);
     on<ShopExportFeedbackDismissed>(_onFeedbackDismissed);
   }
 
+  final ImportShopOrdersUseCase _importShopOrdersUseCase;
   final SaveShopDatasetUseCase _saveShopDatasetUseCase;
   final ShareShopDatasetUseCase _shareShopDatasetUseCase;
   final AppLogger _logger;
@@ -30,6 +35,43 @@ class ShopExportBloc extends Bloc<ShopExportEvent, ShopExportState>
 
   @override
   LogContext get logContext => const LogContext('ShopExportBloc');
+
+  Future<void> _onImportRequested(
+    ShopOrdersImportRequested event,
+    Emitter<ShopExportState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        activeDataset: 'orders-import',
+        activeAction: ShopExportActionKind.importFile,
+        clearFeedback: true,
+      ),
+    );
+
+    final result = await _importShopOrdersUseCase(
+      ImportShopOrdersParams(shopId: event.shopId),
+    );
+
+    if (isClosed) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        emit(state.copyWith(clearActive: true, errorMessage: failure.message));
+      },
+      (summary) {
+        emit(
+          state.copyWith(
+            clearActive: true,
+            successMessage: summary.summary.isEmpty
+                ? '${event.label} imported successfully.'
+                : summary.summary,
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> _onSaveRequested(
     ShopExportSaveRequested event,

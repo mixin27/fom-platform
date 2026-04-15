@@ -126,6 +126,33 @@ class _LoginViewState extends State<_LoginView> {
                           validator: _validatePassword,
                         ),
                         const SizedBox(height: 20),
+                        if (state.sessionConflict != null) ...[
+                          AppAlertBanner(
+                            title: 'SESSION ACTIVE ON ANOTHER DEVICE',
+                            message: _buildSessionConflictMessage(
+                              state.sessionConflict!,
+                            ),
+                            icon: const Icon(
+                              Icons.shield_outlined,
+                              size: 20,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          AppButton(
+                            text: 'Logout another device',
+                            variant: AppButtonVariant.secondary,
+                            isLoading: state.isSubmitting,
+                            onPressed: canSubmit
+                                ? () {
+                                    context.read<AuthBloc>().add(
+                                      const AuthLoginTakeoverRequested(),
+                                    );
+                                  }
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         AppButton(
                           text: 'Sign In',
                           isLoading: state.isSubmitting,
@@ -212,5 +239,26 @@ class _LoginViewState extends State<_LoginView> {
     }
 
     return null;
+  }
+
+  String _buildSessionConflictMessage(AuthSessionConflict conflict) {
+    final parts = <String>[
+      conflict.deviceName,
+      if (conflict.lastSeenAt != null)
+        _formatConflictTimestamp(conflict.lastSeenAt!),
+      if ((conflict.ipAddress ?? '').trim().isNotEmpty)
+        'IP ${conflict.ipAddress!.trim()}',
+    ];
+
+    return parts.join(' • ');
+  }
+
+  String _formatConflictTimestamp(DateTime value) {
+    final localValue = value.toLocal();
+    final hour = localValue.hour % 12 == 0 ? 12 : localValue.hour % 12;
+    final minute = localValue.minute.toString().padLeft(2, '0');
+    final suffix = localValue.hour >= 12 ? 'PM' : 'AM';
+
+    return '${localValue.day}/${localValue.month}/${localValue.year} $hour:$minute $suffix';
   }
 }

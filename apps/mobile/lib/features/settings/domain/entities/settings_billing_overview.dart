@@ -18,6 +18,7 @@ class SettingsBillingOverview extends Equatable {
     required this.latestPaidAt,
     required this.invoiceCount,
     required this.latestInvoiceNumber,
+    required this.availableFeatures,
   });
 
   final String? status;
@@ -36,8 +37,13 @@ class SettingsBillingOverview extends Equatable {
   final DateTime? latestPaidAt;
   final int invoiceCount;
   final String? latestInvoiceNumber;
+  final List<String> availableFeatures;
 
   bool get isTrialing => (status ?? '').trim().toLowerCase() == 'trialing';
+
+  bool hasFeature(String code) {
+    return availableFeatures.contains(code.trim());
+  }
 
   @override
   List<Object?> get props => <Object?>[
@@ -57,5 +63,6 @@ class SettingsBillingOverview extends Equatable {
     latestPaidAt,
     invoiceCount,
     latestInvoiceNumber,
+    availableFeatures,
   ];
 }

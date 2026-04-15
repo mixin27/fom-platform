@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../features/auth/feature_auth.dart';
 import 'di/injection_container.dart';
+import 'session/session_expiry_notifier.dart';
 
 class AppRuntimeBindings extends StatefulWidget {
   const AppRuntimeBindings({required this.child, super.key});
@@ -18,18 +19,24 @@ class AppRuntimeBindings extends StatefulWidget {
 
 class _AppRuntimeBindingsState extends State<AppRuntimeBindings> {
   StreamSubscription<AuthState>? _authSubscription;
+  StreamSubscription<int>? _sessionExpirySubscription;
 
   @override
   void initState() {
     super.initState();
     final authBloc = getIt<AuthBloc>();
+    final sessionExpiryNotifier = getIt<SessionExpiryNotifier>();
     _handleAuthState(authBloc.state);
     _authSubscription = authBloc.stream.listen(_handleAuthState);
+    _sessionExpirySubscription = sessionExpiryNotifier.events.listen((_) {
+      authBloc.add(const AuthSessionExpiredDetected());
+    });
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _sessionExpirySubscription?.cancel();
     super.dispose();
   }
 

@@ -3,6 +3,7 @@ import 'package:app_logger/app_logger.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/shop_export_file.dart';
+import '../../domain/entities/shop_order_import_summary.dart';
 import '../../domain/repositories/shop_exports_repository.dart';
 import '../datasources/shop_exports_local_data_source.dart';
 import '../datasources/shop_exports_remote_data_source.dart';
@@ -93,6 +94,34 @@ class ShopExportsRepositoryImpl
     } catch (error, stackTrace) {
       log.error('Failed to share export', error: error, stackTrace: stackTrace);
       return Result<void>.failure(FailureMapper.from(error));
+    }
+  }
+
+  @override
+  Future<Result<ShopOrderImportSummary>> importShopOrders({
+    required String shopId,
+  }) async {
+    try {
+      final pickedFile = await _localDataSource.pickImportFile(
+        allowedExtensions: const <String>['xlsx', 'csv'],
+      );
+      final summary = await _remoteDataSource.importShopOrders(
+        shopId: shopId,
+        fileName: pickedFile.fileName,
+        bytes: pickedFile.bytes,
+      );
+
+      log.info(
+        'Order spreadsheet imported: shop=$shopId, file=${pickedFile.fileName}',
+      );
+      return Result<ShopOrderImportSummary>.success(summary);
+    } catch (error, stackTrace) {
+      log.error(
+        'Failed to import order spreadsheet',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Result<ShopOrderImportSummary>.failure(FailureMapper.from(error));
     }
   }
 

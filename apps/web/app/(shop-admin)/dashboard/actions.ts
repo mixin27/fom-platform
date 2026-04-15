@@ -413,6 +413,73 @@ export async function createShopOrderFromFormAction(formData: FormData) {
   redirectToPath(returnTo, redirectInput)
 }
 
+export async function importShopOrdersSpreadsheetAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/exports")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const fileEntry = formData.get("spreadsheet")
+
+  if (!shopId) {
+    redirectToPath(returnTo, {
+      error: "Shop context is missing for this import.",
+    })
+  }
+
+  if (!(fileEntry instanceof File) || fileEntry.size === 0) {
+    redirectToPath(returnTo, {
+      error: "Choose a CSV or Excel file before starting the import.",
+    })
+  }
+  const selectedFile = fileEntry as File
+
+  const filename = selectedFile.name.trim()
+  if (!/\.(csv|xlsx)$/i.test(filename)) {
+    redirectToPath(returnTo, {
+      error: "Only .csv or .xlsx files are supported for order import.",
+    })
+  }
+
+  if (selectedFile.size > 5 * 1024 * 1024) {
+    redirectToPath(returnTo, {
+      error: "The import file is too large. Keep it under 5 MB.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+
+  try {
+    const bytes = Buffer.from(await selectedFile.arrayBuffer())
+    const response = await requestAuthenticatedActionApiEnvelope<{
+      summary: string
+    }>({
+      path: `/api/v1/shops/${shopId}/orders/import-spreadsheet`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          filename,
+          content_base64: bytes.toString("base64"),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    redirectInput = {
+      notice:
+        response.data.summary || `Imported orders from ${filename}.`,
+    }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(
+        error,
+        "Unable to import the spreadsheet right now."
+      ),
+    }
+  }
+
+  redirectToPath(returnTo, redirectInput)
+}
+
 export async function updateShopOrderStatusFromFormAction(formData: FormData) {
   const returnTo = getReturnTo(formData, "/dashboard/orders")
   const orderId = normalizeTextField(formData.get("order_id"))

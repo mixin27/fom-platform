@@ -45,6 +45,11 @@ export type AppSession = {
   activeShopId: string | null
 }
 
+type SharedRefreshRecord = {
+  session: AppSession
+  expiresAt: number
+}
+
 function getPlatformOwnerEmailHint() {
   return (
     process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() ??
@@ -236,6 +241,10 @@ export function hasShopAccess(session: AppSession) {
   return session.shops.length > 0
 }
 
+const SESSION_REFRESH_GRACE_MS = 15_000
+const inFlightRefreshes = new Map<string, Promise<AppSession | null>>()
+const recentRefreshes = new Map<string, SharedRefreshRecord>()
+
 const readSession = cache(async () => {
   const cookieStore = await cookies()
   const session = decodeSession(cookieStore.get(AUTH_COOKIE_NAME)?.value)
@@ -300,16 +309,63 @@ export async function clearSessionIfPossible() {
   }
 }
 
-const refreshSessionByToken = cache(
-  async (refreshToken: string, activeShopId: string | null) => {
+function getRecentRefresh(refreshToken: string) {
+  const record = recentRefreshes.get(refreshToken)
+
+  if (!record) {
+    return null
+  }
+
+  if (record.expiresAt <= Date.now()) {
+    recentRefreshes.delete(refreshToken)
+    return null
+  }
+
+  return record.session
+}
+
+function rememberRecentRefresh(previousRefreshToken: string, session: AppSession) {
+  const expiresAt = Date.now() + SESSION_REFRESH_GRACE_MS
+  const record = {
+    session,
+    expiresAt,
+  }
+
+  recentRefreshes.set(previousRefreshToken, record)
+  recentRefreshes.set(session.refreshToken, record)
+}
+
+async function refreshSessionByToken(
+  refreshToken: string,
+  activeShopId: string | null
+) {
+  const recentSession = getRecentRefresh(refreshToken)
+  if (recentSession) {
+    return recentSession
+  }
+
+  const existingRefresh = inFlightRefreshes.get(refreshToken)
+  if (existingRefresh) {
+    return existingRefresh
+  }
+
+  const refreshPromise = (async () => {
     try {
       const refreshedAuth = await refreshAuthSession(refreshToken)
-      return buildSessionFromAuth(refreshedAuth, activeShopId)
+      const refreshedSession = buildSessionFromAuth(refreshedAuth, activeShopId)
+
+      rememberRecentRefresh(refreshToken, refreshedSession)
+      return refreshedSession
     } catch {
-      return null
+      return getRecentRefresh(refreshToken)
+    } finally {
+      inFlightRefreshes.delete(refreshToken)
     }
-  }
-)
+  })()
+
+  inFlightRefreshes.set(refreshToken, refreshPromise)
+  return refreshPromise
+}
 
 export async function refreshSessionForRequest(session: AppSession) {
   if (Date.parse(session.refreshExpiresAt) <= Date.now()) {

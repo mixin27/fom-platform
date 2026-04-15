@@ -11,6 +11,7 @@ import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { permissions, type Permission } from '../common/http/rbac.constants';
+import { subscriptionLimits } from '../platform/subscription-limit.constants';
 import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
@@ -30,6 +31,7 @@ const allowedOperationalSubscriptionStatuses = new Set([
   'active',
   'overdue',
 ]);
+const ownerRoleCode = 'owner';
 
 @Injectable()
 export class ShopsService {
@@ -159,6 +161,9 @@ export class ShopsService {
                 items: {
                   orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
                 },
+                limits: {
+                  orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+                },
               },
             },
             payments: {
@@ -244,6 +249,14 @@ export class ShopsService {
               description: item.description,
               availability_status: item.availabilityStatus,
               sort_order: item.sortOrder,
+            })),
+            limits: (plan.limits ?? []).map((limit) => ({
+              id: limit.id,
+              code: limit.code,
+              label: limit.label,
+              description: limit.description,
+              value: limit.value ?? null,
+              sort_order: limit.sortOrder,
             })),
           }
         : null,
@@ -346,6 +359,14 @@ export class ShopsService {
     const email = body.email ?? null;
     const name = body.name ?? null;
     const roleCodes = body.role_codes ?? ['staff'];
+    const roles = await this.requireRolesByCodes(roleCodes);
+    const requestedRoleCodes = new Set(roles.map((role) => role.code));
+
+    if (requestedRoleCodes.has(ownerRoleCode)) {
+      throw conflictError(
+        'The owner role is reserved for the primary shop owner account.',
+      );
+    }
 
     if (!userId && !email && !phone) {
       throw validationError([
@@ -354,6 +375,12 @@ export class ShopsService {
           errors: ['Provide user_id, email, or phone to identify the member'],
         },
       ]);
+    }
+
+    if (!requestedRoleCodes.has(ownerRoleCode)) {
+      await this.assertStaffSeatAvailability(shopId, {
+        additionalSeats: 1,
+      });
     }
 
     let targetUser =
@@ -402,8 +429,6 @@ export class ShopsService {
     if (existingMember) {
       throw conflictError('User is already a member of this shop');
     }
-
-    const roles = await this.requireRolesByCodes(roleCodes);
     const member = await this.prisma.$transaction(async (tx) => {
       const createdMember = await tx.shopMember.create({
         data: {
@@ -450,11 +475,12 @@ export class ShopsService {
     memberId: string,
     body: UpdateShopMemberDto,
   ) {
-    await this.assertPermission(
+    const access = await this.assertPermission(
       currentUser.id,
       shopId,
       permissions.membersManage,
     );
+    const shop = access.shop;
     const member = await this.prisma.shopMember.findFirst({
       where: {
         id: memberId,
@@ -493,6 +519,42 @@ export class ShopsService {
     const roles = body.role_codes
       ? await this.requireRolesByCodes(body.role_codes)
       : null;
+    const currentRoleCodes = member.roleAssignments.map(
+      (assignment) => assignment.role.code,
+    );
+    const nextRoleCodes = roles
+      ? roles.map((role) => role.code)
+      : currentRoleCodes;
+    const nextStatus = body.status ?? member.status;
+    const isPrimaryOwnerMember = member.userId === shop.ownerUserId;
+
+    if (isPrimaryOwnerMember && nextStatus !== 'active') {
+      throw conflictError(
+        'The primary shop owner cannot be disabled or removed from active access.',
+      );
+    }
+
+    if (isPrimaryOwnerMember && !nextRoleCodes.includes(ownerRoleCode)) {
+      throw conflictError(
+        'The primary shop owner must keep the owner role.',
+      );
+    }
+
+    if (
+      !isPrimaryOwnerMember &&
+      nextRoleCodes.includes(ownerRoleCode)
+    ) {
+      throw conflictError(
+        'The owner role is reserved for the primary shop owner account.',
+      );
+    }
+
+    if (this.countsTowardActiveStaffSeat(nextStatus, nextRoleCodes)) {
+      await this.assertStaffSeatAvailability(shopId, {
+        excludeMemberId: member.id,
+        additionalSeats: 1,
+      });
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (body.status) {
@@ -607,6 +669,25 @@ export class ShopsService {
       ? requiredFeatures
       : [requiredFeatures];
 
+    const planContext = await this.loadOperationalPlanContext(shopId);
+    const availableFeatures = planContext.availableFeatures;
+    const missing = requested.filter((feature) => !availableFeatures.has(feature));
+
+    if (missing.length > 0) {
+      throw forbiddenError(
+        'This feature is not available on the current subscription plan.',
+      );
+    }
+
+    return {
+      ...result,
+      subscription: planContext.subscription,
+      availableFeatures: [...availableFeatures],
+      planLimits: Object.fromEntries(planContext.planLimits),
+    };
+  }
+
+  private async loadOperationalPlanContext(shopId: string) {
     await this.subscriptionLifecycle.expireElapsedTrials();
 
     const subscription = await this.prisma.subscription.findUnique({
@@ -615,6 +696,7 @@ export class ShopsService {
         plan: {
           include: {
             items: true,
+            limits: true,
           },
         },
       },
@@ -637,19 +719,77 @@ export class ShopsService {
         .filter((item) => item.availabilityStatus === 'available')
         .map((item) => item.code),
     );
-    const missing = requested.filter((feature) => !availableFeatures.has(feature));
-
-    if (missing.length > 0) {
-      throw forbiddenError(
-        'This feature is not available on the current subscription plan.',
-      );
-    }
+    const planLimits = new Map<string, number | null>(
+      (subscription.plan.limits ?? []).map((limit) => [
+        limit.code,
+        limit.value ?? null,
+      ]),
+    );
 
     return {
-      ...result,
       subscription,
-      availableFeatures: [...availableFeatures],
+      availableFeatures,
+      planLimits,
     };
+  }
+
+  private countsTowardActiveStaffSeat(
+    status: string,
+    roleCodes: string[],
+  ): boolean {
+    return status === 'active' && !roleCodes.includes(ownerRoleCode);
+  }
+
+  private async assertStaffSeatAvailability(
+    shopId: string,
+    input: {
+      excludeMemberId?: string;
+      additionalSeats: number;
+    },
+  ) {
+    if (input.additionalSeats <= 0) {
+      return;
+    }
+
+    const planContext = await this.loadOperationalPlanContext(shopId);
+    const limitValue = planContext.planLimits.get(
+      subscriptionLimits.activeStaffMembers,
+    );
+
+    if (limitValue === undefined || limitValue === null) {
+      return;
+    }
+
+    const activeStaffCount = await this.prisma.shopMember.count({
+      where: {
+        shopId,
+        status: 'active',
+        ...(input.excludeMemberId
+          ? {
+              NOT: {
+                id: input.excludeMemberId,
+              },
+            }
+          : {}),
+        roleAssignments: {
+          none: {
+            role: {
+              code: ownerRoleCode,
+            },
+          },
+        },
+      },
+    });
+
+    if (activeStaffCount + input.additionalSeats > limitValue) {
+      throw conflictError(
+        `This subscription only allows up to ${limitValue} active staff account${limitValue === 1 ? '' : 's'} for this shop.`,
+        {
+          limit_code: subscriptionLimits.activeStaffMembers,
+          limit_value: limitValue,
+        },
+      );
+    }
   }
 
   async serializeShop(shopId: string) {

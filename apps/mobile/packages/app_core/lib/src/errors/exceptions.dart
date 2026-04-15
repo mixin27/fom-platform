@@ -14,10 +14,16 @@ class NetworkException extends AppException {
 }
 
 class ServerException extends AppException {
-  const ServerException({required String message, this.statusCode})
-    : super(message);
+  const ServerException({
+    required String message,
+    this.statusCode,
+    this.code,
+    this.payload,
+  }) : super(message);
 
   final int? statusCode;
+  final String? code;
+  final Map<String, dynamic>? payload;
 }
 
 class CacheException extends AppException {

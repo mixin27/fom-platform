@@ -1,6 +1,7 @@
 import 'package:app_core/app_core.dart';
 
 import '../entities/shop_export_file.dart';
+import '../entities/shop_order_import_summary.dart';
 
 abstract class ShopExportsRepository {
   Future<Result<ShopExportFile>> saveShopDataset({
@@ -19,5 +20,9 @@ abstract class ShopExportsRepository {
     required String mimeType,
     required String subject,
     String? text,
+  });
+
+  Future<Result<ShopOrderImportSummary>> importShopOrders({
+    required String shopId,
   });
 }

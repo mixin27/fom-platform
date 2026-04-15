@@ -1,17 +1,9 @@
 import Link from "next/link"
-import { ArrowRight, Clock3, Store } from "lucide-react"
+import { Clock3, Store } from "lucide-react"
 import { redirect } from "next/navigation"
 
-import { signInAction } from "@/app/actions"
 import { defaultPathForSession, getSession } from "@/lib/auth/session"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@workspace/ui/components/field"
-import { Input } from "@workspace/ui/components/input"
-import { Button } from "@workspace/ui/components/button"
+import { SignInForm } from "./_components/sign-in-form"
 import {
   Card,
   CardContent,
@@ -35,11 +27,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   }
 
   const params = await searchParams
-  const hasError = params?.error === "invalid_credentials"
   const noAccess = params?.error === "no_access"
-  const authFailed = params?.error === "auth_failed"
   const sessionExpired = params?.error === "session_expired"
   const passwordReset = params?.notice === "password_reset"
+  const initialErrorMessage = sessionExpired
+    ? "Your session expired. Sign in again to continue."
+    : noAccess
+    ? "This account exists, but it does not have platform or shop access yet."
+    : null
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr] transition-all duration-300">
@@ -90,50 +85,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          {hasError ? (
-            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              Email or password is incorrect.
-            </div>
-          ) : null}
-          {noAccess ? (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-              This account exists, but it does not have platform or shop access yet.
-            </div>
-          ) : null}
-          {authFailed ? (
-            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              Sign-in could not be completed right now. Check the API connection and try again.
-            </div>
-          ) : null}
-          {sessionExpired ? (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-              Your session expired. Sign in again to continue.
-            </div>
-          ) : null}
           {passwordReset ? (
             <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-400">
               Password updated. Sign in with the new password.
             </div>
           ) : null}
-          <form action={signInAction} className="flex flex-col gap-5">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" name="email" type="email" placeholder="owner@shop.com" required />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
-                <FieldDescription>
-                  Your credentials are verified by the backend API and a signed web session cookie is created on success.
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-            <Button type="submit" size="lg" className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
-              Continue
-              <ArrowRight data-icon="inline-end" />
-            </Button>
-          </form>
+          <SignInForm initialErrorMessage={initialErrorMessage} />
           <div className="text-sm">
             <Link href="/forgot-password" className="font-medium text-foreground">
               Forgot password?

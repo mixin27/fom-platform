@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum ShopExportActionKind { save, share }
+enum ShopExportActionKind { save, share, importFile }
 
 class ShopExportState extends Equatable {
   const ShopExportState({

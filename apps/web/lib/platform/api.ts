@@ -73,6 +73,7 @@ export type PlatformPlanOption = {
   is_active: boolean
   sort_order: number
   items: PlatformPlanItem[]
+  limits: PlatformPlanLimit[]
 }
 
 export type PlatformPlanItem = {
@@ -81,6 +82,15 @@ export type PlatformPlanItem = {
   label: string
   description: string | null
   availability_status: "available" | "unavailable" | string
+  sort_order: number
+}
+
+export type PlatformPlanLimit = {
+  id: string
+  code: string
+  label: string
+  description: string | null
+  value: number | null
   sort_order: number
 }
 

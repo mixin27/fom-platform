@@ -63,6 +63,16 @@ class ShopExportShareRequested extends ShopExportEvent {
   ];
 }
 
+class ShopOrdersImportRequested extends ShopExportEvent {
+  const ShopOrdersImportRequested({required this.shopId, required this.label});
+
+  final String shopId;
+  final String label;
+
+  @override
+  List<Object?> get props => [shopId, label];
+}
+
 class ShopExportFeedbackDismissed extends ShopExportEvent {
   const ShopExportFeedbackDismissed();
 }

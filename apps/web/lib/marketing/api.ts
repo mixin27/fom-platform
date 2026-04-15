@@ -11,6 +11,15 @@ export type MarketingPlanItem = {
   sort_order: number
 }
 
+export type MarketingPlanLimit = {
+  id: string
+  code: string
+  label: string
+  description: string | null
+  value: number | null
+  sort_order: number
+}
+
 export type MarketingPlan = {
   id: string
   code: string
@@ -22,6 +31,7 @@ export type MarketingPlan = {
   is_active: boolean
   sort_order: number
   items: MarketingPlanItem[]
+  limits: MarketingPlanLimit[]
 }
 
 const fallbackPlans: MarketingPlan[] = [
@@ -36,6 +46,7 @@ const fallbackPlans: MarketingPlan[] = [
     is_active: true,
     sort_order: 0,
     items: [],
+    limits: [],
   },
   {
     id: "pro_monthly",
@@ -43,11 +54,12 @@ const fallbackPlans: MarketingPlan[] = [
     name: "Shop Monthly",
     description: "Single-shop monthly plan for daily Facebook order operations.",
     billing_period: "monthly",
-    price: 7000,
+    price: 15000,
     currency: "MMK",
     is_active: true,
     sort_order: 1,
     items: [],
+    limits: [],
   },
   {
     id: "pro_yearly",
@@ -55,11 +67,12 @@ const fallbackPlans: MarketingPlan[] = [
     name: "Shop Yearly",
     description: "Discounted yearly plan for shops running the workflow every day.",
     billing_period: "yearly",
-    price: 70000,
+    price: 150000,
     currency: "MMK",
     is_active: true,
     sort_order: 2,
     items: [],
+    limits: [],
   },
 ]
 
