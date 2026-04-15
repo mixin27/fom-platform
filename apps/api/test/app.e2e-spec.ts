@@ -230,6 +230,85 @@ describe('Facebook Order Manager API (e2e)', () => {
     },
   );
 
+  dbIt(
+    'keeps only one active session when the same account signs in again',
+    async () => {
+      const firstLogin = await loginWithPassword(
+        app,
+        'maaye@example.com',
+        'Password123!',
+      );
+      const secondLogin = await loginWithPassword(
+        app,
+        'maaye@example.com',
+        'Password123!',
+      );
+
+      const firstAccessPayload = decodeJwtPayload(firstLogin.access_token);
+      const secondAccessPayload = decodeJwtPayload(secondLogin.access_token);
+      const prisma = app.get(PrismaService);
+
+      const firstMeResponse = await app.inject({
+        method: 'GET',
+        url: '/api/v1/users/me',
+        headers: {
+          authorization: `Bearer ${firstLogin.access_token}`,
+        },
+      });
+      expect(firstMeResponse.statusCode).toBe(401);
+
+      const firstRefreshResponse = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: {
+          refresh_token: firstLogin.refresh_token,
+        },
+      });
+      expect(firstRefreshResponse.statusCode).toBe(401);
+
+      const secondMeResponse = await app.inject({
+        method: 'GET',
+        url: '/api/v1/users/me',
+        headers: {
+          authorization: `Bearer ${secondLogin.access_token}`,
+        },
+      });
+      expect(secondMeResponse.statusCode).toBe(200);
+
+      const sessions = await prisma.session.findMany({
+        where: {
+          id: {
+            in: [firstAccessPayload.sid, secondAccessPayload.sid],
+          },
+        },
+        select: {
+          id: true,
+          userId: true,
+          revokedAt: true,
+        },
+      });
+
+      const firstSession = sessions.find(
+        (session) => session.id === firstAccessPayload.sid,
+      );
+      const secondSession = sessions.find(
+        (session) => session.id === secondAccessPayload.sid,
+      );
+
+      expect(firstSession?.revokedAt).toBeInstanceOf(Date);
+      expect(secondSession?.revokedAt).toBeNull();
+      expect(firstSession?.userId).toBe(secondSession?.userId);
+
+      const activeSessionCount = await prisma.session.count({
+        where: {
+          userId: secondSession!.userId,
+          revokedAt: null,
+        },
+      });
+      expect(activeSessionCount).toBe(1);
+    },
+  );
+
   dbIt('includes platform owner access in the login payload', async () => {
     const loginData = await loginWithPassword(
       app,

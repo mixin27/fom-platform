@@ -38,6 +38,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthShopSelected>(_onShopSelected);
     on<AuthSessionRefreshRequested>(_onSessionRefreshRequested);
+    on<AuthSessionExpiredDetected>(_onSessionExpiredDetected);
     on<AuthErrorDismissed>(_onErrorDismissed);
   }
 
@@ -73,6 +74,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
     }
 
     await _restoreSessionAndEmit(emit);
+  }
+
+  void _onSessionExpiredDetected(
+    AuthSessionExpiredDetected event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        status: AuthStatus.unauthenticated,
+        isSubmitting: false,
+        removeSession: true,
+        removeActiveShop: true,
+        errorMessage: 'Your session ended. Please sign in again.',
+      ),
+    );
   }
 
   Future<void> _restoreSessionAndEmit(Emitter<AuthState> emit) async {

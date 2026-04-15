@@ -9,6 +9,7 @@ import "package:get_it/get_it.dart";
 
 import "../../config/app_config.dart";
 import "../../config/app_locale_controller.dart";
+import "../../session/session_expiry_notifier.dart";
 import "dependency_module.dart";
 import "get_it_extensions.dart";
 
@@ -35,6 +36,8 @@ class AppCoreModule implements DependencyModule {
   final AppConfig appConfig;
   final AppLogger appLogger;
   final SharedPreferencesService sharedPreferencesService;
+  static const String _cachedUserKey = "auth.cached_user";
+  static const String _selectedShopIdKey = "auth.selected_shop_id";
 
   @override
   void register(GetIt getIt) {
@@ -51,6 +54,9 @@ class AppCoreModule implements DependencyModule {
       ..putSingletonIfAbsent<AppLogger>(appLogger)
       ..putSingletonIfAbsent<SharedPreferencesService>(sharedPreferencesService)
       ..putSingletonIfAbsent<NetworkConfig>(networkConfig)
+      ..putLazySingletonIfAbsent<SessionExpiryNotifier>(
+        SessionExpiryNotifier.new,
+      )
       ..putSingletonIfAbsent<AppLocaleController>(
         AppLocaleController(sharedPreferencesService),
       )
@@ -71,7 +77,9 @@ class AppCoreModule implements DependencyModule {
           ),
           onSessionExpired: () async {
             await getIt<AuthTokenStore>().clearTokens();
-            await getIt<SharedPreferencesService>().remove("auth.cached_user");
+            await getIt<SharedPreferencesService>().remove(_cachedUserKey);
+            await getIt<SharedPreferencesService>().remove(_selectedShopIdKey);
+            getIt<SessionExpiryNotifier>().notifyExpired();
           },
           enableDebugLogs: appConfig.isDevelopment,
         ),

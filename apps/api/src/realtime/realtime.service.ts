@@ -223,6 +223,32 @@ export class RealtimeService {
     });
   }
 
+  disconnectSessions(sessionIds: string[], reason = 'session_revoked') {
+    const normalizedSessionIds = new Set(
+      sessionIds
+        .map((sessionId) => sessionId.trim())
+        .filter((sessionId) => sessionId.length > 0),
+    );
+
+    if (normalizedSessionIds.size === 0) {
+      return;
+    }
+
+    const emittedAt = new Date().toISOString();
+    for (const connection of [...this.connections.values()]) {
+      if (!normalizedSessionIds.has(connection.sessionId)) {
+        continue;
+      }
+
+      this.sendRaw(connection.socket, {
+        type: 'session.closed',
+        reason,
+        emitted_at: emittedAt,
+      });
+      this.closeSocket(connection.socket, 4001, reason);
+    }
+  }
+
   private acceptSocket(
     socket: RealtimeConnectionRecord['socket'],
     context: {

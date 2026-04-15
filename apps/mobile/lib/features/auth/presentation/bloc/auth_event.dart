@@ -57,6 +57,10 @@ final class AuthSessionRefreshRequested extends AuthEvent {
   const AuthSessionRefreshRequested();
 }
 
+final class AuthSessionExpiredDetected extends AuthEvent {
+  const AuthSessionExpiredDetected();
+}
+
 final class AuthErrorDismissed extends AuthEvent {
   const AuthErrorDismissed();
 }

@@ -15,6 +15,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { generateId } from '../common/utils/id';
 import { hashPassword, verifyPassword } from '../common/auth/password';
 import { EmailOutboxService } from '../email/email-outbox.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
 import type { ConfirmEmailVerificationDto } from './dto/confirm-email-verification.dto';
 import type { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -75,6 +76,7 @@ export class AuthService {
     private readonly shopsService: ShopsService,
     private readonly jwtService: JwtService,
     private readonly emailOutbox: EmailOutboxService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async register(body: RegisterDto, metadata: SessionRequestMetadata) {
@@ -356,7 +358,17 @@ export class AuthService {
     const passwordHash = await hashPassword(body.password);
     const resetAt = new Date();
 
-    await this.prisma.$transaction(async (tx) => {
+    const revokedSessionIds = await this.prisma.$transaction(async (tx) => {
+      const activeSessions = await tx.session.findMany({
+        where: {
+          userId: user.id,
+          revokedAt: null,
+        },
+        select: {
+          id: true,
+        },
+      });
+
       await tx.passwordCredential.upsert({
         where: { userId: user.id },
         update: {
@@ -375,16 +387,36 @@ export class AuthService {
         },
       });
 
-      await tx.session.updateMany({
-        where: {
-          userId: user.id,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: resetAt,
-        },
-      });
+      if (activeSessions.length > 0) {
+        const sessionIds = activeSessions.map((session) => session.id);
+        await tx.session.updateMany({
+          where: {
+            id: {
+              in: sessionIds,
+            },
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: resetAt,
+          },
+        });
+        await tx.pushDevice.updateMany({
+          where: {
+            sessionId: {
+              in: sessionIds,
+            },
+            isActive: true,
+          },
+          data: {
+            isActive: false,
+          },
+        });
+      }
+
+      return activeSessions.map((session) => session.id);
     });
+
+    this.disconnectRealtimeSessions(revokedSessionIds, 'password_reset');
 
     await this.upsertIdentity(user.id, {
       provider: 'password',
@@ -525,17 +557,31 @@ export class AuthService {
 
   async logout(accessToken: string): Promise<void> {
     const payload = await this.verifyAccessToken(accessToken);
+    const revokedAt = new Date();
 
-    await this.prisma.session.updateMany({
-      where: {
-        id: payload.sid,
-        accessToken,
-        revokedAt: null,
-      },
-      data: {
-        revokedAt: new Date(),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.session.updateMany({
+        where: {
+          id: payload.sid,
+          accessToken,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt,
+        },
+      });
+      await tx.pushDevice.updateMany({
+        where: {
+          sessionId: payload.sid,
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+        },
+      });
     });
+
+    this.disconnectRealtimeSessions([payload.sid], 'logged_out');
   }
 
   async authenticate(
@@ -623,76 +669,126 @@ export class AuthService {
     const refreshExpiresAt = new Date(
       Date.now() + jwtConfig.refreshTokenTtlSeconds * 1000,
     );
+    const issuedAt = new Date();
 
-    const session =
-      sessionId !== undefined
-        ? { id: sessionId }
-        : await this.prisma.session.create({
-            data: {
-              userId,
-              accessToken: `pending_access_${generateId('tmp')}`,
-              refreshToken: `pending_refresh_${generateId('tmp')}`,
-              accessExpiresAt,
-              refreshExpiresAt,
-              lastUsedAt: new Date(),
-              ipAddress: normalizedMetadata.ipAddress,
-              userAgent: normalizedMetadata.userAgent,
-              lastUsedIpAddress: normalizedMetadata.ipAddress,
-              lastUsedUserAgent: normalizedMetadata.userAgent,
+    const { persistedSession, revokedSessionIds } =
+      await this.prisma.$transaction(async (tx) => {
+        const currentSession =
+          sessionId !== undefined
+            ? { id: sessionId }
+            : await tx.session.create({
+                data: {
+                  userId,
+                  accessToken: `pending_access_${generateId('tmp')}`,
+                  refreshToken: `pending_refresh_${generateId('tmp')}`,
+                  accessExpiresAt,
+                  refreshExpiresAt,
+                  lastUsedAt: issuedAt,
+                  ipAddress: normalizedMetadata.ipAddress,
+                  userAgent: normalizedMetadata.userAgent,
+                  lastUsedIpAddress: normalizedMetadata.ipAddress,
+                  lastUsedUserAgent: normalizedMetadata.userAgent,
+                },
+                select: { id: true },
+              });
+
+        const accessPayload: AccessTokenPayload = {
+          type: 'access',
+          sub: context.user.id,
+          sid: currentSession.id,
+          name: context.user.name,
+          email: context.user.email,
+          phone: context.user.phone,
+          locale: context.user.locale,
+          platform: context.jwtPlatform,
+          shops: context.jwtShops,
+        };
+        const refreshPayload: RefreshTokenPayload = {
+          type: 'refresh',
+          sub: context.user.id,
+          sid: currentSession.id,
+        };
+
+        const accessToken = await this.jwtService.signAsync(accessPayload, {
+          secret: jwtConfig.accessSecret,
+          issuer: jwtConfig.issuer,
+          audience: jwtConfig.audience,
+          expiresIn: jwtConfig.accessTokenTtlSeconds,
+        });
+        const refreshToken = await this.jwtService.signAsync(refreshPayload, {
+          secret: jwtConfig.refreshSecret,
+          issuer: jwtConfig.issuer,
+          audience: jwtConfig.audience,
+          expiresIn: jwtConfig.refreshTokenTtlSeconds,
+        });
+
+        const existingSessions = await tx.session.findMany({
+          where: {
+            userId,
+            revokedAt: null,
+            id: {
+              not: currentSession.id,
             },
-            select: { id: true },
+          },
+          select: {
+            id: true,
+          },
+        });
+        const revokedSessionIds = existingSessions.map((session) => session.id);
+
+        if (revokedSessionIds.length > 0) {
+          await tx.session.updateMany({
+            where: {
+              id: {
+                in: revokedSessionIds,
+              },
+              revokedAt: null,
+            },
+            data: {
+              revokedAt: issuedAt,
+            },
           });
+          await tx.pushDevice.updateMany({
+            where: {
+              sessionId: {
+                in: revokedSessionIds,
+              },
+              isActive: true,
+            },
+            data: {
+              isActive: false,
+            },
+          });
+        }
 
-    const accessPayload: AccessTokenPayload = {
-      type: 'access',
-      sub: context.user.id,
-      sid: session.id,
-      name: context.user.name,
-      email: context.user.email,
-      phone: context.user.phone,
-      locale: context.user.locale,
-      platform: context.jwtPlatform,
-      shops: context.jwtShops,
-    };
-    const refreshPayload: RefreshTokenPayload = {
-      type: 'refresh',
-      sub: context.user.id,
-      sid: session.id,
-    };
+        const persistedSession = await tx.session.update({
+          where: { id: currentSession.id },
+          data: {
+            accessToken,
+            refreshToken,
+            accessExpiresAt,
+            refreshExpiresAt,
+            revokedAt: null,
+            lastUsedAt: issuedAt,
+            lastUsedIpAddress: normalizedMetadata.ipAddress,
+            lastUsedUserAgent: normalizedMetadata.userAgent,
+          },
+          select: {
+            id: true,
+            accessToken: true,
+            refreshToken: true,
+            accessExpiresAt: true,
+            refreshExpiresAt: true,
+          },
+        });
 
-    const accessToken = await this.jwtService.signAsync(accessPayload, {
-      secret: jwtConfig.accessSecret,
-      issuer: jwtConfig.issuer,
-      audience: jwtConfig.audience,
-      expiresIn: jwtConfig.accessTokenTtlSeconds,
-    });
-    const refreshToken = await this.jwtService.signAsync(refreshPayload, {
-      secret: jwtConfig.refreshSecret,
-      issuer: jwtConfig.issuer,
-      audience: jwtConfig.audience,
-      expiresIn: jwtConfig.refreshTokenTtlSeconds,
-    });
+        return {
+          persistedSession,
+          revokedSessionIds,
+        };
+      });
 
-    const persistedSession = await this.prisma.session.update({
-      where: { id: session.id },
-      data: {
-        accessToken,
-        refreshToken,
-        accessExpiresAt,
-        refreshExpiresAt,
-        revokedAt: null,
-        lastUsedAt: new Date(),
-        lastUsedIpAddress: normalizedMetadata.ipAddress,
-        lastUsedUserAgent: normalizedMetadata.userAgent,
-      },
-      select: {
-        id: true,
-        accessToken: true,
-        refreshToken: true,
-        accessExpiresAt: true,
-        refreshExpiresAt: true,
-      },
-    });
+    this.disconnectRealtimeSessions(revokedSessionIds, 'session_replaced');
 
     return {
       session: persistedSession,
@@ -1142,6 +1238,14 @@ export class AuthService {
       ipAddress: this.normalizeMetadataValue(metadata.ipAddress, 64),
       userAgent: this.normalizeMetadataValue(metadata.userAgent, 1024),
     };
+  }
+
+  private disconnectRealtimeSessions(sessionIds: string[], reason: string) {
+    if (sessionIds.length === 0) {
+      return;
+    }
+
+    this.realtimeService.disconnectSessions(sessionIds, reason);
   }
 
   private normalizeMetadataValue(
