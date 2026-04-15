@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Shield, Store, UserRound } from "lucide-react"
+import { Clock3, Shield, Store, UserRound } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
@@ -7,8 +7,10 @@ import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getCurrentUserProfile,
+  getShopAuditLogs,
   getShopMembers,
   getShopPortalContext,
+  getShopRoles,
   type ShopCursorPagination,
 } from "@/lib/shop/api"
 import {
@@ -19,19 +21,9 @@ import {
 } from "@/lib/shop/query"
 import { formatCodeLabel, formatList } from "@/lib/shop/format"
 import { formatRelativeDate } from "@/lib/platform/format"
-import {
-  addShopMemberFromFormAction,
-  updateShopMemberFromFormAction,
-} from "../actions"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
+import { ShopMemberSheet } from "./_components/shop-member-sheet"
+import { ShopRoleSheet } from "./_components/shop-role-sheet"
 
 type ShopStaffsPageProps = {
   searchParams?: Promise<ShopSearchParams>
@@ -45,13 +37,18 @@ export default async function ShopStaffsPage({
   const { activeShop } = await getShopPortalContext()
   const permissions = new Set(activeShop.membership.permissions)
   const canManageMembers = permissions.has("members.manage")
-  const [membersResponse, profileResponse] = await Promise.all([
+
+  const [membersResponse, profileResponse, rolesResponse, auditLogsResponse] = await Promise.all([
     getShopMembers(params, currentHref),
     getCurrentUserProfile(currentHref),
+    getShopRoles(currentHref),
+    getShopAuditLogs({ limit: "8" }, currentHref),
   ])
 
   const members = membersResponse.data
   const profile = profileResponse.data
+  const roleCatalog = rolesResponse.data
+  const auditLogs = auditLogsResponse.data
   const pagination = membersResponse.meta?.pagination as ShopCursorPagination | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
   const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
@@ -59,21 +56,39 @@ export default async function ShopStaffsPage({
   const notice = getSingleSearchParam(params.notice)
   const error = getSingleSearchParam(params.error)
   const activeMembers = members.filter((member) => member.status === "active")
-  const disabledMembers = members.filter((member) => member.status === "disabled")
   const ownerCount = members.filter((member) =>
     member.roles.some((role) => role.code === "owner")
   ).length
+  const customRoles = roleCatalog.roles.filter((role) => !role.is_system)
+  const currentMembership =
+    profile.shops.find((shopRecord) => shopRecord.id === activeShop.id)?.membership ?? null
 
   return (
     <div className="flex flex-col gap-5">
       <PageIntro
-        eyebrow="Staffs"
-        title="Staff access management"
-        description="Review member access, invite additional operators, and disable staff accounts without leaving the shop workspace."
+        eyebrow="Governance"
+        title="Team access and audit"
+        description="Manage member access, define custom roles, and review recent governance changes for this shop."
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/settings">Shop settings</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/settings">Shop settings</Link>
+            </Button>
+            {canManageMembers ? (
+              <>
+                <ShopMemberSheet
+                  shopId={activeShop.id}
+                  roles={roleCatalog.roles}
+                  triggerLabel="Invite member"
+                />
+                <ShopRoleSheet
+                  shopId={activeShop.id}
+                  availablePermissions={roleCatalog.available_permissions}
+                  triggerLabel="Create role"
+                />
+              </>
+            ) : null}
+          </div>
         }
       />
 
@@ -88,38 +103,42 @@ export default async function ShopStaffsPage({
         </div>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-3 lg:grid-cols-4">
         <DashboardStatCard
           title="Active staffs"
           value={String(activeMembers.length)}
           detail="Members with active access to the current shop."
-          delta={`${disabledMembers.length} disabled`}
+          delta={`${members.length} total members`}
           icon={Store}
           accent="sunset"
         />
         <DashboardStatCard
-          title="Owners"
-          value={String(ownerCount)}
-          detail="Owner-role accounts attached to this shop."
-          delta={`${members.length} total members`}
+          title="Role catalog"
+          value={String(roleCatalog.roles.length)}
+          detail="System and custom roles available for assignment."
+          delta={`${customRoles.length} custom`}
           icon={Shield}
           accent="teal"
+        />
+        <DashboardStatCard
+          title="Recent audit events"
+          value={String(auditLogs.length)}
+          detail="Latest member and role changes recorded for this shop."
+          delta={auditLogs[0] ? formatRelativeDate(auditLogs[0].created_at) : "No audit activity yet"}
+          icon={Clock3}
+          accent="ink"
         />
         <DashboardStatCard
           title="Your access"
           value={profile.name}
           detail={profile.email ?? profile.phone ?? "No primary contact set."}
-          delta={formatList(
-            profile.shops
-              .find((shopRecord) => shopRecord.id === activeShop.id)
-              ?.membership.roles.map((role) => role.code) ?? []
-          )}
+          delta={formatList(currentMembership?.roles.map((role) => role.name) ?? [])}
           icon={UserRound}
           accent="ink"
         />
       </section>
 
-      <div className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
         <PlatformDataTable
           title="Team members"
           description="Current shop access"
@@ -167,7 +186,7 @@ export default async function ShopStaffsPage({
                   {member.roles.map((role) => (
                     <PlatformStatusBadge
                       key={role.id}
-                      status="active"
+                      status={role.is_system ? "active" : "pending"}
                       label={role.name}
                     />
                   ))}
@@ -205,18 +224,13 @@ export default async function ShopStaffsPage({
                   return <span className="text-xs text-muted-foreground">No actions</span>
                 }
 
-                const nextStatus = member.status === "disabled" ? "active" : "disabled"
-
                 return (
-                  <form action={updateShopMemberFromFormAction}>
-                    <input type="hidden" name="return_to" value={currentHref} />
-                    <input type="hidden" name="shop_id" value={activeShop.id} />
-                    <input type="hidden" name="member_id" value={member.id} />
-                    <input type="hidden" name="status" value={nextStatus} />
-                    <Button type="submit" size="sm" variant="outline">
-                      {nextStatus === "active" ? "Restore" : "Disable"}
-                    </Button>
-                  </form>
+                  <ShopMemberSheet
+                    shopId={activeShop.id}
+                    roles={roleCatalog.roles}
+                    member={member}
+                    triggerLabel="Manage"
+                  />
                 )
               },
               className: "w-[120px] px-4 py-2.5 text-right",
@@ -225,38 +239,109 @@ export default async function ShopStaffsPage({
           ]}
         />
 
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Invite staff</CardDescription>
-            <CardTitle>Add member</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {canManageMembers ? (
-              <form action={addShopMemberFromFormAction} className="flex flex-col gap-2.5">
-                <input type="hidden" name="return_to" value={currentHref} />
-                <input type="hidden" name="shop_id" value={activeShop.id} />
-                <Input name="name" placeholder="Member name" />
-                <Input name="email" placeholder="Email" />
-                <Input name="phone" placeholder="Phone" />
-                <select
-                  name="role_code"
-                  defaultValue="staff"
-                  className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
-                >
-                  <option value="staff">Staff</option>
-                </select>
-                <Button type="submit" size="sm">
-                  Add member
-                </Button>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Your account cannot invite or disable members in this shop.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <PlatformDataTable
+          title="Role catalog"
+          description="Shop role definitions"
+          rows={roleCatalog.roles}
+          emptyMessage="No roles found for this shop."
+          footer={`${ownerCount} owner account${ownerCount === 1 ? "" : "s"} currently attached`}
+          columns={[
+            {
+              key: "name",
+              header: "Role",
+              render: (role) => (
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-foreground">{role.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {role.description ?? (role.is_system ? "System role" : "Custom role")}
+                  </span>
+                </div>
+              ),
+            },
+            {
+              key: "type",
+              header: "Type",
+              render: (role) => (
+                <PlatformStatusBadge
+                  status={role.is_system ? "active" : "pending"}
+                  label={role.is_system ? "System" : "Custom"}
+                />
+              ),
+            },
+            {
+              key: "members",
+              header: "Members",
+              render: (role) => String(role.member_count),
+            },
+            {
+              key: "permissions",
+              header: "Permissions",
+              render: (role) => `${role.permissions.length} assigned`,
+            },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (role) => {
+                if (!canManageMembers || !role.editable) {
+                  return (
+                    <span className="text-xs text-muted-foreground">
+                      {role.is_system ? "System role" : "No actions"}
+                    </span>
+                  )
+                }
+
+                return (
+                  <ShopRoleSheet
+                    shopId={activeShop.id}
+                    role={role}
+                    availablePermissions={roleCatalog.available_permissions}
+                    triggerLabel="Edit"
+                  />
+                )
+              },
+              className: "w-[110px] px-4 py-2.5 text-right",
+              cellClassName: "px-4 py-3 text-right",
+            },
+          ]}
+        />
       </div>
+
+      <PlatformDataTable
+        title="Recent audit log"
+        description="Latest governance activity"
+        rows={auditLogs}
+        emptyMessage="No audit events recorded for this shop yet."
+        footer="Member invites, access changes, and custom-role edits are recorded here."
+        columns={[
+          {
+            key: "event",
+            header: "Event",
+            render: (log) => (
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">{log.summary}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatCodeLabel(log.action)}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "actor",
+            header: "Actor",
+            render: (log) => log.actor?.name ?? "System",
+          },
+          {
+            key: "entity",
+            header: "Entity",
+            render: (log) => formatCodeLabel(log.entity_type),
+          },
+          {
+            key: "time",
+            header: "When",
+            render: (log) => formatRelativeDate(log.created_at),
+          },
+        ]}
+      />
     </div>
   )
 }

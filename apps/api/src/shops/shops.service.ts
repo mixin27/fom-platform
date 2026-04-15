@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client';
 import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import {
@@ -10,13 +11,19 @@ import {
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { permissions, type Permission } from '../common/http/rbac.constants';
+import {
+  permissionCatalog,
+  permissions,
+  type Permission,
+} from '../common/http/rbac.constants';
 import { subscriptionLimits } from '../platform/subscription-limit.constants';
 import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
+import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
+import { UpdateShopRoleDto } from './dto/update-shop-role.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 
 type ShopWithCount = any & {
@@ -26,6 +33,9 @@ type ShopWithCount = any & {
 };
 
 type MemberWithAccess = any;
+type RoleWithAccess = any;
+type AuditLogRecord = any;
+type ShopTransaction = Prisma.TransactionClient;
 const allowedOperationalSubscriptionStatuses = new Set([
   'trialing',
   'active',
@@ -106,8 +116,6 @@ export class ShopsService {
     const timezone = body.timezone ?? 'Asia/Yangon';
     this.assertValidTimeZone(timezone);
 
-    const ownerRole = await this.requireRolesByCodes(['owner']);
-
     const created = await this.prisma.$transaction(async (tx) => {
       const shop = await tx.shop.create({
         data: {
@@ -116,6 +124,7 @@ export class ShopsService {
           timezone,
         },
       });
+      const ownerRole = await this.requireRolesByCodes(['owner'], shop.id);
 
       const member = await tx.shopMember.create({
         data: {
@@ -343,6 +352,299 @@ export class ShopsService {
     return paged(page.items, page.pagination);
   }
 
+  async listRoles(currentUser: AuthenticatedUser, shopId: string) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersRead,
+    );
+
+    const roles = await this.prisma.role.findMany({
+      where: this.buildShopRoleScopeFilter(shopId),
+      include: {
+        permissionAssignments: {
+          include: {
+            permission: true,
+          },
+        },
+        memberAssignments: {
+          where: {
+            shopMember: {
+              shopId,
+            },
+          },
+        },
+      },
+      orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
+    });
+
+    return {
+      roles: roles.map((role) => this.serializeRoleRecord(role)),
+      available_permissions: permissionCatalog
+        .filter((permission) => permission.scope === 'shop')
+        .map((permission) => ({
+          code: permission.code,
+          name: permission.name,
+          description: permission.description,
+        })),
+    };
+  }
+
+  async createRole(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: CreateShopRoleDto,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+
+    const name = body.name.trim();
+    const description = body.description?.trim() || null;
+    const permissionsForRole = await this.requireShopPermissions(
+      body.permission_codes,
+    );
+
+    await this.assertUniqueCustomRoleName(shopId, name);
+
+    const createdRole = await this.prisma.$transaction(async (tx) => {
+      const role = await tx.role.create({
+        data: {
+          shopId,
+          code: await this.generateCustomRoleCode(tx, shopId, name),
+          scope: 'shop',
+          name,
+          description,
+          isSystem: false,
+        },
+      });
+
+      await tx.rolePermissionAssignment.createMany({
+        data: permissionsForRole.map((permission) => ({
+          roleId: role.id,
+          permissionId: permission.id,
+        })),
+      });
+
+      await this.recordAuditLog(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'shop.role.created',
+        entityType: 'role',
+        entityId: role.id,
+        summary: `Created custom role ${name}.`,
+        metadata: {
+          role_id: role.id,
+          role_name: name,
+          permission_codes: permissionsForRole.map((permission) => permission.code),
+        },
+      });
+
+      return tx.role.findUnique({
+        where: { id: role.id },
+        include: {
+          permissionAssignments: {
+            include: {
+              permission: true,
+            },
+          },
+          memberAssignments: {
+            where: {
+              shopMember: {
+                shopId,
+              },
+            },
+          },
+        },
+      });
+    });
+
+    return this.serializeRoleRecord(createdRole);
+  }
+
+  async updateRole(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    roleId: string,
+    body: UpdateShopRoleDto,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+
+    const existingRole = await this.requireCustomShopRole(shopId, roleId);
+
+    if (
+      body.name === undefined &&
+      body.description === undefined &&
+      body.permission_codes === undefined
+    ) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide name, description, or permission_codes to update the role'],
+        },
+      ]);
+    }
+
+    const name = body.name?.trim();
+    const description = body.description === undefined
+      ? undefined
+      : body.description?.trim() || null;
+    const permissionsForRole =
+      body.permission_codes !== undefined
+        ? await this.requireShopPermissions(body.permission_codes)
+        : null;
+
+    if (name && name.toLowerCase() !== existingRole.name.toLowerCase()) {
+      await this.assertUniqueCustomRoleName(shopId, name, existingRole.id);
+    }
+
+    const updatedRole = await this.prisma.$transaction(async (tx) => {
+      await tx.role.update({
+        where: { id: existingRole.id },
+        data: {
+          ...(name ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
+        },
+      });
+
+      if (permissionsForRole) {
+        await tx.rolePermissionAssignment.deleteMany({
+          where: {
+            roleId: existingRole.id,
+          },
+        });
+
+        await tx.rolePermissionAssignment.createMany({
+          data: permissionsForRole.map((permission) => ({
+            roleId: existingRole.id,
+            permissionId: permission.id,
+          })),
+        });
+      }
+
+      await this.recordAuditLog(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'shop.role.updated',
+        entityType: 'role',
+        entityId: existingRole.id,
+        summary: `Updated custom role ${name ?? existingRole.name}.`,
+        metadata: {
+          role_id: existingRole.id,
+          role_name: name ?? existingRole.name,
+          permission_codes:
+            permissionsForRole?.map((permission) => permission.code) ?? null,
+        },
+      });
+
+      return tx.role.findUnique({
+        where: { id: existingRole.id },
+        include: {
+          permissionAssignments: {
+            include: {
+              permission: true,
+            },
+          },
+          memberAssignments: {
+            where: {
+              shopMember: {
+                shopId,
+              },
+            },
+          },
+        },
+      });
+    });
+
+    return this.serializeRoleRecord(updatedRole);
+  }
+
+  async deleteRole(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    roleId: string,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+
+    const role = await this.requireCustomShopRole(shopId, roleId);
+    const activeAssignments = await this.prisma.shopMemberRoleAssignment.count({
+      where: {
+        roleId,
+        shopMember: {
+          shopId,
+        },
+      },
+    });
+
+    if (activeAssignments > 0) {
+      throw conflictError(
+        'Remove this role from shop members before deleting it.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.recordAuditLog(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'shop.role.deleted',
+        entityType: 'role',
+        entityId: role.id,
+        summary: `Deleted custom role ${role.name}.`,
+        metadata: {
+          role_id: role.id,
+          role_name: role.name,
+        },
+      });
+
+      await tx.role.delete({
+        where: {
+          id: role.id,
+        },
+      });
+    });
+
+    return {
+      id: role.id,
+      deleted: true,
+    };
+  }
+
+  async listAuditLogs(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    query: CursorPaginationQueryDto,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersManage,
+    );
+
+    const records = await this.prisma.shopAuditLog.findMany({
+      where: {
+        shopId,
+      },
+      include: {
+        actorUser: true,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+
+    const rows = records.map((record) => this.serializeAuditLogRecord(record));
+    const page = paginate(rows, query.limit, query.cursor);
+    return paged(page.items, page.pagination);
+  }
+
   async addMember(
     currentUser: AuthenticatedUser,
     shopId: string,
@@ -358,8 +660,11 @@ export class ShopsService {
     const phone = this.normalizePhone(body.phone);
     const email = body.email ?? null;
     const name = body.name ?? null;
-    const roleCodes = body.role_codes ?? ['staff'];
-    const roles = await this.requireRolesByCodes(roleCodes);
+    const roles = await this.resolveRequestedRoles(shopId, {
+      roleIds: body.role_ids,
+      roleCodes: body.role_codes,
+      fallbackRoleCodes: ['staff'],
+    });
     const requestedRoleCodes = new Set(roles.map((role) => role.code));
 
     if (requestedRoleCodes.has(ownerRoleCode)) {
@@ -445,6 +750,23 @@ export class ShopsService {
         })),
       });
 
+      await this.recordAuditLog(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'shop.member.created',
+        entityType: 'shop_member',
+        entityId: createdMember.id,
+        summary: `Added ${targetUser.name} to the shop team.`,
+        metadata: {
+          member_id: createdMember.id,
+          target_user_id: targetUser.id,
+          target_user_name: targetUser.name,
+          role_ids: roles.map((role) => role.id),
+          role_codes: roles.map((role) => role.code),
+          status: 'active',
+        },
+      });
+
       return tx.shopMember.findUnique({
         where: { id: createdMember.id },
         include: {
@@ -507,18 +829,22 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    if (!body.status && !body.role_codes) {
+    if (!body.status && !body.role_ids && !body.role_codes) {
       throw validationError([
         {
           field: 'body',
-          errors: ['Provide status or role_codes to update the shop member'],
+          errors: ['Provide status, role_ids, or role_codes to update the shop member'],
         },
       ]);
     }
 
-    const roles = body.role_codes
-      ? await this.requireRolesByCodes(body.role_codes)
-      : null;
+    const roles =
+      body.role_ids || body.role_codes
+        ? await this.resolveRequestedRoles(shopId, {
+            roleIds: body.role_ids,
+            roleCodes: body.role_codes,
+          })
+        : null;
     const currentRoleCodes = member.roleAssignments.map(
       (assignment) => assignment.role.code,
     );
@@ -577,6 +903,24 @@ export class ShopsService {
           })),
         });
       }
+
+      await this.recordAuditLog(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'shop.member.updated',
+        entityType: 'shop_member',
+        entityId: member.id,
+        summary: `Updated access for ${member.user.name}.`,
+        metadata: {
+          member_id: member.id,
+          target_user_id: member.userId,
+          target_user_name: member.user.name,
+          previous_status: member.status,
+          next_status: nextStatus,
+          previous_role_codes: currentRoleCodes,
+          next_role_codes: nextRoleCodes,
+        },
+      });
 
       return tx.shopMember.findUnique({
         where: { id: member.id },
@@ -839,16 +1183,37 @@ export class ShopsService {
     return this.serializeMemberRecord(member);
   }
 
-  private async requireRolesByCodes(roleCodes: string[]) {
+  private buildShopRoleScopeFilter(shopId: string): Prisma.RoleWhereInput {
+    return {
+      scope: 'shop',
+      OR: [{ isSystem: true, shopId: null }, { shopId }],
+    };
+  }
+
+  private async requireRolesByCodes(roleCodes: string[], shopId: string) {
     const uniqueRoleCodes = [
-      ...new Set(roleCodes.map((role) => role.trim())),
+      ...new Set(
+        roleCodes
+          .map((role) => role.trim())
+          .filter((role) => role.length > 0),
+      ),
     ].sort();
+
+    if (uniqueRoleCodes.length === 0) {
+      throw validationError([
+        {
+          field: 'role_codes',
+          errors: ['Provide at least one role code'],
+        },
+      ]);
+    }
+
     const roles = await this.prisma.role.findMany({
       where: {
+        ...this.buildShopRoleScopeFilter(shopId),
         code: {
           in: uniqueRoleCodes,
         },
-        scope: 'shop',
       },
     });
 
@@ -856,12 +1221,210 @@ export class ShopsService {
       (code) => !roles.some((role) => role.code === code),
     );
     if (missingRoleCodes.length > 0) {
-      throw notFoundError(
-        `Roles not found: ${missingRoleCodes.join(', ')}. Seed RBAC defaults first.`,
-      );
+      throw notFoundError(`Roles not found: ${missingRoleCodes.join(', ')}.`);
     }
 
-    return roles.sort((left, right) => left.code.localeCompare(right.code));
+    return roles.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  private async requireRolesByIds(roleIds: string[], shopId: string) {
+    const uniqueRoleIds = [
+      ...new Set(
+        roleIds
+          .map((roleId) => roleId.trim())
+          .filter((roleId) => roleId.length > 0),
+      ),
+    ].sort();
+
+    if (uniqueRoleIds.length === 0) {
+      throw validationError([
+        {
+          field: 'role_ids',
+          errors: ['Provide at least one role id'],
+        },
+      ]);
+    }
+
+    const roles = await this.prisma.role.findMany({
+      where: {
+        ...this.buildShopRoleScopeFilter(shopId),
+        id: {
+          in: uniqueRoleIds,
+        },
+      },
+    });
+
+    const missingRoleIds = uniqueRoleIds.filter(
+      (roleId) => !roles.some((role) => role.id === roleId),
+    );
+    if (missingRoleIds.length > 0) {
+      throw notFoundError(`Roles not found: ${missingRoleIds.join(', ')}.`);
+    }
+
+    return roles.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  private async resolveRequestedRoles(
+    shopId: string,
+    input: {
+      roleIds?: string[];
+      roleCodes?: string[];
+      fallbackRoleCodes?: string[];
+    },
+  ) {
+    if (input.roleIds && input.roleIds.length > 0) {
+      return this.requireRolesByIds(input.roleIds, shopId);
+    }
+
+    if (input.roleCodes && input.roleCodes.length > 0) {
+      return this.requireRolesByCodes(input.roleCodes, shopId);
+    }
+
+    if (input.fallbackRoleCodes && input.fallbackRoleCodes.length > 0) {
+      return this.requireRolesByCodes(input.fallbackRoleCodes, shopId);
+    }
+
+    throw validationError([
+      {
+        field: 'role_ids',
+        errors: ['Provide at least one role to assign'],
+      },
+    ]);
+  }
+
+  private async requireShopPermissions(permissionCodes: string[]) {
+    const uniqueCodes = [
+      ...new Set(
+        permissionCodes
+          .map((permissionCode) => permissionCode.trim())
+          .filter((permissionCode) => permissionCode.length > 0),
+      ),
+    ].sort();
+
+    const permissionRecords = await this.prisma.permission.findMany({
+      where: {
+        scope: 'shop',
+        code: {
+          in: uniqueCodes,
+        },
+      },
+    });
+
+    const missingPermissionCodes = uniqueCodes.filter(
+      (permissionCode) =>
+        !permissionRecords.some(
+          (permissionRecord) => permissionRecord.code === permissionCode,
+        ),
+    );
+
+    if (missingPermissionCodes.length > 0) {
+      throw validationError([
+        {
+          field: 'permission_codes',
+          errors: [
+            `Unknown permission codes: ${missingPermissionCodes.join(', ')}.`,
+          ],
+        },
+      ]);
+    }
+
+    return permissionRecords.sort((left, right) =>
+      left.code.localeCompare(right.code),
+    );
+  }
+
+  private async assertUniqueCustomRoleName(
+    shopId: string,
+    name: string,
+    excludeRoleId?: string,
+  ) {
+    const existingRole = await this.prisma.role.findFirst({
+      where: {
+        shopId,
+        scope: 'shop',
+        isSystem: false,
+        ...(excludeRoleId
+          ? {
+              NOT: {
+                id: excludeRoleId,
+              },
+            }
+          : {}),
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (existingRole) {
+      throw conflictError('A custom role with this name already exists.');
+    }
+  }
+
+  private async requireCustomShopRole(shopId: string, roleId: string) {
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id: roleId,
+        shopId,
+        scope: 'shop',
+        isSystem: false,
+      },
+      include: {
+        permissionAssignments: {
+          include: {
+            permission: true,
+          },
+        },
+        memberAssignments: {
+          where: {
+            shopMember: {
+              shopId,
+            },
+          },
+        },
+      },
+    });
+
+    if (!role) {
+      throw notFoundError('Custom shop role not found');
+    }
+
+    return role;
+  }
+
+  private async generateCustomRoleCode(
+    tx: ShopTransaction,
+    shopId: string,
+    roleName: string,
+  ) {
+    const prefix = `shop.${shopId}.`;
+    const baseSlug = this.buildRoleSlug(roleName);
+
+    for (let index = 0; index < 100; index += 1) {
+      const suffix = index === 0 ? '' : `_${index + 1}`;
+      const code = `${prefix}${baseSlug}${suffix}`;
+      const existingRole = await tx.role.findUnique({
+        where: { code },
+      });
+
+      if (!existingRole) {
+        return code;
+      }
+    }
+
+    throw conflictError('Unable to generate a unique role code right now.');
+  }
+
+  private buildRoleSlug(roleName: string) {
+    const slug = roleName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 32);
+
+    return slug.length > 0 ? slug : 'custom_role';
   }
 
   private extractMemberAccess(member: MemberWithAccess) {
@@ -871,12 +1434,19 @@ export class ShopsService {
 
     const roles = [...shopScopedAssignments]
       .map((assignment) => assignment.role)
-      .sort((left, right) => left.code.localeCompare(right.code))
+      .sort((left, right) => {
+        if (left.isSystem !== right.isSystem) {
+          return left.isSystem ? -1 : 1;
+        }
+
+        return left.name.localeCompare(right.name);
+      })
       .map((role) => ({
         id: role.id,
         code: role.code,
         name: role.name,
         description: role.description,
+        is_system: role.isSystem,
       }));
 
     const permissionCodes = [
@@ -891,6 +1461,7 @@ export class ShopsService {
 
     return {
       primaryRole: roles[0]?.code ?? null,
+      primaryRoleName: roles[0]?.name ?? null,
       roles,
       permissions: permissionCodes,
     };
@@ -919,6 +1490,8 @@ export class ShopsService {
       shop_id: member.shopId,
       user_id: member.userId,
       role: access.primaryRole,
+      role_name: access.primaryRoleName,
+      role_ids: access.roles.map((role) => role.id),
       roles: access.roles,
       status: member.status,
       created_at: member.createdAt.toISOString(),
@@ -931,6 +1504,96 @@ export class ShopsService {
       },
       permissions: access.permissions,
     };
+  }
+
+  private serializeRoleRecord(role: RoleWithAccess | null) {
+    if (!role) {
+      throw notFoundError('Shop role not found');
+    }
+
+    const permissionAssignments = [...(role.permissionAssignments ?? [])].sort(
+      (left, right) => left.permission.code.localeCompare(right.permission.code),
+    );
+
+    return {
+      id: role.id,
+      shop_id: role.shopId ?? null,
+      code: role.code,
+      name: role.name,
+      description: role.description,
+      is_system: role.isSystem,
+      member_count: role.memberAssignments?.length ?? 0,
+      assignable: role.code !== ownerRoleCode,
+      editable: !role.isSystem,
+      deletable: !role.isSystem && (role.memberAssignments?.length ?? 0) === 0,
+      permissions: permissionAssignments.map((assignment) => ({
+        id: assignment.permission.id,
+        code: assignment.permission.code,
+        name: assignment.permission.name,
+        description: assignment.permission.description,
+      })),
+      permission_codes: permissionAssignments.map(
+        (assignment) => assignment.permission.code,
+      ),
+      created_at: role.createdAt.toISOString(),
+      updated_at: role.updatedAt.toISOString(),
+    };
+  }
+
+  private serializeAuditLogRecord(record: AuditLogRecord | null) {
+    if (!record) {
+      throw notFoundError('Shop audit log not found');
+    }
+
+    return {
+      id: record.id,
+      shop_id: record.shopId,
+      action: record.action,
+      entity_type: record.entityType,
+      entity_id: record.entityId,
+      summary: record.summary,
+      metadata: record.metadata ?? null,
+      created_at: record.createdAt.toISOString(),
+      actor: record.actorUser
+        ? {
+            id: record.actorUser.id,
+            name: record.actorUser.name,
+          }
+        : record.actorNameSnapshot
+          ? {
+              id: null,
+              name: record.actorNameSnapshot,
+            }
+          : null,
+    };
+  }
+
+  private async recordAuditLog(
+    tx: ShopTransaction,
+    input: {
+      shopId: string;
+      actorUser: AuthenticatedUser;
+      action: string;
+      entityType: string;
+      entityId?: string | null;
+      summary: string;
+      metadata?: Prisma.InputJsonValue | null;
+    },
+  ) {
+    await tx.shopAuditLog.create({
+      data: {
+        shopId: input.shopId,
+        actorUserId: input.actorUser.id,
+        actorNameSnapshot: input.actorUser.name,
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId ?? null,
+        summary: input.summary,
+        ...(input.metadata !== undefined
+          ? { metadata: input.metadata ?? Prisma.JsonNull }
+          : {}),
+      },
+    });
   }
 
   private normalizePhone(value: string | undefined): string | null {

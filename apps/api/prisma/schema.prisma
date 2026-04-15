@@ -66,6 +66,7 @@ model User {
   importedOrderBatches OrderImportBatch[]
   assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
+  shopAuditLogs      ShopAuditLog[]      @relation("ShopAuditActor")
 }
 
 model Shop {
@@ -84,6 +85,8 @@ model Shop {
   notifications    Notification[]
   emailMessages    EmailMessage[]
   orderImportBatches OrderImportBatch[]
+  roles            Role[]            @relation("ShopCustomRoles")
+  auditLogs        ShopAuditLog[]
 
   @@index([ownerUserId])
 }
@@ -257,16 +260,19 @@ model AuthIdentity {
 model Role {
   id                    String                     @id @default(cuid())
   code                  String                     @unique
+  shopId                String?
   scope                 String                     @default("shop")
   name                  String
   description           String?
   isSystem              Boolean                    @default(true)
   createdAt             DateTime                   @default(now())
   updatedAt             DateTime                   @updatedAt
+  shop                  Shop?                      @relation("ShopCustomRoles", fields: [shopId], references: [id], onDelete: Cascade)
   permissionAssignments RolePermissionAssignment[]
   memberAssignments     ShopMemberRoleAssignment[]
   userAssignments       UserRoleAssignment[]
 
+  @@index([shopId, scope, isSystem])
   @@map("roles")
 }
 
@@ -320,6 +326,25 @@ model UserRoleAssignment {
   @@unique([userId, roleId])
   @@index([roleId])
   @@map("user_role_assignments")
+}
+
+model ShopAuditLog {
+  id                String   @id @default(cuid())
+  shopId            String
+  actorUserId       String?
+  actorNameSnapshot String?
+  action            String
+  entityType        String
+  entityId          String?
+  summary           String
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  actorUser         User?    @relation("ShopAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
+  @@index([shopId, action, createdAt])
+  @@map("shop_audit_logs")
 }
 
 model Customer {

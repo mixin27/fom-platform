@@ -163,8 +163,13 @@ Platform notes:
 | PATCH  | /shops/{shopId}                    | Update shop                 | 200 Single Shop   |
 | GET    | /shops/{shopId}/billing            | Get current subscription and recent invoices | 200 Single ShopBilling |
 | GET    | /shops/{shopId}/members            | List staff                  | 200 List Member   |
-| POST   | /shops/{shopId}/members            | Add staff with `role_codes` | 201 Single Member |
+| POST   | /shops/{shopId}/members            | Add staff with `role_ids`   | 201 Single Member |
 | PATCH  | /shops/{shopId}/members/{memberId} | Update roles or status      | 200 Single Member |
+| GET    | /shops/{shopId}/roles              | List system and custom shop roles plus available permissions | 200 Role Catalog |
+| POST   | /shops/{shopId}/roles              | Create custom role          | 201 Single Role   |
+| PATCH  | /shops/{shopId}/roles/{roleId}     | Update custom role          | 200 Single Role   |
+| DELETE | /shops/{shopId}/roles/{roleId}     | Delete custom role          | 200 Delete Result |
+| GET    | /shops/{shopId}/audit-logs         | List recent governance audit events | 200 List AuditLog |
 
 Shop notes:
 
@@ -172,6 +177,9 @@ Shop notes:
 - `POST /shops` starts the new self-serve shop on the default free trial plan when the trial plan is active.
 - Trial subscriptions expire automatically once `end_at` passes. The default trial length is controlled by `DEFAULT_TRIAL_DAYS` and defaults to 7 days.
 - Shop member management routes are plan-gated by `team.members`.
+- Member mutations now prefer `role_ids`; `role_codes` remains accepted only as a transition path for older forms.
+- Custom roles are shop-scoped records. System roles stay immutable, while custom roles can be created, updated, and deleted per shop.
+- Audit logs currently record member invites/access changes and custom-role create/update/delete events.
 
 ## Customers
 

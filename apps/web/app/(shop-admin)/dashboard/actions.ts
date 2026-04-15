@@ -1896,3 +1896,231 @@ export async function updateShopMemberFromFormAction(formData: FormData) {
 
   redirectToPath(returnTo, redirectInput)
 }
+
+export type ShopMemberInput = {
+  name?: string
+  email?: string
+  phone?: string
+  role_ids: string[]
+}
+
+export type ShopMemberUpdateInput = {
+  status?: "active" | "invited" | "disabled"
+  role_ids?: string[]
+}
+
+export type ShopRoleInput = {
+  name: string
+  description?: string | null
+  permission_codes: string[]
+}
+
+export type ShopRoleUpdateInput = {
+  name?: string
+  description?: string | null
+  permission_codes?: string[]
+}
+
+export async function createShopMemberAction(
+  shopId: string,
+  input: ShopMemberInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || (!input.email?.trim() && !input.phone?.trim()) || input.role_ids.length === 0) {
+    return {
+      ok: false,
+      message: "Member contact and at least one role are required.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/members`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          ...(input.name?.trim() ? { name: input.name.trim() } : {}),
+          ...(input.email?.trim() ? { email: input.email.trim().toLowerCase() } : {}),
+          ...(input.phone?.trim() ? { phone: input.phone.trim() } : {}),
+          role_ids: input.role_ids,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Member added to the shop.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to add the member right now.")
+  }
+}
+
+export async function updateShopMemberAction(
+  shopId: string,
+  memberId: string,
+  input: ShopMemberUpdateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !memberId) {
+    return {
+      ok: false,
+      message: "Member context is missing.",
+    }
+  }
+
+  if (input.status === undefined && input.role_ids === undefined) {
+    return {
+      ok: false,
+      message: "Provide a status or role update for the member.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/members/${memberId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.role_ids !== undefined ? { role_ids: input.role_ids } : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Member access updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the member right now.")
+  }
+}
+
+export async function createShopRoleAction(
+  shopId: string,
+  input: ShopRoleInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !input.name.trim() || input.permission_codes.length === 0) {
+    return {
+      ok: false,
+      message: "Role name and at least one permission are required.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/roles`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          name: input.name.trim(),
+          ...(input.description?.trim() ? { description: input.description.trim() } : {}),
+          permission_codes: input.permission_codes,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Custom role created.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to create the role right now.")
+  }
+}
+
+export async function updateShopRoleAction(
+  shopId: string,
+  roleId: string,
+  input: ShopRoleUpdateInput
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !roleId) {
+    return {
+      ok: false,
+      message: "Role context is missing.",
+    }
+  }
+
+  if (
+    input.name === undefined &&
+    input.description === undefined &&
+    input.permission_codes === undefined
+  ) {
+    return {
+      ok: false,
+      message: "Provide role details to update.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/roles/${roleId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description?.trim() ? input.description.trim() : null }
+            : {}),
+          ...(input.permission_codes !== undefined
+            ? { permission_codes: input.permission_codes }
+            : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Role updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to update the role right now.")
+  }
+}
+
+export async function deleteShopRoleAction(
+  shopId: string,
+  roleId: string
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !roleId) {
+    return {
+      ok: false,
+      message: "Role context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/roles/${roleId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Role deleted.",
+    }
+  } catch (error) {
+    return toMutationActionError(error, "Unable to delete the role right now.")
+  }
+}

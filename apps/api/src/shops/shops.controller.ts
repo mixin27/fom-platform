@@ -2,6 +2,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -22,7 +23,9 @@ import type { AuthenticatedUser } from '../common/http/request-context';
 import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
+import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
+import { UpdateShopRoleDto } from './dto/update-shop-role.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { ShopsService } from './shops.service';
 
@@ -125,5 +128,65 @@ export class ShopsController {
     return ok(
       this.shopsService.updateMember(currentUser, shopId, memberId, body),
     );
+  }
+
+  @Get(':shopId/roles')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.membersRead)
+  @ApiOperation({ summary: 'List assignable shop roles and permission catalog' })
+  listRoles(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+  ) {
+    return ok(this.shopsService.listRoles(currentUser, shopId));
+  }
+
+  @Post(':shopId/roles')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.membersManage)
+  @ApiOperation({ summary: 'Create a custom shop role' })
+  createRole(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: CreateShopRoleDto,
+  ) {
+    return ok(this.shopsService.createRole(currentUser, shopId, body));
+  }
+
+  @Patch(':shopId/roles/:roleId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.membersManage)
+  @ApiOperation({ summary: 'Update a custom shop role' })
+  updateRole(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('roleId') roleId: string,
+    @Body() body: UpdateShopRoleDto,
+  ) {
+    return ok(this.shopsService.updateRole(currentUser, shopId, roleId, body));
+  }
+
+  @Delete(':shopId/roles/:roleId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.membersManage)
+  @ApiOperation({ summary: 'Delete a custom shop role' })
+  deleteRole(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('roleId') roleId: string,
+  ) {
+    return ok(this.shopsService.deleteRole(currentUser, shopId, roleId));
+  }
+
+  @Get(':shopId/audit-logs')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.membersManage)
+  @ApiOperation({ summary: 'List recent shop governance audit logs' })
+  listAuditLogs(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Query() query: CursorPaginationQueryDto,
+  ) {
+    return this.shopsService.listAuditLogs(currentUser, shopId, query);
   }
 }
