@@ -306,6 +306,8 @@ class ApiClient {
         return ServerException(
           message: _extractMessage(error.response?.data),
           statusCode: error.response?.statusCode,
+          code: _extractCode(error.response?.data),
+          payload: _extractPayload(error.response?.data),
         );
     }
   }
@@ -332,6 +334,37 @@ class ApiClient {
     }
 
     return 'Server request failed.';
+  }
+
+  String? _extractCode(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      final error = payload['error'];
+      if (error is Map<String, dynamic>) {
+        final code = _safeString(error['code']);
+        if (code != null) {
+          return code;
+        }
+      }
+
+      final code = _safeString(payload['code']);
+      if (code != null) {
+        return code;
+      }
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _extractPayload(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+
+    if (payload is Map) {
+      return Map<String, dynamic>.from(payload);
+    }
+
+    return null;
   }
 
   String? _safeString(dynamic value) {

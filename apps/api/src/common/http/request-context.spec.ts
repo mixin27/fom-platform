@@ -25,6 +25,9 @@ describe('request context', () => {
     expect(getSessionRequestMetadata(request)).toEqual({
       ipAddress: '203.0.113.10',
       userAgent: 'scalar-client/1.0',
+      platform: 'unknown',
+      deviceId: null,
+      deviceName: null,
     });
     expect(response.setHeader).toHaveBeenCalledWith(
       'X-Request-Id',

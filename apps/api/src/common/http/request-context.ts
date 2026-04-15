@@ -13,18 +13,26 @@ export interface AuthenticatedUser {
   shops?: JwtShopAccess[];
 }
 
+export type SessionClientPlatform = 'web' | 'mobile' | 'unknown';
+
 export interface RequestWithContext {
   headers?: Record<string, string | string[] | undefined>;
   ip?: string;
   requestId?: string;
   ipAddress?: string | null;
   userAgent?: string | null;
+  clientPlatform?: SessionClientPlatform;
+  deviceId?: string | null;
+  deviceName?: string | null;
   user?: AuthenticatedUser;
 }
 
 export type SessionRequestMetadata = {
   ipAddress: string | null;
   userAgent: string | null;
+  platform: SessionClientPlatform;
+  deviceId: string | null;
+  deviceName: string | null;
 };
 
 type ResponseWithRequestIdHeader = {
@@ -45,7 +53,10 @@ export class RequestContextMiddleware implements NestMiddleware {
 }
 
 export function getSessionRequestMetadata(
-  request?: Pick<RequestWithContext, 'ipAddress' | 'userAgent'>,
+  request?: Pick<
+    RequestWithContext,
+    'ipAddress' | 'userAgent' | 'clientPlatform' | 'deviceId' | 'deviceName'
+  >,
 ): SessionRequestMetadata {
   if (request) {
     ensureRequestContext(request as RequestWithContext);
@@ -54,6 +65,9 @@ export function getSessionRequestMetadata(
   return {
     ipAddress: request?.ipAddress?.trim() || null,
     userAgent: request?.userAgent?.trim() || null,
+    platform: request?.clientPlatform ?? 'unknown',
+    deviceId: request?.deviceId?.trim() || null,
+    deviceName: request?.deviceName?.trim() || null,
   };
 }
 
@@ -80,9 +94,36 @@ export function ensureRequestContext(
     request.userAgent = readHeaderValue(request.headers?.['user-agent']);
   }
 
+  if (request.clientPlatform === undefined) {
+    request.clientPlatform = resolveClientPlatform(
+      readHeaderValue(request.headers?.['x-client-platform']),
+    );
+  }
+
+  if (request.deviceId === undefined) {
+    request.deviceId = readHeaderValue(request.headers?.['x-device-id']);
+  }
+
+  if (request.deviceName === undefined) {
+    request.deviceName = readHeaderValue(request.headers?.['x-device-name']);
+  }
+
   if (request.requestId) {
     response?.setHeader?.('X-Request-Id', request.requestId);
     response?.header?.('X-Request-Id', request.requestId);
+  }
+}
+
+function resolveClientPlatform(
+  value: string | null,
+): SessionClientPlatform {
+  switch (value?.trim().toLowerCase()) {
+    case 'web':
+      return 'web';
+    case 'mobile':
+      return 'mobile';
+    default:
+      return 'unknown';
   }
 }
 

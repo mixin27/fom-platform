@@ -6,6 +6,7 @@ abstract class AuthRepository {
   Future<Result<AuthSession>> login({
     required String email,
     required String password,
+    bool logoutOtherDevice = false,
   });
 
   Future<Result<AuthSession>> register({

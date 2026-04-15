@@ -1,3 +1,4 @@
+import 'package:app_device/app_device.dart';
 import 'package:app_logger/app_logger.dart';
 import 'package:app_network/app_network.dart';
 import 'package:app_push/app_push.dart';
@@ -31,7 +32,10 @@ class AuthModule implements DependencyModule {
         ),
       )
       ..putLazySingletonIfAbsent<AuthRemoteDataSource>(
-        () => AuthRemoteDataSourceImpl(getIt<ApiClient>()),
+        () => AuthRemoteDataSourceImpl(
+          getIt<ApiClient>(),
+          getIt<DeviceMetadataService>(),
+        ),
       )
       ..putLazySingletonIfAbsent<AuthRepository>(
         () => AuthRepositoryImpl(

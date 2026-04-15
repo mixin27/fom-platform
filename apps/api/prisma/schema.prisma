@@ -444,6 +444,9 @@ model AuthChallenge {
 model Session {
   id                String    @id @default(cuid())
   userId            String
+  platform          String    @default("unknown")
+  deviceId          String?
+  deviceName        String?
   accessToken       String    @unique
   refreshToken      String    @unique
   accessExpiresAt   DateTime
@@ -459,6 +462,8 @@ model Session {
   pushDevices       PushDevice[]
 
   @@index([userId, revokedAt])
+  @@index([userId, platform, revokedAt])
+  @@index([userId, platform, deviceId, revokedAt])
   @@index([accessExpiresAt])
   @@index([refreshExpiresAt])
   @@map("sessions")

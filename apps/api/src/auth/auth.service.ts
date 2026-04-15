@@ -4,11 +4,13 @@ import { JwtService } from '@nestjs/jwt';
 import {
   conflictError,
   notFoundError,
+  sessionConflictError,
   unauthorizedError,
 } from '../common/http/app-http.exception';
 import type { User } from '../generated/prisma/client';
 import type {
   AuthenticatedUser,
+  SessionClientPlatform,
   SessionRequestMetadata,
 } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -40,6 +42,23 @@ type SessionRecord = {
   refreshToken: string;
   accessExpiresAt: Date;
   refreshExpiresAt: Date;
+};
+
+type ActiveSessionSummary = {
+  id: string;
+  platform: string;
+  deviceId: string | null;
+  deviceName: string | null;
+  createdAt: Date;
+  lastUsedAt: Date | null;
+  ipAddress: string | null;
+  lastUsedIpAddress: string | null;
+  userAgent: string | null;
+  lastUsedUserAgent: string | null;
+};
+
+type IssueSessionOptions = {
+  allowPlatformTakeover?: boolean;
 };
 
 type AuthSessionContext = {
@@ -148,7 +167,9 @@ export class AuthService {
       displayName: user.name,
     });
 
-    const issuedSession = await this.issueSessionForUser(user.id, metadata);
+    const issuedSession = await this.issueSessionForUser(user.id, metadata, {
+      allowPlatformTakeover: body.logout_other_device === true,
+    });
     return this.buildAuthResponse(issuedSession);
   }
 
@@ -659,10 +680,17 @@ export class AuthService {
   private async issueSessionForUser(
     userId: string,
     metadata: SessionRequestMetadata,
-    sessionId?: string,
+    optionsOrSessionId?: IssueSessionOptions | string,
+    maybeOptions?: IssueSessionOptions,
   ) {
     const context = await this.buildSessionContext(userId);
     const normalizedMetadata = this.normalizeSessionMetadata(metadata);
+    const sessionId =
+      typeof optionsOrSessionId === 'string' ? optionsOrSessionId : undefined;
+    const options =
+      typeof optionsOrSessionId === 'string'
+        ? (maybeOptions ?? {})
+        : (optionsOrSessionId ?? {});
     const accessExpiresAt = new Date(
       Date.now() + jwtConfig.accessTokenTtlSeconds * 1000,
     );
@@ -675,22 +703,104 @@ export class AuthService {
       await this.prisma.$transaction(async (tx) => {
         const currentSession =
           sessionId !== undefined
-            ? { id: sessionId }
-            : await tx.session.create({
-                data: {
-                  userId,
-                  accessToken: `pending_access_${generateId('tmp')}`,
-                  refreshToken: `pending_refresh_${generateId('tmp')}`,
-                  accessExpiresAt,
-                  refreshExpiresAt,
-                  lastUsedAt: issuedAt,
-                  ipAddress: normalizedMetadata.ipAddress,
-                  userAgent: normalizedMetadata.userAgent,
-                  lastUsedIpAddress: normalizedMetadata.ipAddress,
-                  lastUsedUserAgent: normalizedMetadata.userAgent,
+            ? await tx.session.findUniqueOrThrow({
+                where: { id: sessionId },
+                select: {
+                  id: true,
+                  platform: true,
+                  deviceId: true,
+                  deviceName: true,
                 },
-                select: { id: true },
+              })
+            : await this.resolveCurrentSessionSlot(tx, {
+                userId,
+                issuedAt,
+                accessExpiresAt,
+                refreshExpiresAt,
+                metadata: normalizedMetadata,
               });
+
+        const effectivePlatform =
+          sessionId !== undefined && normalizedMetadata.platform === 'unknown'
+            ? this.normalizePlatform(currentSession.platform)
+            : normalizedMetadata.platform;
+        const effectiveDeviceId =
+          normalizedMetadata.deviceId ?? currentSession.deviceId ?? null;
+        const effectiveDeviceName =
+          normalizedMetadata.deviceName ?? currentSession.deviceName ?? null;
+
+        let revokedSessionIds: string[] = [];
+
+        if (sessionId === undefined) {
+          const conflictingSessions = await tx.session.findMany({
+            where: {
+              userId,
+              platform: effectivePlatform,
+              revokedAt: null,
+              id: {
+                not: currentSession.id,
+              },
+            },
+            select: {
+              id: true,
+              platform: true,
+              deviceId: true,
+              deviceName: true,
+              createdAt: true,
+              lastUsedAt: true,
+              ipAddress: true,
+              lastUsedIpAddress: true,
+              userAgent: true,
+              lastUsedUserAgent: true,
+            },
+            orderBy: [{ lastUsedAt: 'desc' }, { createdAt: 'desc' }],
+          });
+
+          if (
+            conflictingSessions.length > 0 &&
+            options.allowPlatformTakeover !== true
+          ) {
+            throw sessionConflictError(
+              'Your session is active in another device.',
+              {
+              session_conflict: {
+                platform: effectivePlatform,
+                active_session_count: conflictingSessions.length,
+                active_session: this.serializeActiveSession(
+                  conflictingSessions[0],
+                ),
+              },
+            },
+            );
+          }
+
+          revokedSessionIds = conflictingSessions.map((session) => session.id);
+
+          if (revokedSessionIds.length > 0) {
+            await tx.session.updateMany({
+              where: {
+                id: {
+                  in: revokedSessionIds,
+                },
+                revokedAt: null,
+              },
+              data: {
+                revokedAt: issuedAt,
+              },
+            });
+            await tx.pushDevice.updateMany({
+              where: {
+                sessionId: {
+                  in: revokedSessionIds,
+                },
+                isActive: true,
+              },
+              data: {
+                isActive: false,
+              },
+            });
+          }
+        }
 
         const accessPayload: AccessTokenPayload = {
           type: 'access',
@@ -722,48 +832,12 @@ export class AuthService {
           expiresIn: jwtConfig.refreshTokenTtlSeconds,
         });
 
-        const existingSessions = await tx.session.findMany({
-          where: {
-            userId,
-            revokedAt: null,
-            id: {
-              not: currentSession.id,
-            },
-          },
-          select: {
-            id: true,
-          },
-        });
-        const revokedSessionIds = existingSessions.map((session) => session.id);
-
-        if (revokedSessionIds.length > 0) {
-          await tx.session.updateMany({
-            where: {
-              id: {
-                in: revokedSessionIds,
-              },
-              revokedAt: null,
-            },
-            data: {
-              revokedAt: issuedAt,
-            },
-          });
-          await tx.pushDevice.updateMany({
-            where: {
-              sessionId: {
-                in: revokedSessionIds,
-              },
-              isActive: true,
-            },
-            data: {
-              isActive: false,
-            },
-          });
-        }
-
         const persistedSession = await tx.session.update({
           where: { id: currentSession.id },
           data: {
+            platform: effectivePlatform,
+            deviceId: effectiveDeviceId,
+            deviceName: effectiveDeviceName,
             accessToken,
             refreshToken,
             accessExpiresAt,
@@ -788,11 +862,81 @@ export class AuthService {
         };
       });
 
-    this.disconnectRealtimeSessions(revokedSessionIds, 'session_replaced');
+    this.disconnectRealtimeSessions(revokedSessionIds, 'session_taken_over');
 
     return {
       session: persistedSession,
       context,
+    };
+  }
+
+  private async resolveCurrentSessionSlot(
+    tx: any,
+    input: {
+      userId: string;
+      issuedAt: Date;
+      accessExpiresAt: Date;
+      refreshExpiresAt: Date;
+      metadata: SessionRequestMetadata;
+    },
+  ) {
+    if (input.metadata.deviceId) {
+      const existingSameDeviceSession = await tx.session.findFirst({
+        where: {
+          userId: input.userId,
+          platform: input.metadata.platform,
+          deviceId: input.metadata.deviceId,
+          revokedAt: null,
+        },
+        select: {
+          id: true,
+          platform: true,
+          deviceId: true,
+          deviceName: true,
+        },
+        orderBy: [{ lastUsedAt: 'desc' }, { createdAt: 'desc' }],
+      });
+
+      if (existingSameDeviceSession) {
+        return existingSameDeviceSession;
+      }
+    }
+
+    return tx.session.create({
+      data: {
+        userId: input.userId,
+        platform: input.metadata.platform,
+        deviceId: input.metadata.deviceId,
+        deviceName: input.metadata.deviceName,
+        accessToken: `pending_access_${generateId('tmp')}`,
+        refreshToken: `pending_refresh_${generateId('tmp')}`,
+        accessExpiresAt: input.accessExpiresAt,
+        refreshExpiresAt: input.refreshExpiresAt,
+        lastUsedAt: input.issuedAt,
+        ipAddress: input.metadata.ipAddress,
+        userAgent: input.metadata.userAgent,
+        lastUsedIpAddress: input.metadata.ipAddress,
+        lastUsedUserAgent: input.metadata.userAgent,
+      },
+      select: {
+        id: true,
+        platform: true,
+        deviceId: true,
+        deviceName: true,
+      },
+    });
+  }
+
+  private serializeActiveSession(session: ActiveSessionSummary) {
+    const lastSeenAt = session.lastUsedAt ?? session.createdAt;
+
+    return {
+      id: session.id,
+      platform: session.platform,
+      device_id: session.deviceId,
+      device_name: this.describeSessionDeviceName(session),
+      last_seen_at: lastSeenAt.toISOString(),
+      ip_address: session.lastUsedIpAddress ?? session.ipAddress,
     };
   }
 
@@ -1237,6 +1381,9 @@ export class AuthService {
     return {
       ipAddress: this.normalizeMetadataValue(metadata.ipAddress, 64),
       userAgent: this.normalizeMetadataValue(metadata.userAgent, 1024),
+      platform: this.normalizePlatform(metadata.platform),
+      deviceId: this.normalizeMetadataValue(metadata.deviceId, 190),
+      deviceName: this.normalizeMetadataValue(metadata.deviceName, 190),
     };
   }
 
@@ -1262,5 +1409,45 @@ export class AuthService {
     }
 
     return normalized.slice(0, maxLength);
+  }
+
+  private normalizePlatform(
+    value: SessionClientPlatform | string | null | undefined,
+  ): SessionClientPlatform {
+    switch ((value ?? '').trim().toLowerCase()) {
+      case 'web':
+        return 'web';
+      case 'mobile':
+        return 'mobile';
+      default:
+        return 'unknown';
+    }
+  }
+
+  private describeSessionDeviceName(session: ActiveSessionSummary) {
+    const explicitDeviceName = session.deviceName?.trim();
+    if (explicitDeviceName) {
+      return explicitDeviceName;
+    }
+
+    const rawUserAgent =
+      session.lastUsedUserAgent?.trim() || session.userAgent?.trim() || '';
+    if (!rawUserAgent) {
+      switch (session.platform) {
+        case 'web':
+          return 'Web browser';
+        case 'mobile':
+          return 'Mobile device';
+        default:
+          return 'Another device';
+      }
+    }
+
+    const simplifiedUserAgent = rawUserAgent.replace(/\s+/g, ' ').trim();
+    if (simplifiedUserAgent.length <= 96) {
+      return simplifiedUserAgent;
+    }
+
+    return `${simplifiedUserAgent.slice(0, 93)}...`;
   }
 }

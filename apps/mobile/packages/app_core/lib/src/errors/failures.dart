@@ -14,13 +14,19 @@ class NetworkFailure extends Failure {
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure({required String message, this.statusCode})
-    : super(message);
+  const ServerFailure({
+    required String message,
+    this.statusCode,
+    this.code,
+    this.payload,
+  }) : super(message);
 
   final int? statusCode;
+  final String? code;
+  final Map<String, dynamic>? payload;
 
   @override
-  List<Object?> get props => [message, statusCode];
+  List<Object?> get props => [message, statusCode, code, payload];
 }
 
 class CacheFailure extends Failure {

@@ -7,6 +7,8 @@ export type ApiErrorDetail = {
   errors: string[]
 }
 
+export type ApiErrorContext = Record<string, unknown>
+
 export type ApiSuccess<T> = {
   success: true
   data: T
@@ -18,7 +20,8 @@ export class AuthApiError extends Error {
     message: string,
     readonly code: string,
     readonly status: number,
-    readonly details?: ApiErrorDetail[]
+    readonly details?: ApiErrorDetail[],
+    readonly context?: ApiErrorContext
   ) {
     super(message)
     this.name = "AuthApiError"
@@ -95,6 +98,7 @@ export type ApiEnvelope<T> =
         code: string
         message: string
         details?: ApiErrorDetail[]
+        context?: ApiErrorContext
       }
       meta?: Record<string, unknown>
     }
@@ -198,7 +202,8 @@ export async function requestApiEnvelope<T>(
       error.message,
       error.code,
       response.status,
-      error.details
+      error.details,
+      error.context
     )
   }
 
@@ -245,10 +250,14 @@ export async function requestAuthorizedApi<T>(
 export async function loginWithPassword(input: {
   email: string
   password: string
+  logout_other_device?: boolean
+  headers?: HeadersInit
 }) {
+  const { headers, ...json } = input
   return requestApi<AuthResponse>("/api/v1/auth/login", {
     method: "POST",
-    json: input,
+    headers,
+    json,
   })
 }
 
@@ -258,10 +267,13 @@ export async function registerWithPassword(input: {
   password: string
   phone?: string
   locale?: string
+  headers?: HeadersInit
 }) {
+  const { headers, ...json } = input
   return requestApi<AuthResponse>("/api/v1/auth/register", {
     method: "POST",
-    json: input,
+    headers,
+    json,
   })
 }
 
