@@ -1,9 +1,11 @@
+import 'package:app_localizations/app_localizations.dart';
 import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/config/app_locale_controller.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/router/app_router.dart';
 import '../bloc/auth_bloc.dart';
@@ -52,6 +54,7 @@ class _RegisterViewState extends State<_RegisterView> {
   @override
   Widget build(BuildContext context) {
     final connectionService = getIt<NetworkConnectionService>();
+    final l10n = context.l10n;
 
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
@@ -97,10 +100,10 @@ class _RegisterViewState extends State<_RegisterView> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const AuthPageHeader(
-                          badge: 'CREATE ACCOUNT',
-                          title: 'Set up your seller account',
-                          subtitle: 'Registration uses the backend auth API.',
+                        AuthPageHeader(
+                          badge: l10n.registerBadgeCreateAccount,
+                          title: l10n.registerTitleSellerAccount,
+                          subtitle: l10n.registerSubtitleBackend,
                         ),
                         const SizedBox(height: 16),
                         AppConnectionBanner(
@@ -110,8 +113,8 @@ class _RegisterViewState extends State<_RegisterView> {
                         const SizedBox(height: 20),
                         AppTextField(
                           controller: _nameController,
-                          label: 'Full Name',
-                          hintText: 'Ma Aye',
+                          label: l10n.authFullNameLabel,
+                          hintText: l10n.authFullNameHint,
                           textInputAction: TextInputAction.next,
                           prefixIcon: const Icon(
                             Icons.person_outline,
@@ -122,7 +125,7 @@ class _RegisterViewState extends State<_RegisterView> {
                         const SizedBox(height: 16),
                         AppTextField(
                           controller: _emailController,
-                          label: 'Email',
+                          label: l10n.authEmailLabel,
                           hintText: 'maaye@example.com',
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -135,8 +138,8 @@ class _RegisterViewState extends State<_RegisterView> {
                         const SizedBox(height: 16),
                         AppTextField(
                           controller: _phoneController,
-                          label: 'Phone (Optional)',
-                          hintText: '09 7800 1111',
+                          label: l10n.authPhoneOptionalLabel,
+                          hintText: l10n.authPhoneHint,
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
                           prefixIcon: const Icon(
@@ -147,8 +150,8 @@ class _RegisterViewState extends State<_RegisterView> {
                         const SizedBox(height: 16),
                         AppTextField(
                           controller: _passwordController,
-                          label: 'Password',
-                          hintText: 'At least 8 chars, A-z, 0-9',
+                          label: l10n.passwordLabel,
+                          hintText: l10n.authPasswordCreateHint,
                           obscureText: true,
                           textInputAction: TextInputAction.next,
                           prefixIcon: const Icon(Icons.lock_outline, size: 18),
@@ -157,8 +160,8 @@ class _RegisterViewState extends State<_RegisterView> {
                         const SizedBox(height: 16),
                         AppTextField(
                           controller: _confirmPasswordController,
-                          label: 'Confirm Password',
-                          hintText: 'Re-enter password',
+                          label: l10n.authConfirmPasswordLabel,
+                          hintText: l10n.authConfirmPasswordHint,
                           obscureText: true,
                           textInputAction: TextInputAction.done,
                           prefixIcon: const Icon(
@@ -169,7 +172,7 @@ class _RegisterViewState extends State<_RegisterView> {
                         ),
                         const SizedBox(height: 20),
                         AppButton(
-                          text: 'Create Account',
+                          text: l10n.authCreateAccountCta,
                           isLoading: state.isSubmitting,
                           onPressed: canSubmit ? _onRegisterPressed : null,
                         ),
@@ -178,16 +181,16 @@ class _RegisterViewState extends State<_RegisterView> {
                           onTap: () => context.go(AppRouter.authPath),
                           child: Text.rich(
                             TextSpan(
-                              text: 'Already have an account? ',
+                              text: l10n.authAlreadyHaveAccountPrompt,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: AppColors.textMid,
                                     fontWeight: FontWeight.w600,
                                   ),
-                              children: const [
+                              children: [
                                 TextSpan(
-                                  text: 'Sign in',
-                                  style: TextStyle(
+                                  text: l10n.authAlreadyHaveAccountAction,
+                                  style: const TextStyle(
                                     color: AppColors.softOrange,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -214,6 +217,10 @@ class _RegisterViewState extends State<_RegisterView> {
       return;
     }
 
+    final localeCode =
+        getIt<AppLocaleController>().locale?.languageCode ??
+        Localizations.localeOf(context).languageCode;
+
     context.read<AuthBloc>().add(
       AuthRegisterSubmitted(
         name: _nameController.text.trim(),
@@ -222,46 +229,49 @@ class _RegisterViewState extends State<_RegisterView> {
         phone: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
-        locale: 'my',
+        locale: localeCode == 'en' ? 'en' : 'my',
       ),
     );
   }
 
   String? _validateName(String? value) {
+    final l10n = context.l10n;
     final normalized = (value ?? '').trim();
     if (normalized.isEmpty) {
-      return 'Name is required';
+      return l10n.validationNameRequired;
     }
 
     if (normalized.length < 2) {
-      return 'Name must be at least 2 characters';
+      return l10n.validationNameMinLength;
     }
 
     return null;
   }
 
   String? _validateEmail(String? value) {
+    final l10n = context.l10n;
     final normalized = (value ?? '').trim();
     if (normalized.isEmpty) {
-      return 'Email is required';
+      return l10n.validationEmailRequired;
     }
 
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     if (!emailRegex.hasMatch(normalized)) {
-      return 'Enter a valid email';
+      return l10n.validationEmailInvalid;
     }
 
     return null;
   }
 
   String? _validatePassword(String? value) {
+    final l10n = context.l10n;
     final raw = value ?? '';
     if (raw.isEmpty) {
-      return 'Password is required';
+      return l10n.validationPasswordRequired;
     }
 
     if (raw.length < 8) {
-      return 'Password must be at least 8 characters';
+      return l10n.validationPasswordMinLength;
     }
 
     final hasUppercase = raw.contains(RegExp(r'[A-Z]'));
@@ -269,19 +279,20 @@ class _RegisterViewState extends State<_RegisterView> {
     final hasDigit = raw.contains(RegExp(r'\d'));
 
     if (!hasUppercase || !hasLowercase || !hasDigit) {
-      return 'Use uppercase, lowercase, and numbers';
+      return l10n.authPasswordCreateHint;
     }
 
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
+    final l10n = context.l10n;
     if ((value ?? '').isEmpty) {
-      return 'Confirm your password';
+      return l10n.validationConfirmPasswordRequired;
     }
 
     if (value != _passwordController.text) {
-      return 'Passwords do not match';
+      return l10n.validationPasswordMismatch;
     }
 
     return null;

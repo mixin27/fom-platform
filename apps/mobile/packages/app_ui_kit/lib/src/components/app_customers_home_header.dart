@@ -86,10 +86,11 @@ class AppCustomersHomeHeader extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                     ],
-                    AppIconButton(
-                      icon: const Icon(Icons.swap_vert_rounded),
-                      onPressed: onSortPressed,
-                    ),
+                    if (onSortPressed != null)
+                      AppIconButton(
+                        icon: const Icon(Icons.swap_vert_rounded),
+                        onPressed: onSortPressed,
+                      ),
                     const SizedBox(width: 8),
                     AppIconButton(
                       icon: const Icon(Icons.person_add_alt_1_rounded),

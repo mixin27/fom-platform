@@ -1,3 +1,4 @@
+import 'package:app_localizations/app_localizations.dart';
 import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
@@ -45,6 +46,7 @@ class _LoginViewState extends State<_LoginView> {
   @override
   Widget build(BuildContext context) {
     final connectionService = getIt<NetworkConnectionService>();
+    final l10n = context.l10n;
 
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
@@ -92,10 +94,10 @@ class _LoginViewState extends State<_LoginView> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const AuthPageHeader(
-                          badge: 'WELCOME BACK',
-                          title: 'Sign in to your shop',
-                          subtitle: 'Use your account to continue to orders.',
+                        AuthPageHeader(
+                          badge: l10n.loginBadgeWelcomeBack,
+                          title: l10n.loginTitleShop,
+                          subtitle: l10n.loginSubtitleOrders,
                         ),
                         const SizedBox(height: 16),
                         AppConnectionBanner(
@@ -105,7 +107,7 @@ class _LoginViewState extends State<_LoginView> {
                         const SizedBox(height: 20),
                         AppTextField(
                           controller: _emailController,
-                          label: 'Email',
+                          label: l10n.authEmailLabel,
                           hintText: 'maaye@example.com',
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -118,8 +120,8 @@ class _LoginViewState extends State<_LoginView> {
                         const SizedBox(height: 16),
                         AppTextField(
                           controller: _passwordController,
-                          label: 'Password',
-                          hintText: 'Enter password',
+                          label: l10n.passwordLabel,
+                          hintText: l10n.authEnterPasswordHint,
                           obscureText: true,
                           textInputAction: TextInputAction.done,
                           prefixIcon: const Icon(Icons.lock_outline, size: 18),
@@ -128,7 +130,7 @@ class _LoginViewState extends State<_LoginView> {
                         const SizedBox(height: 20),
                         if (state.sessionConflict != null) ...[
                           AppAlertBanner(
-                            title: 'SESSION ACTIVE ON ANOTHER DEVICE',
+                            title: l10n.authSessionConflictTitle,
                             message: _buildSessionConflictMessage(
                               state.sessionConflict!,
                             ),
@@ -140,7 +142,7 @@ class _LoginViewState extends State<_LoginView> {
                           ),
                           const SizedBox(height: 16),
                           AppButton(
-                            text: 'Logout another device',
+                            text: l10n.authLogoutOtherDevice,
                             variant: AppButtonVariant.secondary,
                             isLoading: state.isSubmitting,
                             onPressed: canSubmit
@@ -154,15 +156,15 @@ class _LoginViewState extends State<_LoginView> {
                           const SizedBox(height: 12),
                         ],
                         AppButton(
-                          text: 'Sign In',
+                          text: l10n.signIn,
                           isLoading: state.isSubmitting,
                           onPressed: canSubmit ? _onSignInPressed : null,
                         ),
                         const SizedBox(height: 16),
-                        const AppButton(
-                          text: 'Continue with Facebook',
+                        AppButton(
+                          text: l10n.authContinueWithFacebook,
                           variant: AppButtonVariant.facebook,
-                          icon: Icon(Icons.facebook, color: Colors.white),
+                          icon: const Icon(Icons.facebook, color: Colors.white),
                           onPressed: null,
                         ),
                         const SizedBox(height: 20),
@@ -170,16 +172,16 @@ class _LoginViewState extends State<_LoginView> {
                           onTap: () => context.push(AppRouter.registerPath),
                           child: Text.rich(
                             TextSpan(
-                              text: 'Don\'t have an account? ',
+                              text: l10n.authNoAccountPrompt,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: AppColors.textMid,
                                     fontWeight: FontWeight.w600,
                                   ),
-                              children: const [
+                              children: [
                                 TextSpan(
-                                  text: 'Create one',
-                                  style: TextStyle(
+                                  text: l10n.authCreateOneAction,
+                                  style: const TextStyle(
                                     color: AppColors.softOrange,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -215,27 +217,29 @@ class _LoginViewState extends State<_LoginView> {
   }
 
   String? _validateEmail(String? value) {
+    final l10n = context.l10n;
     final normalized = (value ?? '').trim();
     if (normalized.isEmpty) {
-      return 'Email is required';
+      return l10n.validationEmailRequired;
     }
 
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     if (!emailRegex.hasMatch(normalized)) {
-      return 'Enter a valid email';
+      return l10n.validationEmailInvalid;
     }
 
     return null;
   }
 
   String? _validatePassword(String? value) {
+    final l10n = context.l10n;
     final raw = value ?? '';
     if (raw.isEmpty) {
-      return 'Password is required';
+      return l10n.validationPasswordRequired;
     }
 
     if (raw.length < 8) {
-      return 'Password must be at least 8 characters';
+      return l10n.validationPasswordMinLength;
     }
 
     return null;
