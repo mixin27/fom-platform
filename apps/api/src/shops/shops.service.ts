@@ -747,7 +747,7 @@ export class ShopsService {
       });
     }
 
-    const memberStatus: 'active' | 'invited' = 'active';
+    const memberStatus: 'active' | 'invited' = 'invited';
 
     const existingMember = await this.prisma.shopMember.findUnique({
       where: {
@@ -818,9 +818,17 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
+    const invitationSent = await this.queueStaffInvitationEmail(
+      member.user,
+      shopId,
+      member.id,
+      roles.map((r) => r.name),
+      metadata,
+    );
+
     return {
       ...this.serializeMemberRecord(member),
-      invitation_sent: false,
+      invitation_sent: invitationSent,
     };
   }
 
