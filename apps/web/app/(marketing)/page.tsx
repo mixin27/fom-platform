@@ -16,6 +16,12 @@ import { getMarketingPlans, type MarketingPlan } from "@/lib/marketing/api"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@workspace/ui/components/tabs"
+import {
   Card,
   CardContent,
   CardDescription,
@@ -258,9 +264,9 @@ export default async function LandingPage() {
       <section className="fom-marketing-hero relative overflow-hidden text-white">
         <div className="fom-marketing-grid absolute inset-0" />
         <div className="fom-marketing-glow absolute inset-0" />
-        <div className="relative mx-auto grid w-full max-w-[1120px] gap-14 px-6 py-24 lg:grid-cols-[1fr_360px] lg:gap-20 lg:py-40">
-          <div className="flex max-w-[560px] flex-col gap-7">
-            <Badge className="w-fit border border-[rgba(244,98,42,0.28)] bg-[rgba(244,98,42,0.14)] text-[#ffb088] hover:bg-[rgba(244,98,42,0.14)]">
+        <div className="relative mx-auto grid w-full max-w-[1120px] gap-10 px-6 py-16 md:gap-14 lg:grid-cols-[1fr_360px] lg:gap-20 lg:py-32 xl:py-40">
+          <div className="flex max-w-[560px] flex-col gap-6 md:gap-7">
+            <Badge className="w-fit border border-[rgba(244,98,42,0.28)] bg-[rgba(244,98,42,0.14)] text-xs text-[#ffb088] hover:bg-[rgba(244,98,42,0.14)] md:text-sm">
               Order management for Facebook-first shops
               {/* <span className="ml-2 border-l border-[rgba(244,98,42,0.3)] pl-2 opacity-80">
                 Facebook အခြေပြု အွန်လိုင်းစျေးသည်များအတွက်
@@ -268,13 +274,13 @@ export default async function LandingPage() {
               </span> */}
             </Badge>
             <div className="flex flex-col gap-4">
-              <h1 className="fom-display text-5xl leading-[1.06] md:text-[4.1rem]">
+              <h1 className="fom-display text-4xl leading-[1.06] sm:text-5xl md:text-[4.1rem]">
                 Turn Facebook orders into a real operating workflow.
                 {/* <span className="mt-4 block text-2xl font-medium tracking-tight opacity-70 md:text-4xl">
                   Facebook အော်ဒါများကို စနစ်တကျ လုပ်ငန်းအဖြစ် ပြောင်းလဲလိုက်ပါ။
                 </span> */}
               </h1>
-              <p className="text-lg leading-8 text-white/56">
+              <p className="text-base leading-8 text-white/56 md:text-lg">
                 Capture Messenger orders, track delivery progress, keep customer
                 history, and see daily results from one workspace built for
                 Myanmar shops selling on Facebook.
@@ -349,19 +355,19 @@ export default async function LandingPage() {
         id="problem"
         className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]"
       >
-        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="max-w-[520px]">
-            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
               Why FOM
             </p>
-            <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
+            <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
               Built for the work that starts after the message arrives.
               {/* <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
                 မတ်ဆေ့ချ် ရောက်လာပြီးနောက်ပိုင်း လုပ်ဆောင်ရမည့် အလုပ်များအတွက်
                 အထူးပြုလုပ်ထားသည်။
               </span> */}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
+            <p className="mt-4 text-base leading-8 text-[var(--fom-slate)] md:text-lg">
               Most Facebook shops already know how to sell. The hard part is
               keeping orders, customer details, delivery progress, and payment
               follow-up organized once the inbox gets busy.
@@ -390,18 +396,18 @@ export default async function LandingPage() {
       </section>
 
       <section id="features" className="bg-[var(--fom-marketing-bg)]">
-        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="max-w-[560px]">
-            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
               Core capability
             </p>
-            <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
+            <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
               Everything a Facebook-first shop needs in one place.
               {/* <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
                 Facebook စျေးသည်တစ်ယောက် လိုအပ်သမျှ အရာအားလုံး တစ်နေရာတည်းတွင်
               </span> */}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
+            <p className="mt-4 text-base leading-8 text-[var(--fom-slate)] md:text-lg">
               FOM keeps order capture, customer memory, delivery follow-up,
               templates, and reporting close together so owners and staff can
               work faster without losing context.
@@ -416,28 +422,28 @@ export default async function LandingPage() {
                 <div
                   className={`flex h-full p-0 ${feature.colSpan === "md:col-span-2" ? "flex-col md:flex-row" : "flex-col"}`}
                 >
-                  <div className="flex flex-1 flex-col gap-4 p-8">
-                    <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/10 text-[var(--fom-orange)]">
-                      <feature.icon className="size-6" />
+                  <div className="flex flex-1 flex-col gap-4 p-6 sm:p-8">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/10 text-[var(--fom-orange)] sm:size-14">
+                      <feature.icon className="size-5 sm:size-6" />
                     </span>
                     <div>
                       <h3 className="text-xl font-semibold tracking-tight text-[var(--fom-ink)] md:text-2xl">
                         {feature.title}
                       </h3>
-                      <p className="mt-3 text-[15px] leading-7 text-[var(--fom-slate)]">
+                      <p className="mt-2 text-sm leading-7 text-[var(--fom-slate)] sm:mt-3 sm:text-[15px]">
                         {feature.description}
                       </p>
                     </div>
                   </div>
                   <div
-                    className={`flex items-end justify-center bg-gradient-to-t from-[var(--fom-teal)]/5 to-[var(--fom-orange)]/5 px-8 pt-8 ${feature.colSpan === "md:col-span-2" ? "md:w-[320px] md:flex-shrink-0 lg:w-[380px]" : "mt-auto"}`}
+                    className={`flex items-end justify-center bg-gradient-to-t from-[var(--fom-teal)]/5 to-[var(--fom-orange)]/5 px-6 pt-6 sm:px-8 sm:pt-8 ${feature.colSpan === "md:col-span-2" ? "md:w-[320px] md:flex-shrink-0 lg:w-[380px]" : "mt-auto"}`}
                   >
                     <Image
                       src={feature.image}
                       alt={feature.title}
                       width={280}
                       height={580}
-                      className={`w-full max-w-[280px] rounded-t-[20px] border-x-[6px] border-t-[6px] border-[#1a1a28] object-cover object-top shadow-[0_32px_80px_rgba(0,0,0,0.15)] ${feature.colSpan === "md:col-span-2" ? "h-[280px] md:h-[380px]" : "h-[280px]"}`}
+                      className={`w-full max-w-[280px] rounded-t-[20px] border-x-[4px] border-t-[4px] sm:border-x-[6px] sm:border-t-[6px] border-[#1a1a28] object-cover object-top shadow-[0_32px_80px_rgba(0,0,0,0.15)] ${feature.colSpan === "md:col-span-2" ? "h-[240px] sm:h-[280px] md:h-[380px]" : "h-[240px] sm:h-[280px]"}`}
                     />
                   </div>
                 </div>
@@ -447,19 +453,93 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="how" className="bg-[var(--fom-marketing-surface)]">
-        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
+      <section id="ecosystem" className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+              One Platform, All Workflows
+            </p>
+            <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
+              Tools for every part of your business
+            </h2>
+            <p className="mt-4 text-base leading-8 text-[var(--fom-slate)] md:text-lg">
+              Whether you're processing orders on the go or analyzing monthly reports at your desk, FOM has a tailored interface for the job.
+            </p>
+          </div>
+          
+          <Tabs defaultValue="mobile" className="w-full">
+            <div className="mb-8 flex justify-center md:mb-12">
+              <TabsList className="flex h-auto w-full flex-col bg-[var(--fom-marketing-border)]/50 p-1 sm:w-auto sm:flex-row">
+                <TabsTrigger value="mobile" className="w-full rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-[var(--fom-marketing-surface)] data-[state=active]:text-[var(--fom-orange)] data-[state=active]:shadow-sm sm:w-auto md:px-8">
+                  Mobile Assistant
+                </TabsTrigger>
+                <TabsTrigger value="admin" className="w-full rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-[var(--fom-marketing-surface)] data-[state=active]:text-[var(--fom-teal)] data-[state=active]:shadow-sm sm:w-auto md:px-8">
+                  Shop Admin Portal <Badge className="ml-2 border-0 bg-[var(--fom-teal)]/10 px-1.5 py-0 text-[10px] text-[var(--fom-teal)] shadow-none hover:bg-[var(--fom-teal)]/20">Soon</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="mobile" className="mt-0 animate-in fade-in-50 duration-500">
+              <div className="columns-2 gap-5 space-y-5 md:columns-3 lg:columns-4">
+                {[
+                  {src: "/screenshots/add-order-manual.png", alt: "Manual order entry"},
+                  {src: "/screenshots/add-order-success.png", alt: "Order success confirmation"},
+                  {src: "/screenshots/order-invoice.png", alt: "Professional order invoice"},
+                  {src: "/screenshots/invoice-export-options.png", alt: "Flexible export options"},
+                  {src: "/screenshots/customer-detail.png", alt: "Customer details and history"},
+                  {src: "/screenshots/weekly-report.png", alt: "Weekly revenue summary"},
+                  {src: "/screenshots/monthly-report.png", alt: "Monthly performance report"},
+                  {src: "/screenshots/shop-data-export-download.png", alt: "Data export tools"},
+                ].map((shot, i) => (
+                  <div key={i} className="group relative break-inside-avoid overflow-hidden rounded-[1.5rem] border-[4px] border-[#1a1a28] shadow-xl md:border-[5px]">
+                    <Image 
+                      src={shot.src} 
+                      alt={shot.alt} 
+                      width={300} 
+                      height={600} 
+                      className="h-auto w-full transform object-cover transition-transform duration-700 group-hover:scale-[1.03]" 
+                    />
+                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-[#1a1a28]/95 via-black/20 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:p-5">
+                      <p className="translate-y-4 text-sm font-semibold text-white drop-shadow-md transition-transform duration-300 group-hover:translate-y-0">{shot.alt}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="admin" className="mt-0 animate-in fade-in-50 duration-500">
+              <div className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)] shadow-sm aspect-[4/3] md:aspect-[21/9]">
+                 <div className="absolute inset-0 bg-gradient-to-br from-[var(--fom-teal)]/5 to-[var(--fom-orange)]/5 opacity-50"></div>
+                 <div className="fom-marketing-grid absolute inset-0 opacity-30"></div>
+                 <div className="relative z-10 mx-auto flex max-w-[600px] flex-col items-center gap-4 p-8 text-center">
+                    <div className="mb-2 inline-flex size-16 items-center justify-center rounded-full bg-white shadow-xl shadow-[var(--fom-teal)]/20">
+                      <LayoutDashboard className="size-6 text-[var(--fom-teal)]" />
+                    </div>
+                    <div>
+                      <h3 className="mb-2 text-xl font-bold text-[var(--fom-ink)] sm:mb-3 sm:text-2xl">Desktop Control Center</h3>
+                      <p className="text-sm leading-7 text-[var(--fom-slate)] sm:text-base">A dedicated high-density web portal for owners to manage teams, analyze long-term trends, and run the back-office efficiently on larger screens.</p>
+                    </div>
+                    <Badge variant="outline" className="mt-4 border-[var(--fom-teal)]/30 bg-white/50 px-3 py-1 text-xs text-[var(--fom-teal)] backdrop-blur-sm">Design systems in progress</Badge>
+                 </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </section>
+
+      <section id="how" className="bg-[var(--fom-marketing-surface)]">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
+          <div className="mx-auto max-w-[520px] text-center">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
               Workflow
             </p>
-            <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
+            <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
               Start fast and keep the day moving
               {/* <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
                 မြန်မြန်ဆန်ဆန် စတင်ပြီး အလုပ်များကို အရှိန်မပျက် လုပ်ဆောင်ပါ
               </span> */}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
+            <p className="mt-4 text-base leading-8 text-[var(--fom-slate)] md:text-lg">
               Set up the shop once, then use the workspace every day for order
               entry, customer tracking, delivery updates, and closing summaries.
             </p>
@@ -490,18 +570,18 @@ export default async function LandingPage() {
       </section>
 
       <section id="pricing" className="bg-[var(--fom-marketing-bg)]">
-        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
               Pricing
             </p>
-            <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
+            <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
               Simple pricing for each shop you run
               {/* <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
                 ဆိုင်တိုင်းအတွက် ရိုးရှင်းသော စျေးနှုန်းသတ်မှတ်ချက်များ
               </span> */}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-[var(--fom-slate)]">
+            <p className="mt-4 text-base leading-8 text-[var(--fom-slate)] md:text-lg">
               Plans come from the active subscription catalog. One subscription
               belongs to one shop, and owners can switch between shops from the
               same account.
@@ -655,12 +735,12 @@ export default async function LandingPage() {
         id="faq"
         className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]"
       >
-        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-12 px-6 py-24">
+        <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
               FAQ
             </p>
-            <h2 className="fom-display text-4xl leading-[1.12] text-[var(--fom-ink)] md:text-5xl">
+            <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
               Common questions from sellers
               {/* <span className="mt-3 block text-xl font-medium text-[var(--fom-slate)] opacity-80 md:text-3xl">
                 စျေးသည်များ မကြာခဏ မေးလေ့ရှိသည့် မေးခွန်းများ
