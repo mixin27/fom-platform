@@ -28,6 +28,8 @@ import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import type { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
 import { platformSubscriptionStatuses } from './platform-billing.constants';
+import { subscriptionFeatureCatalog } from './subscription-feature.constants';
+import { subscriptionLimitCatalog } from './subscription-limit.constants';
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
 import {
   platformSupportIssueKinds,
@@ -1491,7 +1493,9 @@ export class PlatformService {
   async getPublicPlans() {
     const plans = await this.loadPlanOptions();
 
-    return plans.filter((plan) => plan.is_active);
+    return plans.filter(
+      (plan) => plan.is_active && plan.billing_period !== 'enterprise',
+    );
   }
 
   private async emitPlatformInvalidation(input: {
@@ -1590,6 +1594,20 @@ export class PlatformService {
         ].length,
       },
       plans,
+      feature_presets: subscriptionFeatureCatalog.map((feature) => ({
+        code: feature.code,
+        category: feature.category,
+        name: feature.name,
+        description: feature.description,
+        launch_phase: feature.launchPhase,
+      })),
+      limit_presets: subscriptionLimitCatalog.map((limit) => ({
+        code: limit.code,
+        category: limit.category,
+        name: limit.name,
+        description: limit.description,
+        launch_phase: limit.launchPhase,
+      })),
     };
   }
 

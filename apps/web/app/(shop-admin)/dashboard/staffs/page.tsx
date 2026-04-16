@@ -24,6 +24,13 @@ import { formatRelativeDate } from "@/lib/platform/format"
 import { Button } from "@workspace/ui/components/button"
 import { ShopMemberSheet } from "./_components/shop-member-sheet"
 import { ShopRoleSheet } from "./_components/shop-role-sheet"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 
 type ShopStaffsPageProps = {
   searchParams?: Promise<ShopSearchParams>
@@ -36,14 +43,38 @@ export default async function ShopStaffsPage({
   const currentHref = buildQueryHref("/dashboard/staffs", params, {})
   const { activeShop } = await getShopPortalContext()
   const permissions = new Set(activeShop.membership.permissions)
+  const canReadMembers = permissions.has("members.read")
   const canManageMembers = permissions.has("members.manage")
 
-  const [membersResponse, profileResponse, rolesResponse, auditLogsResponse] = await Promise.all([
+  if (!canReadMembers) {
+    return (
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+        <CardHeader>
+          <CardDescription>Access required</CardDescription>
+          <CardTitle>Staff management is not available to this member</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground">
+          <p>
+            This account does not currently have permission to read shop members.
+          </p>
+          <div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard">Back to dashboard</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const [membersResponse, profileResponse, rolesResponse] = await Promise.all([
     getShopMembers(params, currentHref),
     getCurrentUserProfile(currentHref),
     getShopRoles(currentHref),
-    getShopAuditLogs({ limit: "8" }, currentHref),
   ])
+  const auditLogsResponse = canManageMembers
+    ? await getShopAuditLogs({ limit: "8" }, currentHref)
+    : { data: [] }
 
   const members = membersResponse.data
   const profile = profileResponse.data
@@ -79,7 +110,7 @@ export default async function ShopStaffsPage({
                 <ShopMemberSheet
                   shopId={activeShop.id}
                   roles={roleCatalog.roles}
-                  triggerLabel="Invite member"
+                  triggerLabel="Add member"
                 />
                 <ShopRoleSheet
                   shopId={activeShop.id}

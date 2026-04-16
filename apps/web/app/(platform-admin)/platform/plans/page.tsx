@@ -13,6 +13,8 @@ export default async function PlatformPlansPage() {
     (left, right) =>
       left.sort_order - right.sort_order || left.name.localeCompare(right.name)
   )
+  const featurePresets = response.data.feature_presets
+  const limitPresets = response.data.limit_presets
 
   const activePlans = plans.filter((plan) => plan.is_active).length
   const availableItems = plans.reduce(
@@ -74,7 +76,11 @@ export default async function PlatformPlansPage() {
         />
       </section>
 
-      <PlatformPlanCatalogWorkspace plans={plans} />
+      <PlatformPlanCatalogWorkspace
+        plans={plans}
+        featurePresets={featurePresets}
+        limitPresets={limitPresets}
+      />
     </div>
   )
 }

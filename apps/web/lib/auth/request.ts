@@ -100,6 +100,10 @@ export async function requestAuthenticatedApiEnvelope<T>({
       throw error
     }
 
+    if (error.status === 403) {
+      throw error
+    }
+
     if (retryPath) {
       redirect(buildSessionRefreshPath(retryPath))
     }

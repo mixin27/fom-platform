@@ -99,6 +99,22 @@ export type PlatformSettingsPlan = PlatformPlanOption & {
   collected_revenue: number
 }
 
+export type PlatformFeaturePreset = {
+  code: string
+  category: string
+  name: string
+  description: string
+  launch_phase: "phase_one" | "future" | string
+}
+
+export type PlatformLimitPreset = {
+  code: string
+  category: string
+  name: string
+  description: string
+  launch_phase: "phase_one" | "future" | string
+}
+
 export type PlatformPlanSummary = {
   plan_code: string
   plan_name: string
@@ -414,5 +430,7 @@ export async function getPlatformSettings() {
       permission_count: number
     }
     plans: PlatformSettingsPlan[]
+    feature_presets: PlatformFeaturePreset[]
+    limit_presets: PlatformLimitPreset[]
   }>("/api/v1/platform/settings", undefined, "/platform/settings")
 }

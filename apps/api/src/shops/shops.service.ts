@@ -747,11 +747,7 @@ export class ShopsService {
       });
     }
 
-    const requiresInvitation =
-      Boolean(targetUser.email) && !this.userCanAuthenticateDirectly(targetUser);
-    const memberStatus: 'active' | 'invited' = requiresInvitation
-      ? 'invited'
-      : 'active';
+    const memberStatus: 'active' | 'invited' = 'active';
 
     const existingMember = await this.prisma.shopMember.findUnique({
       where: {
@@ -822,21 +818,9 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    let invitationSent = false;
-
-    if (requiresInvitation && targetUser.email) {
-      invitationSent = await this.queueStaffInvitationEmail(
-        targetUser,
-        member.shopId,
-        member.id,
-        roles.map((role) => role.name),
-        metadata,
-      );
-    }
-
     return {
       ...this.serializeMemberRecord(member),
-      invitation_sent: invitationSent,
+      invitation_sent: false,
     };
   }
 
@@ -877,8 +861,14 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    if (member.status !== 'invited') {
-      throw conflictError('Only invited members can receive a new invitation link.');
+    if (member.status === 'disabled') {
+      throw conflictError('Disabled members cannot receive an invitation link.');
+    }
+
+    if (this.userCanAuthenticateDirectly(member.user)) {
+      throw conflictError(
+        'This member already has direct sign-in access. No invitation link is needed.',
+      );
     }
 
     if (!member.user.email) {

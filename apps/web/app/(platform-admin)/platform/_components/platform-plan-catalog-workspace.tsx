@@ -17,7 +17,11 @@ import {
   Trash2Icon,
 } from "lucide-react"
 
-import type { PlatformSettingsPlan } from "@/lib/platform/api"
+import type {
+  PlatformFeaturePreset,
+  PlatformLimitPreset,
+  PlatformSettingsPlan,
+} from "@/lib/platform/api"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { formatCurrency } from "@/lib/platform/format"
 import {
@@ -26,11 +30,18 @@ import {
   updatePlatformPlanAction,
   type PlatformPlanActionResult,
   type PlatformPlanEditorInput,
-  type PlatformPlanLimitInput,
   type PlatformPlanItemInput,
+  type PlatformPlanLimitInput,
 } from "../settings/actions"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
 import {
   Select,
@@ -40,14 +51,6 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 import { Switch } from "@workspace/ui/components/switch"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@workspace/ui/components/sheet"
 import {
   Tabs,
   TabsContent,
@@ -65,6 +68,15 @@ type PlanDraftItem = {
   sort_order: number
 }
 
+type PlanDraftLimit = {
+  id: string
+  code: string
+  label: string
+  description: string
+  value: string
+  sort_order: number
+}
+
 type PlanDraft = {
   code: string
   name: string
@@ -78,26 +90,15 @@ type PlanDraft = {
   limits: PlanDraftLimit[]
 }
 
-type PlanDraftLimit = {
-  id: string
-  code: string
-  label: string
-  description: string
-  value: string
-  sort_order: number
-}
-
 type PlatformPlanCatalogWorkspaceProps = {
   plans: PlatformSettingsPlan[]
+  featurePresets: PlatformFeaturePreset[]
+  limitPresets: PlatformLimitPreset[]
 }
-
-const planLimitCodes = {
-  activeStaffMembers: "team.active_staff_members",
-} as const
 
 function createEmptyItem(index: number): PlanDraftItem {
   return {
-    id: `new-${Date.now()}-${index}`,
+    id: `item-${Date.now()}-${index}`,
     code: "",
     label: "",
     description: "",
@@ -137,8 +138,8 @@ function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
       currency: "MMK",
       is_active: true,
       sort_order: "0",
-      items: [createEmptyItem(0)],
-      limits: [createEmptyLimit(0)],
+      items: [],
+      limits: [],
     }
   }
 
@@ -160,17 +161,14 @@ function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
         item.availability_status === "unavailable" ? "unavailable" : "available",
       sort_order: item.sort_order ?? index,
     })),
-    limits:
-      plan.limits.length > 0
-        ? plan.limits.map((limit, index) => ({
-            id: limit.id,
-            code: limit.code,
-            label: limit.label,
-            description: limit.description ?? "",
-            value: limit.value === null ? "" : String(limit.value),
-            sort_order: limit.sort_order ?? index,
-          }))
-        : [createEmptyLimit(0)],
+    limits: plan.limits.map((limit, index) => ({
+      id: limit.id,
+      code: limit.code,
+      label: limit.label,
+      description: limit.description ?? "",
+      value: limit.value === null ? "" : String(limit.value),
+      sort_order: limit.sort_order ?? index,
+    })),
   }
 }
 
@@ -243,7 +241,7 @@ function validateDraft(draft: PlanDraft): string | null {
 
   const items = normalizePlanItems(draft.items)
   if (items.length === 0) {
-    return "Add at least one plan item before saving."
+    return "Select or add at least one feature item before saving."
   }
 
   if (items.some((item) => !/^[a-z0-9._-]+$/.test(item.code))) {
@@ -288,6 +286,114 @@ function ActionNotice({
   )
 }
 
+function PlanMetadataForm({
+  draft,
+  setDraft,
+}: {
+  draft: PlanDraft
+  setDraft: Dispatch<SetStateAction<PlanDraft>>
+}) {
+  return (
+    <div className="grid gap-3 xl:grid-cols-2">
+      <Input
+        value={draft.name}
+        onChange={(event) =>
+          setDraft((current) => ({ ...current, name: event.target.value }))
+        }
+        placeholder="Plan name"
+      />
+      <Input
+        value={draft.code}
+        onChange={(event) =>
+          setDraft((current) => ({
+            ...current,
+            code: event.target.value.trim().toLowerCase(),
+          }))
+        }
+        placeholder="plan_code"
+      />
+      <Input
+        type="number"
+        min={0}
+        value={draft.price}
+        onChange={(event) =>
+          setDraft((current) => ({ ...current, price: event.target.value }))
+        }
+        placeholder="Price"
+      />
+      <Input
+        value={draft.currency}
+        onChange={(event) =>
+          setDraft((current) => ({
+            ...current,
+            currency: event.target.value.toUpperCase(),
+          }))
+        }
+        placeholder="Currency"
+      />
+      <Select
+        value={draft.billing_period}
+        onValueChange={(value) =>
+          setDraft((current) => ({ ...current, billing_period: value }))
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Billing period" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="trial">trial</SelectItem>
+          <SelectItem value="monthly">monthly</SelectItem>
+          <SelectItem value="yearly">yearly</SelectItem>
+          <SelectItem value="enterprise">enterprise</SelectItem>
+        </SelectContent>
+      </Select>
+      <Input
+        type="number"
+        min={0}
+        value={draft.sort_order}
+        onChange={(event) =>
+          setDraft((current) => ({
+            ...current,
+            sort_order: event.target.value,
+          }))
+        }
+        placeholder="Sort order"
+      />
+
+      <div className="xl:col-span-2">
+        <Textarea
+          value={draft.description}
+          onChange={(event) =>
+            setDraft((current) => ({
+              ...current,
+              description: event.target.value,
+            }))
+          }
+          placeholder="Short commercial summary for settings and marketing."
+          rows={3}
+        />
+      </div>
+
+      <div className="xl:col-span-2 flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-[var(--fom-ink)]">
+            Show on pricing surfaces
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Enterprise billing-period plans are still excluded from the public marketing page.
+          </p>
+        </div>
+        <Switch
+          checked={draft.is_active}
+          onCheckedChange={(checked) =>
+            setDraft((current) => ({ ...current, is_active: checked }))
+          }
+        />
+      </div>
+    </div>
+  )
+}
+
 function PlanItemEditorRow({
   item,
   index,
@@ -301,7 +407,7 @@ function PlanItemEditorRow({
 }) {
   return (
     <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-4">
-      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr_0.8fr_auto]">
+      <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr_0.8fr_auto]">
         <Input
           value={item.label}
           onChange={(event) =>
@@ -310,7 +416,7 @@ function PlanItemEditorRow({
               label: event.target.value,
             })
           }
-          placeholder="Feature or limit label"
+          placeholder="Feature label"
         />
         <Input
           value={item.code}
@@ -354,7 +460,7 @@ function PlanItemEditorRow({
               description: event.target.value,
             })
           }
-          placeholder="Optional short explanation shown under this item."
+          placeholder="Optional explanation shown under this plan item."
           rows={2}
         />
         <Input
@@ -387,7 +493,7 @@ function PlanLimitEditorRow({
 }) {
   return (
     <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-4">
-      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr_0.7fr_auto]">
+      <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr_0.7fr_auto]">
         <Input
           value={limit.label}
           onChange={(event) =>
@@ -435,7 +541,7 @@ function PlanLimitEditorRow({
               description: event.target.value,
             })
           }
-          placeholder="Optional explanation shown in the plan workspace."
+          placeholder="Optional explanation shown under this plan limit."
           rows={2}
         />
         <Input
@@ -455,117 +561,25 @@ function PlanLimitEditorRow({
   )
 }
 
-function PlanMetadataForm({
-  draft,
-  setDraft,
-}: {
-  draft: PlanDraft
-  setDraft: Dispatch<SetStateAction<PlanDraft>>
-}) {
-  return (
-    <>
-      <div className="grid gap-3 xl:grid-cols-2">
-        <Input
-          value={draft.name}
-          onChange={(event) =>
-            setDraft((current) => ({ ...current, name: event.target.value }))
-          }
-          placeholder="Plan name"
-        />
-        <Input
-          value={draft.code}
-          onChange={(event) =>
-            setDraft((current) => ({ ...current, code: event.target.value }))
-          }
-          placeholder="plan_code"
-        />
-        <Input
-          type="number"
-          min={0}
-          value={draft.price}
-          onChange={(event) =>
-            setDraft((current) => ({ ...current, price: event.target.value }))
-          }
-          placeholder="Price"
-        />
-        <Input
-          value={draft.currency}
-          onChange={(event) =>
-            setDraft((current) => ({
-              ...current,
-              currency: event.target.value,
-            }))
-          }
-          placeholder="Currency"
-        />
-        <Select
-          value={draft.billing_period}
-          onValueChange={(value) =>
-            setDraft((current) => ({ ...current, billing_period: value }))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Billing period" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="trial">trial</SelectItem>
-            <SelectItem value="monthly">monthly</SelectItem>
-            <SelectItem value="yearly">yearly</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          type="number"
-          min={0}
-          value={draft.sort_order}
-          onChange={(event) =>
-            setDraft((current) => ({
-              ...current,
-              sort_order: event.target.value,
-            }))
-          }
-          placeholder="Sort order"
-        />
-      </div>
-
-      <Textarea
-        value={draft.description}
-        onChange={(event) =>
-          setDraft((current) => ({
-            ...current,
-            description: event.target.value,
-          }))
-        }
-        placeholder="Short commercial summary for settings and marketing."
-        rows={3}
-      />
-
-      <div className="flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--fom-ink)]">
-            Show on platform pricing surfaces
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Inactive plans stay hidden from public pricing and new selection lists.
-          </p>
-        </div>
-        <Switch
-          checked={draft.is_active}
-          onCheckedChange={(checked) =>
-            setDraft((current) => ({ ...current, is_active: checked }))
-          }
-        />
-      </div>
-    </>
-  )
-}
-
 function PlanItemsEditor({
   draft,
   setDraft,
+  presets,
 }: {
   draft: PlanDraft
   setDraft: Dispatch<SetStateAction<PlanDraft>>
+  presets: PlatformFeaturePreset[]
 }) {
+  const [selectedPresetCode, setSelectedPresetCode] = useState("")
+
+  const remainingPresets = useMemo(
+    () =>
+      presets.filter(
+        (preset) => !draft.items.some((item) => item.code === preset.code)
+      ),
+    [draft.items, presets]
+  )
+
   function updateItem(index: number, next: PlanDraftItem) {
     setDraft((current) => ({
       ...current,
@@ -589,32 +603,94 @@ function PlanItemsEditor({
     }))
   }
 
+  function addPreset() {
+    const preset = remainingPresets.find((item) => item.code === selectedPresetCode)
+    if (!preset) {
+      return
+    }
+
+    setDraft((current) => ({
+      ...current,
+      items: [
+        ...current.items,
+        {
+          id: `preset-${preset.code}`,
+          code: preset.code,
+          label: preset.name,
+          description: preset.description,
+          availability_status: preset.launch_phase === "future" ? "unavailable" : "available",
+          sort_order: current.items.length,
+        },
+      ],
+    }))
+    setSelectedPresetCode("")
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--fom-ink)]">Plan items</p>
-          <p className="text-xs text-muted-foreground">
-            These rows drive both the public pricing cards and the runtime feature catalog.
-          </p>
-        </div>
-        <Button type="button" size="sm" variant="outline" onClick={addItem}>
+    <div className="space-y-4">
+      <div className="grid gap-3 xl:grid-cols-[1fr_auto_auto]">
+        <Select value={selectedPresetCode} onValueChange={setSelectedPresetCode}>
+          <SelectTrigger>
+            <SelectValue placeholder="Add feature from preset" />
+          </SelectTrigger>
+          <SelectContent>
+            {remainingPresets.map((preset) => (
+              <SelectItem key={preset.code} value={preset.code}>
+                {preset.name} · {preset.category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" onClick={addPreset} disabled={!selectedPresetCode}>
+          Add preset
+        </Button>
+        <Button type="button" variant="outline" onClick={addItem}>
           <PlusIcon data-icon="inline-start" />
-          Add item
+          Custom item
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {draft.items.map((item, index) => (
-          <PlanItemEditorRow
-            key={item.id}
-            item={item}
-            index={index}
-            onChange={(next) => updateItem(index, next)}
-            onRemove={() => removeItem(index)}
-          />
-        ))}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {presets.slice(0, 6).map((preset) => {
+          const selected = draft.items.some((item) => item.code === preset.code)
+          return (
+            <div
+              key={preset.code}
+              className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-[var(--fom-ink)]">
+                  {preset.name}
+                </p>
+                <Badge variant={selected ? "secondary" : "outline"}>
+                  {selected ? "Selected" : preset.launch_phase}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs leading-6 text-muted-foreground">
+                {preset.description}
+              </p>
+            </div>
+          )
+        })}
       </div>
+
+      {draft.items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[var(--fom-border-subtle)] px-4 py-6 text-sm text-muted-foreground">
+          No feature items selected yet. Add from presets or create a custom item.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {draft.items.map((item, index) => (
+            <PlanItemEditorRow
+              key={item.id}
+              item={item}
+              index={index}
+              onChange={(next) => updateItem(index, next)}
+              onRemove={() => removeItem(index)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -622,10 +698,22 @@ function PlanItemsEditor({
 function PlanLimitsEditor({
   draft,
   setDraft,
+  presets,
 }: {
   draft: PlanDraft
   setDraft: Dispatch<SetStateAction<PlanDraft>>
+  presets: PlatformLimitPreset[]
 }) {
+  const [selectedPresetCode, setSelectedPresetCode] = useState("")
+
+  const remainingPresets = useMemo(
+    () =>
+      presets.filter(
+        (preset) => !draft.limits.some((limit) => limit.code === preset.code)
+      ),
+    [draft.limits, presets]
+  )
+
   function updateLimit(index: number, next: PlanDraftLimit) {
     setDraft((current) => ({
       ...current,
@@ -649,47 +737,87 @@ function PlanLimitsEditor({
     }))
   }
 
+  function addPreset() {
+    const preset = remainingPresets.find((item) => item.code === selectedPresetCode)
+    if (!preset) {
+      return
+    }
+
+    setDraft((current) => ({
+      ...current,
+      limits: [
+        ...current.limits,
+        {
+          id: `preset-limit-${preset.code}`,
+          code: preset.code,
+          label: preset.name,
+          description: preset.description,
+          value: "",
+          sort_order: current.limits.length,
+        },
+      ],
+    }))
+    setSelectedPresetCode("")
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--fom-ink)]">Plan limits</p>
-          <p className="text-xs text-muted-foreground">
-            Use numeric limits for quota-style restrictions such as active staff seats.
-          </p>
-        </div>
-        <Button type="button" size="sm" variant="outline" onClick={addLimit}>
+    <div className="space-y-4">
+      <div className="grid gap-3 xl:grid-cols-[1fr_auto_auto]">
+        <Select value={selectedPresetCode} onValueChange={setSelectedPresetCode}>
+          <SelectTrigger>
+            <SelectValue placeholder="Add limit from preset" />
+          </SelectTrigger>
+          <SelectContent>
+            {remainingPresets.map((preset) => (
+              <SelectItem key={preset.code} value={preset.code}>
+                {preset.name} · {preset.category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" onClick={addPreset} disabled={!selectedPresetCode}>
+          Add preset
+        </Button>
+        <Button type="button" variant="outline" onClick={addLimit}>
           <PlusIcon data-icon="inline-start" />
-          Add limit
+          Custom limit
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {draft.limits.map((limit, index) => (
-          <PlanLimitEditorRow
-            key={limit.id}
-            limit={limit}
-            index={index}
-            onChange={(next) => updateLimit(index, next)}
-            onRemove={() => removeLimit(index)}
-          />
-        ))}
-      </div>
+      {draft.limits.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[var(--fom-border-subtle)] px-4 py-6 text-sm text-muted-foreground">
+          No limits configured yet. Add from presets or create a custom limit.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {draft.limits.map((limit, index) => (
+            <PlanLimitEditorRow
+              key={limit.id}
+              limit={limit}
+              index={index}
+              onChange={(next) => updateLimit(index, next)}
+              onRemove={() => removeLimit(index)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-function PlanFormSheet({
+function PlanEditorPanel({
   mode,
   plan,
-  open,
-  onOpenChange,
+  featurePresets,
+  limitPresets,
+  onCancel,
   onCompleted,
 }: {
   mode: "create" | "edit"
   plan: PlatformSettingsPlan | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  featurePresets: PlatformFeaturePreset[]
+  limitPresets: PlatformLimitPreset[]
+  onCancel: () => void
   onCompleted: (result: PlatformPlanActionResult) => void
 }) {
   const router = useRouter()
@@ -698,15 +826,13 @@ function PlanFormSheet({
   const [localError, setLocalError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("details")
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
+  const editorKey = `${mode}:${plan?.id ?? "new"}`
 
+  useEffect(() => {
     setDraft(toDraft(plan ?? undefined))
     setLocalError(null)
     setActiveTab("details")
-  }, [open, plan])
+  }, [editorKey, plan])
 
   const itemBreakdown = useMemo(() => {
     const available = draft.items.filter(
@@ -745,7 +871,6 @@ function PlanFormSheet({
 
       onCompleted(result)
       if (result.ok) {
-        onOpenChange(false)
         router.refresh()
       }
     })
@@ -767,8 +892,8 @@ function PlanFormSheet({
       const result = await deletePlatformPlanAction(plan.id)
       onCompleted(result)
       if (result.ok) {
-        onOpenChange(false)
         router.refresh()
+        onCancel()
       }
     })
   }
@@ -776,112 +901,105 @@ function PlanFormSheet({
   const title = mode === "create" ? "Create plan" : `Edit ${plan?.name ?? "plan"}`
   const description =
     mode === "create"
-      ? "Add a subscription plan, define its feature matrix, and set quota-style restrictions."
-      : "Adjust pricing, public availability, runtime feature items, and numeric limits."
+      ? "Pick presets, tune pricing, and define the final feature matrix."
+      : "Adjust pricing, visibility, runtime feature items, and numeric limits."
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] sm:max-w-[960px]"
-      >
-        <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <SheetTitle>{title}</SheetTitle>
-              <SheetDescription>{description}</SheetDescription>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">
-                {itemBreakdown.available} available / {itemBreakdown.unavailable} unavailable
-              </Badge>
-              <Badge variant="outline">{itemBreakdown.limits} limits</Badge>
-              {plan ? <Badge variant="outline">{plan.shop_count} shops</Badge> : null}
-              <Badge
-                variant={
-                  mode === "edit" && plan?.is_active ? "secondary" : "outline"
-                }
-              >
-                {mode === "edit" && plan?.is_active ? "Active" : "Draft"}
-              </Badge>
-            </div>
+    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
+      <CardHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardDescription>Plan editor</CardDescription>
+            <CardTitle>{title}</CardTitle>
+            <p className="mt-2 text-sm text-muted-foreground">{description}</p>
           </div>
-        </SheetHeader>
-
-        <div className="flex flex-1 flex-col overflow-y-auto p-4">
-          {localError ? <ActionNotice tone="error" message={localError} /> : null}
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-1">
-            <TabsList variant="line" className="w-full justify-start gap-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="features">Feature items</TabsTrigger>
-              <TabsTrigger value="limits">Limits</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="details" className="mt-5">
-              <div className="space-y-5">
-                {plan ? (
-                  <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3">
-                    <p className="text-sm font-semibold text-[var(--fom-ink)]">
-                      Current commercial footprint
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {plan.shop_count} subscribed shops · Collected revenue{" "}
-                      {formatCurrency(plan.collected_revenue, plan.currency)}
-                    </p>
-                  </div>
-                ) : null}
-                <PlanMetadataForm draft={draft} setDraft={setDraft} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="features" className="mt-5">
-              <PlanItemsEditor draft={draft} setDraft={setDraft} />
-            </TabsContent>
-
-            <TabsContent value="limits" className="mt-5">
-              <PlanLimitsEditor draft={draft} setDraft={setDraft} />
-            </TabsContent>
-          </Tabs>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">
+              {itemBreakdown.available} available / {itemBreakdown.unavailable} unavailable
+            </Badge>
+            <Badge variant="outline">{itemBreakdown.limits} limits</Badge>
+            {plan ? <Badge variant="outline">{plan.shop_count} shops</Badge> : null}
+            <Badge
+              variant={mode === "edit" && plan?.is_active ? "secondary" : "outline"}
+            >
+              {mode === "edit" && plan?.is_active ? "Active" : "Draft"}
+            </Badge>
+          </div>
         </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 p-4">
+        {localError ? <ActionNotice tone="error" message={localError} /> : null}
 
-        <SheetFooter className="border-t border-[var(--fom-border-subtle)] bg-muted/10">
-          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-between">
-            <div className="flex gap-2">
-              {mode === "edit" && plan ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  <Trash2Icon data-icon="inline-start" />
-                  Delete plan
-                </Button>
-              ) : null}
-            </div>
-            <div className="flex gap-2">
+        {plan ? (
+          <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3 text-sm">
+            <p className="font-semibold text-[var(--fom-ink)]">{plan.name}</p>
+            <p className="mt-1 text-muted-foreground">
+              {plan.shop_count} subscribed shops · Revenue{" "}
+              {formatCurrency(plan.collected_revenue, plan.currency)}
+            </p>
+          </div>
+        ) : null}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList variant="line" className="w-full justify-start gap-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="limits">Limits</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details" className="mt-5">
+            <PlanMetadataForm draft={draft} setDraft={setDraft} />
+          </TabsContent>
+
+          <TabsContent value="features" className="mt-5">
+            <PlanItemsEditor
+              draft={draft}
+              setDraft={setDraft}
+              presets={featurePresets}
+            />
+          </TabsContent>
+
+          <TabsContent value="limits" className="mt-5">
+            <PlanLimitsEditor
+              draft={draft}
+              setDraft={setDraft}
+              presets={limitPresets}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex flex-wrap justify-between gap-2 border-t border-[var(--fom-border-subtle)] pt-4">
+          <div className="flex gap-2">
+            {mode === "edit" && plan ? (
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={handleDelete}
                 disabled={isPending}
               >
-                Cancel
+                <Trash2Icon data-icon="inline-start" />
+                Delete plan
               </Button>
-              <Button type="button" onClick={handleSubmit} disabled={isPending}>
-                {mode === "create" ? "Create plan" : "Save changes"}
-              </Button>
-            </div>
+            ) : null}
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={isPending}>
+              {mode === "create" ? "Create plan" : "Save changes"}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
 export function PlatformPlanCatalogWorkspace({
   plans,
+  featurePresets,
+  limitPresets,
 }: PlatformPlanCatalogWorkspaceProps) {
   const sortedPlans = useMemo(
     () =>
@@ -891,10 +1009,29 @@ export function PlatformPlanCatalogWorkspace({
       ),
     [plans]
   )
+
   const [result, setResult] = useState<PlatformPlanActionResult | null>(null)
-  const [editorMode, setEditorMode] = useState<"create" | "edit">("create")
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
-  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorMode, setEditorMode] = useState<"create" | "edit">(
+    sortedPlans.length > 0 ? "edit" : "create"
+  )
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
+    sortedPlans[0]?.id ?? null
+  )
+
+  useEffect(() => {
+    if (editorMode === "edit" && selectedPlanId) {
+      const planStillExists = sortedPlans.some((plan) => plan.id === selectedPlanId)
+      if (!planStillExists) {
+        setSelectedPlanId(sortedPlans[0]?.id ?? null)
+        setEditorMode(sortedPlans[0] ? "edit" : "create")
+      }
+      return
+    }
+
+    if (editorMode === "edit" && !selectedPlanId && sortedPlans[0]) {
+      setSelectedPlanId(sortedPlans[0].id)
+    }
+  }, [editorMode, selectedPlanId, sortedPlans])
 
   const selectedPlan =
     sortedPlans.find((plan) => plan.id === selectedPlanId) ?? null
@@ -902,13 +1039,26 @@ export function PlatformPlanCatalogWorkspace({
   function openCreate() {
     setEditorMode("create")
     setSelectedPlanId(null)
-    setEditorOpen(true)
+    setResult(null)
   }
 
   function openEdit(planId: string) {
     setEditorMode("edit")
     setSelectedPlanId(planId)
-    setEditorOpen(true)
+    setResult(null)
+  }
+
+  function resetEditor() {
+    const firstPlan = sortedPlans[0]
+
+    if (firstPlan) {
+      setEditorMode("edit")
+      setSelectedPlanId(firstPlan.id)
+      return
+    }
+
+    setEditorMode("create")
+    setSelectedPlanId(null)
   }
 
   return (
@@ -921,144 +1071,120 @@ export function PlatformPlanCatalogWorkspace({
         )
       ) : null}
 
-      <PlatformDataTable
-        title="Plan catalog"
-        description="Review pricing, runtime access, and quota restrictions without opening every plan inline."
-        rows={sortedPlans}
-        emptyMessage="No subscription plans are configured yet."
-        footer={`Showing ${sortedPlans.length} plan${sortedPlans.length === 1 ? "" : "s"}`}
-        toolbar={
-          <Button type="button" size="sm" onClick={openCreate}>
-            <PlusIcon data-icon="inline-start" />
-            Create plan
-          </Button>
-        }
-        columns={[
-          {
-            key: "plan",
-            header: "Plan",
-            render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-foreground">{plan.name}</span>
-                  <Badge variant={plan.is_active ? "secondary" : "outline"}>
-                    {plan.is_active ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {plan.code}
-                  {plan.description ? ` · ${plan.description}` : ""}
-                </span>
-              </div>
-            ),
-          },
-          {
-            key: "billing",
-            header: "Billing",
-            render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-foreground">
-                  {formatCurrency(plan.price, plan.currency)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {plan.billing_period} · sort {plan.sort_order}
-                </span>
-              </div>
-            ),
-          },
-          {
-            key: "features",
-            header: "Features",
-            render: (plan) => {
-              const availableItems = plan.items.filter(
-                (item) => item.availability_status === "available"
-              ).length
-              const unavailableItems = plan.items.filter(
-                (item) => item.availability_status === "unavailable"
-              ).length
-
-              return (
+      <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <PlatformDataTable
+          title="Plan catalog"
+          description="Review pricing, feature posture, and quota restrictions without leaving the plans page."
+          rows={sortedPlans}
+          emptyMessage="No subscription plans are configured yet."
+          footer={`Showing ${sortedPlans.length} plan${sortedPlans.length === 1 ? "" : "s"}`}
+          toolbar={
+            <Button type="button" size="sm" onClick={openCreate}>
+              <PlusIcon data-icon="inline-start" />
+              New plan
+            </Button>
+          }
+          columns={[
+            {
+              key: "plan",
+              header: "Plan",
+              render: (plan) => (
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <BadgeCheckIcon className="size-4 text-emerald-600" />
-                    <span>{availableItems} enabled</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-foreground">{plan.name}</span>
+                    <Badge variant={plan.is_active ? "secondary" : "outline"}>
+                      {plan.is_active ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CircleSlash2Icon className="size-3.5" />
-                    <span>{unavailableItems} unavailable</span>
-                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {plan.code}
+                    {plan.description ? ` · ${plan.description}` : ""}
+                  </span>
                 </div>
-              )
+              ),
             },
-          },
-          {
-            key: "limits",
-            header: "Limits",
-            render: (plan) => {
-              const staffSeatLimit = plan.limits.find(
-                (limit) => limit.code === planLimitCodes.activeStaffMembers
-              )
-
-              return (
+            {
+              key: "billing",
+              header: "Billing",
+              render: (plan) => (
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm text-foreground">
-                    {staffSeatLimit
-                      ? staffSeatLimit.value === null
-                        ? "Unlimited staff seats"
-                        : staffSeatLimit.value === 0
-                          ? "Owner only"
-                          : `${staffSeatLimit.value} staff seats`
-                      : "No numeric limits"}
+                  <span className="text-sm font-medium text-foreground">
+                    {formatCurrency(plan.price, plan.currency)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {plan.limits.length} configured limit
-                    {plan.limits.length === 1 ? "" : "s"}
+                    {plan.billing_period} · sort {plan.sort_order}
                   </span>
                 </div>
-              )
+              ),
             },
-          },
-          {
-            key: "usage",
-            header: "Usage",
-            render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <span className="text-sm text-foreground">
-                  {plan.shop_count} subscribed shop{plan.shop_count === 1 ? "" : "s"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Revenue {formatCurrency(plan.collected_revenue, plan.currency)}
-                </span>
-              </div>
-            ),
-          },
-          {
-            key: "actions",
-            header: "",
-            className: "w-[120px] px-4 py-2.5 text-right",
-            cellClassName: "px-4 py-3 text-right",
-            render: (plan) => (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => openEdit(plan.id)}
-              >
-                <PencilLineIcon data-icon="inline-start" />
-                Edit
-              </Button>
-            ),
-          },
-        ]}
-      />
+            {
+              key: "features",
+              header: "Features",
+              render: (plan) => {
+                const availableItems = plan.items.filter(
+                  (item) => item.availability_status === "available"
+                ).length
+                const unavailableItems = plan.items.filter(
+                  (item) => item.availability_status === "unavailable"
+                ).length
 
-      <PlanFormSheet
-        mode={editorMode}
-        plan={selectedPlan}
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        onCompleted={setResult}
-      />
+                return (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <BadgeCheckIcon className="size-4 text-emerald-600" />
+                      <span>{availableItems} enabled</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CircleSlash2Icon className="size-3.5" />
+                      <span>{unavailableItems} unavailable</span>
+                    </div>
+                  </div>
+                )
+              },
+            },
+            {
+              key: "usage",
+              header: "Usage",
+              render: (plan) => (
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm text-foreground">
+                    {plan.shop_count} subscribed shop{plan.shop_count === 1 ? "" : "s"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Revenue {formatCurrency(plan.collected_revenue, plan.currency)}
+                  </span>
+                </div>
+              ),
+            },
+            {
+              key: "actions",
+              header: "",
+              className: "w-[120px] px-4 py-2.5 text-right",
+              cellClassName: "px-4 py-3 text-right",
+              render: (plan) => (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openEdit(plan.id)}
+                >
+                  <PencilLineIcon data-icon="inline-start" />
+                  Edit
+                </Button>
+              ),
+            },
+          ]}
+        />
+
+        <PlanEditorPanel
+          mode={editorMode}
+          plan={selectedPlan}
+          featurePresets={featurePresets}
+          limitPresets={limitPresets}
+          onCancel={resetEditor}
+          onCompleted={setResult}
+        />
+      </div>
     </div>
   )
 }

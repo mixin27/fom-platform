@@ -65,7 +65,12 @@ function getInitialValues(member: ShopMember | null | undefined, roles: ShopRole
     name: member?.user.name ?? "",
     email: member?.user.email ?? "",
     phone: member?.user.phone ?? "",
-    status: (member?.status as FormValues["status"] | undefined) ?? "active",
+    status:
+      (member?.status as FormValues["status"] | undefined) === "disabled"
+        ? "disabled"
+        : (member?.status as FormValues["status"] | undefined) === "invited"
+          ? "invited"
+          : "active",
     roleIds:
       currentRoleIds.length > 0
         ? currentRoleIds
@@ -177,7 +182,7 @@ export function ShopMemberSheet({
       <SheetTrigger asChild>
         <Button type="button" size="sm" variant={triggerVariant}>
           {isEdit ? <PencilLine data-icon="inline-start" /> : <Plus data-icon="inline-start" />}
-          {triggerLabel ?? (isEdit ? "Edit member" : "Invite member")}
+          {triggerLabel ?? (isEdit ? "Edit member" : "Add member")}
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -185,11 +190,11 @@ export function ShopMemberSheet({
         className="w-full border-l border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] sm:max-w-xl"
       >
         <SheetHeader className="border-b border-[var(--fom-border-subtle)] pb-4">
-          <SheetTitle>{isEdit ? "Edit member access" : "Invite member"}</SheetTitle>
+          <SheetTitle>{isEdit ? "Edit member access" : "Add member"}</SheetTitle>
           <SheetDescription>
             {isEdit
               ? "Update member status and role assignments for this shop."
-              : "Add a new operator and assign the roles they should use in this shop."}
+              : "Create or attach a staff account and assign the roles they should use in this shop."}
           </SheetDescription>
         </SheetHeader>
 
@@ -206,7 +211,7 @@ export function ShopMemberSheet({
                 disabled={isEdit}
               />
               <FieldDescription>
-                Required only when creating a brand new user from this shop.
+                Required when creating a brand new user record from this shop.
               </FieldDescription>
               <FieldError>{getFieldError("name")}</FieldError>
             </Field>
@@ -235,7 +240,7 @@ export function ShopMemberSheet({
                 disabled={isEdit}
               />
               <FieldDescription>
-                Provide email or phone so the member can be matched to an existing user.
+                Provide email or phone so the member can be matched to an existing user account.
               </FieldDescription>
               <FieldError>{getFieldError("phone")}</FieldError>
             </Field>
@@ -255,7 +260,9 @@ export function ShopMemberSheet({
                   className="h-10 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
                 >
                   <option value="active">Active</option>
-                  <option value="invited">Invited</option>
+                  {member?.status === "invited" ? (
+                    <option value="invited">Invited</option>
+                  ) : null}
                   <option value="disabled">Disabled</option>
                 </select>
                 <FieldError>{getFieldError("status")}</FieldError>
@@ -266,7 +273,7 @@ export function ShopMemberSheet({
               <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-background px-3 py-3">
                 <div className="text-sm font-semibold text-foreground">Invitation pending</div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  This member still needs to open the email link and set a password before access becomes active.
+                  This member still needs to open the email link and set a password before direct sign-in becomes active.
                 </p>
                 <Button
                   type="button"
@@ -329,7 +336,7 @@ export function ShopMemberSheet({
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isPending || assignableRoles.length === 0}>
-            {isPending ? "Saving..." : isEdit ? "Save changes" : "Invite member"}
+            {isPending ? "Saving..." : isEdit ? "Save changes" : "Add member"}
           </Button>
         </SheetFooter>
       </SheetContent>
