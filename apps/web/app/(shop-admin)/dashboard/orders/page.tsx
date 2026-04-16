@@ -96,6 +96,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             {canCreateOrders ? (
               <ShopOrderSheet
                 shopId={activeShop.id}
+                shopName={activeShop.name}
                 triggerLabel="Create order"
                 triggerVariant="default"
               />
@@ -264,7 +265,11 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
               return (
                 <div className="flex flex-wrap justify-end gap-2">
                   {canEditOrders ? (
-                    <ShopOrderSheet shopId={activeShop.id} order={order} />
+                    <ShopOrderSheet
+                      shopId={activeShop.id}
+                      shopName={activeShop.name}
+                      order={order}
+                    />
                   ) : null}
                   {canAdvanceOrders && nextAction ? (
                     <form action={updateShopOrderStatusFromFormAction}>
