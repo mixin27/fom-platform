@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fom_mobile/app/di/injection_container.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
 import 'package:fom_mobile/features/exports/feature_exports.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/settings_snapshot.dart';
 import '../../domain/usecases/fetch_settings_snapshot_use_case.dart';
@@ -76,36 +77,37 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
                 bottom: false,
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Data Import & Export',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              activeShop == null
-                                  ? 'Download exports or import spreadsheets from the current active shop.'
-                                  : 'Save exports, share them to other apps, or import historical order spreadsheets for ${activeShop.shopName}.',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textLight,
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    SliverToBoxAdapter(child: _buildHeader(context)),
+                    // SliverToBoxAdapter(
+                    //   child: Padding(
+                    //     padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    //     child: Column(
+                    //       crossAxisAlignment: CrossAxisAlignment.start,
+                    //       children: [
+                    //         const Text(
+                    //           'Data Import & Export',
+                    //           style: TextStyle(
+                    //             fontSize: 28,
+                    //             fontWeight: FontWeight.w900,
+                    //             color: AppColors.textDark,
+                    //           ),
+                    //         ),
+                    //         const SizedBox(height: 8),
+                    //         Text(
+                    //           activeShop == null
+                    //               ? 'Download exports or import spreadsheets from the current active shop.'
+                    //               : 'Save exports, share them to other apps, or import historical order spreadsheets for ${activeShop.shopName}.',
+                    //           style: const TextStyle(
+                    //             fontSize: 13,
+                    //             fontWeight: FontWeight.w600,
+                    //             color: AppColors.textLight,
+                    //             height: 1.5,
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 92),
                       sliver: SliverList(
@@ -333,6 +335,51 @@ class _ShopExportsPageState extends State<ShopExportsPage> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final activeShop = getIt<AuthBloc>().state.activeShop;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        color: AppColors.warmWhite,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1.5)),
+      ),
+      child: Row(
+        children: [
+          AppIconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.pop(),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Data Import & Export',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Text(
+                  activeShop == null
+                      ? 'Download exports or import spreadsheets from the current active shop.'
+                      : 'Save exports, share them to other apps, or import historical order spreadsheets for ${activeShop.shopName}.',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

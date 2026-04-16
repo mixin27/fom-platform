@@ -3,81 +3,215 @@
   "appTitleDev": "FOM (Dev)",
   "appTitleStaging": "FOM (Staging)",
   "appTitle": "FOM",
-  "navCampaigns": "ကမ်ပိန်းများ",
-  "navCoupons": "ကူပွန်များ",
-  "navLoyalty": "Loyalty",
-  "navNotifications": "အသိပေးချက်များ",
-  "navMore": "အခြား",
-  "unavailableTitle": "မရနိုင်ပါ",
-  "missingPhoneNumberForOtp": "OTP အတည်ပြုရန် ဖုန်းနံပါတ် မရှိပါ",
-  "claimRewardUnavailable": "ဆုတောင်းခံမှု မရနိုင်ပါ",
-  "campaignDetailUnavailable": "ကမ်ပိန်းအသေးစိတ် မရနိုင်ပါ",
-  "couponDetailUnavailable": "ကူပွန်အသေးစိတ် မရနိုင်ပါ",
-  "somethingWentWrong": "တစ်ခုခုမှားယွင်းနေပါသည်။",
-  "authSignInTitle": "အကောင့်ဝင်ရန်",
-  "authSignInSubtitle": "ဆုလာဘ်များရယူပြီး ကိုယ်ပိုင်ဒေတာအသုံးပြုရန် အကောင့်ဝင်ပါ။",
-  "authContinueWithPhoneOtp": "ဖုန်း OTP ဖြင့် ဆက်လုပ်မည်",
-  "authContinueWithEmailPassword": "အီးမေးလ်/စကားဝှက် ဖြင့် ဆက်လုပ်မည်",
-  "authOtherMethodsHint": "Google/Apple/Facebook ကဲ့သို့သော နည်းလမ်းများအတွက် AuthBloc ရှိ MethodLoginRequested ကို အသုံးပြုနိုင်သည်။",
-  "authContinueAsGuest": "Guest အနေဖြင့် ဆက်လုပ်မည်",
-  "phoneOtpTitle": "ဖုန်း OTP",
-  "phoneNumberLabel": "ဖုန်းနံပါတ်",
-  "phoneNumberHint": "+959123456789",
-  "purposeLabel": "ရည်ရွယ်ချက်",
-  "purposeLogin": "ဝင်မည်",
-  "purposeRegister": "စာရင်းသွင်းမည်",
-  "requestOtp": "OTP တောင်းမည်",
-  "requesting": "တောင်းနေသည်...",
-  "enterPhoneNumberError": "ဖုန်းနံပါတ် ဖြည့်ပါ။",
-  "emailSignInTitle": "အီးမေးလ်ဖြင့် ဝင်ရန်",
-  "emailOrUsernameLabel": "အီးမေးလ် သို့မဟုတ် အသုံးပြုသူအမည်",
   "passwordLabel": "စကားဝှက်",
   "signIn": "အကောင့်ဝင်ရန်",
-  "signingIn": "ဝင်နေသည်...",
-  "enterEmailPasswordError": "အီးမေးလ်/အသုံးပြုသူအမည် နှင့် စကားဝှက် ဖြည့်ပါ။",
-  "verifyOtpTitle": "OTP အတည်ပြုရန်",
-  "phoneValue": "ဖုန်း: {phone}",
-  "purposeValue": "ရည်ရွယ်ချက်: {purpose}",
-  "otpCodeLabel": "OTP ကုဒ်",
-  "verifying": "အတည်ပြုနေသည်...",
-  "verifyAndSignIn": "အတည်ပြုပြီး အကောင့်ဝင်မည်",
-  "enterOtpCodeError": "OTP ကုဒ် ဖြည့်ပါ။",
-  "noCampaignsAvailable": "ရရှိနိုင်သော ကမ်ပိန်း မရှိပါ။",
-  "descriptionLabel": "ဖော်ပြချက်",
-  "campaignPeriodLabel": "ကမ်ပိန်းကာလ",
-  "noCouponsAvailable": "ရရှိနိုင်သော ကူပွန် မရှိပါ။",
-  "amountValue": "ပမာဏ: {amount} MMK",
-  "quantityValue": "အရေအတွက်: {quantity}",
-  "qtyValue": "Qty: {quantity}",
-  "expiresValue": "သက်တမ်းကုန်: {date}",
-  "alreadyRedeemed": "အသုံးပြုပြီး",
-  "redeemCoupon": "ကူပွန် အသုံးပြုမည်",
-  "available": "ရရှိနိုင်သည်",
-  "redeemed": "အသုံးပြုပြီး",
-  "noLoyaltyHistoryFound": "Loyalty မှတ်တမ်း မတွေ့ပါ။",
-  "totalPoints": "စုစုပေါင်း အမှတ်",
-  "noNotificationsAvailable": "အသိပေးချက် မရှိပါ။",
-  "claimRewardTitle": "ဆုတောင်းခံရန်",
-  "couponReward": "ကူပွန်ဆု",
-  "couponIdValue": "ကူပွန် ID: {couponId}",
-  "codeValue": "ကုဒ်: {code}",
-  "rewardClaimSubmittedDemo": "ဆုတောင်းခံမှု တင်သွင်းပြီးပါပြီ (demo)။",
-  "alreadyClaimed": "တောင်းခံပြီး",
-  "confirmClaim": "တောင်းခံမှု အတည်ပြုမည်",
-  "moreAuthenticationTitle": "Authentication",
-  "signedIn": "အကောင့်ဝင်ထားသည်",
-  "guestMode": "Guest မုဒ်",
-  "sessionValue": "Session: {token}",
-  "signInRegister": "အကောင့်ဝင် / စာရင်းသွင်း",
   "signOut": "အကောင့်ထွက်ရန်",
-  "loginRequiredTitle": "အကောင့်ဝင်ရန်လိုအပ်သည်",
-  "loginRequiredMessage": "ဤလုပ်ဆောင်ချက်ကို အသုံးပြုရန် အကောင့်ဝင်ပါ။",
-  "languageTitle": "ဘာသာစကား",
-  "languageLabel": "အက်ပ်ဘာသာစကား",
-  "languageSystemDefault": "စက်၏ဘာသာစကားကို အသုံးပြုမည်",
+  "guestMode": "Guest မုဒ်",
+  "chooseShop": "ဆိုင်ရွေးမည်",
+  "retry": "ထပ်စမ်းမည်",
   "languageEnglish": "အင်္ဂလိပ်",
   "languageMyanmar": "မြန်မာ",
-  "developerTitle": "Developer",
-  "openTalkerLogConsole": "Talker log console ဖွင့်ရန်။",
-  "openLogDevTools": "Log DevTools ဖွင့်ရန်"
+  "navOrders": "အော်ဒါများ",
+  "navCustomers": "ဖောက်သည်များ",
+  "navReports": "အစီရင်ခံစာများ",
+  "navSettings": "ဆက်တင်များ",
+  "navAccount": "အကောင့်",
+  "loginBadgeWelcomeBack": "ပြန်လည်ကြိုဆိုပါသည်",
+  "loginTitleShop": "သင့်ဆိုင်အကောင့်သို့ ဝင်ပါ",
+  "loginSubtitleOrders": "အော်ဒါများဆက်လုပ်ရန် သင့်အကောင့်ကို အသုံးပြုပါ။",
+  "authEmailLabel": "အီးမေးလ်",
+  "authEnterPasswordHint": "စကားဝှက်ထည့်ပါ",
+  "authSessionConflictTitle": "အခြားစက်ပေါ်တွင် အကောင့်ဝင်ထားပါသည်",
+  "authLogoutOtherDevice": "အခြားစက်မှ ထွက်မည်",
+  "authNoAccountPrompt": "အကောင့်မရှိသေးဘူးလား။ ",
+  "authCreateOneAction": "အသစ်ဖန်တီးပါ",
+  "authContinueWithFacebook": "Facebook ဖြင့် ဆက်လုပ်မည်",
+  "validationEmailRequired": "အီးမေးလ်လိုအပ်ပါသည်",
+  "validationEmailInvalid": "မှန်ကန်သော အီးမေးလ်ထည့်ပါ",
+  "validationPasswordRequired": "စကားဝှက်လိုအပ်ပါသည်",
+  "validationPasswordMinLength": "စကားဝှက်သည် အနည်းဆုံး ၈ လုံး ရှိရပါမည်",
+  "registerBadgeCreateAccount": "အကောင့်ဖန်တီးရန်",
+  "registerTitleSellerAccount": "သင့်ရောင်းသူအကောင့်ကို စတင်ဖန်တီးပါ",
+  "registerSubtitleBackend": "စာရင်းသွင်းမှုသည် backend auth API ကို အသုံးပြုပါသည်။",
+  "authFullNameLabel": "အမည်အပြည့်အစုံ",
+  "authFullNameHint": "မအေး",
+  "authPhoneOptionalLabel": "ဖုန်း (မဖြည့်လည်းရ)",
+  "authPhoneHint": "09 7800 1111",
+  "authPasswordCreateHint": "အနည်းဆုံး ၈ လုံး၊ A-z၊ 0-9 ပါဝင်ရမည်",
+  "authConfirmPasswordLabel": "စကားဝှက် အတည်ပြုရန်",
+  "authConfirmPasswordHint": "စကားဝှက်ကို ထပ်ထည့်ပါ",
+  "authCreateAccountCta": "အကောင့်ဖန်တီးမည်",
+  "authAlreadyHaveAccountPrompt": "အကောင့်ရှိပြီးသားလား။ ",
+  "authAlreadyHaveAccountAction": "အကောင့်ဝင်ပါ",
+  "validationNameRequired": "အမည်လိုအပ်ပါသည်",
+  "validationNameMinLength": "အမည်သည် အနည်းဆုံး ၂ လုံး ရှိရပါမည်",
+  "validationConfirmPasswordRequired": "စကားဝှက်ကို ထပ်မံအတည်ပြုပေးပါ",
+  "validationPasswordMismatch": "စကားဝှက်နှစ်ခု မတူပါ",
+  "shopSelectionEmptyTitle": "ဆိုင်အသုံးပြုခွင့် မရှိသေးပါ",
+  "shopSelectionTitle": "ဆိုင်ရွေးပါ",
+  "shopSelectionEmptyMessage": "ဤအကောင့်သည် အကောင့်ဝင်ထားသော်လည်း ချိတ်ဆက်ထားသည့်ဆိုင် မရှိသေးပါ။ ပထမဆုံးဆိုင်ကို web မှ ပြီးအောင်လုပ်ပါ သို့မဟုတ် platform owner ထံမှ အသုံးပြုခွင့်တောင်းပါ။",
+  "shopSelectionMessage": "ဤအကောင့်တွင် ဆိုင်များစွာကို အသုံးပြုခွင့်ရှိသည်။ ဆက်လုပ်ရန် workspace တစ်ခုရွေးပါ၊ ဤစက်ပေါ်တွင် မှတ်ထားပေးပါမည်။",
+  "shopSelectionSignedInAs": "{name} အဖြစ် အကောင့်ဝင်ထားသည်",
+  "@shopSelectionSignedInAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "shopSelectionNoContact": "ဆက်သွယ်ရန် အချက်အလက်မရှိပါ",
+  "shopSelectionPermissionsCount": "ခွင့်ပြုချက် {count} ခု",
+  "@shopSelectionPermissionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleOwner": "ပိုင်ရှင်",
+  "roleStaff": "ဝန်ထမ်း",
+  "roleUnknown": "အဖွဲ့ဝင်",
+  "settingsNoActiveShopTitle": "အသက်ဝင်နေသော ဆိုင် မရွေးထားပါ",
+  "settingsNoActiveShopMessage": "အကောင့်၊ ဘီလ်နှင့် အသိပေးချက်ဆက်တင်များကို စီမံရန် အရင်ဆုံး ဆိုင်တစ်ခုရွေးပါ။",
+  "settingsUnavailableTitle": "ဆက်တင်များ မရနိုင်ပါ",
+  "settingsUnavailableMessage": "သင့်အကောင့်နှင့် ဘီလ်အချက်အလက်များကို ယခု မတင်နိုင်ပါ။",
+  "settingsSectionWorkspace": "လုပ်ငန်းခွင်",
+  "settingsSectionTools": "ကိရိယာများ",
+  "settingsSectionAccount": "အကောင့်",
+  "settingsSectionBilling": "ငွေတောင်းခံမှု",
+  "settingsSectionNotifications": "အသိပေးချက်များ",
+  "settingsProfileAndShopTitle": "ပရိုဖိုင်နှင့် ဆိုင်",
+  "settingsProfileAndShopSubtitle": "{accountName} · {shopName}",
+  "@settingsProfileAndShopSubtitle": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      },
+      "shopName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSwitchShopTitle": "ဆိုင်ပြောင်းမည်",
+  "settingsSwitchShopSubtitle": "လက်ရှိ: {shopName}",
+  "@settingsSwitchShopSubtitle": {
+    "placeholders": {
+      "shopName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAppLanguageTitle": "အက်ပ်ဘာသာစကား",
+  "settingsAppLanguageSubtitle": "ဤစက်ပေါ်တွင် သိမ်းထားမည်",
+  "settingsTimezoneTitle": "အချိန်ဇုန်",
+  "settingsTimezoneSubtitle": "အော်ဒါနှင့် အနှစ်ချုပ်အချိန်များ",
+  "settingsDataExportsTitle": "ဒေတာထုတ်ယူမှုများ",
+  "settingsDataExportsSubtitle": "အော်ဒါ၊ ဖောက်သည်၊ ပို့ဆောင်မှုနှင့် ဝန်ထမ်း CSV များကို ဒေါင်းလုဒ်လုပ်ပါ",
+  "settingsAccountEmailVerified": "အီးမေးလ် အတည်ပြုပြီး",
+  "settingsAccountEmailPending": "အီးမေးလ် အတည်ပြုရန် ကျန်ရှိနေသည်",
+  "settingsNoEmailSet": "အီးမေးလ် မသတ်မှတ်ထားပါ",
+  "settingsPrimarySignInIdentifier": "အဓိက အကောင့်ဝင်အချက်အလက်",
+  "settingsNoPhoneSet": "ဖုန်းနံပါတ် မသတ်မှတ်ထားပါ",
+  "settingsOptionalContactNumber": "ရွေးချယ်နိုင်သော ဆက်သွယ်ရန်နံပါတ်",
+  "settingsSignedInAccountTitle": "လက်ရှိအကောင့်",
+  "settingsCurrentShopTitle": "လက်ရှိလုပ်ငန်းခွင်",
+  "settingsCurrentRoleTitle": "အသုံးပြုခွင့်အဆင့်",
+  "settingsAccountOwnerFallback": "အကောင့်ပိုင်ရှင်",
+  "settingsLanguageSheetTitle": "အက်ပ်ဘာသာစကားရွေးပါ",
+  "settingsLanguageSheetSubtitle": "ဤစက်ပေါ်တွင် English နှင့် မြန်မာ အကြား ပြောင်းနိုင်ပါသည်။",
+  "settingsEditAction": "ပြင်ဆင်မည်",
+  "settingsBillingNoActivePlan": "အသုံးပြုနေသော အစီအစဉ် မရှိပါ",
+  "settingsBillingOutstandingBalanceTitle": "ကျန်ငွေ",
+  "settingsBillingAllSettled": "ဘောက်ချာအားလုံးကို ရှင်းလင်းပြီးပါပြီ",
+  "settingsBillingPaymentNeeded": "ဆိုင်ကို ဆက်လက်အသုံးပြုရန် ငွေပေးချေရန်လိုအပ်သည်",
+  "settingsBillingTrialActiveTitle": "Free trial အသုံးပြုနေပါသည်",
+  "settingsBillingTrialActiveMessage": "Trial အသက်ဝင်နေစဉ် ဆိုင်ကို ဆက်လက်အသုံးပြုနိုင်ပါသည်။",
+  "settingsBillingTrialEndsIn": "Trial သည် {duration} အတွင်း ကုန်ဆုံးပါမည်။",
+  "@settingsBillingTrialEndsIn": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBillingNeedsAttentionTitle": "ငွေတောင်းခံမှုကို စစ်ဆေးရန်လိုအပ်သည်",
+  "settingsBillingNeedsAttentionMessage": "နောက်ကျဘောက်ချာ {overdueCount} ခု | ကျန်ငွေ {amount} MMK ရှိပါသည်။",
+  "@settingsBillingNeedsAttentionMessage": {
+    "placeholders": {
+      "overdueCount": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBillingToday": "ယနေ့",
+  "settingsBillingOneDay": "၁ ရက်",
+  "settingsBillingManyDays": "{count} ရက်",
+  "@settingsBillingManyDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBillingPeriodMonthly": "လစဉ် ငွေတောင်းခံမည်",
+  "settingsBillingPeriodYearly": "နှစ်စဉ် ငွေတောင်းခံမည်",
+  "settingsBillingPeriodTrial": "Trial ကာလ",
+  "settingsBillingPeriodUnavailable": "ငွေတောင်းခံမှုကာလ မရနိုင်ပါ",
+  "settingsBillingStatusUnavailable": "Subscription အခြေအနေ မရှိပါ",
+  "settingsBillingNextBilling": "နောက်တစ်ကြိမ် ငွေတောင်းခံမည့်ရက်: {date}",
+  "@settingsBillingNextBilling": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBillingCurrentPeriodEnds": "လက်ရှိကာလ ပြီးဆုံးမည့်ရက် {date}",
+  "@settingsBillingCurrentPeriodEnds": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBillingNoDueDate": "သတ်မှတ်ထားသော due date မရှိပါ",
+  "settingsPlanCurrentPlan": "လက်ရှိအစီအစဉ်",
+  "settingsPlanFreeTrial": "Free Trial",
+  "settingsPlanUnknownStatus": "မသိရ",
+  "settingsPlanTrialActive": "ဤဆိုင်အတွက် trial အသုံးပြုခွင့် အသက်ဝင်နေပါသည်။",
+  "settingsPlanTrialEndsOn": "Trial ကုန်ဆုံးမည့်ရက် {date}",
+  "@settingsPlanTrialEndsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPlanNextBillingOn": "နောက်တစ်ကြိမ် ငွေတောင်းခံမည့်ရက် {date}",
+  "@settingsPlanNextBillingOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPlanCurrentPeriodEndsOn": "လက်ရှိကာလ ပြီးဆုံးမည့်ရက် {date}",
+  "@settingsPlanCurrentPeriodEndsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPlanSubscriptionSynced": "ငွေတောင်းခံမှုအချက်အလက်များကို လက်ရှိဆိုင် subscription မှ sync လုပ်ထားပါသည်။",
+  "notificationsOrderReminders": "အော်ဒါသတိပေးချက်များ",
+  "notificationsOrderRemindersDesc": "အော်ဒါအသစ်များနှင့် စောင့်ဆိုင်းနေသော အော်ဒါသတိပေးချက်များ",
+  "notificationsDailySummary": "နေ့စဉ်အနှစ်ချုပ်",
+  "notificationsDailySummaryDesc": "နေ့ကုန်အစီရင်ခံစာနှင့် အကျဉ်းချုပ်",
+  "notificationsProductUpdates": "ထုတ်ကုန်အပ်ဒိတ်များ",
+  "notificationsProductUpdatesDesc": "လုပ်ဆောင်ချက်အသစ်များနှင့် ရောင်းအားတိုးအကြံပြုချက်များ",
+  "notificationsChannelInAppEmail": "အက်ပ်အတွင်း + အီးမေးလ်"
 }

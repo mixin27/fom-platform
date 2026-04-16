@@ -29,7 +29,7 @@ export const subscriptionLimitCatalog: ReadonlyArray<{
     name: 'Managed shop workspaces',
     description:
       'Reserved for future centralized multi-shop workspace controls.',
-    launchPhase: 'future',
+    launchPhase: 'phase_one',
   },
   {
     code: subscriptionLimits.monthlyApiRequests,

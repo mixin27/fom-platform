@@ -368,3 +368,16 @@ export async function resetPasswordWithToken(input: {
     json: input,
   })
 }
+
+export async function acceptInvitationWithToken(input: {
+  token: string
+  password: string
+  headers?: HeadersInit
+}) {
+  const { headers, ...json } = input
+  return requestApi<AuthResponse>("/api/v1/auth/invitations/accept", {
+    method: "POST",
+    headers,
+    json,
+  })
+}

@@ -34,11 +34,13 @@ export type ShopRecord = {
 export type ShopMembershipSummary = {
   id: string
   role: string | null
+  role_name?: string | null
   roles: Array<{
     id: string
     code: string
     name: string
     description: string | null
+    is_system?: boolean
   }>
   status: string
   permissions: string[]
@@ -49,11 +51,14 @@ export type ShopMember = {
   shop_id: string
   user_id: string
   role: string | null
+  role_name?: string | null
+  role_ids?: string[]
   roles: Array<{
     id: string
     code: string
     name: string
     description: string | null
+    is_system?: boolean
   }>
   status: string
   created_at: string
@@ -65,6 +70,56 @@ export type ShopMember = {
     locale: string
   }
   permissions: string[]
+}
+
+export type ShopPermissionOption = {
+  code: string
+  name: string
+  description: string
+}
+
+export type ShopRole = {
+  id: string
+  shop_id: string | null
+  code: string
+  name: string
+  description: string | null
+  is_system: boolean
+  member_count: number
+  assignable: boolean
+  editable: boolean
+  deletable: boolean
+  permissions: Array<{
+    id: string
+    code: string
+    name: string
+    description: string | null
+  }>
+  permission_codes: string[]
+  created_at: string
+  updated_at: string
+}
+
+export type ShopRoleCatalog = {
+  roles: ShopRole[]
+  available_permissions: ShopPermissionOption[]
+}
+
+export type ShopAuditLog = {
+  id: string
+  shop_id: string
+  action: string
+  entity_type: string
+  entity_id: string | null
+  summary: string
+  metadata: Record<string, unknown> | null
+  created_at: string
+  actor:
+    | {
+        id: string | null
+        name: string
+      }
+    | null
 }
 
 export type ShopOrderItem = {
@@ -434,6 +489,19 @@ export async function getShopMembers(
   const resolvedRetryPath =
     retryPath ?? `/dashboard/settings${buildQueryString(searchParams)}`
   return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath)
+}
+
+export async function getShopRoles(retryPath = "/dashboard/staffs") {
+  return shopRequest<ShopRoleCatalog>("/roles", undefined, retryPath)
+}
+
+export async function getShopAuditLogs(
+  searchParams?: SearchParamsRecord,
+  retryPath?: string
+) {
+  const resolvedRetryPath =
+    retryPath ?? `/dashboard/staffs${buildQueryString(searchParams)}`
+  return shopRequest<ShopAuditLog[]>("/audit-logs", searchParams, resolvedRetryPath)
 }
 
 export async function getShopBilling(retryPath = "/dashboard/settings") {

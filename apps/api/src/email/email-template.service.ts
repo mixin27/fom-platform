@@ -13,6 +13,8 @@ export class EmailTemplateService {
         return this.renderWelcome(input.variables);
       case 'auth.verify_email':
         return this.renderVerifyEmail(input.variables);
+      case 'auth.staff_invitation':
+        return this.renderStaffInvitation(input.variables);
       case 'auth.forgot_password':
         return this.renderForgotPassword(input.variables);
       case 'auth.password_reset_success':
@@ -103,6 +105,47 @@ export class EmailTemplateService {
       footerLines: [
         'If you did not request this change, you can ignore this email.',
       ],
+    });
+  }
+
+  private renderStaffInvitation(
+    variables: Record<string, string | number | boolean | null | undefined>,
+  ): RenderedEmailTemplate {
+    return this.compose({
+      category: 'auth',
+      templateKey: 'auth.staff_invitation',
+      subject: String(
+        variables.subject ?? `You were invited to ${variables.shopName ?? 'a shop workspace'}`,
+      ),
+      eyebrow: 'Shop invitation',
+      title: String(
+        variables.title ??
+          `Join ${variables.shopName ?? 'this shop'} on FOM Order Manager.`,
+      ),
+      intro: String(
+        variables.intro ??
+          'A shop owner added your email to a shop workspace and prepared an access invite for you.',
+      ),
+      bodyLines: [
+        String(
+          variables.roleLine ??
+            (variables.roleNames
+              ? `Assigned roles: ${variables.roleNames}`
+              : ''),
+        ),
+        String(
+          variables.expiryText ??
+            'This invitation link is single-use and expires soon.',
+        ),
+      ].filter(Boolean),
+      ctaLabel: variables.ctaLabel ?? 'Set password and join',
+      ctaUrl: variables.ctaUrl,
+      footerLines: [
+        String(
+          variables.footerText ??
+            'If you were not expecting this invitation, you can ignore this email.',
+        ),
+      ].filter(Boolean),
     });
   }
 

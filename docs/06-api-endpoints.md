@@ -49,6 +49,7 @@ Public marketing notes:
 | POST   | /auth/email/verification/confirm | Confirm an email verification token        | 200 Single {email, email_verified_at, verified} |
 | POST   | /auth/password/forgot | Queue a password reset email                        | 200 Single {accepted, message} |
 | POST   | /auth/password/reset | Reset password with a token and revoke sessions      | 200 Single {reset, email, reset_at} |
+| POST   | /auth/invitations/accept | Accept a staff invitation, set password, and issue a session | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/social/login | Create or reuse a Google/Facebook identity and sign in | 200 Single {access_token, refresh_token, user, platform_access, shops} |
 | POST   | /auth/phone/start  | Send OTP to phone number                               | 200 Single {challenge_id, purpose, expires_at} |
 | POST   | /auth/phone/verify | Verify OTP and create session                          | 200 Single {access_token, refresh_token, user, platform_access, shops} |
@@ -77,7 +78,23 @@ Notification notes:
 - SMTP mode also supports `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD`, `EMAIL_SMTP_IGNORE_TLS`, and `EMAIL_SMTP_REQUIRE_TLS`.
 - SendGrid mode requires `SENDGRID_API_KEY` and can override sender defaults with `EMAIL_SENDGRID_FROM_EMAIL` and `EMAIL_SENDGRID_FROM_NAME`.
 - Auth emails are production-oriented templates for welcome, email verification, forgot password, and password reset success.
+- Staff invitation emails use the same token system and land on `/auth/invitations/accept`, which activates the invited membership after the user sets a password.
 - Platform billing currently emits invoice and billing notice emails when invoices are created or updated. Trial and promotion templates are available through the shared template system for future workflows.
+
+## Enterprise Workspace
+
+| Method | Path                  | Description                                              | Response                            |
+| ------ | --------------------- | -------------------------------------------------------- | ----------------------------------- |
+| GET    | /enterprise/workspace | Get cross-shop dashboard data for the current operator   | 200 Single EnterpriseWorkspace      |
+
+Enterprise workspace notes:
+
+- This route is authenticated shop-side access, not platform-owner access.
+- The route accepts `shop_id` and `status`.
+- `status` supports `all`, `active`, `trial`, `expiring`, `overdue`, and `inactive`.
+- The response always returns the accessible shop posture for the current operator, even when no shop is yet enterprise-enabled.
+- Cross-shop aggregation only selects shops whose plan enables `shops.multi_workspace`.
+- The response also exposes `analytics_enabled` and `priority_support_enabled` so the web/mobile shells can show locked vs ready enterprise capabilities without inventing client-side plan logic.
 
 ## Realtime
 
@@ -163,8 +180,14 @@ Platform notes:
 | PATCH  | /shops/{shopId}                    | Update shop                 | 200 Single Shop   |
 | GET    | /shops/{shopId}/billing            | Get current subscription and recent invoices | 200 Single ShopBilling |
 | GET    | /shops/{shopId}/members            | List staff                  | 200 List Member   |
-| POST   | /shops/{shopId}/members            | Add staff with `role_codes` | 201 Single Member |
+| POST   | /shops/{shopId}/members            | Add staff with `role_ids`   | 201 Single Member |
 | PATCH  | /shops/{shopId}/members/{memberId} | Update roles or status      | 200 Single Member |
+| POST   | /shops/{shopId}/members/{memberId}/invite | Resend a pending member invitation email | 200 Single {id, invitation_sent} |
+| GET    | /shops/{shopId}/roles              | List system and custom shop roles plus available permissions | 200 Role Catalog |
+| POST   | /shops/{shopId}/roles              | Create custom role          | 201 Single Role   |
+| PATCH  | /shops/{shopId}/roles/{roleId}     | Update custom role          | 200 Single Role   |
+| DELETE | /shops/{shopId}/roles/{roleId}     | Delete custom role          | 200 Delete Result |
+| GET    | /shops/{shopId}/audit-logs         | List recent governance audit events | 200 List AuditLog |
 
 Shop notes:
 
@@ -172,6 +195,11 @@ Shop notes:
 - `POST /shops` starts the new self-serve shop on the default free trial plan when the trial plan is active.
 - Trial subscriptions expire automatically once `end_at` passes. The default trial length is controlled by `DEFAULT_TRIAL_DAYS` and defaults to 7 days.
 - Shop member management routes are plan-gated by `team.members`.
+- `POST /shops/{shopId}/members` now supports invitation bootstrap: when the target user has an email but no direct authentication method yet, the member is created with `status: invited` and an invitation email is queued.
+- `POST /shops/{shopId}/members/{memberId}/invite` resends the pending invitation email for an invited member.
+- Member mutations now prefer `role_ids`; `role_codes` remains accepted only as a transition path for older forms.
+- Custom roles are shop-scoped records. System roles stay immutable, while custom roles can be created, updated, and deleted per shop.
+- Audit logs currently record member invites/access changes and custom-role create/update/delete events.
 
 ## Customers
 

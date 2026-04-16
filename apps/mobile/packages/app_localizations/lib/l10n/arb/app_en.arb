@@ -3,144 +3,215 @@
   "appTitleDev": "FOM (Dev)",
   "appTitleStaging": "FOM (Staging)",
   "appTitle": "FOM",
-  "navCampaigns": "Campaigns",
-  "navCoupons": "Coupons",
-  "navLoyalty": "Loyalty",
-  "navNotifications": "Notifications",
-  "navMore": "More",
-  "unavailableTitle": "Unavailable",
-  "missingPhoneNumberForOtp": "Missing phone number for OTP verification",
-  "claimRewardUnavailable": "Claim reward unavailable",
-  "campaignDetailUnavailable": "Campaign detail unavailable",
-  "couponDetailUnavailable": "Coupon detail unavailable",
-  "somethingWentWrong": "Something went wrong.",
-  "authSignInTitle": "Sign in",
-  "authSignInSubtitle": "Sign in to claim rewards and access your personal data.",
-  "authContinueWithPhoneOtp": "Continue with phone OTP",
-  "authContinueWithEmailPassword": "Continue with email/password",
-  "authOtherMethodsHint": "Other methods like Google/Apple/Facebook can use MethodLoginRequested in AuthBloc.",
-  "authContinueAsGuest": "Continue as guest",
-  "phoneOtpTitle": "Phone OTP",
-  "phoneNumberLabel": "Phone number",
-  "phoneNumberHint": "+959123456789",
-  "purposeLabel": "Purpose",
-  "purposeLogin": "Login",
-  "purposeRegister": "Register",
-  "requestOtp": "Request OTP",
-  "requesting": "Requesting...",
-  "enterPhoneNumberError": "Please enter your phone number.",
-  "emailSignInTitle": "Email sign in",
-  "emailOrUsernameLabel": "Email or username",
   "passwordLabel": "Password",
   "signIn": "Sign in",
-  "signingIn": "Signing in...",
-  "enterEmailPasswordError": "Please enter email/username and password.",
-  "verifyOtpTitle": "Verify OTP",
-  "phoneValue": "Phone: {phone}",
-  "@phoneValue": {
+  "signOut": "Sign out",
+  "guestMode": "Guest mode",
+  "chooseShop": "Choose shop",
+  "retry": "Retry",
+  "languageEnglish": "English",
+  "languageMyanmar": "Myanmar (Burmese)",
+  "navOrders": "Orders",
+  "navCustomers": "Customers",
+  "navReports": "Reports",
+  "navSettings": "Settings",
+  "navAccount": "Account",
+  "loginBadgeWelcomeBack": "WELCOME BACK",
+  "loginTitleShop": "Sign in to your shop",
+  "loginSubtitleOrders": "Use your account to continue to orders.",
+  "authEmailLabel": "Email",
+  "authEnterPasswordHint": "Enter password",
+  "authSessionConflictTitle": "SESSION ACTIVE ON ANOTHER DEVICE",
+  "authLogoutOtherDevice": "Logout another device",
+  "authNoAccountPrompt": "Don't have an account? ",
+  "authCreateOneAction": "Create one",
+  "authContinueWithFacebook": "Continue with Facebook",
+  "validationEmailRequired": "Email is required",
+  "validationEmailInvalid": "Enter a valid email",
+  "validationPasswordRequired": "Password is required",
+  "validationPasswordMinLength": "Password must be at least 8 characters",
+  "registerBadgeCreateAccount": "CREATE ACCOUNT",
+  "registerTitleSellerAccount": "Set up your seller account",
+  "registerSubtitleBackend": "Registration uses the backend auth API.",
+  "authFullNameLabel": "Full Name",
+  "authFullNameHint": "Ma Aye",
+  "authPhoneOptionalLabel": "Phone (Optional)",
+  "authPhoneHint": "09 7800 1111",
+  "authPasswordCreateHint": "At least 8 chars, A-z, 0-9",
+  "authConfirmPasswordLabel": "Confirm Password",
+  "authConfirmPasswordHint": "Re-enter password",
+  "authCreateAccountCta": "Create Account",
+  "authAlreadyHaveAccountPrompt": "Already have an account? ",
+  "authAlreadyHaveAccountAction": "Sign in",
+  "validationNameRequired": "Name is required",
+  "validationNameMinLength": "Name must be at least 2 characters",
+  "validationConfirmPasswordRequired": "Please confirm your password",
+  "validationPasswordMismatch": "Passwords do not match",
+  "shopSelectionEmptyTitle": "No shop access yet",
+  "shopSelectionTitle": "Choose a shop",
+  "shopSelectionEmptyMessage": "This account is signed in, but it does not have any linked shop yet. Complete the first-shop setup on web or ask the platform owner to assign access.",
+  "shopSelectionMessage": "This account has access to multiple shops. Pick one workspace to continue and we will remember it on this device.",
+  "shopSelectionSignedInAs": "Signed in as {name}",
+  "@shopSelectionSignedInAs": {
     "placeholders": {
-      "phone": {
+      "name": {
         "type": "String"
       }
     }
   },
-  "purposeValue": "Purpose: {purpose}",
-  "@purposeValue": {
+  "shopSelectionNoContact": "No contact",
+  "shopSelectionPermissionsCount": "{count} permissions",
+  "@shopSelectionPermissionsCount": {
     "placeholders": {
-      "purpose": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "roleOwner": "Owner",
+  "roleStaff": "Staff",
+  "roleUnknown": "Member",
+  "settingsNoActiveShopTitle": "No active shop selected",
+  "settingsNoActiveShopMessage": "Choose a shop first to manage account, billing, and notification settings.",
+  "settingsUnavailableTitle": "Settings unavailable",
+  "settingsUnavailableMessage": "We could not load your account and billing details right now.",
+  "settingsSectionWorkspace": "Workspace",
+  "settingsSectionTools": "Tools",
+  "settingsSectionAccount": "Account",
+  "settingsSectionBilling": "Billing",
+  "settingsSectionNotifications": "Notifications",
+  "settingsProfileAndShopTitle": "Profile & Shop",
+  "settingsProfileAndShopSubtitle": "{accountName} · {shopName}",
+  "@settingsProfileAndShopSubtitle": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      },
+      "shopName": {
         "type": "String"
       }
     }
   },
-  "otpCodeLabel": "OTP code",
-  "verifying": "Verifying...",
-  "verifyAndSignIn": "Verify and sign in",
-  "enterOtpCodeError": "Please enter the OTP code.",
-  "noCampaignsAvailable": "No campaigns available.",
-  "descriptionLabel": "Description",
-  "campaignPeriodLabel": "Campaign period",
-  "noCouponsAvailable": "No coupons available.",
-  "amountValue": "Amount: {amount} MMK",
-  "@amountValue": {
+  "settingsSwitchShopTitle": "Switch Shop",
+  "settingsSwitchShopSubtitle": "Current: {shopName}",
+  "@settingsSwitchShopSubtitle": {
     "placeholders": {
+      "shopName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAppLanguageTitle": "App Language",
+  "settingsAppLanguageSubtitle": "Saved on this device",
+  "settingsTimezoneTitle": "Timezone",
+  "settingsTimezoneSubtitle": "Order and summary timestamps",
+  "settingsDataExportsTitle": "Data Exports",
+  "settingsDataExportsSubtitle": "Download orders, customers, deliveries, and staffs as CSV",
+  "settingsAccountEmailVerified": "Email verified",
+  "settingsAccountEmailPending": "Email verification pending",
+  "settingsNoEmailSet": "No email set",
+  "settingsPrimarySignInIdentifier": "Primary sign-in identifier",
+  "settingsNoPhoneSet": "No phone set",
+  "settingsOptionalContactNumber": "Optional contact number",
+  "settingsSignedInAccountTitle": "Signed-in account",
+  "settingsCurrentShopTitle": "Current workspace",
+  "settingsCurrentRoleTitle": "Access level",
+  "settingsAccountOwnerFallback": "Account owner",
+  "settingsLanguageSheetTitle": "Choose app language",
+  "settingsLanguageSheetSubtitle": "Switch between English and Myanmar on this device.",
+  "settingsEditAction": "Edit",
+  "settingsBillingNoActivePlan": "No active plan",
+  "settingsBillingOutstandingBalanceTitle": "Outstanding balance",
+  "settingsBillingAllSettled": "All invoices are settled",
+  "settingsBillingPaymentNeeded": "Payment needed to keep the shop active",
+  "settingsBillingTrialActiveTitle": "Free trial is active",
+  "settingsBillingTrialActiveMessage": "You can continue using the shop while the trial is active.",
+  "settingsBillingTrialEndsIn": "Trial ends in {duration}.",
+  "@settingsBillingTrialEndsIn": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBillingNeedsAttentionTitle": "Billing needs attention",
+  "settingsBillingNeedsAttentionMessage": "{overdueCount} overdue invoice(s) | {amount} MMK outstanding.",
+  "@settingsBillingNeedsAttentionMessage": {
+    "placeholders": {
+      "overdueCount": {
+        "type": "int"
+      },
       "amount": {
         "type": "String"
       }
     }
   },
-  "quantityValue": "Quantity: {quantity}",
-  "@quantityValue": {
+  "settingsBillingToday": "today",
+  "settingsBillingOneDay": "1 day",
+  "settingsBillingManyDays": "{count} days",
+  "@settingsBillingManyDays": {
     "placeholders": {
-      "quantity": {
-        "type": "String"
+      "count": {
+        "type": "int"
       }
     }
   },
-  "qtyValue": "Qty: {quantity}",
-  "@qtyValue": {
-    "placeholders": {
-      "quantity": {
-        "type": "String"
-      }
-    }
-  },
-  "expiresValue": "Expires: {date}",
-  "@expiresValue": {
+  "settingsBillingPeriodMonthly": "Billed monthly",
+  "settingsBillingPeriodYearly": "Billed yearly",
+  "settingsBillingPeriodTrial": "Trial period",
+  "settingsBillingPeriodUnavailable": "Billing cadence unavailable",
+  "settingsBillingStatusUnavailable": "No subscription status",
+  "settingsBillingNextBilling": "Next billing: {date}",
+  "@settingsBillingNextBilling": {
     "placeholders": {
       "date": {
         "type": "String"
       }
     }
   },
-  "alreadyRedeemed": "Already redeemed",
-  "redeemCoupon": "Redeem coupon",
-  "available": "Available",
-  "redeemed": "Redeemed",
-  "noLoyaltyHistoryFound": "No loyalty history found.",
-  "totalPoints": "Total points",
-  "noNotificationsAvailable": "No notifications available.",
-  "claimRewardTitle": "Claim reward",
-  "couponReward": "Coupon reward",
-  "couponIdValue": "Coupon ID: {couponId}",
-  "@couponIdValue": {
+  "settingsBillingCurrentPeriodEnds": "Current period ends {date}",
+  "@settingsBillingCurrentPeriodEnds": {
     "placeholders": {
-      "couponId": {
+      "date": {
         "type": "String"
       }
     }
   },
-  "codeValue": "Code: {code}",
-  "@codeValue": {
+  "settingsBillingNoDueDate": "No due date scheduled",
+  "settingsPlanCurrentPlan": "Current Plan",
+  "settingsPlanFreeTrial": "Free Trial",
+  "settingsPlanUnknownStatus": "Unknown",
+  "settingsPlanTrialActive": "Trial access is active for this shop.",
+  "settingsPlanTrialEndsOn": "Trial ends {date}",
+  "@settingsPlanTrialEndsOn": {
     "placeholders": {
-      "code": {
+      "date": {
         "type": "String"
       }
     }
   },
-  "rewardClaimSubmittedDemo": "Reward claim submitted (demo).",
-  "alreadyClaimed": "Already claimed",
-  "confirmClaim": "Confirm claim",
-  "moreAuthenticationTitle": "Authentication",
-  "signedIn": "Signed in",
-  "guestMode": "Guest mode",
-  "sessionValue": "Session: {token}",
-  "@sessionValue": {
+  "settingsPlanNextBillingOn": "Next billing on {date}",
+  "@settingsPlanNextBillingOn": {
     "placeholders": {
-      "token": {
+      "date": {
         "type": "String"
       }
     }
   },
-  "signInRegister": "Sign in / Register",
-  "signOut": "Sign out",
-  "loginRequiredTitle": "Login Required",
-  "loginRequiredMessage": "Please login to access this feature.",
-  "languageTitle": "Language",
-  "languageLabel": "App language",
-  "languageSystemDefault": "Use device language",
-  "languageEnglish": "English",
-  "languageMyanmar": "Myanmar (Burmese)",
-  "developerTitle": "Developer",
-  "openTalkerLogConsole": "Open Talker log console.",
-  "openLogDevTools": "Open Log DevTools"
+  "settingsPlanCurrentPeriodEndsOn": "Current period ends {date}",
+  "@settingsPlanCurrentPeriodEndsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPlanSubscriptionSynced": "Billing details synced from the current shop subscription.",
+  "notificationsOrderReminders": "Order Reminders",
+  "notificationsOrderRemindersDesc": "New and pending order alerts",
+  "notificationsDailySummary": "Daily Summary",
+  "notificationsDailySummaryDesc": "End-of-day report and recap",
+  "notificationsProductUpdates": "Product Updates",
+  "notificationsProductUpdatesDesc": "Feature news and selling tips",
+  "notificationsChannelInAppEmail": "In-app + email"
 }

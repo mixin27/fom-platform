@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:app_localizations/app_localizations.dart';
 import 'package:app_logger/app_logger.dart';
 import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
 import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
@@ -159,6 +161,7 @@ class AppRouter {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(
+            authBloc: _authBloc,
             navigationShell: navigationShell,
             networkConnectionService: _networkConnectionService,
           );
@@ -315,11 +318,13 @@ class AppRouter {
 
 class AppShell extends StatelessWidget {
   const AppShell({
+    required this.authBloc,
     required this.navigationShell,
     required this.networkConnectionService,
     super.key,
   });
 
+  final AuthBloc authBloc;
   final StatefulNavigationShell navigationShell;
   final NetworkConnectionService networkConnectionService;
 
@@ -352,36 +357,64 @@ class AppShell extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
+      bottomNavigationBar: BlocBuilder<AuthBloc, AuthState>(
+        bloc: authBloc,
+        builder: (context, authState) {
+          final l10n = context.l10n;
+          final canManageShopSettings =
+              authState.activeShop?.permissions.contains('shops.write') ??
+              false;
+
+          return NavigationBar(
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: (index) {
+              navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              );
+            },
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.receipt_long_outlined),
+                selectedIcon: const Icon(
+                  Icons.receipt_long,
+                  color: AppColors.softOrange,
+                ),
+                label: l10n.navOrders,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.people_outline),
+                selectedIcon: const Icon(
+                  Icons.people,
+                  color: AppColors.softOrange,
+                ),
+                label: l10n.navCustomers,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.bar_chart_outlined),
+                selectedIcon: const Icon(
+                  Icons.bar_chart,
+                  color: AppColors.softOrange,
+                ),
+                label: l10n.navReports,
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  canManageShopSettings
+                      ? Icons.settings_outlined
+                      : Icons.person_outline_rounded,
+                ),
+                selectedIcon: Icon(
+                  canManageShopSettings ? Icons.settings : Icons.person_rounded,
+                  color: AppColors.softOrange,
+                ),
+                label: canManageShopSettings
+                    ? l10n.navSettings
+                    : l10n.navAccount,
+              ),
+            ],
           );
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long, color: AppColors.softOrange),
-            label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people, color: AppColors.softOrange),
-            label: 'Customers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart, color: AppColors.softOrange),
-            label: 'Reports',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings, color: AppColors.softOrange),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }

@@ -51,6 +51,19 @@ export class AddShopMemberDto {
 
   @ApiPropertyOptional({
     type: [String],
+    example: ['cmrole_staff'],
+  })
+  @Transform(trimStringArray)
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @MaxLength(120, { each: true })
+  role_ids?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
     example: ['staff'],
   })
   @Transform(trimStringArray)

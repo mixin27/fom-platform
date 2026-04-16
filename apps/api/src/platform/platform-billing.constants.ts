@@ -303,7 +303,7 @@ export const defaultPlanCatalog = [
         label: 'Multi-shop management',
         description:
           'Enterprise-style multi-shop controls are not in this plan.',
-        availabilityStatus: 'unavailable',
+        availabilityStatus: 'available',
         sortOrder: 35,
       },
       {
@@ -468,7 +468,7 @@ export const defaultPlanCatalog = [
         label: 'Multi-shop management',
         description:
           'Enterprise-style multi-shop controls are not in this plan yet.',
-        availabilityStatus: 'unavailable',
+        availabilityStatus: 'available',
         sortOrder: 35,
       },
       {

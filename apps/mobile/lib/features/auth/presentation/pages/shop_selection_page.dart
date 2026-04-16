@@ -1,3 +1,4 @@
+import 'package:app_localizations/app_localizations.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,6 +31,8 @@ class _ShopSelectionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
           previous.errorMessage != current.errorMessage ||
@@ -60,7 +63,9 @@ class _ShopSelectionView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    shops.isEmpty ? 'No shop access yet' : 'Choose a shop',
+                    shops.isEmpty
+                        ? l10n.shopSelectionEmptyTitle
+                        : l10n.shopSelectionTitle,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: AppColors.textDark,
@@ -69,8 +74,8 @@ class _ShopSelectionView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     shops.isEmpty
-                        ? 'This account is signed in, but it does not have any linked shop yet. Complete the first-shop setup on web or ask the platform owner to assign access.'
-                        : 'This account has access to multiple shops. Pick one workspace to continue and we will remember it on this device.',
+                        ? l10n.shopSelectionEmptyMessage
+                        : l10n.shopSelectionMessage,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textMid,
                       height: 1.5,
@@ -83,7 +88,9 @@ class _ShopSelectionView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Signed in as ${state.user?.name ?? 'User'}',
+                            l10n.shopSelectionSignedInAs(
+                              state.user?.name ?? l10n.guestMode,
+                            ),
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   fontWeight: FontWeight.w800,
@@ -94,13 +101,13 @@ class _ShopSelectionView extends StatelessWidget {
                           Text(
                             state.user?.email ??
                                 state.user?.phone ??
-                                'No contact',
+                                l10n.shopSelectionNoContact,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textMid),
                           ),
                           const SizedBox(height: 20),
                           AppButton(
-                            text: 'Log out',
+                            text: l10n.signOut,
                             variant: AppButtonVariant.secondary,
                             onPressed: () {
                               context.read<AuthBloc>().add(
@@ -181,7 +188,7 @@ class _ShopSelectionView extends StatelessWidget {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              '${_formatRoleLabel(shop.role)} · ${shop.permissions.length} permissions',
+                                              '${_formatRoleLabel(context, shop.role)} · ${l10n.shopSelectionPermissionsCount(shop.permissions.length)}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -230,15 +237,16 @@ class _ShopSelectionView extends StatelessWidget {
   }
 }
 
-String _formatRoleLabel(String? role) {
+String _formatRoleLabel(BuildContext context, String? role) {
+  final l10n = context.l10n;
   final normalized = (role ?? '').trim().toLowerCase();
 
   switch (normalized) {
     case 'owner':
-      return 'Owner';
+      return l10n.roleOwner;
     case 'staff':
-      return 'Staff';
+      return l10n.roleStaff;
     default:
-      return normalized.isEmpty ? 'Member' : normalized;
+      return normalized.isEmpty ? l10n.roleUnknown : normalized;
   }
 }

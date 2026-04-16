@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BarChart3,
+  Building2,
   CreditCard,
   Download,
   LayoutDashboard,
@@ -22,6 +23,7 @@ import { cn } from "@workspace/ui/lib/utils"
 
 const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
+  workspace: Building2,
   orders: ShoppingCart,
   customers: Users,
   staffs: Users,
