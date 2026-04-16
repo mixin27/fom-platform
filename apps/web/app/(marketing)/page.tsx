@@ -127,7 +127,7 @@ const faqItems = [
 
 function formatPlanPrice(plan: MarketingPlan) {
   if (plan.price === 0) {
-    return "Free"
+    return plan.billing_period === "enterprise" ? "Contact Us" : "Free"
   }
 
   return new Intl.NumberFormat("en-US").format(plan.price)
@@ -141,6 +141,8 @@ function getPlanPeriodLabel(plan: MarketingPlan) {
       return "Monthly billing"
     case "yearly":
       return "Yearly billing"
+    case "enterprise":
+      return "Enterprise solutions"
     default:
       return plan.billing_period
   }
@@ -178,6 +180,10 @@ function getPlanSummary(
     return "Lower total yearly pricing for shops that run every day."
   }
 
+  if (plan.billing_period === "enterprise") {
+    return "Higher limits, custom roles, and dedicated support for multi-shop operations."
+  }
+
   return "Simple pricing for one shop subscription."
 }
 
@@ -193,6 +199,18 @@ function getFallbackPlanItems(
         "Upgrade later without losing shop data",
       ],
       unavailable: ["Continuous access after the trial window"],
+    }
+  }
+
+  if (plan.billing_period === "enterprise") {
+    return {
+      available: [
+        "Unlimited shops and workspace members",
+        "Higher numeric limits for orders and customers",
+        "Custom roles and permissions for larger teams",
+        "Dedicated implementation support and training",
+      ],
+      unavailable: [],
     }
   }
 
@@ -240,6 +258,10 @@ function getPlanActionLabel(plan: MarketingPlan, dashboardHref: string | null) {
 
   if (plan.billing_period === "trial") {
     return "Start free trial"
+  }
+
+  if (plan.billing_period === "enterprise") {
+    return "Contact sales"
   }
 
   return "Create shop account"

@@ -129,8 +129,9 @@ model Plan {
   price         Int
   currency      String         @default("MMK")
   billingPeriod String
-  isActive      Boolean        @default(true)
-  sortOrder     Int            @default(0)
+  isActive         Boolean        @default(true)
+  marketingVisible Boolean        @default(false)
+  sortOrder        Int            @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   subscriptions Subscription[]

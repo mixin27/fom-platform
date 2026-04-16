@@ -78,6 +78,7 @@ type PlanDraft = {
   price: string
   currency: string
   is_active: boolean
+  marketing_visible: boolean
   sort_order: string
   items: PlanDraftItem[]
   limits: PlanDraftLimit[]
@@ -124,6 +125,7 @@ function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
       price: "0",
       currency: "MMK",
       is_active: true,
+      marketing_visible: false,
       sort_order: "0",
       items: [],
       limits: [],
@@ -138,6 +140,7 @@ function toDraft(plan?: PlatformSettingsPlan): PlanDraft {
     price: String(plan.price),
     currency: plan.currency,
     is_active: plan.is_active,
+    marketing_visible: plan.marketing_visible,
     sort_order: String(plan.sort_order),
     items: plan.items.map((item, index) => ({
       id: item.id,
@@ -197,6 +200,7 @@ function buildPayload(draft: PlanDraft): PlatformPlanEditorInput {
     price: Number.parseInt(draft.price, 10) || 0,
     currency: draft.currency.trim().toUpperCase() || "MMK",
     is_active: draft.is_active,
+    marketing_visible: draft.marketing_visible,
     sort_order: Number.parseInt(draft.sort_order, 10) || 0,
     items: normalizePlanItems(draft.items),
     limits: normalizePlanLimits(draft.limits),
@@ -364,16 +368,33 @@ function PlanMetadataForm({
       <div className="flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3 xl:col-span-2">
         <div>
           <p className="text-sm font-medium text-[var(--fom-ink)]">
-            Show on pricing surfaces
+            Active in catalog
           </p>
           <p className="text-xs text-muted-foreground">
-            Enterprise billing-period plans are still excluded from the public marketing page.
+            Allow shops to subscribe to or renew this plan in their dashboard.
           </p>
         </div>
         <Switch
           checked={draft.is_active}
           onCheckedChange={(checked) =>
             setDraft((current) => ({ ...current, is_active: checked }))
+          }
+        />
+      </div>
+
+      <div className="flex items-center justify-between rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 py-3 xl:col-span-2">
+        <div>
+          <p className="text-sm font-medium text-[var(--fom-ink)]">
+            Marketing visibility
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Control whether this plan appears on the public landing page.
+          </p>
+        </div>
+        <Switch
+          checked={draft.marketing_visible}
+          onCheckedChange={(checked) =>
+            setDraft((current) => ({ ...current, marketing_visible: checked }))
           }
         />
       </div>

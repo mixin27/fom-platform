@@ -71,6 +71,7 @@ export type PlatformPlanOption = {
   price: number
   currency: string
   is_active: boolean
+  marketing_visible: boolean
   sort_order: number
   items: PlatformPlanItem[]
   limits: PlatformPlanLimit[]

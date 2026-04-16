@@ -121,6 +121,7 @@ type PlanOptionRow = {
   price: number;
   currency: string;
   is_active: boolean;
+  marketing_visible: boolean;
   sort_order: number;
   items: PlanItemRow[];
   limits: PlanLimitRow[];
@@ -1355,6 +1356,7 @@ export class PlatformService {
       body.currency === undefined &&
       body.billing_period === undefined &&
       body.is_active === undefined &&
+      body.marketing_visible === undefined &&
       body.sort_order === undefined &&
       body.items === undefined &&
       body.limits === undefined
@@ -1393,6 +1395,9 @@ export class PlatformService {
             ? { billingPeriod: body.billing_period.trim() }
             : {}),
           ...(body.is_active !== undefined ? { isActive: body.is_active } : {}),
+          ...(body.marketing_visible !== undefined
+            ? { marketingVisible: body.marketing_visible }
+            : {}),
           ...(body.sort_order !== undefined ? { sortOrder: body.sort_order } : {}),
         },
       });
@@ -1434,6 +1439,7 @@ export class PlatformService {
           currency: body.currency?.trim().toUpperCase() || 'MMK',
           billingPeriod: body.billing_period.trim(),
           isActive: body.is_active ?? true,
+          marketingVisible: body.marketing_visible ?? false,
           sortOrder: body.sort_order ?? 0,
         },
         select: { id: true },
@@ -1493,9 +1499,7 @@ export class PlatformService {
   async getPublicPlans() {
     const plans = await this.loadPlanOptions();
 
-    return plans.filter(
-      (plan) => plan.is_active && plan.billing_period !== 'enterprise',
-    );
+    return plans.filter((plan) => plan.is_active && plan.marketing_visible);
   }
 
   private async emitPlatformInvalidation(input: {
@@ -1676,6 +1680,7 @@ export class PlatformService {
       price: plan.price,
       currency: plan.currency,
       is_active: plan.isActive,
+      marketing_visible: plan.marketingVisible,
       sort_order: plan.sortOrder,
       shop_count: plan.subscriptions.length,
       collected_revenue: paidRevenue,
@@ -2759,6 +2764,7 @@ export class PlatformService {
       price: plan.price,
       currency: plan.currency,
       is_active: plan.isActive,
+      marketing_visible: plan.marketingVisible,
       sort_order: plan.sortOrder,
       items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
       limits: (plan.limits ?? []).map((limit: any) =>
