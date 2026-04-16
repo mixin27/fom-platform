@@ -26,6 +26,10 @@ class AppOrdersHomeHeader extends StatelessWidget {
     this.hasUnreadNotifications = false,
     this.leading,
     this.showTrailingActions = true,
+    this.todayOrdersLabel = "Today Orders",
+    this.revenueLabel = "Revenue",
+    this.revenueSubtitle = "MMK today",
+    this.pendingLabel = "Pending",
   });
 
   final String shopName;
@@ -45,6 +49,10 @@ class AppOrdersHomeHeader extends StatelessWidget {
   final bool hasUnreadNotifications;
   final Widget? leading;
   final bool showTrailingActions;
+  final String todayOrdersLabel;
+  final String revenueLabel;
+  final String revenueSubtitle;
+  final String pendingLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -158,10 +166,10 @@ class AppOrdersHomeHeader extends StatelessWidget {
                 children: [
                   Expanded(
                     child: AppSummaryCard(
-                      label: "Today Orders",
+                      label: todayOrdersLabel,
                       value: "$todayOrdersCount",
                       changeText: todayOrdersCount > 0
-                          ? "Active today"
+                          ? "Active orders"
                           : "No orders yet",
                       isPositiveChange: true,
                     ),
@@ -169,17 +177,17 @@ class AppOrdersHomeHeader extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: AppSummaryCard(
-                      label: "Revenue",
+                      label: revenueLabel,
                       value: todayRevenueText,
                       valueColor: AppColors.textDark,
-                      changeText: "MMK today",
+                      changeText: revenueSubtitle,
                       isPositiveChange: true,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: AppSummaryCard(
-                      label: "Pending",
+                      label: pendingLabel,
                       value: "$pendingCount",
                       valueColor: AppColors.yellow,
                       changeText: pendingCount > 0
