@@ -23,6 +23,7 @@ import {
 type RegisterPageProps = {
   searchParams?: Promise<{
     error?: string
+    message?: string
   }>
 }
 
@@ -43,6 +44,8 @@ export default async function RegisterPage({
     params?.error === "shop_name_unavailable"
   const trialUnavailable = params?.error === "trial_unavailable"
   const registrationFailed = params?.error === "registration_failed"
+  const validationError = params?.error === "validation_error"
+  const customMessage = params?.message
 
   return (
     <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
@@ -54,7 +57,12 @@ export default async function RegisterPage({
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
             <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              Fill in all fields with a valid email and a password of at least 8 characters.
+              Fill in all fields with a valid email and a password of at least 1 uppercase, 1 lowercase, 1 number and 8 characters long.
+            </div>
+          ) : null}
+          {validationError ? (
+            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 first-letter:uppercase">
+              {customMessage || "Invalid registration data provided."}
             </div>
           ) : null}
           {emailInUse ? (

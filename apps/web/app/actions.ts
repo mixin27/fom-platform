@@ -156,7 +156,14 @@ export async function registerAction(formData: FormData) {
   const email = getFieldValue(formData, "email").toLowerCase()
   const password = getFieldValue(formData, "password")
 
-  if (!fullName || !shopName || !ensureEmail(email) || password.length < 8) {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
+  if (
+    !fullName ||
+    !shopName ||
+    !ensureEmail(email) ||
+    password.length < 8 ||
+    !passwordRegex.test(password)
+  ) {
     redirect("/register?error=invalid_registration")
   }
 
@@ -202,8 +209,20 @@ export async function registerAction(formData: FormData) {
     await persistSession(session)
     redirect(defaultPathForSession(session))
   } catch (error) {
-    if (error instanceof AuthApiError && error.code === "CONFLICT") {
-      redirect("/register?error=email_in_use")
+    if (error instanceof AuthApiError) {
+      if (error.code === "CONFLICT") {
+        redirect("/register?error=email_in_use")
+      }
+
+      if (error.code === "VALIDATION_ERROR" || error.status === 422) {
+        const passwordError = error.details?.find((d) => d.field === "password")
+          ?.errors[0]
+        const genericMessage =
+          passwordError || error.message || "Invalid registration data"
+        redirect(
+          `/register?error=validation_error&message=${encodeURIComponent(genericMessage)}`
+        )
+      }
     }
 
     redirect("/register?error=registration_failed")
