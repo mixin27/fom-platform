@@ -26,7 +26,6 @@ import { TemplatesService } from './templates.service';
 
 @Controller('api/v1/shops/:shopId/templates')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.templatesManagement)
 @ApiTags('Message Templates')
 @ApiBearerAuth('access-token')
 export class TemplatesController {
@@ -34,6 +33,7 @@ export class TemplatesController {
 
   @Get()
   @RequirePermissions(permissions.templatesRead)
+  @RequirePlanFeatures(subscriptionFeatures.templatesManagement)
   @ApiOperation({ summary: 'List message templates for a shop' })
   listTemplates(
     @CurrentUser() currentUser: AuthenticatedUser,

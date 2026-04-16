@@ -28,6 +28,7 @@ type AuthenticatedRequestOptions = {
   }
   requiredAccess?: RequiredAccess
   preferFreshSession?: boolean
+  allowForbidden?: boolean
 }
 
 function redirectForMissingAccess(session: AppSession, requiredAccess: RequiredAccess) {
@@ -76,6 +77,7 @@ export async function requestAuthenticatedApiEnvelope<T>({
   retryPath,
   init,
   requiredAccess = "any",
+  allowForbidden = false,
 }: AuthenticatedRequestOptions): Promise<ApiSuccess<T>> {
   const session = await getSession()
 
@@ -101,6 +103,13 @@ export async function requestAuthenticatedApiEnvelope<T>({
     }
 
     if (error.status === 403) {
+      if (allowForbidden) {
+        return {
+          success: true,
+          data: null as T,
+          meta: { forbidden: true, message: error.message },
+        }
+      }
       throw error
     }
 
@@ -130,6 +139,14 @@ export async function requestAuthenticatedApiEnvelope<T>({
       }
 
       if (retryError instanceof AuthApiError && retryError.status === 403) {
+        if (allowForbidden) {
+          return {
+            success: true,
+            data: null as T,
+            meta: { forbidden: true, message: retryError.message },
+          }
+        }
+
         if (requiredAccess !== "any") {
           redirectForMissingAccess(refreshedSession, requiredAccess)
         }

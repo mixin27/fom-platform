@@ -81,7 +81,7 @@ export class ShopsController {
 
   @Get(':shopId/billing')
   @UseGuards(RbacGuard)
-  @RequirePermissions(permissions.shopsWrite)
+  @RequirePermissions(permissions.shopsRead)
   @ApiOperation({ summary: 'Get shop subscription and recent billing history' })
   getBilling(
     @CurrentUser() currentUser: AuthenticatedUser,

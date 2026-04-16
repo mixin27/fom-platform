@@ -467,7 +467,8 @@ export async function getShopPortalContext() {
 async function shopRequest<T>(
   path: string,
   searchParams?: SearchParamsRecord,
-  retryPath = "/dashboard"
+  retryPath = "/dashboard",
+  allowForbidden = false
 ): Promise<ApiSuccess<T>> {
   const { activeShop } = await getShopPortalContext()
 
@@ -475,6 +476,7 @@ async function shopRequest<T>(
     path: `/api/v1/shops/${activeShop.id}${path}${buildQueryString(searchParams)}`,
     retryPath,
     requiredAccess: "shop",
+    allowForbidden,
   })
 }
 
@@ -488,7 +490,7 @@ export async function getShopMembers(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/settings${buildQueryString(searchParams)}`
-  return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath)
+  return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopRoles(retryPath = "/dashboard/staffs") {
@@ -505,7 +507,7 @@ export async function getShopAuditLogs(
 }
 
 export async function getShopBilling(retryPath = "/dashboard/settings") {
-  return shopRequest<ShopBilling>("/billing", undefined, retryPath)
+  return shopRequest<ShopBilling>("/billing", undefined, retryPath, true)
 }
 
 export async function getShopOrders(
@@ -514,11 +516,11 @@ export async function getShopOrders(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/orders${buildQueryString(searchParams)}`
-  return shopRequest<ShopOrder[]>("/orders", searchParams, resolvedRetryPath)
+  return shopRequest<ShopOrder[]>("/orders", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopOrder(orderId: string, retryPath = "/dashboard/orders") {
-  return shopRequest<ShopOrder>(`/orders/${orderId}`, undefined, retryPath)
+  return shopRequest<ShopOrder>(`/orders/${orderId}`, undefined, retryPath, true)
 }
 
 export async function getShopCustomers(
@@ -527,14 +529,14 @@ export async function getShopCustomers(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/customers${buildQueryString(searchParams)}`
-  return shopRequest<ShopCustomer[]>("/customers", searchParams, resolvedRetryPath)
+  return shopRequest<ShopCustomer[]>("/customers", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopCustomer(
   customerId: string,
   retryPath = "/dashboard/customers"
 ) {
-  return shopRequest<ShopCustomer>(`/customers/${customerId}`, undefined, retryPath)
+  return shopRequest<ShopCustomer>(`/customers/${customerId}`, undefined, retryPath, true)
 }
 
 export async function getShopDeliveries(
@@ -543,7 +545,7 @@ export async function getShopDeliveries(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/deliveries${buildQueryString(searchParams)}`
-  return shopRequest<ShopDelivery[]>("/deliveries", searchParams, resolvedRetryPath)
+  return shopRequest<ShopDelivery[]>("/deliveries", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopTemplates(
@@ -552,7 +554,7 @@ export async function getShopTemplates(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/templates${buildQueryString(searchParams)}`
-  return shopRequest<ShopTemplate[]>("/templates", searchParams, resolvedRetryPath)
+  return shopRequest<ShopTemplate[]>("/templates", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopDailySummary(
@@ -561,7 +563,12 @@ export async function getShopDailySummary(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/reports${buildQueryString(searchParams)}`
-  return shopRequest<ShopDailySummary>("/summaries/daily", searchParams, resolvedRetryPath)
+  return shopRequest<ShopDailySummary>(
+    "/summaries/daily",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
 export async function getShopWeeklyReport(

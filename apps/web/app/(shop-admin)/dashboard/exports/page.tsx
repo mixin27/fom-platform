@@ -53,15 +53,18 @@ export default async function ShopExportsPage({
     getShopBilling("/dashboard/exports"),
   ])
   const billing = billingResponse.data
+  const isBillingForbidden = billingResponse.meta?.forbidden === true
   const permissions = new Set(activeShop.membership.permissions)
+
   const availableFeatures = new Set(
-    billing.plan?.items
+    billing?.plan?.items
       .filter((item) => item.availability_status === "available")
       .map((item) => item.code) ?? []
   )
-  const exportEnabled = availableFeatures.has("exports.csv")
+
+  const exportEnabled = !isBillingForbidden && availableFeatures.has("exports.csv")
   const memberExportEnabled = exportEnabled && availableFeatures.has("team.members")
-  const importEnabled = availableFeatures.has("orders.import_spreadsheet")
+  const importEnabled = !isBillingForbidden && availableFeatures.has("orders.import_spreadsheet")
   const canWriteOrders = permissions.has("orders.write")
   const importDisabledReason = !canWriteOrders
     ? "You need order write permission to import historical orders."

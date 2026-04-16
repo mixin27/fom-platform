@@ -164,7 +164,7 @@ export class ShopsService {
   }
 
   async getBilling(currentUser: AuthenticatedUser, shopId: string) {
-    await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
     await this.subscriptionLifecycle.expireElapsedTrials();
 
     const shop = await this.prisma.shop.findUnique({

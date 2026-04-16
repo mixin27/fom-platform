@@ -16,7 +16,6 @@ import { SummariesService } from './summaries.service';
 
 @Controller('api/v1/shops/:shopId/reports')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.reportsAnalytics)
 @ApiTags('Reports')
 @ApiBearerAuth('access-token')
 export class ReportsController {
@@ -24,6 +23,7 @@ export class ReportsController {
 
   @Get('weekly')
   @RequirePermissions(permissions.summariesRead)
+  @RequirePlanFeatures(subscriptionFeatures.reportsAnalytics)
   @ApiOperation({ summary: 'Get the weekly report for a shop' })
   getWeeklyReport(
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -37,6 +37,7 @@ export class ReportsController {
 
   @Get('monthly')
   @RequirePermissions(permissions.summariesRead)
+  @RequirePlanFeatures(subscriptionFeatures.reportsAnalytics)
   @ApiOperation({ summary: 'Get the monthly report for a shop' })
   getMonthlyReport(
     @CurrentUser() currentUser: AuthenticatedUser,
