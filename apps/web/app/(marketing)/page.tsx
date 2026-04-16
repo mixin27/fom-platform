@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import {
   ArrowRight,
@@ -51,24 +52,32 @@ const featureCards = [
     description:
       "Copy a customer's message, paste into the app, and fields auto-fill. No retyping, fewer mistakes, and faster order entry.",
     icon: ScanSearch,
-  },
-  {
-    title: "One-tap status updates",
-    description:
-      "New to confirmed to shipping to delivered. Keep the whole day moving without digging through multiple tools.",
-    icon: Truck,
+    image: "/screenshots/order-parsing-result.png",
+    colSpan: "md:col-span-2",
   },
   {
     title: "Daily revenue summary",
     description:
       "See today's order count, revenue, and delivery rate in one clean screen made for shop owners.",
     icon: Store,
+    image: "/screenshots/daily-report.png",
+    colSpan: "md:col-span-1",
+  },
+  {
+    title: "One-tap status updates",
+    description:
+      "New to confirmed to shipping to delivered. Keep the whole day moving without digging through multiple tools.",
+    icon: Truck,
+    image: "/screenshots/order-detail-page.png",
+    colSpan: "md:col-span-1",
   },
   {
     title: "Smart search and customer memory",
     description:
       "Find by name, phone, or product and keep lightweight customer history attached to every order.",
     icon: Search,
+    image: "/screenshots/customer-home-page.png",
+    colSpan: "md:col-span-2",
   },
 ]
 
@@ -249,7 +258,7 @@ export default async function LandingPage() {
       <section className="fom-marketing-hero relative overflow-hidden text-white">
         <div className="fom-marketing-grid absolute inset-0" />
         <div className="fom-marketing-glow absolute inset-0" />
-        <div className="relative mx-auto grid w-full max-w-[1120px] gap-14 px-6 py-24 lg:grid-cols-[1fr_256px] lg:py-40">
+        <div className="relative mx-auto grid w-full max-w-[1120px] gap-14 px-6 py-24 lg:grid-cols-[1fr_360px] lg:gap-20 lg:py-40">
           <div className="flex max-w-[560px] flex-col gap-7">
             <Badge className="w-fit border border-[rgba(244,98,42,0.28)] bg-[rgba(244,98,42,0.14)] text-[#ffb088] hover:bg-[rgba(244,98,42,0.14)]">
               Order management for Facebook-first shops
@@ -321,59 +330,16 @@ export default async function LandingPage() {
             </div>
           </div>
           <div className="flex items-center justify-center">
-            <div className="w-[256px] rounded-[36px] border border-white/10 bg-[#1a1a28] p-4 shadow-[0_48px_96px_rgba(0,0,0,0.7)]">
-              <div className="mb-3 flex items-center justify-between text-[10px] font-bold text-white/45">
-                <span>9:41</span>
-                <span>Ma Aye Shop</span>
-              </div>
-              <div className="mb-3 rounded-xl bg-white/7 p-3">
-                <p className="text-xs font-bold text-white">Today's summary</p>
-                <p className="mt-1 text-[9px] text-white/38">
-                  Orders moving right now
-                </p>
-              </div>
-              <div className="mb-3 grid grid-cols-3 gap-2">
-                <div className="rounded-lg bg-white/6 p-2 text-center">
-                  <p className="text-sm font-extrabold text-white">23</p>
-                  <p className="text-[8px] text-white/35">Orders</p>
-                </div>
-                <div className="rounded-lg bg-white/6 p-2 text-center">
-                  <p className="text-sm font-extrabold text-white">11</p>
-                  <p className="text-[8px] text-white/35">Delivered</p>
-                </div>
-                <div className="rounded-lg bg-white/6 p-2 text-center">
-                  <p className="text-sm font-extrabold text-white">8</p>
-                  <p className="text-[8px] text-white/35">Pending</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                {[
-                  {
-                    name: "Silk Longyi x2",
-                    color: "bg-[var(--fom-orange)]",
-                    badge: "NEW",
-                  },
-                  {
-                    name: "Men Shirt x1",
-                    color: "bg-[var(--fom-teal)]",
-                    badge: "OK",
-                  },
-                  { name: "Handbag x1", color: "bg-[#22C55E]", badge: "DONE" },
-                ].map((item) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center gap-2 rounded-[10px] bg-white/6 p-2.5"
-                  >
-                    <span className={`h-9 w-1 rounded-full ${item.color}`} />
-                    <span className="flex-1 text-[10px] font-bold text-white">
-                      {item.name}
-                    </span>
-                    <span className="rounded-full bg-white/10 px-2 py-1 text-[7px] font-extrabold text-white/72">
-                      {item.badge}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            <div className="relative mx-auto flex w-[260px] items-center justify-center md:w-[280px] lg:w-[320px]">
+              <div className="absolute inset-x-0 top-[40px] bottom-[-20px] rounded-[3rem] bg-gradient-to-tr from-[var(--fom-orange)] to-[var(--fom-teal)] opacity-30 blur-3xl lg:opacity-40"></div>
+              <Image
+                src="/screenshots/orders-home-page.png"
+                alt="Orders Dashboard"
+                width={320}
+                height={693}
+                priority
+                className="relative rounded-[2rem] border-[6px] border-[#1a1a28] shadow-[0_48px_96px_rgba(0,0,0,0.7)] animate-hero-float lg:rounded-[2.5rem] lg:border-[8px]"
+              />
             </div>
           </div>
         </div>
@@ -441,65 +407,40 @@ export default async function LandingPage() {
               work faster without losing context.
             </p>
           </div>
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <Card className="border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)] md:col-span-2">
-              <CardContent className="grid gap-6 p-6 md:grid-cols-[1fr_220px]">
-                <div className="flex flex-col gap-4">
-                  <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/10 text-[var(--fom-orange)]">
-                    <ScanSearch className="size-5" />
-                  </span>
-                  <div>
-                    <h3 className="text-2xl font-semibold text-[var(--fom-ink)]">
-                      Paste from Messenger
-                    </h3>
-                    <p className="mt-3 text-sm leading-7 text-[var(--fom-slate)]">
-                      Copy a customer message, paste into the app, and fields
-                      auto-fill. Adding an order takes seconds instead of a
-                      slow, error-prone re-entry process.
-                    </p>
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-[#fafaf8] p-4">
-                  <div className="flex flex-col gap-3">
-                    {["Name", "Phone", "Address"].map((label, index) => (
-                      <div key={label} className="flex items-center gap-3">
-                        <span
-                          className={`size-3 rounded-full ${
-                            index === 0
-                              ? "bg-[var(--fom-orange)]"
-                              : index === 1
-                                ? "bg-[var(--fom-teal)]"
-                                : "bg-[#22C55E]"
-                          }`}
-                        />
-                        <span className="h-2 flex-1 rounded-full bg-[var(--fom-marketing-border)]" />
-                      </div>
-                    ))}
-                    <p className="pt-2 text-center text-[10px] font-medium text-muted-foreground">
-                      10 sec to add an order
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            {featureCards.slice(1).map((feature) => (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {featureCards.map((feature, index) => (
               <Card
                 key={feature.title}
-                className="border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)]"
+                className={`overflow-hidden border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)] ${feature.colSpan}`}
               >
-                <CardHeader>
-                  <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/8 text-[var(--fom-orange)]">
-                    <feature.icon className="size-5" />
-                  </span>
-                  <CardTitle className="pt-2 text-xl">
-                    {feature.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-7 text-[var(--fom-slate)]">
-                    {feature.description}
-                  </p>
-                </CardContent>
+                <div
+                  className={`flex h-full p-0 ${feature.colSpan === "md:col-span-2" ? "flex-col md:flex-row" : "flex-col"}`}
+                >
+                  <div className="flex flex-1 flex-col gap-4 p-8">
+                    <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-[var(--fom-orange)]/10 text-[var(--fom-orange)]">
+                      <feature.icon className="size-6" />
+                    </span>
+                    <div>
+                      <h3 className="text-xl font-semibold tracking-tight text-[var(--fom-ink)] md:text-2xl">
+                        {feature.title}
+                      </h3>
+                      <p className="mt-3 text-[15px] leading-7 text-[var(--fom-slate)]">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`flex items-end justify-center bg-gradient-to-t from-[var(--fom-teal)]/5 to-[var(--fom-orange)]/5 px-8 pt-8 ${feature.colSpan === "md:col-span-2" ? "md:w-[320px] md:flex-shrink-0 lg:w-[380px]" : "mt-auto"}`}
+                  >
+                    <Image
+                      src={feature.image}
+                      alt={feature.title}
+                      width={280}
+                      height={580}
+                      className={`w-full max-w-[280px] rounded-t-[20px] border-x-[6px] border-t-[6px] border-[#1a1a28] object-cover object-top shadow-[0_32px_80px_rgba(0,0,0,0.15)] ${feature.colSpan === "md:col-span-2" ? "h-[280px] md:h-[380px]" : "h-[280px]"}`}
+                    />
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
