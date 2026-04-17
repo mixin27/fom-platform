@@ -380,6 +380,7 @@ export async function getPlatformSupport() {
       onboarding_items: number
       billing_items: number
       public_contact_inbox: number
+      payment_proof_queue: number
     }
     issues: Array<{
       id: string
@@ -413,6 +414,26 @@ export async function getPlatformSupport() {
         created_at: string
       }>
     }
+    payment_proofs: Array<{
+      id: string
+      shop_id: string
+      shop_name: string
+      payment_id: string
+      invoice_no: string
+      amount_claimed: number
+      currency_claimed: string
+      payment_channel: string
+      paid_at: string | null
+      sender_name: string | null
+      sender_phone: string | null
+      transaction_ref: string | null
+      note: string | null
+      status: string
+      admin_note: string | null
+      reviewed_at: string | null
+      reviewed_by: { id: string; name: string } | null
+      created_at: string
+    }>
     health: {
       total_shops: number
       active_shops: number

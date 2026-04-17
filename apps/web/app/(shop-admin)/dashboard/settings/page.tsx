@@ -27,6 +27,7 @@ import {
 } from "@/lib/platform/format"
 import {
   addShopMemberFromFormAction,
+  submitShopPaymentProofFromFormAction,
   updateCurrentUserProfileFromFormAction,
   updateShopMemberFromFormAction,
   updateShopProfileFromFormAction,
@@ -586,6 +587,102 @@ export default async function ShopSettingsPage({
           </CardContent>
         </Card>
       )}
+
+      {canManageShop ? (
+        <div className="grid gap-3 xl:grid-cols-[0.95fr_1.05fr]">
+          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+            <CardHeader className="pb-3">
+              <CardDescription>Manual payment flow</CardDescription>
+              <CardTitle>Submit payment proof</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <form
+                action={submitShopPaymentProofFromFormAction}
+                className="flex flex-col gap-2.5"
+              >
+                <input type="hidden" name="return_to" value={currentHref} />
+                <input type="hidden" name="shop_id" value={activeShop.id} />
+                <Input name="invoice_no" placeholder="Invoice number (INV-...)" />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    name="amount_claimed"
+                    type="number"
+                    min={0}
+                    placeholder="Amount paid"
+                  />
+                  <Input
+                    name="currency_claimed"
+                    defaultValue={billing?.overview.plan_currency ?? "MMK"}
+                    placeholder="Currency"
+                  />
+                </div>
+                <Input
+                  name="payment_channel"
+                  placeholder="Channel (KBZPay, WavePay, bank transfer)"
+                />
+                <Input name="paid_at" type="datetime-local" />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input name="sender_name" placeholder="Sender name (optional)" />
+                  <Input name="sender_phone" placeholder="Sender phone (optional)" />
+                </div>
+                <Input
+                  name="transaction_ref"
+                  placeholder="Transaction ref (optional)"
+                />
+                <Input name="note" placeholder="Optional note" />
+                <Button type="submit" size="sm">
+                  Submit proof
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <PlatformDataTable
+            title="Submitted payment proofs"
+            description="Review status from platform operations"
+            rows={billing?.payment_proofs.slice(0, 10) ?? []}
+            emptyMessage="No payment proofs submitted yet."
+            footer={`${Math.min(billing?.payment_proofs.length ?? 0, 10)} proof record${
+              (billing?.payment_proofs.length ?? 0) === 1 ? "" : "s"
+            } visible`}
+            columns={[
+              {
+                key: "invoice",
+                header: "Invoice",
+                render: (proof) => (
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-foreground">
+                      {proof.invoice_no}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatCurrency(proof.amount_claimed, proof.currency_claimed)} ·{" "}
+                      {proof.payment_channel}
+                    </span>
+                  </div>
+                ),
+              },
+              {
+                key: "status",
+                header: "Status",
+                render: (proof) => <PlatformStatusBadge status={proof.status} />,
+              },
+              {
+                key: "submitted",
+                header: "Submitted",
+                render: (proof) => formatRelativeDate(proof.created_at),
+              },
+              {
+                key: "reviewed",
+                header: "Reviewed",
+                render: (proof) =>
+                  proof.reviewed_at
+                    ? `${formatRelativeDate(proof.reviewed_at)}${proof.reviewed_by ? ` by ${proof.reviewed_by.name}` : ""}`
+                    : "Pending",
+              },
+            ]}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

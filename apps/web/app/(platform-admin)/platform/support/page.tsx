@@ -19,6 +19,7 @@ import {
 import {
   archivePublicContactSubmissionAction,
   createPlatformSupportIssueFromFormAction,
+  reviewPaymentProofAction,
   updatePlatformSupportIssueFromFormAction,
 } from "./actions"
 import { Button } from "@workspace/ui/components/button"
@@ -44,6 +45,7 @@ export default async function PlatformSupportPage({
   const data = response.data
   const publicSubmissions = data.public_contact?.submissions ?? []
   const publicInboxCount = data.overview.public_contact_inbox ?? 0
+  const paymentProofs = data.payment_proofs ?? []
   const notice = getSingleSearchParam(params.notice)
   const error = getSingleSearchParam(params.error)
 
@@ -107,7 +109,94 @@ export default async function PlatformSupportPage({
           icon={Inbox}
           accent="teal"
         />
+        <DashboardStatCard
+          title="Payment proof queue"
+          value={String(data.overview.payment_proof_queue ?? 0)}
+          detail="Submitted manual payment confirmations."
+          delta="Billing proof"
+          icon={AlertTriangle}
+          accent="sunset"
+        />
       </div>
+
+      <PlatformDataTable
+        title="Payment proof queue"
+        description="Manual transfers awaiting finance review"
+        rows={paymentProofs}
+        emptyMessage="No payment proofs waiting for review."
+        footer={`Showing ${paymentProofs.length} payment proof record(s)`}
+        columns={[
+          {
+            key: "shop",
+            header: "Shop / Invoice",
+            render: (proof) => (
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-[var(--fom-ink)]">
+                  {proof.shop_name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {proof.invoice_no}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "claim",
+            header: "Claim",
+            render: (proof) => (
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-[var(--fom-ink)]">
+                  {proof.amount_claimed.toLocaleString()} {proof.currency_claimed}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {proof.payment_channel}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (proof) => (
+              <PlatformStatusBadge status={proof.status} label={proof.status} />
+            ),
+          },
+          {
+            key: "submitted",
+            header: "Submitted",
+            render: (proof) => formatRelativeDate(proof.created_at),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            render: (proof) => (
+              <div className="flex flex-wrap justify-end gap-2">
+                <form action={reviewPaymentProofAction}>
+                  <input type="hidden" name="proof_id" value={proof.id} />
+                  <input type="hidden" name="status" value="approved" />
+                  <Button type="submit" size="sm">
+                    Approve
+                  </Button>
+                </form>
+                <form action={reviewPaymentProofAction}>
+                  <input type="hidden" name="proof_id" value={proof.id} />
+                  <input type="hidden" name="status" value="rejected" />
+                  <input
+                    type="hidden"
+                    name="admin_note"
+                    value="Rejected from support workspace."
+                  />
+                  <Button type="submit" size="sm" variant="outline">
+                    Reject
+                  </Button>
+                </form>
+              </div>
+            ),
+            className: "w-[220px] px-4 py-2.5 text-right",
+            cellClassName: "px-4 py-3 text-right",
+          },
+        ]}
+      />
 
       <PlatformDataTable
         title="Public contact queue"

@@ -144,3 +144,38 @@ export async function archivePublicContactSubmissionAction(formData: FormData) {
 
   redirectSupport({ notice: "Contact message archived." })
 }
+
+export async function reviewPaymentProofAction(formData: FormData) {
+  const proofId = normalizeTextField(formData.get("proof_id"))
+  const status = normalizeTextField(formData.get("status"))
+  const adminNote = normalizeTextField(formData.get("admin_note"))
+
+  if (!proofId || !status) {
+    redirectSupport({
+      error: "Payment proof ID and status are required.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/platform/payment-proofs/${proofId}`,
+      preferFreshSession: true,
+      requiredAccess: "platform",
+      init: {
+        method: "PATCH",
+        json: {
+          status,
+          ...(adminNote ? { admin_note: adminNote } : {}),
+        },
+      },
+    })
+
+    revalidatePlatformSupportWorkspace()
+  } catch (error) {
+    redirectSupport({
+      error: toActionMessage(error, "Unable to review this payment proof."),
+    })
+  }
+
+  redirectSupport({ notice: "Payment proof review updated." })
+}

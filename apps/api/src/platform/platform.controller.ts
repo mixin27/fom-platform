@@ -32,6 +32,9 @@ import { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings
 import { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
+import {
+  UpdatePlatformPaymentProofDto,
+} from './dto/update-platform-payment-proof.dto';
 import { PlatformService } from './platform.service';
 import { UpdatePublicContactSubmissionDto } from '../public-contact/dto/update-public-contact-submission.dto';
 import { PublicContactService } from '../public-contact/public-contact.service';
@@ -202,6 +205,20 @@ export class PlatformController {
     return ok(
       this.publicContactService.updateSubmissionAsPlatform(submissionId, body),
     );
+  }
+
+  @Patch('payment-proofs/:proofId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportWrite)
+  @ApiOperation({
+    summary: 'Review a submitted manual payment proof',
+  })
+  updatePaymentProof(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('proofId') proofId: string,
+    @Body() body: UpdatePlatformPaymentProofDto,
+  ) {
+    return ok(this.platformService.updatePaymentProof(currentUser, proofId, body));
   }
 
   @Get('settings')

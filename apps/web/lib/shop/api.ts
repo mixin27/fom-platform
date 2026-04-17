@@ -300,6 +300,27 @@ export type ShopBilling = {
     created_at: string
     updated_at: string
   }>
+  payment_proofs: Array<{
+    id: string
+    payment_id: string
+    invoice_no: string
+    amount_claimed: number
+    currency_claimed: string
+    payment_channel: string
+    paid_at: string | null
+    sender_name: string | null
+    sender_phone: string | null
+    transaction_ref: string | null
+    note: string | null
+    status: string
+    admin_note: string | null
+    reviewed_at: string | null
+    reviewed_by: {
+      id: string
+      name: string
+    } | null
+    created_at: string
+  }>
 }
 
 export type ShopDailySummary = {

@@ -27,6 +27,10 @@ import type { UpdatePlatformSettingsProfileDto } from './dto/update-platform-set
 import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import type { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
+import {
+  paymentProofStatuses,
+  type UpdatePlatformPaymentProofDto,
+} from './dto/update-platform-payment-proof.dto';
 import { platformSubscriptionStatuses } from './platform-billing.constants';
 import { subscriptionFeatureCatalog } from './subscription-feature.constants';
 import { subscriptionLimitCatalog } from './subscription-limit.constants';
@@ -1105,6 +1109,30 @@ export class PlatformService {
     const issues = await this.syncAndLoadSupportIssues(tenants, payments, now);
     const publicContact = await this.publicContactService.listInboxForPlatform();
 
+    const paymentProofs = await this.prisma.paymentProofSubmission.findMany({
+      where: {
+        status: {
+          in: ['submitted', 'suspicious'],
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      take: 100,
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        reviewedByUser: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
     return {
       overview: {
         open_items: issues.length,
@@ -1114,9 +1142,36 @@ export class PlatformService {
           .length,
         billing_items: issues.filter((issue) => issue.kind === 'billing').length,
         public_contact_inbox: publicContact.open_count,
+        payment_proof_queue: paymentProofs.length,
       },
       issues,
       public_contact: publicContact,
+      payment_proofs: paymentProofs.map((proof) => ({
+        id: proof.id,
+        shop_id: proof.shopId,
+        shop_name: proof.shop?.name ?? 'Unknown shop',
+        payment_id: proof.paymentId,
+        invoice_no: proof.invoiceNoSnapshot,
+        amount_claimed: proof.amountClaimed,
+        currency_claimed: proof.currencyClaimed,
+        payment_channel: proof.paymentChannel,
+        paid_at: proof.paidAt?.toISOString() ?? null,
+        sender_name: proof.senderName,
+        sender_phone: proof.senderPhone,
+        transaction_ref: proof.transactionRef,
+        note: proof.note,
+        status: proof.status,
+        admin_note: proof.adminNote,
+        reviewed_at: proof.reviewedAt?.toISOString() ?? null,
+        reviewed_by:
+          proof.reviewedByUser === null
+            ? null
+            : {
+                id: proof.reviewedByUser.id,
+                name: proof.reviewedByUser.name,
+              },
+        created_at: proof.createdAt.toISOString(),
+      })),
       health: {
         total_shops: tenants.length,
         active_shops: tenants.filter((tenant) => tenant.status === 'active')
@@ -1133,6 +1188,89 @@ export class PlatformService {
         total_orders: tenant.total_orders,
         last_active_at: tenant.last_active_at,
       })),
+    };
+  }
+
+  async updatePaymentProof(
+    currentUser: AuthenticatedUser,
+    proofId: string,
+    body: UpdatePlatformPaymentProofDto,
+  ) {
+    const proof = await this.prisma.paymentProofSubmission.findUnique({
+      where: { id: proofId },
+      include: {
+        payment: {
+          include: {
+            subscription: true,
+          },
+        },
+      },
+    });
+
+    if (!proof) {
+      throw notFoundError('Payment proof not found');
+    }
+
+    if (body.status === undefined && body.admin_note === undefined) {
+      throw validationError([
+        {
+          field: 'body',
+          errors: ['Provide status or admin_note to update'],
+        },
+      ]);
+    }
+
+    const nextStatusRaw = body.status ?? proof.status;
+    if (!paymentProofStatuses.includes(nextStatusRaw as (typeof paymentProofStatuses)[number])) {
+      throw validationError([
+        { field: 'status', errors: ['Invalid payment proof status'] },
+      ]);
+    }
+    const nextStatus = nextStatusRaw as (typeof paymentProofStatuses)[number];
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.paymentProofSubmission.update({
+        where: { id: proofId },
+        data: {
+          ...(body.status !== undefined ? { status: body.status } : {}),
+          ...(body.admin_note !== undefined
+            ? { adminNote: body.admin_note?.trim() || null }
+            : {}),
+          ...(body.status !== undefined
+            ? {
+                reviewedByUserId: currentUser.id,
+                reviewedAt: new Date(),
+              }
+            : {}),
+        },
+      });
+
+      if (nextStatus === 'approved' && proof.payment.status !== 'paid') {
+        await tx.payment.update({
+          where: { id: proof.paymentId },
+          data: {
+            status: 'paid',
+            paidAt: proof.paidAt ?? new Date(),
+            paymentMethod: proof.paymentChannel,
+            providerRef: proof.transactionRef ?? proof.payment.providerRef,
+          },
+        });
+        await this.syncSubscriptionStatusFromInvoices(tx, proof.payment.subscriptionId);
+      }
+
+      return row;
+    });
+
+    void this.emitPlatformInvalidation({
+      resource: 'support',
+      action: 'payment_proof_updated',
+    });
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      admin_note: updated.adminNote,
+      reviewed_at: updated.reviewedAt?.toISOString() ?? null,
     };
   }
 

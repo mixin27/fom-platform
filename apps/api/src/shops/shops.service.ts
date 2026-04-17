@@ -25,6 +25,7 @@ import { subscriptionLimits } from '../platform/subscription-limit.constants';
 import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
+import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
@@ -213,6 +214,22 @@ export class ShopsService {
       .filter((payment) => payment.dueAt)
       .sort((left, right) => left.dueAt!.getTime() - right.dueAt!.getTime())[0];
 
+    const paymentProofs = await this.prisma.paymentProofSubmission.findMany({
+      where: {
+        shopId,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      take: 20,
+      include: {
+        reviewedByUser: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
     return {
       shop_id: shop.id,
       shop_name: shop.name,
@@ -289,6 +306,119 @@ export class ShopsService {
         created_at: payment.createdAt.toISOString(),
         updated_at: payment.updatedAt.toISOString(),
       })),
+      payment_proofs: paymentProofs.map((proof) => ({
+        id: proof.id,
+        payment_id: proof.paymentId,
+        invoice_no: proof.invoiceNoSnapshot,
+        amount_claimed: proof.amountClaimed,
+        currency_claimed: proof.currencyClaimed,
+        payment_channel: proof.paymentChannel,
+        paid_at: proof.paidAt?.toISOString() ?? null,
+        sender_name: proof.senderName,
+        sender_phone: proof.senderPhone,
+        transaction_ref: proof.transactionRef,
+        note: proof.note,
+        status: proof.status,
+        admin_note: proof.adminNote,
+        reviewed_at: proof.reviewedAt?.toISOString() ?? null,
+        reviewed_by:
+          proof.reviewedByUser === null
+            ? null
+            : {
+                id: proof.reviewedByUser.id,
+                name: proof.reviewedByUser.name,
+              },
+        created_at: proof.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async submitPaymentProof(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: CreateShopPaymentProofDto,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const invoiceNo = body.invoice_no.trim();
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        invoiceNo,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        subscription: {
+          include: {
+            shop: true,
+            plan: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw validationError([
+        {
+          field: 'invoice_no',
+          errors: ['Invoice not found for this shop.'],
+        },
+      ]);
+    }
+
+    const proof = await this.prisma.paymentProofSubmission.create({
+      data: {
+        shopId,
+        paymentId: payment.id,
+        invoiceNoSnapshot: payment.invoiceNo,
+        amountClaimed: body.amount_claimed,
+        currencyClaimed: body.currency_claimed?.trim() || payment.currency,
+        paymentChannel: body.payment_channel.trim(),
+        paidAt: body.paid_at ? new Date(body.paid_at) : null,
+        senderName: body.sender_name?.trim() || null,
+        senderPhone: body.sender_phone?.trim() || null,
+        transactionRef: body.transaction_ref?.trim() || null,
+        note: body.note?.trim() || null,
+        status: 'submitted',
+      },
+    });
+
+    await this.emailOutbox.queueAndSendEmail({
+      shopId,
+      category: 'payment_proof',
+      toEmail:
+        process.env.PUBLIC_CONTACT_INBOX_EMAIL?.trim() ||
+        process.env.EMAIL_SUPPORT_EMAIL?.trim() ||
+        'support@fom-platform.local',
+      subject: `[FOM Billing] Payment proof ${payment.invoiceNo} (${payment.subscription.shop.name})`,
+      textBody: [
+        `Shop: ${payment.subscription.shop.name}`,
+        `Invoice: ${payment.invoiceNo}`,
+        `Claimed amount: ${body.amount_claimed.toLocaleString()} ${body.currency_claimed?.trim() || payment.currency}`,
+        `Channel: ${body.payment_channel.trim()}`,
+        body.transaction_ref?.trim()
+          ? `Transaction ref: ${body.transaction_ref.trim()}`
+          : null,
+        body.sender_name?.trim() ? `Sender: ${body.sender_name.trim()}` : null,
+        body.sender_phone?.trim() ? `Sender phone: ${body.sender_phone.trim()}` : null,
+        body.note?.trim() ? `Note: ${body.note.trim()}` : null,
+        `Proof ID: ${proof.id}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      metadata: {
+        payment_proof_id: proof.id,
+        invoice_no: payment.invoiceNo,
+        shop_id: shopId,
+      },
+    });
+
+    return {
+      id: proof.id,
+      status: proof.status,
+      invoice_no: proof.invoiceNoSnapshot,
+      created_at: proof.createdAt.toISOString(),
     };
   }
 

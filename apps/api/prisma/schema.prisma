@@ -70,6 +70,7 @@ model User {
   assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
   shopAuditLogs      ShopAuditLog[]      @relation("ShopAuditActor")
+  reviewedPaymentProofs PaymentProofSubmission[] @relation("PaymentProofReviewer")
 }
 
 model Shop {
@@ -90,6 +91,7 @@ model Shop {
   orderImportBatches OrderImportBatch[]
   roles            Role[]            @relation("ShopCustomRoles")
   auditLogs        ShopAuditLog[]
+  paymentProofSubmissions PaymentProofSubmission[]
 
   @@index([ownerUserId])
 }
@@ -212,6 +214,7 @@ model Payment {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  paymentProofSubmissions PaymentProofSubmission[]
 
   @@index([subscriptionId, status])
   @@index([status, dueAt])
@@ -653,4 +656,34 @@ model PublicContactSubmission {
   @@index([archived, createdAt])
   @@index([createdAt])
   @@map("public_contact_submissions")
+}
+
+model PaymentProofSubmission {
+  id               String   @id @default(cuid())
+  shopId           String
+  paymentId        String
+  invoiceNoSnapshot String
+  amountClaimed    Int
+  currencyClaimed  String   @default("MMK")
+  paymentChannel   String
+  paidAt           DateTime?
+  senderName       String?
+  senderPhone      String?
+  transactionRef   String?
+  note             String?
+  status           String   @default("submitted")
+  adminNote        String?
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  reviewedByUser   User?    @relation("PaymentProofReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
+  @@index([paymentId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([transactionRef])
+  @@map("payment_proof_submissions")
 }

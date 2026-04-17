@@ -29,6 +29,7 @@ import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
 import { UpdateShopRoleDto } from './dto/update-shop-role.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
 import { ShopsService } from './shops.service';
 
 @Controller('api/v1/shops')
@@ -88,6 +89,18 @@ export class ShopsController {
     @Param('shopId') shopId: string,
   ) {
     return ok(this.shopsService.getBilling(currentUser, shopId));
+  }
+
+  @Post(':shopId/billing/payment-proofs')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Submit manual payment proof for billing review' })
+  submitPaymentProof(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: CreateShopPaymentProofDto,
+  ) {
+    return ok(this.shopsService.submitPaymentProof(currentUser, shopId, body));
   }
 
   @Get(':shopId/members')
