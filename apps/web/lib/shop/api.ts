@@ -419,6 +419,7 @@ export type ShopMessengerOverview = {
     verify_token_configured: boolean
     signature_validation_enabled: boolean
     graph_api_version: string
+    oauth_connect_enabled: boolean
   }
   stats: {
     thread_count: number
@@ -426,6 +427,23 @@ export type ShopMessengerOverview = {
     auto_reply_rule_count: number
   }
 }
+
+export type ShopMessengerOauthPageChoice = {
+  page_id: string
+  page_name: string
+}
+
+export type ShopMessengerOauthCompleteResult =
+  | {
+      status: "connected"
+      connection: NonNullable<ShopMessengerOverview["connection"]>
+    }
+  | {
+      status: "selection_required"
+      redirect_uri: string
+      selection_token: string
+      pages: ShopMessengerOauthPageChoice[]
+    }
 
 export type ShopMessengerThread = {
   id: string

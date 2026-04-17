@@ -14,12 +14,16 @@ import {
   serviceUnavailableError,
   validationError,
 } from '../common/http/app-http.exception';
+import type { AuthenticatedUser } from '../common/http/request-context';
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { BeginMessengerOauthDto } from './dto/begin-messenger-oauth.dto';
+import { CompleteMessengerOauthDto } from './dto/complete-messenger-oauth.dto';
 import { CreateMessengerAutoReplyRuleDto } from './dto/create-messenger-auto-reply-rule.dto';
 import { ListMessengerThreadsQueryDto } from './dto/list-messenger-threads-query.dto';
+import { SelectMessengerOauthPageDto } from './dto/select-messenger-oauth-page.dto';
 import { UpdateMessengerConnectionDto } from './dto/update-messenger-connection.dto';
 import { UpdateMessengerAutoReplyRuleDto } from './dto/update-messenger-auto-reply-rule.dto';
 
@@ -36,12 +40,56 @@ type MessengerGraphSendResponse = {
   message_id?: string;
 };
 
+type MessengerGraphTokenExchangeResponse = {
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
+};
+
+type MessengerGraphAccount = {
+  id: string;
+  name: string;
+  access_token: string;
+};
+
+type MessengerUserProfile = {
+  first_name?: string;
+  last_name?: string;
+  profile_pic?: string;
+  locale?: string;
+};
+
+type MessengerOauthStatePayload = {
+  kind: 'messenger_oauth_state';
+  shop_id: string;
+  user_id: string;
+  redirect_uri: string;
+  issued_at: string;
+};
+
+type MessengerOauthSelectionPayload = {
+  kind: 'messenger_oauth_selection';
+  shop_id: string;
+  user_id: string;
+  redirect_uri: string;
+  user_access_token: string;
+  issued_at: string;
+};
+
 type DbConnection = any;
 type DbThread = any;
 type DbMessage = any;
 type DbRule = any;
 
 const INBOUND_MESSAGE_PERMISSION_HINT = 'Connect a Facebook Page first.';
+const MESSENGER_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const MESSENGER_PROFILE_BACKFILL_LIMIT = 5;
+const MESSENGER_PROFILE_FIELDS = [
+  'first_name',
+  'last_name',
+  'profile_pic',
+  'locale',
+].join(',');
 
 @Injectable()
 export class MessengerService {
@@ -157,6 +205,8 @@ export class MessengerService {
         signature_validation_enabled:
           this.config.getMetaMessengerConfig().isSignatureValidationConfigured,
         graph_api_version: this.config.getMetaMessengerConfig().graphApiVersion,
+        oauth_connect_enabled:
+          this.config.getMetaMessengerConfig().isOauthConfigured,
       },
       stats: {
         thread_count: connection?._count?.threads ?? 0,
@@ -166,79 +216,159 @@ export class MessengerService {
     };
   }
 
-  async updateConnection(shopId: string, body: UpdateMessengerConnectionDto) {
-    const pageId = body.page_id.trim();
-    const pageName = body.page_name?.trim() || null;
-    const pageAccessToken = body.page_access_token.trim();
-
-    if (!pageId || !pageAccessToken) {
-      throw validationError([
-        {
-          field: 'page_id',
-          errors: ['Page ID and access token are required.'],
-        },
-      ]);
-    }
-
-    const existingByPage = await this.prisma.messengerConnection.findFirst({
-      where: {
-        pageId,
-        NOT: {
-          shopId,
-        },
-      },
-    });
-
-    if (existingByPage) {
-      throw conflictError(
-        'This Facebook Page is already connected to another shop workspace.',
+  async beginOauthConnect(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: BeginMessengerOauthDto,
+  ) {
+    const messengerConfig = this.config.getMetaMessengerConfig();
+    if (!messengerConfig.isOauthConfigured) {
+      throw serviceUnavailableError(
+        'Meta OAuth is not configured on the server yet.',
       );
     }
 
-    const existingConnection = await this.prisma.messengerConnection.findUnique({
-      where: { shopId },
-      include: {
-        _count: {
-          select: {
-            threads: true,
-          },
-        },
-      },
+    const redirectUri = this.normalizeOauthRedirectUri(body.redirect_uri);
+    const state = this.signOauthState({
+      kind: 'messenger_oauth_state',
+      shop_id: shopId,
+      user_id: currentUser.id,
+      redirect_uri: redirectUri,
+      issued_at: new Date().toISOString(),
     });
+
+    const authorizationUrl = new URL(messengerConfig.oauthDialogUrl);
+    authorizationUrl.searchParams.set('client_id', String(messengerConfig.appId));
+    authorizationUrl.searchParams.set('redirect_uri', redirectUri);
+    authorizationUrl.searchParams.set(
+      'config_id',
+      String(messengerConfig.loginConfigId),
+    );
+    authorizationUrl.searchParams.set('response_type', 'code');
+    authorizationUrl.searchParams.set('state', state);
+
+    return {
+      authorization_url: authorizationUrl.toString(),
+      redirect_uri: redirectUri,
+      expires_at: new Date(
+        Date.now() + MESSENGER_OAUTH_STATE_TTL_MS,
+      ).toISOString(),
+    };
+  }
+
+  async completeOauthConnect(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: CompleteMessengerOauthDto,
+  ) {
+    const messengerConfig = this.config.getMetaMessengerConfig();
+    if (!messengerConfig.isOauthConfigured) {
+      throw serviceUnavailableError(
+        'Meta OAuth is not configured on the server yet.',
+      );
+    }
+
+    const redirectUri = this.normalizeOauthRedirectUri(body.redirect_uri);
+    const state = this.readOauthState(body.state);
 
     if (
-      existingConnection &&
-      existingConnection.pageId !== pageId &&
-      existingConnection._count.threads > 0
+      state.shop_id !== shopId ||
+      state.user_id !== currentUser.id ||
+      state.redirect_uri !== redirectUri
     ) {
+      throw forbiddenError('Messenger OAuth state is invalid or expired.');
+    }
+
+    this.assertOauthIssuedAt(state.issued_at);
+
+    const userAccessToken = await this.exchangeCodeForUserAccessToken(
+      body.code.trim(),
+      redirectUri,
+    );
+    const pages = await this.listAvailablePages(userAccessToken);
+
+    if (pages.length === 0) {
       throw conflictError(
-        'This shop already has Messenger history. Replacing it with a different Page ID is not supported on this connection yet.',
+        'Meta did not return any Facebook Pages for this account.',
       );
     }
 
-    const encryptedToken = this.encryptAccessToken(pageAccessToken);
+    if (pages.length === 1) {
+      return {
+        status: 'connected',
+        connection: await this.saveConnection(
+          shopId,
+          pages[0].id,
+          pages[0].name,
+          pages[0].access_token,
+        ),
+      };
+    }
 
-    const connection = existingConnection
-      ? await this.prisma.messengerConnection.update({
-          where: { id: existingConnection.id },
-          data: {
-            pageId,
-            pageName,
-            pageAccessTokenEncrypted: encryptedToken,
-            status: 'active',
-          },
-        })
-      : await this.prisma.messengerConnection.create({
-          data: {
-            shopId,
-            pageId,
-            pageName,
-            pageAccessTokenEncrypted: encryptedToken,
-            status: 'active',
-          },
-        });
+    return {
+      status: 'selection_required',
+      redirect_uri: redirectUri,
+      selection_token: this.encryptJsonPayload<MessengerOauthSelectionPayload>({
+        kind: 'messenger_oauth_selection',
+        shop_id: shopId,
+        user_id: currentUser.id,
+        redirect_uri: redirectUri,
+        user_access_token: userAccessToken,
+        issued_at: new Date().toISOString(),
+      }),
+      pages: pages.map((page) => ({
+        page_id: page.id,
+        page_name: page.name,
+      })),
+    };
+  }
 
-    return this.serializeConnection(connection);
+  async selectOauthPage(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: SelectMessengerOauthPageDto,
+  ) {
+    const selection = this.decryptJsonPayload<MessengerOauthSelectionPayload>(
+      body.selection_token,
+    );
+
+    if (
+      selection.kind !== 'messenger_oauth_selection' ||
+      selection.shop_id !== shopId ||
+      selection.user_id !== currentUser.id
+    ) {
+      throw forbiddenError('Messenger page selection is invalid or expired.');
+    }
+
+    this.assertOauthIssuedAt(selection.issued_at);
+
+    const pages = await this.listAvailablePages(selection.user_access_token);
+    const selectedPage = pages.find((page) => page.id === body.page_id.trim());
+
+    if (!selectedPage) {
+      throw notFoundError(
+        'The selected Facebook Page is no longer available for this account.',
+      );
+    }
+
+    return {
+      status: 'connected',
+      connection: await this.saveConnection(
+        shopId,
+        selectedPage.id,
+        body.page_name?.trim() || selectedPage.name,
+        selectedPage.access_token,
+      ),
+    };
+  }
+
+  async updateConnection(shopId: string, body: UpdateMessengerConnectionDto) {
+    return this.saveConnection(
+      shopId,
+      body.page_id.trim(),
+      body.page_name?.trim() || null,
+      body.page_access_token.trim(),
+    );
   }
 
   async disconnectConnection(shopId: string) {
@@ -496,6 +626,82 @@ export class MessengerService {
     });
   }
 
+  private async saveConnection(
+    shopId: string,
+    pageId: string,
+    pageName: string | null,
+    pageAccessToken: string,
+  ) {
+    if (!pageId || !pageAccessToken) {
+      throw validationError([
+        {
+          field: 'page_id',
+          errors: ['Page ID and access token are required.'],
+        },
+      ]);
+    }
+
+    const existingByPage = await this.prisma.messengerConnection.findFirst({
+      where: {
+        pageId,
+        NOT: {
+          shopId,
+        },
+      },
+    });
+
+    if (existingByPage) {
+      throw conflictError(
+        'This Facebook Page is already connected to another shop workspace.',
+      );
+    }
+
+    const existingConnection = await this.prisma.messengerConnection.findUnique({
+      where: { shopId },
+      include: {
+        _count: {
+          select: {
+            threads: true,
+          },
+        },
+      },
+    });
+
+    if (
+      existingConnection &&
+      existingConnection.pageId !== pageId &&
+      existingConnection._count.threads > 0
+    ) {
+      throw conflictError(
+        'This shop already has Messenger history. Replacing it with a different Page ID is not supported on this connection yet.',
+      );
+    }
+
+    const encryptedToken = this.encryptAccessToken(pageAccessToken);
+    const connection = existingConnection
+      ? await this.prisma.messengerConnection.update({
+          where: { id: existingConnection.id },
+          data: {
+            pageId,
+            pageName,
+            pageAccessTokenEncrypted: encryptedToken,
+            status: 'active',
+          },
+        })
+      : await this.prisma.messengerConnection.create({
+          data: {
+            shopId,
+            pageId,
+            pageName,
+            pageAccessTokenEncrypted: encryptedToken,
+            status: 'active',
+          },
+        });
+
+    await this.backfillMissingThreadProfiles(connection);
+    return this.serializeConnection(connection);
+  }
+
   private async processMessagingEvent(event: MetaMessagingEvent) {
     const senderId = this.readNestedString(event.sender, 'id');
     const recipientId = this.readNestedString(event.recipient, 'id');
@@ -559,7 +765,7 @@ export class MessengerService {
       return;
     }
 
-    const thread = await this.ensureThread(connection, customerPsid);
+    const { thread, created } = await this.ensureThread(connection, customerPsid);
     const providerMessageId =
       typeof messagePayload.mid === 'string' ? messagePayload.mid : null;
 
@@ -607,6 +813,10 @@ export class MessengerService {
       });
     });
 
+    if (created) {
+      await this.enrichThreadProfile(connection, thread.id, customerPsid);
+    }
+
     if (textBody) {
       await this.runAutoReplyRules(connection, thread.id, customerPsid, textBody);
     }
@@ -623,7 +833,7 @@ export class MessengerService {
       return;
     }
 
-    const thread = await this.ensureThread(connection, senderId);
+    const { thread, created } = await this.ensureThread(connection, senderId);
     const providerMessageId =
       typeof postbackPayload.mid === 'string' ? postbackPayload.mid : null;
     const title =
@@ -664,6 +874,10 @@ export class MessengerService {
         },
       });
     });
+
+    if (created) {
+      await this.enrichThreadProfile(connection, thread.id, senderId);
+    }
   }
 
   private async runAutoReplyRules(
@@ -834,6 +1048,348 @@ export class MessengerService {
     return parsedBody as MessengerGraphSendResponse;
   }
 
+  private async exchangeCodeForUserAccessToken(
+    code: string,
+    redirectUri: string,
+  ) {
+    const messengerConfig = this.config.getMetaMessengerConfig();
+
+    let response: Response;
+    try {
+      const url = new URL(
+        `${messengerConfig.graphApiBaseUrl}/${messengerConfig.graphApiVersion}/oauth/access_token`,
+      );
+      url.searchParams.set('client_id', String(messengerConfig.appId));
+      url.searchParams.set('client_secret', String(messengerConfig.appSecret));
+      url.searchParams.set('redirect_uri', redirectUri);
+      url.searchParams.set('code', code);
+
+      response = await fetch(url, {
+        method: 'GET',
+      });
+    } catch (error) {
+      throw serviceUnavailableError(
+        'Unable to reach Meta for the Messenger login flow right now.',
+        this.buildFetchErrorContext(error),
+      );
+    }
+
+    const payload = await this.readGraphJson<MessengerGraphTokenExchangeResponse>(
+      response,
+    );
+    if (!response.ok || !payload.access_token) {
+      throw conflictError('Meta rejected the Messenger authorization code.', {
+        status: response.status,
+        body: payload,
+      });
+    }
+
+    return payload.access_token;
+  }
+
+  private async listAvailablePages(userAccessToken: string) {
+    const response = await this.fetchGraphJson<{
+      data?: Array<Record<string, unknown>>;
+    }>('me/accounts', userAccessToken, {
+      fields: 'id,name,access_token',
+    });
+    const pages = Array.isArray(response.data) ? response.data : [];
+
+    return pages
+      .map((page) => ({
+        id:
+          typeof page.id === 'string' && page.id.trim()
+            ? page.id.trim()
+            : null,
+        name:
+          typeof page.name === 'string' && page.name.trim()
+            ? page.name.trim()
+            : null,
+        access_token:
+          typeof page.access_token === 'string' && page.access_token.trim()
+            ? page.access_token.trim()
+            : null,
+      }))
+      .filter(
+        (
+          page,
+        ): page is {
+          id: string;
+          name: string;
+          access_token: string;
+        } => Boolean(page.id && page.name && page.access_token),
+      );
+  }
+
+  private async fetchMessengerUserProfile(
+    customerPsid: string,
+    pageAccessToken: string,
+  ) {
+    try {
+      return await this.fetchGraphJson<MessengerUserProfile>(
+        customerPsid,
+        pageAccessToken,
+        {
+          fields: MESSENGER_PROFILE_FIELDS,
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        [
+          'FORBIDDEN',
+          'CONFLICT',
+          'SERVICE_UNAVAILABLE',
+          'NOT_FOUND',
+        ].includes(error.name)
+      ) {
+        return null;
+      }
+
+      return null;
+    }
+  }
+
+  private async enrichThreadProfile(
+    connection: DbConnection,
+    threadId: string,
+    customerPsid: string,
+  ) {
+    if (!connection.pageAccessTokenEncrypted) {
+      return;
+    }
+
+    const profile = await this.fetchMessengerUserProfile(
+      customerPsid,
+      this.decryptAccessToken(connection.pageAccessTokenEncrypted),
+    );
+
+    if (!profile) {
+      return;
+    }
+
+    const customerName = this.normalizeProfileName(profile);
+    const customerLocale =
+      typeof profile.locale === 'string' && profile.locale.trim()
+        ? profile.locale.trim()
+        : null;
+
+    if (!customerName && !customerLocale) {
+      return;
+    }
+
+    await this.prisma.messengerThread.update({
+      where: { id: threadId },
+      data: {
+        ...(customerName ? { customerName } : {}),
+        ...(customerLocale ? { customerLocale } : {}),
+      },
+    });
+  }
+
+  private async backfillMissingThreadProfiles(connection: DbConnection) {
+    if (!connection.pageAccessTokenEncrypted) {
+      return;
+    }
+
+    const threads = await this.prisma.messengerThread.findMany({
+      where: {
+        connectionId: connection.id,
+        OR: [{ customerName: null }, { customerLocale: null }],
+      },
+      orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
+      take: MESSENGER_PROFILE_BACKFILL_LIMIT,
+    });
+
+    for (const thread of threads) {
+      await this.enrichThreadProfile(connection, thread.id, thread.customerPsid);
+    }
+  }
+
+  private normalizeProfileName(profile: MessengerUserProfile) {
+    const parts = [profile.first_name, profile.last_name]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter((value) => value.length > 0);
+
+    if (parts.length === 0) {
+      return null;
+    }
+
+    return parts.join(' ');
+  }
+
+  private normalizeOauthRedirectUri(value: string) {
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw validationError([
+        {
+          field: 'redirect_uri',
+          errors: ['A valid absolute redirect URI is required.'],
+        },
+      ]);
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw validationError([
+        {
+          field: 'redirect_uri',
+          errors: ['Only http and https redirect URIs are supported.'],
+        },
+      ]);
+    }
+
+    parsed.hash = '';
+    return parsed.toString();
+  }
+
+  private signOauthState(payload: MessengerOauthStatePayload) {
+    const serialized = Buffer.from(JSON.stringify(payload), 'utf8').toString(
+      'base64url',
+    );
+    const signature = createHmac(
+      'sha256',
+      this.config.getMetaMessengerConfig().tokenEncryptionSecret,
+    )
+      .update(serialized)
+      .digest('base64url');
+
+    return `${serialized}.${signature}`;
+  }
+
+  private readOauthState(value: string) {
+    const [serialized, providedSignature] = value.split('.');
+
+    if (!serialized || !providedSignature) {
+      throw forbiddenError('Messenger OAuth state is invalid or expired.');
+    }
+
+    const expectedSignature = createHmac(
+      'sha256',
+      this.config.getMetaMessengerConfig().tokenEncryptionSecret,
+    )
+      .update(serialized)
+      .digest('base64url');
+
+    if (
+      providedSignature.length !== expectedSignature.length ||
+      !timingSafeEqual(
+        Buffer.from(providedSignature, 'utf8'),
+        Buffer.from(expectedSignature, 'utf8'),
+      )
+    ) {
+      throw forbiddenError('Messenger OAuth state is invalid or expired.');
+    }
+
+    try {
+      const parsed = JSON.parse(
+        Buffer.from(serialized, 'base64url').toString('utf8'),
+      ) as MessengerOauthStatePayload;
+
+      if (
+        parsed.kind !== 'messenger_oauth_state' ||
+        !parsed.shop_id ||
+        !parsed.user_id ||
+        !parsed.redirect_uri ||
+        !parsed.issued_at
+      ) {
+        throw new Error('Invalid OAuth state payload.');
+      }
+
+      return parsed;
+    } catch {
+      throw forbiddenError('Messenger OAuth state is invalid or expired.');
+    }
+  }
+
+  private assertOauthIssuedAt(value: string) {
+    const issuedAtMs = Date.parse(value);
+    if (
+      Number.isNaN(issuedAtMs) ||
+      issuedAtMs + MESSENGER_OAUTH_STATE_TTL_MS < Date.now()
+    ) {
+      throw forbiddenError('Messenger OAuth state is invalid or expired.');
+    }
+  }
+
+  private encryptJsonPayload<T extends Record<string, unknown>>(value: T) {
+    return this.encryptOpaqueValue(JSON.stringify(value));
+  }
+
+  private decryptJsonPayload<T extends Record<string, unknown>>(value: string) {
+    try {
+      return JSON.parse(this.decryptOpaqueValue(value)) as T;
+    } catch {
+      throw forbiddenError('Messenger page selection is invalid or expired.');
+    }
+  }
+
+  private async fetchGraphJson<T extends Record<string, unknown>>(
+    path: string,
+    accessToken: string,
+    query?: Record<string, string>,
+  ) {
+    const url = new URL(this.buildGraphUrl(path, accessToken));
+
+    for (const [key, value] of Object.entries(query ?? {})) {
+      url.searchParams.set(key, value);
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+      });
+    } catch (error) {
+      throw serviceUnavailableError(
+        'Unable to reach Meta right now. Please try again shortly.',
+        this.buildFetchErrorContext(error),
+      );
+    }
+
+    const payload = await this.readGraphJson<T>(response);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw conflictError('Meta resource not found.', {
+          status: response.status,
+          body: payload,
+        });
+      }
+
+      if (response.status === 403) {
+        throw conflictError('Meta rejected this Messenger request.', {
+          status: response.status,
+          body: payload,
+        });
+      }
+
+      throw conflictError('Meta rejected this Messenger request.', {
+        status: response.status,
+        body: payload,
+      });
+    }
+
+    return payload;
+  }
+
+  private async readGraphJson<T extends Record<string, unknown>>(
+    response: Response,
+  ) {
+    const rawBody = await response.text();
+
+    if (!rawBody.trim()) {
+      return {} as T;
+    }
+
+    try {
+      return JSON.parse(rawBody) as T;
+    } catch {
+      return { raw_body: rawBody } as unknown as T;
+    }
+  }
+
   private async ensureThread(connection: DbConnection, customerPsid: string) {
     const existingThread = await this.prisma.messengerThread.findUnique({
       where: {
@@ -848,19 +1404,69 @@ export class MessengerService {
     });
 
     if (existingThread) {
-      return existingThread;
+      return {
+        thread: existingThread,
+        created: false,
+      };
     }
 
-    return this.prisma.messengerThread.create({
-      data: {
-        shopId: connection.shopId,
-        connectionId: connection.id,
-        customerPsid,
-      },
-      include: {
-        connection: true,
-      },
-    });
+    return {
+      thread: await this.prisma.messengerThread.create({
+        data: {
+          shopId: connection.shopId,
+          connectionId: connection.id,
+          customerPsid,
+        },
+        include: {
+          connection: true,
+        },
+      }),
+      created: true,
+    };
+  }
+
+  private encryptOpaqueValue(value: string) {
+    const key = this.resolveEncryptionKey();
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([
+      cipher.update(value, 'utf8'),
+      cipher.final(),
+    ]);
+    const authTag = cipher.getAuthTag();
+
+    return `${iv.toString('base64url')}.${authTag.toString('base64url')}.${encrypted.toString(
+      'base64url',
+    )}`;
+  }
+
+  private decryptOpaqueValue(value: string) {
+    const [ivPart, authTagPart, encryptedPart] = value.split('.');
+    if (!ivPart || !authTagPart || !encryptedPart) {
+      throw forbiddenError('Messenger page selection is invalid or expired.');
+    }
+
+    const decipher = createDecipheriv(
+      'aes-256-gcm',
+      this.resolveEncryptionKey(),
+      Buffer.from(ivPart, 'base64url'),
+    );
+    decipher.setAuthTag(Buffer.from(authTagPart, 'base64url'));
+
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedPart, 'base64url')),
+      decipher.final(),
+    ]).toString('utf8');
+  }
+
+  private buildAppSecretProof(accessToken: string) {
+    const appSecret = this.config.getMetaMessengerConfig().appSecret;
+
+    if (!appSecret) {
+      return null;
+    }
+
+    return createHmac('sha256', appSecret).update(accessToken).digest('hex');
   }
 
   private isValidSignature(
@@ -890,10 +1496,18 @@ export class MessengerService {
   private buildGraphUrl(path: string, accessToken: string) {
     const messengerConfig = this.config.getMetaMessengerConfig();
     const normalizedPath = path.replace(/^\/+/, '');
+    const url = new URL(
+      `${messengerConfig.graphApiBaseUrl}/${messengerConfig.graphApiVersion}/${normalizedPath}`,
+    );
 
-    return `${messengerConfig.graphApiBaseUrl}/${messengerConfig.graphApiVersion}/${normalizedPath}?access_token=${encodeURIComponent(
-      accessToken,
-    )}`;
+    url.searchParams.set('access_token', accessToken);
+
+    const appSecretProof = this.buildAppSecretProof(accessToken);
+    if (appSecretProof) {
+      url.searchParams.set('appsecret_proof', appSecretProof);
+    }
+
+    return url.toString();
   }
 
   private encryptAccessToken(value: string) {

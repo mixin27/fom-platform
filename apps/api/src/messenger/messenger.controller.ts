@@ -14,14 +14,19 @@ import {
 } from '@nestjs/common';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
+import { CurrentUser } from '../common/http/current-user.decorator';
 import { RequirePlanFeatures } from '../common/http/plan-features.decorator';
 import { RequirePermissions } from '../common/http/permissions.decorator';
+import type { AuthenticatedUser } from '../common/http/request-context';
 import { permissions } from '../common/http/rbac.constants';
 import { RbacGuard } from '../common/http/rbac.guard';
 import { SubscriptionFeatureGuard } from '../common/http/subscription-feature.guard';
 import { subscriptionFeatures } from '../platform/subscription-feature.constants';
+import { BeginMessengerOauthDto } from './dto/begin-messenger-oauth.dto';
+import { CompleteMessengerOauthDto } from './dto/complete-messenger-oauth.dto';
 import { CreateMessengerAutoReplyRuleDto } from './dto/create-messenger-auto-reply-rule.dto';
 import { ListMessengerThreadsQueryDto } from './dto/list-messenger-threads-query.dto';
+import { SelectMessengerOauthPageDto } from './dto/select-messenger-oauth-page.dto';
 import { SendMessengerReplyDto } from './dto/send-messenger-reply.dto';
 import { UpdateMessengerConnectionDto } from './dto/update-messenger-connection.dto';
 import { UpdateMessengerAutoReplyRuleDto } from './dto/update-messenger-auto-reply-rule.dto';
@@ -40,6 +45,54 @@ export class MessengerController {
   @ApiOperation({ summary: 'Get Messenger inbox connection status and setup details' })
   getOverview(@Param('shopId') shopId: string) {
     return ok(this.messengerService.getOverview(shopId));
+  }
+
+  @Post('oauth/start')
+  @RequirePermissions(permissions.shopsWrite)
+  @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
+  @ApiOperation({ summary: 'Start the Meta OAuth flow for connecting a Facebook Page' })
+  beginOauthConnect(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: BeginMessengerOauthDto,
+  ) {
+    return ok(
+      this.messengerService.beginOauthConnect(currentUser, shopId, body),
+    );
+  }
+
+  @Post('oauth/complete')
+  @RequirePermissions(permissions.shopsWrite)
+  @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
+  @ApiOperation({
+    summary:
+      'Complete the Meta OAuth code exchange and either connect a page or return page choices',
+  })
+  completeOauthConnect(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: CompleteMessengerOauthDto,
+  ) {
+    return ok(
+      this.messengerService.completeOauthConnect(currentUser, shopId, body),
+    );
+  }
+
+  @Post('oauth/select-page')
+  @RequirePermissions(permissions.shopsWrite)
+  @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
+  @ApiOperation({
+    summary:
+      'Finalize the Meta OAuth flow by selecting one page from the authorized account',
+  })
+  selectOauthPage(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: SelectMessengerOauthPageDto,
+  ) {
+    return ok(
+      this.messengerService.selectOauthPage(currentUser, shopId, body),
+    );
   }
 
   @Put('connection')

@@ -1,10 +1,12 @@
 "use server"
 
+import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { AuthApiError } from "@/lib/auth/api"
 import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
+import { SHOP_MESSENGER_OAUTH_SELECTION_COOKIE } from "@/lib/messenger/oauth"
 
 function revalidateShopWorkspace() {
   revalidatePath("/dashboard")
@@ -945,6 +947,54 @@ export async function disconnectShopMessengerConnectionFromFormAction(
       error: toActionMessage(
         error,
         "Unable to disconnect the Messenger page right now."
+      ),
+    })
+  }
+}
+
+export async function completeShopMessengerOauthSelectionFromFormAction(
+  formData: FormData
+) {
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const selectionToken = normalizeTextField(formData.get("selection_token"))
+  const pageId = normalizeTextField(formData.get("page_id"))
+  const pageName = normalizeTextField(formData.get("page_name"))
+  const cookieStore = await cookies()
+
+  if (!shopId || !selectionToken || !pageId) {
+    cookieStore.delete(SHOP_MESSENGER_OAUTH_SELECTION_COOKIE)
+    redirectToPath("/dashboard/inbox", {
+      error: "Messenger page selection expired.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/oauth/select-page`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          selection_token: selectionToken,
+          page_id: pageId,
+          ...(pageName ? { page_name: pageName } : {}),
+        },
+      },
+    })
+
+    cookieStore.delete(SHOP_MESSENGER_OAUTH_SELECTION_COOKIE)
+    revalidateShopWorkspace()
+    revalidatePath("/dashboard/inbox/connect-meta/select")
+    redirectToPath("/dashboard/inbox", {
+      notice: "Messenger page connected.",
+    })
+  } catch (error) {
+    cookieStore.delete(SHOP_MESSENGER_OAUTH_SELECTION_COOKIE)
+    redirectToPath("/dashboard/inbox", {
+      error: toActionMessage(
+        error,
+        "Unable to connect the selected Messenger page right now."
       ),
     })
   }
