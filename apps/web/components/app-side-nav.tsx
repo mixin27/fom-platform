@@ -7,8 +7,10 @@ import {
   Building2,
   CreditCard,
   Download,
+  Inbox,
   LayoutDashboard,
   LifeBuoy,
+  Megaphone,
   MessageSquareText,
   PackageCheck,
   Settings,
@@ -37,6 +39,10 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   plans: WalletCards,
   subscriptions: CreditCard,
   support: LifeBuoy,
+  billing: CreditCard,
+  payments: CreditCard,
+  contact: Inbox,
+  announcements: Megaphone,
 }
 
 type AppSideNavProps = {

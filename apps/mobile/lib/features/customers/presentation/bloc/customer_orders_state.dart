@@ -38,6 +38,11 @@ class CustomerOrdersState extends Equatable {
   bool get hasShop => (shopId ?? '').trim().isNotEmpty;
   bool get hasOrders => orders.isNotEmpty;
 
+  int get totalOrdersCount => orders.length;
+
+  int get totalRevenue =>
+      orders.fold<int>(0, (sum, order) => sum + order.totalPrice);
+
   int countForTab(OrdersHomeTab tab) {
     final now = DateTime.now();
 
@@ -48,9 +53,17 @@ class CustomerOrdersState extends Equatable {
         return orders.where((order) => _isSameDay(order.createdAt, now)).length;
       case OrdersHomeTab.pending:
         return orders.where((order) => order.status.isPending).length;
+      case OrdersHomeTab.shipping:
+        return orders
+            .where((order) => order.status == OrderStatus.outForDelivery)
+            .length;
       case OrdersHomeTab.delivered:
         return orders
             .where((order) => order.status == OrderStatus.delivered)
+            .length;
+      case OrdersHomeTab.cancelled:
+        return orders
+            .where((order) => order.status == OrderStatus.cancelled)
             .length;
     }
   }
@@ -149,8 +162,12 @@ class CustomerOrdersState extends Equatable {
         return _isSameDay(order.createdAt, now);
       case OrdersHomeTab.pending:
         return order.status.isPending;
+      case OrdersHomeTab.shipping:
+        return order.status == OrderStatus.outForDelivery;
       case OrdersHomeTab.delivered:
         return order.status == OrderStatus.delivered;
+      case OrdersHomeTab.cancelled:
+        return order.status == OrderStatus.cancelled;
     }
   }
 }

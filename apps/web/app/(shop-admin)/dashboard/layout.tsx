@@ -3,12 +3,17 @@ import Link from "next/link"
 import { Plus, Search } from "lucide-react"
 
 import { signOutAction } from "@/app/actions"
+import { AnnouncementBannerStack } from "@/components/announcement-banner-stack"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
 import { PortalRealtimeBellButton } from "@/components/portal-realtime-bell-button"
 import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { shopPortalNav } from "@/lib/navigation"
-import { getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
+import {
+  getCurrentUserProfile,
+  getShopAnnouncements,
+  getShopPortalContext,
+} from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
 import { ShopSwitcher } from "./_components/shop-switcher"
 
@@ -19,32 +24,40 @@ export default async function ShopAppLayout({
 }) {
   const portalContext = await getShopPortalContext()
   const { session, activeShop } = portalContext
+  const canManageShop = activeShop.membership.permissions.includes("shops.write")
   const navItems =
     session.shops.length > 1
       ? shopPortalNav
       : shopPortalNav.filter((item) => item.href !== "/dashboard/workspace")
-  const [profileResponse, unreadResponse] = await Promise.all([
-    getCurrentUserProfile("/dashboard"),
-    getNotificationUnreadCount({
-      requiredAccess: "shop",
-      retryPath: "/dashboard",
-      searchParams: {
-        shop_id: activeShop.id,
-      },
-    }),
-  ])
+  const visibleNavItems = navItems.filter(
+    (item) => item.href !== "/dashboard/billing" || canManageShop
+  )
+  const [profileResponse, unreadResponse, announcementResponse] = await Promise.all(
+    [
+      getCurrentUserProfile("/dashboard"),
+      getNotificationUnreadCount({
+        requiredAccess: "shop",
+        retryPath: "/dashboard",
+        searchParams: {
+          shop_id: activeShop.id,
+        },
+      }),
+      getShopAnnouncements("/dashboard"),
+    ]
+  )
   const profile = profileResponse.data
   const unreadCount = unreadResponse.data.unread_count
+  const announcements = announcementResponse.data.announcements
 
   return (
     <div className="fom-portal-canvas min-h-screen">
-      <div className="fom-portal-shell flex h-screen w-full max-w-none max-h-none overflow-hidden rounded-none border-0 shadow-none">
+      <div className="fom-portal-shell flex h-screen max-h-none w-full max-w-none overflow-hidden rounded-none border-0 shadow-none">
         <aside className="w-[236px] flex-shrink-0 border-r border-[var(--fom-border-subtle)] bg-[var(--fom-portal-sidebar)]">
           <div className="flex h-full flex-col">
             <div className="border-b border-[var(--fom-border-subtle)] px-4 py-3.5">
               <BrandMark compact />
               <div className="mt-3 rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-bg)] p-3.5">
-                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
+                <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                   Shop portal
                 </p>
                 <ShopSwitcher
@@ -64,7 +77,7 @@ export default async function ShopAppLayout({
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-3">
-              <AppSideNav items={navItems} tone="shop" />
+              <AppSideNav items={visibleNavItems} tone="shop" />
             </div>
 
             <div className="border-t border-[var(--fom-border-subtle)] px-4 py-3">
@@ -76,11 +89,21 @@ export default async function ShopAppLayout({
                   {profile.email ?? session.user.email ?? "No email"}
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <Button asChild variant="outline" size="sm" className="flex-1">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
                     <Link href="/">Landing</Link>
                   </Button>
                   <form action={signOutAction} className="flex-1">
-                    <Button type="submit" variant="outline" size="sm" className="w-full">
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
                       Sign out
                     </Button>
                   </form>
@@ -91,6 +114,10 @@ export default async function ShopAppLayout({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-portal-bg)]">
+          <AnnouncementBannerStack
+            announcements={announcements}
+            className="border-b-0"
+          />
           <header className="flex h-14 items-center gap-4 border-b border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-5">
             <div className="flex flex-col">
               <span className="text-[13px] font-semibold text-foreground">
@@ -120,7 +147,8 @@ export default async function ShopAppLayout({
             <div className="border-b border-[var(--fom-orange)]/15 bg-[rgba(249,122,31,0.08)] px-5 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-[var(--fom-ink)]">
-                  Verify <span className="font-medium">{session.user.email}</span> to
+                  Verify{" "}
+                  <span className="font-medium">{session.user.email}</span> to
                   enable password recovery and billing notices.
                 </p>
                 <Button asChild size="sm" variant="outline">

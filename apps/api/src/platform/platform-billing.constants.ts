@@ -175,7 +175,7 @@ export const defaultPlanCatalog = [
     name: 'Shop Monthly',
     description:
       'Single-shop monthly plan for daily Facebook order operations.',
-    price: 15000,
+    price: 88000,
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
@@ -303,7 +303,7 @@ export const defaultPlanCatalog = [
         label: 'Multi-shop management',
         description:
           'Enterprise-style multi-shop controls are not in this plan.',
-        availabilityStatus: 'available',
+        availabilityStatus: 'unavailable',
         sortOrder: 35,
       },
       {
@@ -338,7 +338,7 @@ export const defaultPlanCatalog = [
     name: 'Shop Yearly',
     description:
       'Discounted yearly plan for shops running the workflow every day.',
-    price: 150000,
+    price: 880000,
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
@@ -468,7 +468,7 @@ export const defaultPlanCatalog = [
         label: 'Multi-shop management',
         description:
           'Enterprise-style multi-shop controls are not in this plan yet.',
-        availabilityStatus: 'available',
+        availabilityStatus: 'unavailable',
         sortOrder: 35,
       },
       {
@@ -495,6 +495,171 @@ export const defaultPlanCatalog = [
           'Maximum number of non-owner active staff accounts allowed on the yearly plan.',
         value: 3,
         sortOrder: 0,
+      },
+    ],
+  },
+  {
+    code: 'enterprise',
+    name: 'Enterprise / Custom',
+    description:
+      'Enterprise tier for multi-shop management, advanced analytics, and priority support.',
+    price: 0,
+    currency: 'MMK',
+    billingPeriod: 'enterprise',
+    isActive: true,
+    sortOrder: 3,
+    items: [
+      {
+        code: subscriptionFeatures.shopWorkspace,
+        label: 'One subscription still belongs to one shop',
+        description:
+          'Each enterprise-managed shop keeps its own subscription and renewal state.',
+        availabilityStatus: 'available',
+        sortOrder: 0,
+      },
+      {
+        code: subscriptionFeatures.ordersManagement,
+        label: 'Order management',
+        description:
+          'Full operational order management across enterprise shops.',
+        availabilityStatus: 'available',
+        sortOrder: 1,
+      },
+      {
+        code: subscriptionFeatures.ordersParseMessenger,
+        label: 'Manual and paste-from-Messenger order capture',
+        description:
+          'Continue Messenger-driven intake without waiting for native sync.',
+        availabilityStatus: 'available',
+        sortOrder: 2,
+      },
+      {
+        code: subscriptionFeatures.ordersImportSpreadsheet,
+        label: 'Spreadsheet order import',
+        description: 'Import historical or migration order data.',
+        availabilityStatus: 'available',
+        sortOrder: 3,
+      },
+      {
+        code: subscriptionFeatures.customersManagement,
+        label: 'Customer management',
+        description: 'Maintain customer records across managed shops.',
+        availabilityStatus: 'available',
+        sortOrder: 4,
+      },
+      {
+        code: subscriptionFeatures.deliveriesManagement,
+        label: 'Delivery management',
+        description: 'Keep delivery workflows available at shop level.',
+        availabilityStatus: 'available',
+        sortOrder: 5,
+      },
+      {
+        code: subscriptionFeatures.templatesManagement,
+        label: 'Message templates',
+        description: 'Use reusable message templates across teams.',
+        availabilityStatus: 'available',
+        sortOrder: 6,
+      },
+      {
+        code: subscriptionFeatures.reportsAnalytics,
+        label: 'Operational reports',
+        description: 'Includes daily, weekly, and monthly reporting.',
+        availabilityStatus: 'available',
+        sortOrder: 7,
+      },
+      {
+        code: subscriptionFeatures.teamMembers,
+        label: 'Expanded team access',
+        description:
+          'Supports larger staff teams with custom roles and governance.',
+        availabilityStatus: 'available',
+        sortOrder: 8,
+      },
+      {
+        code: subscriptionFeatures.csvExports,
+        label: 'CSV exports',
+        description: 'Export operational and reporting data.',
+        availabilityStatus: 'available',
+        sortOrder: 9,
+      },
+      {
+        code: subscriptionFeatures.analyticsAdvanced,
+        label: 'Advanced analytics',
+        description:
+          'Unlock deeper operational analytics across enterprise-managed shops.',
+        availabilityStatus: 'available',
+        sortOrder: 20,
+      },
+      {
+        code: subscriptionFeatures.multiShopManagement,
+        label: 'Enterprise multi-shop workspace',
+        description: 'Aggregate eligible shops into one enterprise workspace.',
+        availabilityStatus: 'available',
+        sortOrder: 21,
+      },
+      {
+        code: subscriptionFeatures.supportPriority,
+        label: 'Priority support',
+        description:
+          'Enables enterprise-priority support and onboarding workflows.',
+        availabilityStatus: 'available',
+        sortOrder: 22,
+      },
+      {
+        code: subscriptionFeatures.facebookCommentsIntegration,
+        label: 'Facebook comments integration',
+        description:
+          'Direct Facebook comment capture remains reserved for a later release.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 30,
+      },
+      {
+        code: subscriptionFeatures.facebookInboxIntegration,
+        label: 'Facebook inbox integration',
+        description: 'Direct inbox sync remains reserved for a later release.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 31,
+      },
+      {
+        code: subscriptionFeatures.automationAutoReply,
+        label: 'Auto reply automation',
+        description: 'Automation flows remain reserved for a later release.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 32,
+      },
+      {
+        code: subscriptionFeatures.integrationsDeliveryApi,
+        label: 'Delivery API integrations',
+        description:
+          'Third-party delivery APIs remain reserved for a later release.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 33,
+      },
+      {
+        code: subscriptionFeatures.integrationsApiAccess,
+        label: 'API access',
+        description: 'Public API access remains reserved for a later release.',
+        availabilityStatus: 'unavailable',
+        sortOrder: 34,
+      },
+    ],
+    limits: [
+      {
+        code: subscriptionLimits.activeStaffMembers,
+        label: 'Active staff seats',
+        description:
+          'Maximum number of non-owner active staff accounts allowed per enterprise-managed shop.',
+        value: 20,
+        sortOrder: 0,
+      },
+      {
+        code: subscriptionLimits.managedShops,
+        label: 'Managed shop workspaces',
+        description:
+          'Reference quota for the number of shops intended for the enterprise workspace.',
+        value: 20,
+        sortOrder: 1,
       },
     ],
   },

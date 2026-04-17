@@ -1,5 +1,11 @@
 import Link from "next/link"
-import { ArrowRight, PackageCheck, Truck, TrendingUp, Users } from "lucide-react"
+import {
+  ArrowRight,
+  PackageCheck,
+  Truck,
+  TrendingUp,
+  Users,
+} from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
@@ -36,16 +42,94 @@ export default async function ShopDashboardPage({
 }: ShopDashboardPageProps) {
   const params = (await searchParams) ?? {}
   const date = getSingleSearchParam(params.date)
-  const [{ activeShop }, summaryResponse, deliveriesResponse] = await Promise.all([
-    getShopPortalContext(),
-    getShopDailySummary(date ? { date } : undefined, "/dashboard"),
-    getShopDeliveries(
-      { limit: "5", status: "out_for_delivery" },
-      "/dashboard"
-    ),
-  ])
+  const [{ activeShop }, summaryResponse, deliveriesResponse] =
+    await Promise.all([
+      getShopPortalContext(),
+      getShopDailySummary(date ? { date } : undefined, "/dashboard"),
+      getShopDeliveries(
+        { limit: "5", status: "out_for_delivery" },
+        "/dashboard"
+      ),
+    ])
   const summary = summaryResponse.data
   const deliveries = deliveriesResponse.data
+  const isSummaryForbidden = summaryResponse.meta?.forbidden === true
+
+  if (isSummaryForbidden || !summary) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageIntro
+          eyebrow="Dashboard"
+          title={`Welcome back to ${activeShop.name}`}
+          description="Your operational command center. Connect your order flow, dispatch progress, and customer momentum in one place."
+          actions={
+            <Button
+              asChild
+              size="sm"
+              className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
+            >
+              <Link href="/dashboard/orders">
+                View orders
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          }
+        />
+
+        <Card className="border-2 border-dashed border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              Reports & Analytics Restricted
+            </CardTitle>
+            <CardDescription className="text-base">
+              {(summaryResponse.meta?.message as string) ??
+                "Insights and daily summaries are available on paid plans."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              Upgrade your subscription to unlock automated daily reporting,
+              revenue tracking, and customer analytics.
+            </p>
+            <Button asChild variant="outline" className="w-fit">
+              <Link href="/dashboard/billing">Upgrade now</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {deliveries.length > 0 && (
+          <section className="grid gap-3">
+            <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+              <CardHeader className="pb-3">
+                <CardDescription>Dispatch board</CardDescription>
+                <CardTitle>Orders currently on route</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 pt-0">
+                {deliveries.map((delivery) => (
+                  <div
+                    key={delivery.id}
+                    className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        {delivery.order.order_no}
+                      </p>
+                      <PlatformStatusBadge status={delivery.status} />
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {delivery.order.customer.name} · Driver:{" "}
+                      {delivery.driver.name}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </section>
+        )}
+      </div>
+    )
+  }
+
   const deliveryRate = summary.delivered_rate / 100
   const topProduct = summary.top_products[0]
 
@@ -70,7 +154,10 @@ export default async function ShopDashboardPage({
       />
 
       <div className="flex flex-wrap gap-2">
-        <PlatformStatusBadge status="active" label={formatDate(summary.summary_date)} />
+        <PlatformStatusBadge
+          status="active"
+          label={formatDate(summary.summary_date)}
+        />
         <PlatformStatusBadge
           status="confirmed"
           label={`${summary.total_orders} orders in focus`}
@@ -151,10 +238,10 @@ export default async function ShopDashboardPage({
                 note: "Already landed in collected revenue.",
               },
             ].map((item) => (
-                <div
-                  key={item.key}
-                  className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 p-4"
-                >
+              <div
+                key={item.key}
+                className="rounded-2xl border border-[var(--fom-border-subtle)] bg-muted/5 p-4"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-foreground">
                     {formatCodeLabel(item.key)}
@@ -219,7 +306,9 @@ export default async function ShopDashboardPage({
               header: "Order",
               render: (order) => (
                 <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{order.order_no}</span>
+                  <span className="font-semibold text-foreground">
+                    {order.order_no}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {formatRelativeDate(order.created_at)}
                   </span>

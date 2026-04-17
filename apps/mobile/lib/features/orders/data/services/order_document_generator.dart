@@ -107,9 +107,9 @@ class OrderDocumentGeneratorImpl implements OrderDocumentGenerator {
     final safeCustomerName = _slugify(order.customerName);
 
     return [
-      safeShopName.isEmpty ? "shop" : safeShopName,
-      safeCustomerName.isEmpty ? "customer" : safeCustomerName,
       safeOrderNo.isEmpty ? "order" : safeOrderNo,
+      safeCustomerName.isEmpty ? "customer" : safeCustomerName,
+      safeShopName.isEmpty ? "shop" : safeShopName,
       timestamp,
     ].join("-");
   }
@@ -128,7 +128,7 @@ class OrderDocumentGeneratorImpl implements OrderDocumentGenerator {
   }) {
     final buffer = StringBuffer()
       ..writeln(shopName)
-      ..writeln("Order Information")
+      ..writeln("Order Invoice")
       ..writeln("")
       ..writeln("Order No: ${order.orderNo}")
       ..writeln("Status: ${_statusLabel(order)}")
@@ -285,13 +285,14 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
   final brandmarkBytes = brandmarkBytesData.materialize().asUint8List();
   final brandmarkImage = pw.MemoryImage(brandmarkBytes);
   final document = pw.Document();
-  final headerColor = PdfColor.fromHex("#FF6B35");
-  final accentColor = PdfColor.fromHex("#2AA8A0");
-  final softSurface = PdfColor.fromHex("#FFF0EB");
-  final borderColor = PdfColor.fromHex("#EDE8E0");
-  final textDark = PdfColor.fromHex("#1A1A2E");
-  final textMid = PdfColor.fromHex("#5A5A7A");
-  final cream = PdfColor.fromHex("#FDF9F4");
+
+  // Color Tokens matching Web Redesign
+  final brandOrange = PdfColor.fromHex("#f4622a");
+  final textDark = PdfColor.fromHex("#1e293b"); // text-slate-800 approx
+  final textLight = PdfColor.fromHex("#64748b"); // text-slate-500
+  final borderColor = PdfColor.fromHex("#f1f5f9"); // border-slate-100
+  final bgSoft = PdfColor.fromHex("#f8fafc"); // bg-slate-50
+
   final items = (payload["items"] as List<Object?>)
       .cast<Map<String, Object?>>();
   final customerTownship = _pdfString(payload, "customerTownship");
@@ -301,146 +302,212 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
   document.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.fromLTRB(28, 32, 28, 28),
-      footer: (context) => pw.Padding(
-        padding: const pw.EdgeInsets.only(top: 14),
-        child: pw.Center(
-          child: pw.Row(
-            mainAxisSize: pw.MainAxisSize.min,
-            children: [
-              pw.Image(brandmarkImage, width: 14, height: 14),
-              pw.SizedBox(width: 6),
-              pw.Text(
-                _documentBrandFooter,
-                style: pw.TextStyle(
-                  color: textMid,
-                  fontSize: 9,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ],
+      margin: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 48),
+      footer: (context) => pw.Container(
+        margin: const pw.EdgeInsets.only(top: 24),
+        padding: const pw.EdgeInsets.only(top: 24),
+        decoration: pw.BoxDecoration(
+          border: pw.Border(
+            top: pw.BorderSide(color: PdfColor.fromHex("#f1f5f9"), width: 1),
           ),
+        ),
+        child: pw.Column(
+          children: [
+            pw.Text(
+              "Thank you for shopping with us!",
+              style: pw.TextStyle(
+                color: textDark,
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Image(brandmarkImage, width: 12, height: 12),
+                pw.SizedBox(width: 6),
+                pw.Text(
+                  "Powered by FOM Order Manager · getfom.com",
+                  style: pw.TextStyle(
+                    color: textLight,
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
       build: (context) => [
-        pw.Container(
-          padding: const pw.EdgeInsets.all(18),
-          decoration: pw.BoxDecoration(
-            color: softSurface,
-            border: pw.Border.all(color: borderColor),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          _pdfString(payload, "shopName"),
-                          style: pw.TextStyle(
-                            color: headerColor,
-                            fontSize: 24,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          "Customer Invoice",
-                          style: pw.TextStyle(
-                            color: textDark,
-                            fontSize: 18,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+        // Header Section
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  _pdfString(payload, "shopName"),
+                  style: pw.TextStyle(
+                    color: brandOrange,
+                    fontSize: 28,
+                    fontWeight: pw.FontWeight.bold,
                   ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColor.fromHex("#E8F7F6"),
-                      border: pw.Border.all(color: accentColor),
-                    ),
-                    child: pw.Text(
-                      _pdfString(payload, "status"),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  "Official Invoice",
+                  style: pw.TextStyle(
+                    color: textLight,
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      "INVOICE NO. ",
                       style: pw.TextStyle(
-                        color: accentColor,
-                        fontSize: 10,
+                        color: textLight,
+                        fontSize: 8,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
+                    pw.Text(
+                      _pdfString(payload, "orderNo"),
+                      style: pw.TextStyle(
+                        color: textDark,
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.Text(
+                  _pdfString(payload, "createdAt"),
+                  style: pw.TextStyle(color: textLight, fontSize: 10),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
                   ),
-                ],
-              ),
-              pw.SizedBox(height: 16),
-              pw.Row(
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex("#fef3c7"),
+                    borderRadius: const pw.BorderRadius.all(
+                      pw.Radius.circular(10),
+                    ),
+                  ),
+                  child: pw.Text(
+                    _pdfString(payload, "status").toUpperCase(),
+                    style: pw.TextStyle(
+                      color: PdfColor.fromHex("#b45309"),
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 24),
+          child: pw.Divider(color: borderColor, thickness: 1.5),
+        ),
+
+        // Info Grid
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Expanded(
-                    child: _pdfInfoBlock(
-                      label: "Order No",
-                      value: _pdfString(payload, "orderNo"),
-                      textDark: textDark,
-                      textMid: textMid,
+                  pw.Text(
+                    "BILL TO",
+                    style: pw.TextStyle(
+                      color: textLight,
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
                     ),
                   ),
-                  pw.SizedBox(width: 12),
-                  pw.Expanded(
-                    child: _pdfInfoBlock(
-                      label: "Created",
-                      value: _pdfString(payload, "createdAt"),
-                      textDark: textDark,
-                      textMid: textMid,
+                  pw.SizedBox(height: 6),
+                  pw.Text(
+                    _pdfString(payload, "customerName"),
+                    style: pw.TextStyle(
+                      color: textDark,
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
                     ),
+                  ),
+                  pw.Text(
+                    _pdfString(payload, "customerPhone"),
+                    style: pw.TextStyle(color: textLight, fontSize: 10),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        pw.SizedBox(height: 18),
-        _pdfSectionTitle("Customer", textDark),
-        pw.SizedBox(height: 8),
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.all(14),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.white,
-            border: pw.Border.all(color: borderColor),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _pdfLine(
-                "Name",
-                _pdfString(payload, "customerName"),
-                textDark,
-                textMid,
+            ),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    "SHIP TO",
+                    style: pw.TextStyle(
+                      color: textLight,
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  if (customerTownship.isNotEmpty)
+                    pw.Text(
+                      customerTownship,
+                      style: pw.TextStyle(
+                        color: textDark,
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  if (customerAddress.isNotEmpty)
+                    pw.Text(
+                      customerAddress,
+                      style: pw.TextStyle(
+                        color: textLight,
+                        fontSize: 10,
+                        lineSpacing: 2,
+                      ),
+                    ),
+                  if (customerTownship.isEmpty && customerAddress.isEmpty)
+                    pw.Text(
+                      "No address provided",
+                      style: pw.TextStyle(
+                        color: textLight,
+                        fontSize: 10,
+                        fontStyle: pw.FontStyle.italic,
+                      ),
+                    ),
+                ],
               ),
-              _pdfLine(
-                "Phone",
-                _pdfString(payload, "customerPhone"),
-                textDark,
-                textMid,
-              ),
-              if (customerTownship.isNotEmpty)
-                _pdfLine("Township", customerTownship, textDark, textMid),
-              if (customerAddress.isNotEmpty)
-                _pdfLine("Address", customerAddress, textDark, textMid),
-            ],
-          ),
+            ),
+          ],
         ),
-        pw.SizedBox(height: 18),
-        _pdfSectionTitle("Items", textDark),
-        pw.SizedBox(height: 8),
+
+        pw.SizedBox(height: 32),
+
+        // Items Table
         pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.8),
           columnWidths: const <int, pw.TableColumnWidth>{
             0: pw.FlexColumnWidth(3.3),
             1: pw.FlexColumnWidth(0.9),
@@ -449,10 +516,14 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
           },
           children: [
             pw.TableRow(
-              decoration: pw.BoxDecoration(color: softSurface),
+              decoration: pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: textDark, width: 0.8),
+                ),
+              ),
               children: [
                 _pdfTableCell(
-                  "Item",
+                  "Item Description",
                   isHeader: true,
                   textAlign: pw.TextAlign.left,
                 ),
@@ -462,7 +533,7 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
                   textAlign: pw.TextAlign.center,
                 ),
                 _pdfTableCell(
-                  "Unit Price",
+                  "Price",
                   isHeader: true,
                   textAlign: pw.TextAlign.right,
                 ),
@@ -473,85 +544,127 @@ Future<TransferableTypedData> _buildPdfDocumentInIsolate(
                 ),
               ],
             ),
-            ...items.map(
-              (item) => pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.white),
+            ...items.asMap().entries.map((entry) {
+              final item = entry.value;
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: borderColor, width: 0.5),
+                  ),
+                ),
                 children: [
                   _pdfTableCell(
                     _pdfItemString(item, "productName"),
                     textAlign: pw.TextAlign.left,
+                    verticalPadding: 12,
                   ),
                   _pdfTableCell(
                     _pdfItemString(item, "quantity"),
                     textAlign: pw.TextAlign.center,
+                    verticalPadding: 12,
                   ),
                   _pdfTableCell(
                     _pdfItemString(item, "unitPrice"),
                     textAlign: pw.TextAlign.right,
+                    verticalPadding: 12,
                   ),
                   _pdfTableCell(
                     _pdfItemString(item, "lineTotal"),
                     textAlign: pw.TextAlign.right,
+                    verticalPadding: 12,
+                    isBold: true,
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+
+        pw.SizedBox(height: 24),
+
+        // Totals aligned right
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.end,
+          children: [
+            pw.Container(
+              width: 200,
+              child: pw.Column(
+                children: [
+                  _pdfTotalRow(
+                    "Subtotal",
+                    _pdfString(payload, "subtotal"),
+                    textLight,
+                    textDark,
+                  ),
+                  pw.SizedBox(height: 8),
+                  _pdfTotalRow(
+                    "Delivery Fee",
+                    _pdfString(payload, "deliveryFee"),
+                    textLight,
+                    textDark,
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 12),
+                    child: pw.Divider(color: borderColor, thickness: 1),
+                  ),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        "Total",
+                        style: pw.TextStyle(
+                          color: textDark,
+                          fontSize: 12,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Text(
+                        _pdfString(payload, "total"),
+                        style: pw.TextStyle(
+                          color: brandOrange,
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ],
         ),
-        pw.SizedBox(height: 18),
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Container(
-            width: 220,
-            padding: const pw.EdgeInsets.all(14),
+
+        // Note Section
+        if (note.isNotEmpty) ...[
+          pw.SizedBox(height: 48),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(16),
             decoration: pw.BoxDecoration(
-              color: cream,
-              border: pw.Border.all(color: borderColor),
+              color: bgSoft,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
             ),
             child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _pdfTotalRow(
-                  "Subtotal",
-                  _pdfString(payload, "subtotal"),
-                  textDark,
-                  textDark,
+                pw.Text(
+                  "CUSTOMER NOTE",
+                  style: pw.TextStyle(
+                    color: textLight,
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
-                pw.SizedBox(height: 8),
-                _pdfTotalRow(
-                  "Delivery Fee",
-                  _pdfString(payload, "deliveryFee"),
-                  textDark,
-                  textDark,
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 10),
-                  child: pw.Divider(color: borderColor, height: 1),
-                ),
-                _pdfTotalRow(
-                  "Total",
-                  _pdfString(payload, "total"),
-                  textDark,
-                  headerColor,
-                  isEmphasized: true,
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  "\"$note\"",
+                  style: pw.TextStyle(
+                    color: textDark,
+                    fontSize: 10,
+                    fontStyle: pw.FontStyle.italic,
+                    lineSpacing: 1.5,
+                  ),
                 ),
               ],
-            ),
-          ),
-        ),
-        if (note.isNotEmpty) ...[
-          pw.SizedBox(height: 18),
-          _pdfSectionTitle("Note", textDark),
-          pw.SizedBox(height: 8),
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(14),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.white,
-              border: pw.Border.all(color: borderColor),
-            ),
-            child: pw.Text(
-              note,
-              style: pw.TextStyle(color: textMid, fontSize: 11, lineSpacing: 3),
             ),
           ),
         ],
@@ -573,94 +686,24 @@ String _pdfItemString(Map<String, Object?> payload, String key) {
   return value is String ? value : "";
 }
 
-pw.Widget _pdfSectionTitle(String title, PdfColor textDark) {
-  return pw.Text(
-    title,
-    style: pw.TextStyle(
-      color: textDark,
-      fontSize: 14,
-      fontWeight: pw.FontWeight.bold,
-    ),
-  );
-}
-
-pw.Widget _pdfInfoBlock({
-  required String label,
-  required String value,
-  required PdfColor textDark,
-  required PdfColor textMid,
-}) {
-  return pw.Container(
-    padding: const pw.EdgeInsets.all(12),
-    decoration: pw.BoxDecoration(
-      color: PdfColors.white,
-      border: pw.Border.all(color: PdfColor.fromHex("#EDE8E0")),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(label, style: pw.TextStyle(color: textMid, fontSize: 10)),
-        pw.SizedBox(height: 4),
-        pw.Text(
-          value,
-          style: pw.TextStyle(
-            color: textDark,
-            fontSize: 12,
-            fontWeight: pw.FontWeight.bold,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-pw.Widget _pdfLine(
-  String label,
-  String value,
-  PdfColor textDark,
-  PdfColor textMid,
-) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.only(bottom: 8),
-    child: pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.SizedBox(
-          width: 62,
-          child: pw.Text(
-            label,
-            style: pw.TextStyle(color: textMid, fontSize: 11),
-          ),
-        ),
-        pw.Expanded(
-          child: pw.Text(
-            value,
-            style: pw.TextStyle(
-              color: textDark,
-              fontSize: 11,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 pw.Widget _pdfTableCell(
   String text, {
   bool isHeader = false,
+  bool isBold = false,
   pw.TextAlign textAlign = pw.TextAlign.left,
+  double verticalPadding = 10,
 }) {
   return pw.Padding(
-    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    padding: pw.EdgeInsets.symmetric(horizontal: 8, vertical: verticalPadding),
     child: pw.Text(
       text,
       textAlign: textAlign,
       style: pw.TextStyle(
-        color: PdfColor.fromHex("#1A1A2E"),
-        fontSize: 11,
-        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        color: PdfColor.fromHex("#1e293b"),
+        fontSize: 10,
+        fontWeight: (isHeader || isBold)
+            ? pw.FontWeight.bold
+            : pw.FontWeight.normal,
       ),
     ),
   );
@@ -670,9 +713,8 @@ pw.Widget _pdfTotalRow(
   String label,
   String value,
   PdfColor leadingColor,
-  PdfColor trailingColor, {
-  bool isEmphasized = false,
-}) {
+  PdfColor trailingColor,
+) {
   return pw.Row(
     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
     children: [
@@ -680,15 +722,15 @@ pw.Widget _pdfTotalRow(
         label,
         style: pw.TextStyle(
           color: leadingColor,
-          fontSize: isEmphasized ? 12 : 11,
-          fontWeight: isEmphasized ? pw.FontWeight.bold : pw.FontWeight.normal,
+          fontSize: 10,
+          fontWeight: pw.FontWeight.bold,
         ),
       ),
       pw.Text(
         value,
         style: pw.TextStyle(
           color: trailingColor,
-          fontSize: isEmphasized ? 13 : 11,
+          fontSize: 10,
           fontWeight: pw.FontWeight.bold,
         ),
       ),
@@ -783,267 +825,259 @@ class _InvoiceImageCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.softOrangeLight,
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          shopName,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.softOrange,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Customer Invoice",
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
-                    ),
+        // Header Section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  shopName,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.softOrange,
+                    fontSize: 26,
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.tealLight,
-                      border: Border.all(color: AppColors.teal),
-                    ),
-                    child: Text(
-                      _statusLabel(order),
+                ),
+                Text(
+                  "Official Invoice",
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textLight,
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "INVOICE NO. ",
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.teal,
+                        color: AppColors.textLight,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 8,
+                      ),
+                    ),
+                    Text(
+                      order.orderNo,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppColors.textDark,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                  ],
+                ),
+                Text(
+                  _formatDateTime(order.createdAt),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.textLight,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.yellowLight,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _statusLabel(order).toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.yellow,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Divider(color: AppColors.border, thickness: 1.5),
+        ),
+
+        // Info Grid (Bill To & Ship To)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _ImageInfoPill(
-                      label: "Order No",
-                      value: order.orderNo,
+                  Text(
+                    "BILL TO",
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textLight,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _ImageInfoPill(
-                      label: "Created",
-                      value: _formatDateTime(order.createdAt),
+                  const SizedBox(height: 8),
+                  Text(
+                    order.customerName,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    order.customerPhone,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textMid,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "SHIP TO",
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textLight,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if ((order.customerTownship ?? "").isNotEmpty)
+                    Text(
+                      order.customerTownship!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  if ((order.customerAddress ?? "").isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        order.customerAddress!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textMid,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  if ((order.customerTownship ?? "").isEmpty &&
+                      (order.customerAddress ?? "").isEmpty)
+                    Text(
+                      "No address provided",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textLight,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 18),
-        const _InvoiceSectionTitle(title: "Customer"),
-        const SizedBox(height: 8),
-        _ImageSectionCard(
-          child: Column(
-            children: [
-              _ImageInfoRow(label: "Name", value: order.customerName),
-              _ImageInfoRow(label: "Phone", value: order.customerPhone),
-              if ((order.customerTownship ?? "").trim().isNotEmpty)
-                _ImageInfoRow(
-                  label: "Township",
-                  value: order.customerTownship!.trim(),
-                ),
-              if ((order.customerAddress ?? "").trim().isNotEmpty)
-                _ImageInfoRow(
-                  label: "Address",
-                  value: order.customerAddress!.trim(),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        const _InvoiceSectionTitle(title: "Items"),
-        const SizedBox(height: 8),
+
+        const SizedBox(height: 36),
+
+        // Items Table
         _InvoiceItemsTable(order: order),
-        const SizedBox(height: 18),
+
+        const SizedBox(height: 24),
+
+        // Totals Area
         Align(
           alignment: Alignment.centerRight,
-          child: Container(
-            width: 230,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.cream,
-              border: Border.all(color: AppColors.border),
-            ),
+          child: SizedBox(
+            width: 240,
             child: Column(
               children: [
                 _ImageSummaryRow(
                   label: "Subtotal",
                   value: _formatMoney(order.subtotal, order.currency),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 _ImageSummaryRow(
                   label: "Delivery Fee",
                   value: _formatMoney(order.deliveryFee, order.currency),
                 ),
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Divider(height: 1, color: AppColors.border),
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(color: AppColors.border, thickness: 1),
                 ),
-                _ImageSummaryRow(
-                  label: "Total",
-                  value: _formatMoney(order.totalPrice, order.currency),
-                  emphasize: true,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Total",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      _formatMoney(order.totalPrice, order.currency),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: AppColors.softOrange,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
+
         if ((order.note ?? "").trim().isNotEmpty) ...[
-          const SizedBox(height: 18),
-          const _InvoiceSectionTitle(title: "Note"),
-          const SizedBox(height: 8),
-          _ImageSectionCard(
-            child: Text(
-              order.note!.trim(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMid,
-                height: 1.45,
-              ),
+          const SizedBox(height: 48),
+          Container(
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.softOrangeLight.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "CUSTOMER NOTE",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.softOrange.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "\"${order.note!.trim()}\"",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                    height: 1.5,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ],
-    );
-  }
-}
-
-class _ImageSectionCard extends StatelessWidget {
-  const _ImageSectionCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _ImageInfoPill extends StatelessWidget {
-  const _ImageInfoPill({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.textLight,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textDark,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ImageInfoRow extends StatelessWidget {
-  const _ImageInfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 72,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textLight,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textDark,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvoiceSectionTitle extends StatelessWidget {
-  const _InvoiceSectionTitle({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w900,
-        color: AppColors.textDark,
-      ),
     );
   }
 }
@@ -1055,73 +1089,70 @@ class _InvoiceItemsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const border = BorderSide(color: AppColors.border, width: 1);
+    const border = BorderSide(color: AppColors.border, width: 0.8);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: Table(
-        columnWidths: const <int, TableColumnWidth>{
-          0: FlexColumnWidth(3.3),
-          1: FlexColumnWidth(0.9),
-          2: FlexColumnWidth(1.6),
-          3: FlexColumnWidth(1.6),
-        },
-        border: const TableBorder(
-          top: border,
-          bottom: border,
-          left: border,
-          right: border,
-          horizontalInside: border,
-          verticalInside: border,
+    return Table(
+      columnWidths: const <int, TableColumnWidth>{
+        0: FlexColumnWidth(3.3),
+        1: FlexColumnWidth(0.9),
+        2: FlexColumnWidth(1.6),
+        3: FlexColumnWidth(1.6),
+      },
+      children: [
+        const TableRow(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: AppColors.textDark, width: 1),
+            ),
+          ),
+          children: [
+            _InvoiceTableCell(
+              "Item Description",
+              isHeader: true,
+              alignment: TextAlign.left,
+            ),
+            _InvoiceTableCell(
+              "Qty",
+              isHeader: true,
+              alignment: TextAlign.center,
+            ),
+            _InvoiceTableCell(
+              "Price",
+              isHeader: true,
+              alignment: TextAlign.right,
+            ),
+            _InvoiceTableCell(
+              "Total",
+              isHeader: true,
+              alignment: TextAlign.right,
+            ),
+          ],
         ),
-        children: [
-          const TableRow(
-            decoration: BoxDecoration(color: AppColors.softOrangeLight),
+        ...order.items.map(
+          (item) => TableRow(
+            decoration: const BoxDecoration(border: Border(bottom: border)),
             children: [
+              _InvoiceTableCell(item.productName, verticalPadding: 14),
               _InvoiceTableCell(
-                "Item",
-                isHeader: true,
-                alignment: TextAlign.left,
-              ),
-              _InvoiceTableCell(
-                "Qty",
-                isHeader: true,
+                "${item.quantity}",
                 alignment: TextAlign.center,
+                verticalPadding: 14,
               ),
               _InvoiceTableCell(
-                "Unit Price",
-                isHeader: true,
+                _formatMoney(item.unitPrice, order.currency),
                 alignment: TextAlign.right,
+                verticalPadding: 14,
               ),
               _InvoiceTableCell(
-                "Total",
-                isHeader: true,
+                _formatMoney(item.lineTotal, order.currency),
                 alignment: TextAlign.right,
+                isBold: true,
+                verticalPadding: 14,
               ),
             ],
           ),
-          ...order.items.map(
-            (item) => TableRow(
-              decoration: const BoxDecoration(color: Colors.white),
-              children: [
-                _InvoiceTableCell(item.productName),
-                _InvoiceTableCell(
-                  "${item.quantity}",
-                  alignment: TextAlign.center,
-                ),
-                _InvoiceTableCell(
-                  _formatMoney(item.unitPrice, order.currency),
-                  alignment: TextAlign.right,
-                ),
-                _InvoiceTableCell(
-                  _formatMoney(item.lineTotal, order.currency),
-                  alignment: TextAlign.right,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1130,23 +1161,28 @@ class _InvoiceTableCell extends StatelessWidget {
   const _InvoiceTableCell(
     this.text, {
     this.isHeader = false,
+    this.isBold = false,
     this.alignment = TextAlign.left,
+    this.verticalPadding = 12,
   });
 
   final String text;
   final bool isHeader;
+  final bool isBold;
   final TextAlign alignment;
+  final double verticalPadding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: verticalPadding),
       child: Text(
         text,
         textAlign: alignment,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: AppColors.textDark,
-          fontWeight: isHeader ? FontWeight.w900 : FontWeight.w700,
+          fontWeight: (isHeader || isBold) ? FontWeight.w900 : FontWeight.w600,
+          fontSize: 12,
           height: 1.35,
         ),
       ),
@@ -1155,15 +1191,10 @@ class _InvoiceTableCell extends StatelessWidget {
 }
 
 class _ImageSummaryRow extends StatelessWidget {
-  const _ImageSummaryRow({
-    required this.label,
-    required this.value,
-    this.emphasize = false,
-  });
+  const _ImageSummaryRow({required this.label, required this.value});
 
   final String label;
   final String value;
-  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
@@ -1173,15 +1204,17 @@ class _ImageSummaryRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppColors.textDark,
-            fontWeight: emphasize ? FontWeight.w900 : FontWeight.w700,
+            color: AppColors.textLight,
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
           ),
         ),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: emphasize ? AppColors.softOrange : AppColors.textDark,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textDark,
             fontWeight: FontWeight.w900,
+            fontSize: 13,
           ),
         ),
       ],

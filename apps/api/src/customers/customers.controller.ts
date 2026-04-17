@@ -28,7 +28,6 @@ import { CustomersService } from './customers.service';
 
 @Controller('api/v1/shops/:shopId/customers')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.customersManagement)
 @ApiTags('Customers')
 @ApiBearerAuth('access-token')
 export class CustomersController {
@@ -36,6 +35,7 @@ export class CustomersController {
 
   @Get()
   @RequirePermissions(permissions.customersRead)
+  @RequirePlanFeatures(subscriptionFeatures.customersManagement)
   @ApiOperation({ summary: 'List customers for a shop' })
   listCustomers(
     @CurrentUser() currentUser: AuthenticatedUser,

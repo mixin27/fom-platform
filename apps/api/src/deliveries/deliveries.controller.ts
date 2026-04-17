@@ -26,7 +26,6 @@ import { DeliveriesService } from './deliveries.service';
 
 @Controller('api/v1/shops/:shopId/deliveries')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.deliveriesManagement)
 @ApiTags('Deliveries')
 @ApiBearerAuth('access-token')
 export class DeliveriesController {
@@ -34,6 +33,7 @@ export class DeliveriesController {
 
   @Get()
   @RequirePermissions(permissions.deliveriesRead)
+  @RequirePlanFeatures(subscriptionFeatures.deliveriesManagement)
   @ApiOperation({ summary: 'List deliveries for a shop' })
   listDeliveries(
     @CurrentUser() currentUser: AuthenticatedUser,

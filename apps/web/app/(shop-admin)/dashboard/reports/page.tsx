@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { BarChart3, CalendarRange, NotebookTabs } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
@@ -7,6 +8,7 @@ import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import {
   getShopDailySummary,
   getShopMonthlyReport,
+  getShopPortalContext,
   getShopWeeklyReport,
 } from "@/lib/shop/api"
 import { getSingleSearchParam, type ShopSearchParams } from "@/lib/shop/query"
@@ -33,10 +35,34 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const params = (await searchParams) ?? {}
   const date = getSingleSearchParam(params.date) ?? ""
   const month = getSingleSearchParam(params.month) ?? ""
+  const { activeShop } = await getShopPortalContext()
+  const canReadReports = activeShop.membership.permissions.includes("summaries.read")
   const currentHref = `/dashboard/reports${date || month ? `?${new URLSearchParams({
     ...(date ? { date } : {}),
     ...(month ? { month } : {}),
   }).toString()}` : ""}`
+
+  if (!canReadReports) {
+    return (
+      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+        <CardHeader>
+          <CardDescription>Access required</CardDescription>
+          <CardTitle>Reports are not available to this member</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground">
+          <p>
+            This account does not currently have permission to read shop summaries.
+          </p>
+          <div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard">Back to dashboard</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const [dailyResponse, weeklyResponse, monthlyResponse] = await Promise.all([
     getShopDailySummary(date ? { date } : undefined, currentHref),
     getShopWeeklyReport(date ? { date } : undefined, currentHref),

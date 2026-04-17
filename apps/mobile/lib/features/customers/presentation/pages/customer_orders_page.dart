@@ -113,10 +113,13 @@ class _CustomerOrdersViewState extends State<_CustomerOrdersView> {
                           CustomerOrdersTabChanged(kOrdersHomeTabs[index]),
                         );
                       },
-                      todayOrdersCount: state.countForTab(OrdersHomeTab.today),
+                      todayOrdersCount: state.totalOrdersCount,
+                      todayOrdersLabel: "Total Orders",
                       todayRevenueText: _formatCompactAmount(
-                        state.todayRevenue,
+                        state.totalRevenue,
                       ),
+                      revenueLabel: "Total Spent",
+                      revenueSubtitle: "Total MMK",
                       pendingCount: state.countForTab(OrdersHomeTab.pending),
                       showSummaryCards: true,
                       showPendingAlert:

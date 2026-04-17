@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
+import { getDatabaseUrl } from '../../config/app-env';
 
 @Injectable()
 export class PrismaService
@@ -9,12 +10,8 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    const connectionString =
-      process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5432/fom_platform_api?schema=public';
-
     super({
-      adapter: new PrismaPg({ connectionString }),
+      adapter: new PrismaPg({ connectionString: getDatabaseUrl() }),
     });
   }
 

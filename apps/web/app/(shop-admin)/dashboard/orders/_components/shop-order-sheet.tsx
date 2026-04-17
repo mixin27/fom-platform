@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { PencilLine, Plus, Save, Trash2 } from "lucide-react"
+import { Copy, Download, FileText, ImageIcon, MoreHorizontal, PencilLine, Plus, Printer, Save, Trash2 } from "lucide-react"
+import { toPng } from "html-to-image"
+import { jsPDF } from "jspdf"
+import { toast } from "sonner"
 
 import type { ShopOrder } from "@/lib/shop/api"
 import {
@@ -12,7 +15,20 @@ import {
   updateShopOrderAction,
   updateShopOrderItemAction,
 } from "../../actions"
+import {
+  generateInvoiceFilename,
+  generateOrderInvoiceText,
+} from "@/lib/shop/invoice"
 import { Button } from "@workspace/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
 import {
   Field,
   FieldDescription,
@@ -31,9 +47,11 @@ import {
   SheetTrigger,
 } from "@workspace/ui/components/sheet"
 import { Textarea } from "@workspace/ui/components/textarea"
+import { OrderInvoiceDocument } from "./order-invoice-document"
 
 type ShopOrderSheetProps = {
   shopId: string
+  shopName: string
   order?: ShopOrder | null
   triggerLabel?: string
   triggerVariant?: "default" | "outline" | "secondary" | "ghost"
@@ -99,13 +117,16 @@ function parseInteger(value: string) {
 
 export function ShopOrderSheet({
   shopId,
+  shopName,
   order,
   triggerLabel,
   triggerVariant = "outline",
 }: ShopOrderSheetProps) {
   const router = useRouter()
+  const invoiceRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isExporting, setIsExporting] = useState(false)
   const [values, setValues] = useState<FormValues>(getInitialValues(order))
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -370,6 +391,63 @@ export function ShopOrderSheet({
       }))
       router.refresh()
     })
+  }
+
+  function handleExportText() {
+    if (!order) return
+    const text = generateOrderInvoiceText(order, shopName)
+    navigator.clipboard.writeText(text)
+    toast.success("Invoice text copied to clipboard!")
+  }
+
+  async function handleExportImage() {
+    if (!order || !invoiceRef.current) return
+    setIsExporting(true)
+
+    try {
+      const dataUrl = await toPng(invoiceRef.current, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+      })
+
+      const link = document.createElement("a")
+      link.download = generateInvoiceFilename(order, shopName, "png")
+      link.href = dataUrl
+      link.click()
+      toast.success("Invoice image downloaded!")
+    } catch (error) {
+      console.error("Export failed", error)
+      toast.error("Failed to generate image. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleExportPDF() {
+    if (!order || !invoiceRef.current) return
+    setIsExporting(true)
+
+    try {
+      const dataUrl = await toPng(invoiceRef.current, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+      })
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: [800, 1131], // Match our component size
+      })
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, 800, 1131)
+      pdf.save(generateInvoiceFilename(order, shopName, "pdf"))
+      toast.success("Invoice PDF downloaded!")
+    } catch (error) {
+      console.error("Export failed", error)
+      toast.error("Failed to generate PDF. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
@@ -691,14 +769,58 @@ export function ShopOrderSheet({
           ) : null}
         </div>
 
-        <SheetFooter className="border-t border-[var(--fom-border-subtle)] px-4 py-4">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
+        <div className="fixed top-[-9999px] left-[-9999px] pointer-events-none">
+          {order && (
+            <OrderInvoiceDocument
+              ref={invoiceRef}
+              order={order}
+              shopName={shopName}
+            />
+          )}
+        </div>
+
+        <SheetFooter className="border-t border-[var(--fom-border-subtle)] px-4 py-4 sm:justify-between">
+          <div className="flex gap-2">
+            {isEdit && order && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={isExporting}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    {isExporting ? "Exporting..." : "Export invoice"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={handleExportText}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy text
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPDF}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Save as PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportImage}>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Save as Image
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
           <Button
             type="button"
             onClick={isEdit ? handleSaveMetadata : handleCreate}
-            disabled={isPending}
+            disabled={isPending || isExporting}
           >
             {isPending
               ? "Saving..."

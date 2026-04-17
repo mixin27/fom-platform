@@ -40,6 +40,14 @@
   "authPasswordCreateHint": "အနည်းဆုံး ၈ လုံး၊ A-z၊ 0-9 ပါဝင်ရမည်",
   "authConfirmPasswordLabel": "စကားဝှက် အတည်ပြုရန်",
   "authConfirmPasswordHint": "စကားဝှက်ကို ထပ်ထည့်ပါ",
+  "authTermsConsentTitle": "စည်းကမ်းချက်များကို လက်ခံပါသည်",
+  "authPrivacyConsentTitle": "ကိုယ်ရေးအချက်အလက်မူဝါဒကို လက်ခံပါသည်",
+  "authConsentRequiredSubtitle": "အကောင့်ဖန်တီးမီ လိုအပ်ပါသည်။",
+  "authViewTermsLink": "စည်းကမ်းချက်များ ကြည့်မည်",
+  "authViewPrivacyLink": "ကိုယ်ရေးမူဝါဒ ကြည့်မည်",
+  "authConsentRequiredError": "အကောင့်မဖန်တီးမီ စည်းကမ်းချက်များနှင့် ကိုယ်ရေးအချက်အလက်မူဝါဒကို လက်ခံပေးပါ။",
+  "authTermsOpenError": "စည်းကမ်းချက်များ စာမျက်နှာကို ယခု ဖွင့်မရပါ။",
+  "authPrivacyOpenError": "ကိုယ်ရေးအချက်အလက်မူဝါဒ စာမျက်နှာကို ယခု ဖွင့်မရပါ။",
   "authCreateAccountCta": "အကောင့်ဖန်တီးမည်",
   "authAlreadyHaveAccountPrompt": "အကောင့်ရှိပြီးသားလား။ ",
   "authAlreadyHaveAccountAction": "အကောင့်ဝင်ပါ",
@@ -124,6 +132,8 @@
   "settingsBillingOutstandingBalanceTitle": "ကျန်ငွေ",
   "settingsBillingAllSettled": "ဘောက်ချာအားလုံးကို ရှင်းလင်းပြီးပါပြီ",
   "settingsBillingPaymentNeeded": "ဆိုင်ကို ဆက်လက်အသုံးပြုရန် ငွေပေးချေရန်လိုအပ်သည်",
+  "settingsBillingPaymentHelpTitle": "ငွေပေးချေမှုညွှန်ကြားချက်များ",
+  "settingsBillingPaymentHelpSubtitle": "ဘောက်ချာ၊ ငွေပေးချေမှုနှင့် အသုံးပြုခွင့်အကူအညီအတွက် FOM website ကို ဖွင့်ပါ။",
   "settingsBillingTrialActiveTitle": "Free trial အသုံးပြုနေပါသည်",
   "settingsBillingTrialActiveMessage": "Trial အသက်ဝင်နေစဉ် ဆိုင်ကို ဆက်လက်အသုံးပြုနိုင်ပါသည်။",
   "settingsBillingTrialEndsIn": "Trial သည် {duration} အတွင်း ကုန်ဆုံးပါမည်။",
@@ -213,5 +223,6 @@
   "notificationsDailySummaryDesc": "နေ့ကုန်အစီရင်ခံစာနှင့် အကျဉ်းချုပ်",
   "notificationsProductUpdates": "ထုတ်ကုန်အပ်ဒိတ်များ",
   "notificationsProductUpdatesDesc": "လုပ်ဆောင်ချက်အသစ်များနှင့် ရောင်းအားတိုးအကြံပြုချက်များ",
-  "notificationsChannelInAppEmail": "အက်ပ်အတွင်း + အီးမေးလ်"
+  "notificationsChannelInAppEmail": "အက်ပ်အတွင်း + အီးမေးလ်",
+  "settingsSupportOpenError": "Website ကို ယခု ဖွင့်မရပါ။"
 }

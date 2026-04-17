@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/config/app_locale_controller.dart';
 import '../../../../app/di/injection_container.dart';
@@ -20,6 +21,8 @@ class SettingsHomePage extends StatefulWidget {
 }
 
 class _SettingsHomePageState extends State<SettingsHomePage> {
+  static final Uri _supportWebsiteUri = Uri.parse('https://getfom.com');
+
   @override
   void initState() {
     super.initState();
@@ -147,6 +150,32 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _launchSupportWebsite() async {
+    final l10n = context.l10n;
+
+    try {
+      final launched = await launchUrl(
+        _supportWebsiteUri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (launched || !mounted) {
+        return;
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.settingsSupportOpenError),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -656,6 +685,19 @@ class _SettingsHomePageState extends State<SettingsHomePage> {
                                         : l10n.settingsBillingPaymentNeeded,
                                     trailingValue:
                                         '${_formatAmount(snapshot.billing.outstandingBalance)} MMK',
+                                  ),
+                                  AppSettingTile(
+                                    leading: const Icon(
+                                      Icons.open_in_browser_rounded,
+                                      size: 18,
+                                      color: AppColors.teal,
+                                    ),
+                                    iconBgColor: AppColors.tealLight,
+                                    title: l10n.settingsBillingPaymentHelpTitle,
+                                    subtitle:
+                                        l10n.settingsBillingPaymentHelpSubtitle,
+                                    showArrow: true,
+                                    onTap: _launchSupportWebsite,
                                   ),
                                 ],
                               ),

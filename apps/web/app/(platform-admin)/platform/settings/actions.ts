@@ -180,6 +180,7 @@ export type PlatformPlanEditorInput = {
   currency: string
   billing_period: string
   is_active: boolean
+  marketing_visible: boolean
   sort_order: number
   items: PlatformPlanItemInput[]
   limits: PlatformPlanLimitInput[]

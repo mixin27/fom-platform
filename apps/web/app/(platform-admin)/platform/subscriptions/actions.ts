@@ -36,6 +36,7 @@ export type PlatformBillingActionResult =
 
 function revalidatePlatformBillingWorkspace() {
   revalidatePath("/platform")
+  revalidatePath("/platform/payments")
   revalidatePath("/platform/shops")
   revalidatePath("/platform/subscriptions")
   revalidatePath("/platform/support")

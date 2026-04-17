@@ -8,6 +8,7 @@ import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 
 function revalidateShopWorkspace() {
   revalidatePath("/dashboard")
+  revalidatePath("/dashboard/billing")
   revalidatePath("/dashboard/orders")
   revalidatePath("/dashboard/orders/paste-from-messenger")
   revalidatePath("/dashboard/customers")
@@ -1894,6 +1895,40 @@ export async function updateShopMemberFromFormAction(formData: FormData) {
     }
   }
 
+  redirectToPath(returnTo, redirectInput)
+}
+
+export async function createInvoiceMmqrSessionFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/billing")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const invoiceId = normalizeTextField(formData.get("invoice_id"))
+
+  if (!shopId || !invoiceId) {
+    redirectToPath(returnTo, {
+      error: "Invoice context is missing.",
+    })
+  }
+
+  let redirectInput: { notice?: string; error?: string }
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/billing/invoices/${invoiceId}/mmqr-session`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+      },
+    })
+    revalidateShopWorkspace()
+    redirectInput = { notice: "MyanMyanPay payment session is ready." }
+  } catch (error) {
+    redirectInput = {
+      error: toActionMessage(
+        error,
+        "Unable to create a MyanMyanPay payment session right now."
+      ),
+    }
+  }
   redirectToPath(returnTo, redirectInput)
 }
 

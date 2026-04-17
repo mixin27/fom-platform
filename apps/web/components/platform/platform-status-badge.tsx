@@ -31,11 +31,23 @@ const badgeClasses: Record<string, string> = {
     "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
   expired:
     "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  sent: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
+  queued: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
   failed: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
   high: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
   medium:
     "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
   low: "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  info: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50",
+  success:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
+  warning:
+    "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
+  critical: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
+  draft: "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  archived:
+    "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  ended: "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
 }
 
 type PlatformStatusBadgeProps = {

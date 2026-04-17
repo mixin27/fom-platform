@@ -3,12 +3,14 @@ import Link from "next/link"
 import { Search, Shield } from "lucide-react"
 
 import { signOutAction } from "@/app/actions"
+import { AnnouncementBannerStack } from "@/components/announcement-banner-stack"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
 import { PortalRealtimeBellButton } from "@/components/portal-realtime-bell-button"
 import { platformPortalNav } from "@/lib/navigation"
 import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { requirePlatformAdmin } from "@/lib/auth/session"
+import { getPlatformLiveAnnouncements } from "@/lib/platform/api"
 import { Button } from "@workspace/ui/components/button"
 
 export default async function PlatformLayout({
@@ -17,11 +19,15 @@ export default async function PlatformLayout({
   children: ReactNode
 }) {
   const session = await requirePlatformAdmin()
-  const unreadResponse = await getNotificationUnreadCount({
-    requiredAccess: "platform",
-    retryPath: "/platform",
-  })
+  const [unreadResponse, announcementResponse] = await Promise.all([
+    getNotificationUnreadCount({
+      requiredAccess: "platform",
+      retryPath: "/platform",
+    }),
+    getPlatformLiveAnnouncements(),
+  ])
   const unreadCount = unreadResponse.data.unread_count
+  const announcements = announcementResponse.data.announcements
 
   return (
     <div className="fom-admin-canvas min-h-screen">
@@ -80,6 +86,7 @@ export default async function PlatformLayout({
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-admin-surface)]">
+          <AnnouncementBannerStack announcements={announcements} />
           <header className="flex h-14 items-center gap-4 border-b border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-5">
             <div className="flex flex-col">
               <span className="text-[13px] font-semibold text-[var(--fom-ink)]">

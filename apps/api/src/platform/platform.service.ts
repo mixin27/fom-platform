@@ -27,8 +27,15 @@ import type { UpdatePlatformSettingsProfileDto } from './dto/update-platform-set
 import type { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import type { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import type { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
+import {
+  paymentProofStatuses,
+  type UpdatePlatformPaymentProofDto,
+} from './dto/update-platform-payment-proof.dto';
 import { platformSubscriptionStatuses } from './platform-billing.constants';
+import { subscriptionFeatureCatalog } from './subscription-feature.constants';
+import { subscriptionLimitCatalog } from './subscription-limit.constants';
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
+import { PublicContactService } from '../public-contact/public-contact.service';
 import {
   platformSupportIssueKinds,
   platformSupportIssueSeverities,
@@ -119,6 +126,7 @@ type PlanOptionRow = {
   price: number;
   currency: string;
   is_active: boolean;
+  marketing_visible: boolean;
   sort_order: number;
   items: PlanItemRow[];
   limits: PlanLimitRow[];
@@ -221,6 +229,7 @@ export class PlatformService {
     private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
     private readonly realtimeService: RealtimeService,
+    private readonly publicContactService: PublicContactService,
   ) {}
 
   async getDashboard() {
@@ -886,6 +895,53 @@ export class PlatformService {
     };
   }
 
+  async getPayments(query: ListPlatformSubscriptionsQueryDto) {
+    const normalizedSearch = query.search?.trim().toLowerCase() ?? '';
+    const normalizedStatus = query.status ?? 'all';
+    const normalizedPlan = query.plan?.trim().toLowerCase() ?? '';
+    const payments = await this.loadPaymentRows();
+    const filteredInvoices = payments.filter((payment) => {
+      if (normalizedStatus !== 'all' && payment.status !== normalizedStatus) {
+        return false;
+      }
+
+      if (normalizedPlan && payment.plan_code.toLowerCase() !== normalizedPlan) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        payment.invoice_no,
+        payment.shop_name,
+        payment.provider_ref ?? '',
+        payment.plan_name,
+      ].some((value) => value.toLowerCase().includes(normalizedSearch));
+    });
+    const page = paginate(filteredInvoices, query.limit, query.cursor);
+
+    return {
+      overview: {
+        total_invoices: payments.length,
+        paid_invoices: payments.filter((payment) => payment.status === 'paid').length,
+        pending_invoices: payments.filter((payment) => payment.status === 'pending')
+          .length,
+        overdue_invoices: payments.filter((payment) => payment.status === 'overdue')
+          .length,
+        failed_invoices: payments.filter((payment) => payment.status === 'failed')
+          .length,
+      },
+      invoices: page.items,
+      invoices_pagination: page.pagination,
+    };
+  }
+
+  async getPayment(invoiceId: string) {
+    return this.loadPaymentDetailById(invoiceId);
+  }
+
   async updateSubscription(
     subscriptionId: string,
     body: UpdatePlatformSubscriptionDto,
@@ -1098,6 +1154,7 @@ export class PlatformService {
     const tenants = await this.loadTenantSnapshots(now);
     const payments = await this.loadPaymentRows();
     const issues = await this.syncAndLoadSupportIssues(tenants, payments, now);
+    const publicContact = await this.publicContactService.listInboxForPlatform();
 
     return {
       overview: {
@@ -1107,8 +1164,12 @@ export class PlatformService {
         onboarding_items: issues.filter((issue) => issue.kind === 'onboarding')
           .length,
         billing_items: issues.filter((issue) => issue.kind === 'billing').length,
+        public_contact_inbox: publicContact.open_count,
+        payment_proof_queue: 0,
       },
       issues,
+      public_contact: publicContact,
+      payment_proofs: [],
       health: {
         total_shops: tenants.length,
         active_shops: tenants.filter((tenant) => tenant.status === 'active')
@@ -1126,6 +1187,21 @@ export class PlatformService {
         last_active_at: tenant.last_active_at,
       })),
     };
+  }
+
+  async updatePaymentProof(
+    currentUser: AuthenticatedUser,
+    proofId: string,
+    body: UpdatePlatformPaymentProofDto,
+  ) {
+    void currentUser;
+    void proofId;
+    void body;
+    void paymentProofStatuses;
+
+    throw conflictError(
+      'Manual payment proof flow has been retired. Billing is now handled through MyanMyanPay invoice sessions.',
+    );
   }
 
   async createSupportIssue(
@@ -1353,6 +1429,7 @@ export class PlatformService {
       body.currency === undefined &&
       body.billing_period === undefined &&
       body.is_active === undefined &&
+      body.marketing_visible === undefined &&
       body.sort_order === undefined &&
       body.items === undefined &&
       body.limits === undefined
@@ -1391,6 +1468,9 @@ export class PlatformService {
             ? { billingPeriod: body.billing_period.trim() }
             : {}),
           ...(body.is_active !== undefined ? { isActive: body.is_active } : {}),
+          ...(body.marketing_visible !== undefined
+            ? { marketingVisible: body.marketing_visible }
+            : {}),
           ...(body.sort_order !== undefined ? { sortOrder: body.sort_order } : {}),
         },
       });
@@ -1432,6 +1512,7 @@ export class PlatformService {
           currency: body.currency?.trim().toUpperCase() || 'MMK',
           billingPeriod: body.billing_period.trim(),
           isActive: body.is_active ?? true,
+          marketingVisible: body.marketing_visible ?? false,
           sortOrder: body.sort_order ?? 0,
         },
         select: { id: true },
@@ -1491,7 +1572,7 @@ export class PlatformService {
   async getPublicPlans() {
     const plans = await this.loadPlanOptions();
 
-    return plans.filter((plan) => plan.is_active);
+    return plans.filter((plan) => plan.is_active && plan.marketing_visible);
   }
 
   private async emitPlatformInvalidation(input: {
@@ -1590,6 +1671,20 @@ export class PlatformService {
         ].length,
       },
       plans,
+      feature_presets: subscriptionFeatureCatalog.map((feature) => ({
+        code: feature.code,
+        category: feature.category,
+        name: feature.name,
+        description: feature.description,
+        launch_phase: feature.launchPhase,
+      })),
+      limit_presets: subscriptionLimitCatalog.map((limit) => ({
+        code: limit.code,
+        category: limit.category,
+        name: limit.name,
+        description: limit.description,
+        launch_phase: limit.launchPhase,
+      })),
     };
   }
 
@@ -1658,6 +1753,7 @@ export class PlatformService {
       price: plan.price,
       currency: plan.currency,
       is_active: plan.isActive,
+      marketing_visible: plan.marketingVisible,
       sort_order: plan.sortOrder,
       shop_count: plan.subscriptions.length,
       collected_revenue: paidRevenue,
@@ -2629,6 +2725,89 @@ export class PlatformService {
     };
   }
 
+  private async loadPaymentDetailById(paymentId: string) {
+    const payment = await (this.prisma as any).payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        subscription: {
+          include: {
+            shop: {
+              include: {
+                owner: true,
+              },
+            },
+            plan: true,
+          },
+        },
+        transactions: {
+          orderBy: [{ createdAt: 'desc' }],
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    return {
+      id: payment.id,
+      invoice_no: payment.invoiceNo,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      payment_method: payment.paymentMethod,
+      provider_ref: payment.providerRef,
+      due_at: payment.dueAt?.toISOString() ?? null,
+      paid_at: payment.paidAt?.toISOString() ?? null,
+      created_at: payment.createdAt.toISOString(),
+      updated_at: payment.updatedAt.toISOString(),
+      subscription: {
+        id: payment.subscription.id,
+        status: payment.subscription.status,
+        auto_renews: payment.subscription.autoRenews,
+        start_at: payment.subscription.startAt.toISOString(),
+        end_at: payment.subscription.endAt?.toISOString() ?? null,
+        shop_id: payment.subscription.shopId,
+        shop_name: payment.subscription.shop.name,
+        owner_name: payment.subscription.shop.owner.name,
+        owner_email: payment.subscription.shop.owner.email,
+        plan_code: payment.subscription.plan.code,
+        plan_name: payment.subscription.plan.name,
+        plan_price: payment.subscription.plan.price,
+        plan_currency: payment.subscription.plan.currency,
+        billing_period: payment.subscription.plan.billingPeriod,
+      },
+      transactions: payment.transactions.map((transaction: any) => {
+        const rawCreateResponse =
+          transaction.rawCreateResponse &&
+          typeof transaction.rawCreateResponse === 'object' &&
+          !Array.isArray(transaction.rawCreateResponse)
+            ? (transaction.rawCreateResponse as Record<string, unknown>)
+            : null;
+
+        return {
+          id: transaction.id,
+          provider: transaction.provider,
+          provider_txn_id: transaction.providerTxnId,
+          provider_order_id: transaction.providerOrderId,
+          status: transaction.status,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          qr_payload: transaction.qrPayload,
+          qr_image_url: transaction.qrImageUrl,
+          payment_url:
+            rawCreateResponse && typeof rawCreateResponse.url === 'string'
+              ? rawCreateResponse.url
+              : null,
+          expires_at: transaction.expiresAt?.toISOString() ?? null,
+          paid_at: transaction.paidAt?.toISOString() ?? null,
+          created_at: transaction.createdAt.toISOString(),
+          updated_at: transaction.updatedAt.toISOString(),
+        };
+      }),
+    };
+  }
+
   private async loadSubscriptionRows(): Promise<SubscriptionRow[]> {
     await this.subscriptionLifecycle.expireElapsedTrials();
 
@@ -2741,6 +2920,7 @@ export class PlatformService {
       price: plan.price,
       currency: plan.currency,
       is_active: plan.isActive,
+      marketing_visible: plan.marketingVisible,
       sort_order: plan.sortOrder,
       items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
       limits: (plan.limits ?? []).map((limit: any) =>

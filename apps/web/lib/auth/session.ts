@@ -2,6 +2,7 @@ import "server-only"
 
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { Buffer } from "node:buffer"
+import { brotliCompressSync, brotliDecompressSync } from "node:zlib"
 import { cache } from "react"
 
 import { cookies } from "next/headers"
@@ -71,7 +72,10 @@ function signValue(value: string) {
 }
 
 function encodeSession(session: AppSession) {
-  const payload = Buffer.from(JSON.stringify(session), "utf8").toString("base64url")
+  const compressedPayload = brotliCompressSync(
+    Buffer.from(JSON.stringify(session), "utf8"),
+  )
+  const payload = compressedPayload.toString("base64url")
   const signature = signValue(payload)
   return `${payload}.${signature}`
 }
@@ -102,8 +106,9 @@ function decodeSession(value?: string) {
       return null
     }
 
+    const encodedBytes = Buffer.from(payload, "base64url")
     const parsed = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8")
+      decodeSerializedSessionPayload(encodedBytes)
     ) as AppSession
 
     if (
@@ -127,6 +132,14 @@ function decodeSession(value?: string) {
     return parsed
   } catch {
     return null
+  }
+}
+
+function decodeSerializedSessionPayload(payload: Buffer) {
+  try {
+    return brotliDecompressSync(payload).toString("utf8")
+  } catch {
+    return payload.toString("utf8")
   }
 }
 

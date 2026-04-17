@@ -1,29 +1,19 @@
-import { Shield, Store, UserRound } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, Shield, UserRound, Users } from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getCurrentUserProfile,
-  getShopBilling,
   getShopDetails,
-  getShopMembers,
   getShopPortalContext,
-  type ShopCursorPagination,
 } from "@/lib/shop/api"
-import {
-  buildQueryHref,
-  getPreviousCursor,
-  getSingleSearchParam,
-  type ShopSearchParams,
-} from "@/lib/shop/query"
 import { formatCodeLabel, formatList } from "@/lib/shop/format"
-import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/platform/format"
+import { formatRelativeDate } from "@/lib/platform/format"
+import { getSingleSearchParam, type ShopSearchParams } from "@/lib/shop/query"
 import {
-  addShopMemberFromFormAction,
   updateCurrentUserProfileFromFormAction,
-  updateShopMemberFromFormAction,
   updateShopProfileFromFormAction,
 } from "../actions"
 import { Button } from "@workspace/ui/components/button"
@@ -44,36 +34,46 @@ export default async function ShopSettingsPage({
   searchParams,
 }: ShopSettingsPageProps) {
   const params = (await searchParams) ?? {}
-  const currentHref = buildQueryHref("/dashboard/settings", params, {})
+  const returnTo = "/dashboard/settings"
   const { activeShop } = await getShopPortalContext()
   const permissions = new Set(activeShop.membership.permissions)
   const canManageShop = permissions.has("shops.write")
-  const [shopResponse, membersResponse, profileResponse, billingResponse] = await Promise.all([
-    getShopDetails(currentHref),
-    getShopMembers(params, currentHref),
-    getCurrentUserProfile(currentHref),
-    canManageShop ? getShopBilling(currentHref) : Promise.resolve(null),
+  const [shopResponse, profileResponse] = await Promise.all([
+    getShopDetails(returnTo),
+    getCurrentUserProfile(returnTo),
   ])
   const shop = shopResponse.data
-  const members = membersResponse.data
   const profile = profileResponse.data
-  const billing = billingResponse?.data ?? null
-  const pagination = membersResponse.meta?.pagination as ShopCursorPagination | undefined
-  const currentCursor = getSingleSearchParam(params.cursor)
-  const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
-  const previousCursor = getPreviousCursor(currentCursor, limit)
   const notice = getSingleSearchParam(params.notice)
   const error = getSingleSearchParam(params.error)
-  const canManageMembers = permissions.has("members.manage")
   const currentMembership =
-    profile.shops.find((shopRecord) => shopRecord.id === activeShop.id)?.membership ?? null
+    profile.shops.find((shopRecord) => shopRecord.id === activeShop.id)
+      ?.membership ?? null
 
   return (
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Settings"
-        title="Shop settings and access"
-        description="Keep shop identity, your operator profile, and member access aligned with the way the team works."
+        title="Shop and account settings"
+        description="Keep identity, profile, and access simple. Team management and billing now live on their own pages."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/staffs">
+                Staffs
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+            {canManageShop ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/billing">
+                  Billing & Subscription
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        }
       />
 
       {notice ? (
@@ -91,16 +91,18 @@ export default async function ShopSettingsPage({
         <DashboardStatCard
           title="Shop members"
           value={String(shop.member_count)}
-          detail="Members with access to the current shop workspace."
-          delta={`${members.filter((member) => member.status === "active").length} active`}
-          icon={Store}
+          detail="Member access is managed from the dedicated Staffs workspace."
+          delta="Staffs workspace"
+          icon={Users}
           accent="sunset"
         />
         <DashboardStatCard
           title="Your role"
           value={formatCodeLabel(currentMembership?.role ?? "member")}
           detail={`${currentMembership?.permissions.length ?? 0} effective shop permissions.`}
-          delta={formatList(currentMembership?.roles.map((role) => role.code) ?? [])}
+          delta={formatList(
+            currentMembership?.roles.map((role) => role.code) ?? []
+          )}
           icon={Shield}
           accent="teal"
         />
@@ -122,10 +124,17 @@ export default async function ShopSettingsPage({
           </CardHeader>
           <CardContent className="pt-0">
             {canManageShop ? (
-              <form action={updateShopProfileFromFormAction} className="flex flex-col gap-2.5">
-                <input type="hidden" name="return_to" value={currentHref} />
+              <form
+                action={updateShopProfileFromFormAction}
+                className="flex flex-col gap-2.5"
+              >
+                <input type="hidden" name="return_to" value={returnTo} />
                 <input type="hidden" name="shop_id" value={activeShop.id} />
-                <Input name="name" defaultValue={shop.name} placeholder="Shop name" />
+                <Input
+                  name="name"
+                  defaultValue={shop.name}
+                  placeholder="Shop name"
+                />
                 <Input
                   name="timezone"
                   defaultValue={shop.timezone}
@@ -139,7 +148,9 @@ export default async function ShopSettingsPage({
               <div className="text-sm leading-7 text-muted-foreground">
                 <p>{shop.name}</p>
                 <p>{shop.timezone}</p>
-                <p className="mt-2">Your account cannot edit shop identity fields.</p>
+                <p className="mt-2">
+                  Your account can view these fields but cannot edit them.
+                </p>
               </div>
             )}
           </CardContent>
@@ -155,7 +166,7 @@ export default async function ShopSettingsPage({
               action={updateCurrentUserProfileFromFormAction}
               className="flex flex-col gap-2.5"
             >
-              <input type="hidden" name="return_to" value={currentHref} />
+              <input type="hidden" name="return_to" value={returnTo} />
               <Input name="name" defaultValue={profile.name} placeholder="Name" />
               <Input
                 name="email"
@@ -184,8 +195,8 @@ export default async function ShopSettingsPage({
 
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Current access</CardDescription>
-            <CardTitle>Effective permissions</CardTitle>
+            <CardDescription>Effective access</CardDescription>
+            <CardTitle>Current permissions</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 pt-0">
             {(currentMembership?.permissions ?? []).length > 0 ? (
@@ -205,311 +216,97 @@ export default async function ShopSettingsPage({
         </Card>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-        <PlatformDataTable
-          title="Team members"
-          description="Current shop access"
-          rows={members}
-          emptyMessage="No members found for this shop."
-          footer={`Showing ${members.length} member${members.length === 1 ? "" : "s"}`}
-          pagination={
-            pagination
-              ? {
-                  previousHref: previousCursor
-                    ? buildQueryHref("/dashboard/settings", params, {
-                        cursor: previousCursor,
-                      })
-                    : currentCursor
-                      ? buildQueryHref("/dashboard/settings", params, {
-                          cursor: null,
-                        })
-                      : null,
-                  nextHref: pagination.next_cursor
-                    ? buildQueryHref("/dashboard/settings", params, {
-                        cursor: pagination.next_cursor,
-                      })
-                    : null,
-                }
-              : undefined
-          }
-          columns={[
-            {
-              key: "user",
-              header: "Member",
-              render: (member) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{member.user.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {member.user.email ?? member.user.phone ?? "No contact"}
-                  </span>
-                </div>
-              ),
-            },
-            {
-              key: "roles",
-              header: "Roles",
-              render: (member) => (
-                <div className="flex flex-wrap gap-2">
-                  {member.roles.map((role) => (
-                    <PlatformStatusBadge
-                      key={role.id}
-                      status="active"
-                      label={role.name}
-                    />
-                  ))}
-                </div>
-              ),
-            },
-            {
-              key: "status",
-              header: "Status",
-              render: (member) => <PlatformStatusBadge status={member.status} />,
-            },
-            {
-              key: "permissions",
-              header: "Permissions",
-              render: (member) => `${member.permissions.length} granted`,
-            },
-            {
-              key: "joined",
-              header: "Joined",
-              render: (member) => formatRelativeDate(member.created_at),
-            },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (member) => {
-                const isCurrentUser = member.user_id === profile.id
-                const isOwner = member.roles.some((role) => role.code === "owner")
-
-                if (!canManageMembers || isCurrentUser || isOwner) {
-                  return <span className="text-xs text-muted-foreground">No actions</span>
-                }
-
-                const nextStatus = member.status === "disabled" ? "active" : "disabled"
-
-                return (
-                  <form action={updateShopMemberFromFormAction}>
-                    <input type="hidden" name="return_to" value={currentHref} />
-                    <input type="hidden" name="shop_id" value={activeShop.id} />
-                    <input type="hidden" name="member_id" value={member.id} />
-                    <input type="hidden" name="status" value={nextStatus} />
-                    <Button type="submit" size="sm" variant="outline">
-                      {nextStatus === "active" ? "Restore" : "Disable"}
-                    </Button>
-                  </form>
-                )
-              },
-              className: "w-[120px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
-            },
-          ]}
-        />
+      <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>Dedicated workspaces</CardDescription>
+            <CardTitle>Settings is intentionally smaller now</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 pt-0">
+            <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4 text-sm leading-7 text-muted-foreground">
+              <p>
+                Team access, billing, and invoice follow-up have been moved out
+                of settings so this page stays focused on identity and access.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  Staffs workspace
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Invite, disable, and review member access from the dedicated
+                  team page.
+                </p>
+                <Button asChild size="sm" variant="outline" className="mt-4">
+                  <Link href="/dashboard/staffs">Open Staffs</Link>
+                </Button>
+              </div>
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  Billing & Subscription
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Review invoices, payment status, and MyanMyanPay payment
+                  sessions from the dedicated billing page.
+                </p>
+                {canManageShop ? (
+                  <Button asChild size="sm" variant="outline" className="mt-4">
+                    <Link href="/dashboard/billing">Open Billing</Link>
+                  </Button>
+                ) : (
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Billing access stays with shop managers.
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Access control</CardDescription>
-            <CardTitle>Add member</CardTitle>
+            <CardDescription>Shop summary</CardDescription>
+            <CardTitle>Current context</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            {canManageMembers ? (
-              <form action={addShopMemberFromFormAction} className="flex flex-col gap-2.5">
-                <input type="hidden" name="return_to" value={currentHref} />
-                <input type="hidden" name="shop_id" value={activeShop.id} />
-                <Input name="name" placeholder="Member name" />
-                <Input name="email" placeholder="Email" />
-                <Input name="phone" placeholder="Phone" />
-                <select
-                  name="role_code"
-                  defaultValue="staff"
-                  className="h-9 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-3 text-sm"
-                >
-                  <option value="staff">Staff</option>
-                </select>
-                <Button type="submit" size="sm">
-                  Add member
-                </Button>
-              </form>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Your account cannot invite or disable members in this shop.
+          <CardContent className="flex flex-col gap-3 pt-0 text-sm">
+            {[
+              { label: "Shop", value: shop.name },
+              { label: "Timezone", value: shop.timezone },
+              {
+                label: "Member status",
+                value: formatCodeLabel(currentMembership?.status ?? "active"),
+              },
+              {
+                label: "Joined",
+                value: formatRelativeDate(shop.created_at),
+              },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
+              >
+                <span className="text-muted-foreground">{row.label}</span>
+                <span className="font-medium text-foreground">{row.value}</span>
+              </div>
+            ))}
+            <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3">
+              <p className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase">
+                Assigned roles
               </p>
-            )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(currentMembership?.roles ?? []).map((role) => (
+                  <PlatformStatusBadge
+                    key={role.id}
+                    status="active"
+                    label={role.name}
+                  />
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      <section className="grid gap-3 md:grid-cols-3">
-        <DashboardStatCard
-          title="Current plan"
-          value={billing?.overview.plan_name ?? "No plan"}
-          detail={
-            billing?.overview.plan_price != null && billing?.overview.plan_currency
-              ? `${formatCurrency(
-                  billing.overview.plan_price,
-                  billing.overview.plan_currency
-                )} · ${billing.overview.billing_period ?? "custom"}`
-              : "No billing plan is attached to this shop yet."
-          }
-          delta={billing?.overview.plan_code ?? "billing"}
-          icon={Shield}
-          accent="sunset"
-        />
-        <DashboardStatCard
-          title="Subscription state"
-          value={formatCodeLabel(billing?.overview.status ?? "inactive")}
-          detail={
-            billing?.overview.current_period_end
-              ? `Current period ends ${formatDate(billing.overview.current_period_end)}.`
-              : "No renewal date is currently scheduled."
-          }
-          delta={
-            billing?.overview.auto_renews
-              ? "Auto renew enabled"
-              : "Manual renewal"
-          }
-          icon={Store}
-          accent="teal"
-        />
-        <DashboardStatCard
-          title="Outstanding balance"
-          value={formatCurrency(billing?.overview.outstanding_balance ?? 0)}
-          detail="Pending and overdue invoices still open for this shop."
-          delta={`${billing?.overview.overdue_invoice_count ?? 0} overdue`}
-          icon={UserRound}
-          accent="ink"
-        />
-      </section>
-
-      {canManageShop ? (
-        <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-          <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
-            <CardHeader className="pb-3">
-              <CardDescription>Billing visibility</CardDescription>
-              <CardTitle>Subscription health</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 pt-0">
-              <div className="flex flex-wrap gap-2">
-                <PlatformStatusBadge
-                  status={billing?.overview.status ?? "inactive"}
-                  label={formatCodeLabel(billing?.overview.status ?? "inactive")}
-                />
-                {billing?.overview.latest_invoice_status ? (
-                  <PlatformStatusBadge
-                    status={billing.overview.latest_invoice_status}
-                    label={`Latest invoice ${formatCodeLabel(
-                      billing.overview.latest_invoice_status
-                    )}`}
-                  />
-                ) : null}
-              </div>
-
-              <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-                <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
-                    Next due
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-foreground">
-                    {billing?.overview.next_due_at
-                      ? formatDate(billing.overview.next_due_at)
-                      : "No unpaid invoice"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
-                    Last paid
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-foreground">
-                    {billing?.overview.latest_paid_at
-                      ? formatDate(billing.overview.latest_paid_at)
-                      : "No paid invoice yet"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4 text-sm leading-7 text-muted-foreground">
-                <p>
-                  Subscription created{" "}
-                  {billing?.subscription?.created_at
-                    ? formatRelativeDate(billing.subscription.created_at)
-                    : "not yet"}
-                  .
-                </p>
-                <p>
-                  Renewal mode:{" "}
-                  {billing?.overview.auto_renews
-                    ? "automatic on the current billing cadence"
-                    : "manual renewal from the platform side"}
-                  .
-                </p>
-                <p>
-                  This section is read-only in the shop portal so billing control
-                  stays on the platform workspace.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <PlatformDataTable
-            title="Recent invoices"
-            description="Latest billing records for this shop"
-            rows={billing?.invoices.slice(0, 8) ?? []}
-            emptyMessage="No invoices have been created for this shop yet."
-            footer={`${Math.min(billing?.invoices.length ?? 0, 8)} invoice record${
-              (billing?.invoices.length ?? 0) === 1 ? "" : "s"
-            } visible`}
-            columns={[
-              {
-                key: "invoice",
-                header: "Invoice",
-                render: (invoice) => (
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-foreground">
-                      {invoice.invoice_no}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Created {formatRelativeDate(invoice.created_at)}
-                    </span>
-                  </div>
-                ),
-              },
-              {
-                key: "status",
-                header: "Status",
-                render: (invoice) => <PlatformStatusBadge status={invoice.status} />,
-              },
-              {
-                key: "amount",
-                header: "Amount",
-                render: (invoice) => formatCurrency(invoice.amount, invoice.currency),
-              },
-              {
-                key: "due",
-                header: "Due",
-                render: (invoice) =>
-                  invoice.due_at ? formatDate(invoice.due_at) : "—",
-              },
-              {
-                key: "paid",
-                header: "Paid",
-                render: (invoice) =>
-                  invoice.paid_at ? formatDate(invoice.paid_at) : "—",
-              },
-            ]}
-          />
-        </div>
-      ) : (
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Billing visibility</CardDescription>
-            <CardTitle>Subscription details stay with shop management access</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-sm leading-7 text-muted-foreground">
-            The billing plan, invoice state, and renewal window are only shown to
-            members who can manage shop settings.
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

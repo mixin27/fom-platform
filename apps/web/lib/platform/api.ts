@@ -1,6 +1,7 @@
 import "server-only"
 
 import { type ApiSuccess } from "@/lib/auth/api"
+import type { PortalAnnouncement } from "@/lib/announcements/types"
 import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
 
 type SearchParamsValue = string | string[] | undefined
@@ -38,6 +39,7 @@ export type PlatformInvoice = {
   due_at: string | null
   paid_at: string | null
   created_at: string
+  updated_at?: string
 }
 
 export type PlatformSubscription = {
@@ -71,6 +73,7 @@ export type PlatformPlanOption = {
   price: number
   currency: string
   is_active: boolean
+  marketing_visible: boolean
   sort_order: number
   items: PlatformPlanItem[]
   limits: PlatformPlanLimit[]
@@ -97,6 +100,22 @@ export type PlatformPlanLimit = {
 export type PlatformSettingsPlan = PlatformPlanOption & {
   shop_count: number
   collected_revenue: number
+}
+
+export type PlatformFeaturePreset = {
+  code: string
+  category: string
+  name: string
+  description: string
+  launch_phase: "phase_one" | "future" | string
+}
+
+export type PlatformLimitPreset = {
+  code: string
+  category: string
+  name: string
+  description: string
+  launch_phase: "phase_one" | "future" | string
 }
 
 export type PlatformPlanSummary = {
@@ -171,6 +190,82 @@ export type PlatformUser = {
     membership_status: string
     role: string | null
   }>
+}
+
+export type PlatformPaymentDetail = {
+  id: string
+  invoice_no: string
+  amount: number
+  currency: string
+  status: string
+  payment_method: string | null
+  provider_ref: string | null
+  due_at: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+  subscription: {
+    id: string
+    status: string
+    auto_renews: boolean
+    start_at: string
+    end_at: string | null
+    shop_id: string
+    shop_name: string
+    owner_name: string
+    owner_email: string | null
+    plan_code: string
+    plan_name: string
+    plan_price: number
+    plan_currency: string
+    billing_period: string
+  }
+  transactions: Array<{
+    id: string
+    provider: string
+    provider_txn_id: string | null
+    provider_order_id: string
+    status: string
+    amount: number
+    currency: string
+    qr_payload: string | null
+    qr_image_url: string | null
+    payment_url: string | null
+    expires_at: string | null
+    paid_at: string | null
+    created_at: string
+    updated_at: string
+  }>
+}
+
+export type PlatformPublicContactSubmission = {
+  id: string
+  email: string
+  name: string | null
+  subject: string | null
+  message: string
+  email_status: string
+  ip_fingerprint: string | null
+  user_agent: string | null
+  archived: boolean
+  admin_note: string | null
+  created_at: string
+  updated_at?: string
+}
+
+export type PlatformAnnouncement = PortalAnnouncement & {
+  created_at: string
+  updated_at: string
+  created_by: {
+    id: string
+    name: string
+    email: string | null
+  } | null
+  updated_by: {
+    id: string
+    name: string
+    email: string | null
+  } | null
 }
 
 function buildQueryString(searchParams?: SearchParamsRecord) {
@@ -355,6 +450,73 @@ export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord
   }>("/api/v1/platform/subscriptions", searchParams, retryPath)
 }
 
+export async function getPlatformPayments(searchParams?: SearchParamsRecord) {
+  const retryPath = `/platform/payments${buildQueryString(searchParams)}`
+
+  return platformRequest<{
+    overview: {
+      total_invoices: number
+      paid_invoices: number
+      pending_invoices: number
+      overdue_invoices: number
+      failed_invoices: number
+    }
+    invoices: PlatformInvoice[]
+    invoices_pagination: {
+      limit: number
+      cursor: string | null
+      next_cursor: string | null
+      total: number
+    }
+  }>("/api/v1/platform/payments", searchParams, retryPath)
+}
+
+export async function getPlatformPayment(
+  invoiceId: string,
+  retryPath = "/platform/payments"
+) {
+  return platformRequest<PlatformPaymentDetail>(
+    `/api/v1/platform/payments/${invoiceId}`,
+    undefined,
+    retryPath
+  )
+}
+
+export async function getPlatformLiveAnnouncements() {
+  return platformRequest<{
+    announcements: PortalAnnouncement[]
+  }>("/api/v1/platform/announcements/live", undefined, "/platform")
+}
+
+export async function getPlatformAnnouncements(
+  searchParams?: SearchParamsRecord
+) {
+  const retryPath = `/platform/announcements${buildQueryString(searchParams)}`
+
+  return platformRequest<{
+    overview: {
+      total: number
+      active: number
+      scheduled: number
+      draft: number
+      ended: number
+      archived: number
+    }
+    announcements: PlatformAnnouncement[]
+  }>("/api/v1/platform/announcements", searchParams, retryPath)
+}
+
+export async function getPlatformAnnouncement(
+  announcementId: string,
+  retryPath = "/platform/announcements"
+) {
+  return platformRequest<PlatformAnnouncement>(
+    `/api/v1/platform/announcements/${announcementId}`,
+    undefined,
+    retryPath
+  )
+}
+
 export async function getPlatformSupport() {
   return platformRequest<{
     overview: {
@@ -362,6 +524,8 @@ export async function getPlatformSupport() {
       high_priority_items: number
       onboarding_items: number
       billing_items: number
+      public_contact_inbox: number
+      payment_proof_queue: number
     }
     issues: Array<{
       id: string
@@ -379,6 +543,42 @@ export async function getPlatformSupport() {
       resolution_note: string | null
       resolved_at: string | null
     }>
+    public_contact: {
+      open_count: number
+      submissions: Array<{
+        id: string
+        email: string
+        name: string | null
+        subject: string | null
+        message: string
+        email_status: string
+        ip_fingerprint: string | null
+        user_agent: string | null
+        archived: boolean
+        admin_note: string | null
+        created_at: string
+      }>
+    }
+    payment_proofs: Array<{
+      id: string
+      shop_id: string
+      shop_name: string
+      payment_id: string
+      invoice_no: string
+      amount_claimed: number
+      currency_claimed: string
+      payment_channel: string
+      paid_at: string | null
+      sender_name: string | null
+      sender_phone: string | null
+      transaction_ref: string | null
+      note: string | null
+      status: string
+      admin_note: string | null
+      reviewed_at: string | null
+      reviewed_by: { id: string; name: string } | null
+      created_at: string
+    }>
     health: {
       total_shops: number
       active_shops: number
@@ -393,6 +593,24 @@ export async function getPlatformSupport() {
       last_active_at: string | null
     }>
   }>("/api/v1/platform/support", undefined, "/platform/support")
+}
+
+export async function getPlatformPublicContactSubmissions() {
+  return platformRequest<{
+    open_count: number
+    submissions: PlatformPublicContactSubmission[]
+  }>("/api/v1/platform/public-contact-submissions", undefined, "/platform/contact-form")
+}
+
+export async function getPlatformPublicContactSubmission(
+  submissionId: string,
+  retryPath = "/platform/contact-form"
+) {
+  return platformRequest<PlatformPublicContactSubmission>(
+    `/api/v1/platform/public-contact-submissions/${submissionId}`,
+    undefined,
+    retryPath
+  )
 }
 
 export async function getPlatformSettings() {
@@ -414,5 +632,7 @@ export async function getPlatformSettings() {
       permission_count: number
     }
     plans: PlatformSettingsPlan[]
+    feature_presets: PlatformFeaturePreset[]
+    limit_presets: PlatformLimitPreset[]
   }>("/api/v1/platform/settings", undefined, "/platform/settings")
 }

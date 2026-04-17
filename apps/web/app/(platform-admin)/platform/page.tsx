@@ -62,6 +62,12 @@ export default async function PlatformHomePage() {
               <Link href="/platform/subscriptions">Subscriptions</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
+              <Link href="/platform/payments">Payments</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/platform/contact-form">Contact Form</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
               <Link href="/platform/support">Support</Link>
             </Button>
           </div>

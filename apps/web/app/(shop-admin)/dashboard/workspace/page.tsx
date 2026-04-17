@@ -24,6 +24,7 @@ import {
   type ShopSearchParams,
 } from "@/lib/shop/query"
 import { Button } from "@workspace/ui/components/button"
+import { WorkspaceShopActions } from "./_components/workspace-shop-actions"
 import {
   Card,
   CardContent,
@@ -333,6 +334,11 @@ export default async function EnterpriseWorkspacePage({
                 </div>
               ),
             },
+            {
+              key: "actions",
+              header: "",
+              render: (shop) => <WorkspaceShopActions shopId={shop.id} shopName={shop.name} />,
+            },
           ]}
         />
       </section>
@@ -459,6 +465,11 @@ export default async function EnterpriseWorkspacePage({
             header: "Last active",
             render: (shop) =>
               shop.last_active_at ? formatRelativeDate(shop.last_active_at) : "No recent activity",
+          },
+          {
+            key: "actions",
+            header: "",
+            render: (shop) => <WorkspaceShopActions shopId={shop.id} shopName={shop.name} />,
           },
         ]}
       />

@@ -29,6 +29,7 @@ export type MarketingPlan = {
   price: number
   currency: string
   is_active: boolean
+  marketing_visible: boolean
   sort_order: number
   items: MarketingPlanItem[]
   limits: MarketingPlanLimit[]
@@ -44,6 +45,7 @@ const fallbackPlans: MarketingPlan[] = [
     price: 0,
     currency: "MMK",
     is_active: true,
+    marketing_visible: true,
     sort_order: 0,
     items: [],
     limits: [],
@@ -57,6 +59,7 @@ const fallbackPlans: MarketingPlan[] = [
     price: 15000,
     currency: "MMK",
     is_active: true,
+    marketing_visible: true,
     sort_order: 1,
     items: [],
     limits: [],
@@ -70,6 +73,7 @@ const fallbackPlans: MarketingPlan[] = [
     price: 150000,
     currency: "MMK",
     is_active: true,
+    marketing_visible: true,
     sort_order: 2,
     items: [],
     limits: [],

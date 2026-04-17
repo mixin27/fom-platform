@@ -15,6 +15,8 @@ abstract class AuthRemoteDataSource {
     required String name,
     required String email,
     required String password,
+    required bool acceptedTerms,
+    required bool acceptedPrivacy,
     String? phone,
     String? locale,
   });
@@ -82,6 +84,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String name,
     required String email,
     required String password,
+    required bool acceptedTerms,
+    required bool acceptedPrivacy,
     String? phone,
     String? locale,
   }) async {
@@ -92,6 +96,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'name': name.trim(),
         'email': email.trim(),
         'password': password,
+        'accepted_terms': acceptedTerms,
+        'accepted_privacy': acceptedPrivacy,
         if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
         if (locale != null && locale.trim().isNotEmpty) 'locale': locale.trim(),
       },

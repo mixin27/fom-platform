@@ -47,6 +47,9 @@ model User {
   locale             LocaleCode          @default(my)
   emailVerifiedAt    DateTime?
   phoneVerifiedAt    DateTime?
+  termsAcceptedAt    DateTime?
+  privacyAcceptedAt  DateTime?
+  legalConsentVersion String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   ownedShops         Shop[]              @relation("ShopOwner")
@@ -67,6 +70,9 @@ model User {
   assignedSupportIssues PlatformSupportIssue[] @relation("SupportIssueAssignee")
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
   shopAuditLogs      ShopAuditLog[]      @relation("ShopAuditActor")
+  reviewedPaymentProofs PaymentProofSubmission[] @relation("PaymentProofReviewer")
+  createdAnnouncements Announcement[]    @relation("AnnouncementCreator")
+  updatedAnnouncements Announcement[]    @relation("AnnouncementUpdater")
 }
 
 model Shop {
@@ -87,6 +93,7 @@ model Shop {
   orderImportBatches OrderImportBatch[]
   roles            Role[]            @relation("ShopCustomRoles")
   auditLogs        ShopAuditLog[]
+  paymentProofSubmissions PaymentProofSubmission[]
 
   @@index([ownerUserId])
 }
@@ -129,8 +136,9 @@ model Plan {
   price         Int
   currency      String         @default("MMK")
   billingPeriod String
-  isActive      Boolean        @default(true)
-  sortOrder     Int            @default(0)
+  isActive         Boolean        @default(true)
+  marketingVisible Boolean        @default(false)
+  sortOrder        Int            @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   subscriptions Subscription[]
@@ -208,6 +216,8 @@ model Payment {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  paymentProofSubmissions PaymentProofSubmission[]
+  transactions  PaymentTransaction[]
 
   @@index([subscriptionId, status])
   @@index([status, dueAt])
@@ -577,6 +587,32 @@ model Notification {
   @@map("notifications")
 }
 
+model Announcement {
+  id              String   @id @default(cuid())
+  title           String
+  body            String
+  severity        String   @default("info")
+  status          String   @default("draft")
+  audiences       String[]
+  ctaLabel        String?
+  ctaUrl          String?
+  startsAt        DateTime?
+  endsAt          DateTime?
+  pinned          Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdByUserId String?
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdByUser   User?    @relation("AnnouncementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser   User?    @relation("AnnouncementUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, startsAt, endsAt])
+  @@index([pinned, sortOrder, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@map("announcements")
+}
+
 model NotificationPreference {
   id           String   @id @default(cuid())
   userId       String
@@ -620,11 +656,103 @@ model EmailMessage {
   updatedAt      DateTime      @updatedAt
   user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   notification   Notification? @relation(fields: [notificationId], references: [id], onDelete: SetNull)
-  shop           Shop?         @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  shop                    Shop?                    @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  publicContactSubmission PublicContactSubmission?
 
   @@index([status, queuedAt])
   @@index([userId, queuedAt])
   @@index([notificationId])
   @@index([category, queuedAt])
   @@map("email_outbox")
+}
+
+model PublicContactSubmission {
+  id             String        @id @default(cuid())
+  email          String
+  name           String?
+  subject        String?
+  message        String
+  emailMessageId String?       @unique
+  emailStatus    String        @default("queued")
+  ipFingerprint  String?
+  userAgent      String?
+  archived       Boolean       @default(false)
+  adminNote      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  emailMessage   EmailMessage? @relation(fields: [emailMessageId], references: [id], onDelete: SetNull)
+
+  @@index([archived, createdAt])
+  @@index([createdAt])
+  @@map("public_contact_submissions")
+}
+
+model PaymentProofSubmission {
+  id               String   @id @default(cuid())
+  shopId           String
+  paymentId        String
+  invoiceNoSnapshot String
+  amountClaimed    Int
+  currencyClaimed  String   @default("MMK")
+  paymentChannel   String
+  paidAt           DateTime?
+  senderName       String?
+  senderPhone      String?
+  transactionRef   String?
+  note             String?
+  status           String   @default("submitted")
+  adminNote        String?
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  reviewedByUser   User?    @relation("PaymentProofReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
+  @@index([paymentId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([transactionRef])
+  @@map("payment_proof_submissions")
+}
+
+model PaymentTransaction {
+  id                 String   @id @default(cuid())
+  paymentId          String
+  provider           String
+  providerTxnId      String?  @unique
+  providerOrderId    String   @unique
+  status             String   @default("created")
+  amount             Int
+  currency           String   @default("MMK")
+  qrPayload          String?
+  qrImageUrl         String?
+  expiresAt          DateTime?
+  paidAt             DateTime?
+  rawCreateResponse  Json?
+  rawWebhookPayload  Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  payment            Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, status, createdAt])
+  @@index([provider, status, createdAt])
+  @@map("payment_transactions")
+}
+
+model PaymentWebhookEvent {
+  id             String   @id @default(cuid())
+  provider       String
+  eventId        String?
+  signatureValid Boolean  @default(false)
+  payload        Json
+  processed      Boolean  @default(false)
+  processedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  @@index([provider, processed, createdAt])
+  @@unique([provider, eventId])
+  @@map("payment_webhook_events")
 }

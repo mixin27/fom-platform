@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { AnnouncementsService } from '../announcements/announcements.service';
 import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
@@ -29,6 +30,7 @@ import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
 import { UpdateShopRoleDto } from './dto/update-shop-role.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
 import { ShopsService } from './shops.service';
 
 @Controller('api/v1/shops')
@@ -36,7 +38,10 @@ import { ShopsService } from './shops.service';
 @ApiTags('Shops')
 @ApiBearerAuth('access-token')
 export class ShopsController {
-  constructor(private readonly shopsService: ShopsService) {}
+  constructor(
+    private readonly shopsService: ShopsService,
+    private readonly announcementsService: AnnouncementsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List current user shops or stores' })
@@ -81,13 +86,75 @@ export class ShopsController {
 
   @Get(':shopId/billing')
   @UseGuards(RbacGuard)
-  @RequirePermissions(permissions.shopsWrite)
+  @RequirePermissions(permissions.shopsRead)
   @ApiOperation({ summary: 'Get shop subscription and recent billing history' })
   getBilling(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Param('shopId') shopId: string,
   ) {
     return ok(this.shopsService.getBilling(currentUser, shopId));
+  }
+
+  @Get(':shopId/announcements')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Get active shop portal announcements and billing notices' })
+  getAnnouncements(@Param('shopId') shopId: string) {
+    return ok(this.announcementsService.listShopAnnouncements(shopId));
+  }
+
+  @Post(':shopId/billing/payment-proofs')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Retired manual payment proof endpoint' })
+  submitPaymentProof(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: CreateShopPaymentProofDto,
+  ) {
+    return ok(this.shopsService.submitPaymentProof(currentUser, shopId, body));
+  }
+
+  @Get(':shopId/billing/invoices/:invoiceId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Get a single billing invoice for the current shop' })
+  getBillingInvoice(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return ok(
+      this.shopsService.getBillingInvoice(currentUser, shopId, invoiceId),
+    );
+  }
+
+  @Post(':shopId/billing/invoices/:invoiceId/mmqr-session')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Create MMQR payment session for invoice' })
+  createMmqrSession(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return ok(
+      this.shopsService.createMmqrSessionForInvoice(currentUser, shopId, invoiceId),
+    );
+  }
+
+  @Get(':shopId/billing/invoices/:invoiceId/mmqr-session')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Get latest MMQR payment session for invoice' })
+  getMmqrSession(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return ok(
+      this.shopsService.getMmqrSessionForInvoice(currentUser, shopId, invoiceId),
+    );
   }
 
   @Get(':shopId/members')

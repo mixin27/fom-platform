@@ -6,9 +6,12 @@ import {
 } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { AnnouncementsService } from './announcements/announcements.service';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AppConfigService } from './config/app-config.service';
 import { AuthController } from './auth/auth.controller';
+import { AuthRateLimitService } from './auth/auth-rate-limit.service';
 import { AuthService } from './auth/auth.service';
 import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
@@ -39,6 +42,12 @@ import { NotificationsController } from './notifications/notifications.controlle
 import { NotificationsService } from './notifications/notifications.service';
 import { PlatformController } from './platform/platform.controller';
 import { PlatformService } from './platform/platform.service';
+import { PublicContactController } from './public-contact/public-contact.controller';
+import { PublicContactRateLimitService } from './public-contact/public-contact-rate-limit.service';
+import { PublicContactService } from './public-contact/public-contact.service';
+import { MyanmyanpayService } from './payments/myanmyanpay.service';
+import { PaymentsController } from './payments/payments.controller';
+import { PaymentsService } from './payments/payments.service';
 import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.service';
 import { PushController } from './push/push.controller';
 import { PushService } from './push/push.service';
@@ -70,6 +79,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     UsersController,
     ShopsController,
     PlatformController,
+    PublicContactController,
     RealtimeController,
     PushController,
     CustomersController,
@@ -82,14 +92,22 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     TemplatesController,
     SummariesController,
     ReportsController,
+    PaymentsController,
   ],
   providers: [
+    AppConfigService,
     AppService,
+    AnnouncementsService,
     PrismaService,
     AuthService,
+    AuthRateLimitService,
     UsersService,
     ShopsService,
     PlatformService,
+    PublicContactRateLimitService,
+    PublicContactService,
+    MyanmyanpayService,
+    PaymentsService,
     SubscriptionLifecycleService,
     CustomersService,
     OrderMessageParserService,

@@ -39,7 +39,6 @@ type BinaryReply = {
 
 @Controller('api/v1/shops/:shopId/orders')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.ordersManagement)
 @ApiTags('Orders')
 @ApiBearerAuth('access-token')
 export class OrdersController {
@@ -47,6 +46,7 @@ export class OrdersController {
 
   @Get()
   @RequirePermissions(permissions.ordersRead)
+  @RequirePlanFeatures(subscriptionFeatures.ordersManagement)
   @ApiOperation({ summary: 'List orders for a shop with filters' })
   listOrders(
     @CurrentUser() currentUser: AuthenticatedUser,

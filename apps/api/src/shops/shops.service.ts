@@ -15,6 +15,7 @@ import {
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AppConfigService } from '../config/app-config.service';
 import { EmailOutboxService } from '../email/email-outbox.service';
 import {
   permissionCatalog,
@@ -24,7 +25,9 @@ import {
 import { subscriptionLimits } from '../platform/subscription-limit.constants';
 import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
+import { MyanmyanpayService } from '../payments/myanmyanpay.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
+import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
@@ -55,6 +58,8 @@ export class ShopsService {
     private readonly prisma: PrismaService,
     private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
+    private readonly myanmyanpay: MyanmyanpayService,
+    private readonly config: AppConfigService,
   ) {}
 
   async listUserShops(userId: string) {
@@ -164,7 +169,7 @@ export class ShopsService {
   }
 
   async getBilling(currentUser: AuthenticatedUser, shopId: string) {
-    await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
     await this.subscriptionLifecycle.expireElapsedTrials();
 
     const shop = await this.prisma.shop.findUnique({
@@ -184,6 +189,12 @@ export class ShopsService {
             },
             payments: {
               orderBy: [{ dueAt: 'desc' }, { createdAt: 'desc' }],
+              include: {
+                transactions: {
+                  orderBy: [{ createdAt: 'desc' }],
+                  take: 1,
+                },
+              },
             },
           },
         },
@@ -216,6 +227,11 @@ export class ShopsService {
     return {
       shop_id: shop.id,
       shop_name: shop.name,
+      payment_provider: {
+        code: 'myanmyanpay',
+        label: 'MyanMyanPay',
+        is_enabled: this.myanmyanpay.isConfigured(),
+      },
       overview: {
         status: subscription?.status ?? null,
         auto_renews: subscription?.autoRenews ?? false,
@@ -288,7 +304,272 @@ export class ShopsService {
         paid_at: payment.paidAt?.toISOString() ?? null,
         created_at: payment.createdAt.toISOString(),
         updated_at: payment.updatedAt.toISOString(),
+        latest_transaction:
+          payment.transactions?.[0] === undefined
+            ? null
+            : this.serializePaymentTransactionSummary(payment.transactions[0]),
       })),
+      payment_proofs: [],
+    };
+  }
+
+  async getBillingInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    invoiceId: string,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: invoiceId,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        subscription: {
+          include: {
+            shop: true,
+            plan: true,
+          },
+        },
+        transactions: {
+          where: { provider: 'myanmyanpay' },
+          orderBy: [{ createdAt: 'desc' }],
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    return {
+      id: payment.id,
+      invoice_no: payment.invoiceNo,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      payment_method: payment.paymentMethod,
+      provider_ref: payment.providerRef,
+      due_at: payment.dueAt?.toISOString() ?? null,
+      paid_at: payment.paidAt?.toISOString() ?? null,
+      created_at: payment.createdAt.toISOString(),
+      updated_at: payment.updatedAt.toISOString(),
+      payment_provider: {
+        code: 'myanmyanpay',
+        label: 'MyanMyanPay',
+        is_enabled: this.myanmyanpay.isConfigured(),
+      },
+      subscription: {
+        id: payment.subscription.id,
+        status: payment.subscription.status,
+        auto_renews: payment.subscription.autoRenews,
+        start_at: payment.subscription.startAt.toISOString(),
+        end_at: payment.subscription.endAt?.toISOString() ?? null,
+        shop_id: payment.subscription.shopId,
+        shop_name: payment.subscription.shop.name,
+        plan_code: payment.subscription.plan.code,
+        plan_name: payment.subscription.plan.name,
+        plan_price: payment.subscription.plan.price,
+        plan_currency: payment.subscription.plan.currency,
+        billing_period: payment.subscription.plan.billingPeriod,
+      },
+      latest_transaction:
+        payment.transactions[0] === undefined
+          ? null
+          : this.serializePaymentTransaction(payment.transactions[0]),
+      transactions: payment.transactions.map((transaction) =>
+        this.serializePaymentTransaction(transaction),
+      ),
+    };
+  }
+
+  async createMmqrSessionForInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    invoiceId: string,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: invoiceId,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        subscription: {
+          include: {
+            shop: true,
+          },
+        },
+        transactions: {
+          where: { provider: 'myanmyanpay' },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 1,
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    if (payment.status === 'paid') {
+      throw conflictError('Invoice is already paid');
+    }
+
+    const activeTransaction = payment.transactions[0] ?? null;
+    if (
+      activeTransaction &&
+      activeTransaction.status === 'pending' &&
+      activeTransaction.expiresAt &&
+      activeTransaction.expiresAt.getTime() > Date.now()
+    ) {
+      return this.serializePaymentTransaction(activeTransaction);
+    }
+
+    const providerOrderId = `MMP-${payment.invoiceNo}-${randomBytes(3).toString('hex').toUpperCase()}`;
+
+    const session = await this.myanmyanpay.createMmqrSession({
+      invoiceNo: payment.invoiceNo,
+      amount: payment.amount,
+      currency: payment.currency,
+      orderId: providerOrderId,
+      expiresInSeconds: this.config.getMyanmyanpayConfig().qrExpirySeconds,
+    });
+
+    const transaction = await this.prisma.paymentTransaction.create({
+      data: {
+        paymentId: payment.id,
+        provider: 'myanmyanpay',
+        providerTxnId: session.provider_txn_id,
+        providerOrderId: session.provider_order_id,
+        status: session.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        qrPayload: session.qr_payload,
+        qrImageUrl: session.qr_image_url,
+        expiresAt: session.expires_at,
+        rawCreateResponse: session.raw_response as Prisma.InputJsonValue,
+      },
+    });
+
+    return this.serializePaymentTransaction(transaction);
+  }
+
+  async getMmqrSessionForInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    invoiceId: string,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: invoiceId,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        transactions: {
+          where: { provider: 'myanmyanpay' },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 1,
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    const transaction = payment.transactions[0] ?? null;
+    if (!transaction) {
+      return null;
+    }
+
+    return this.serializePaymentTransaction(transaction);
+  }
+
+  async submitPaymentProof(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: CreateShopPaymentProofDto,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+    void body;
+
+    throw conflictError(
+      'Manual payment proof flow has been retired. Open the invoice and pay with MyanMyanPay instead.',
+    );
+  }
+
+  private serializePaymentTransactionSummary(transaction: {
+    id: string;
+    provider: string;
+    providerOrderId: string;
+    status: string;
+    expiresAt: Date | null;
+    paidAt?: Date | null;
+    createdAt: Date;
+  }) {
+    return {
+      id: transaction.id,
+      provider: transaction.provider,
+      provider_order_id: transaction.providerOrderId,
+      status: transaction.status,
+      expires_at: transaction.expiresAt?.toISOString() ?? null,
+      paid_at: transaction.paidAt?.toISOString() ?? null,
+      created_at: transaction.createdAt.toISOString(),
+    };
+  }
+
+  private serializePaymentTransaction(transaction: {
+    id: string;
+    provider: string;
+    providerTxnId: string | null;
+    providerOrderId: string;
+    status: string;
+    amount: number;
+    currency: string;
+    qrPayload: string | null;
+    qrImageUrl: string | null;
+    expiresAt: Date | null;
+    paidAt: Date | null;
+    createdAt: Date;
+    updatedAt?: Date;
+    rawCreateResponse?: Prisma.JsonValue | null;
+  }) {
+    const rawResponse =
+      transaction.rawCreateResponse &&
+      typeof transaction.rawCreateResponse === 'object' &&
+      !Array.isArray(transaction.rawCreateResponse)
+        ? (transaction.rawCreateResponse as Record<string, unknown>)
+        : null;
+
+    return {
+      id: transaction.id,
+      provider: transaction.provider,
+      provider_txn_id: transaction.providerTxnId,
+      provider_order_id: transaction.providerOrderId,
+      status: transaction.status,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      qr_payload: transaction.qrPayload,
+      qr_image_url: transaction.qrImageUrl,
+      payment_url:
+        rawResponse && typeof rawResponse.url === 'string'
+          ? rawResponse.url
+          : null,
+      expires_at: transaction.expiresAt?.toISOString() ?? null,
+      paid_at: transaction.paidAt?.toISOString() ?? null,
+      created_at: transaction.createdAt.toISOString(),
+      updated_at: transaction.updatedAt?.toISOString() ?? null,
     };
   }
 
@@ -747,11 +1028,7 @@ export class ShopsService {
       });
     }
 
-    const requiresInvitation =
-      Boolean(targetUser.email) && !this.userCanAuthenticateDirectly(targetUser);
-    const memberStatus: 'active' | 'invited' = requiresInvitation
-      ? 'invited'
-      : 'active';
+    const memberStatus: 'active' | 'invited' = 'invited';
 
     const existingMember = await this.prisma.shopMember.findUnique({
       where: {
@@ -822,17 +1099,13 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    let invitationSent = false;
-
-    if (requiresInvitation && targetUser.email) {
-      invitationSent = await this.queueStaffInvitationEmail(
-        targetUser,
-        member.shopId,
-        member.id,
-        roles.map((role) => role.name),
-        metadata,
-      );
-    }
+    const invitationSent = await this.queueStaffInvitationEmail(
+      member.user,
+      shopId,
+      member.id,
+      roles.map((r) => r.name),
+      metadata,
+    );
 
     return {
       ...this.serializeMemberRecord(member),
@@ -877,8 +1150,14 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    if (member.status !== 'invited') {
-      throw conflictError('Only invited members can receive a new invitation link.');
+    if (member.status === 'disabled') {
+      throw conflictError('Disabled members cannot receive an invitation link.');
+    }
+
+    if (this.userCanAuthenticateDirectly(member.user)) {
+      throw conflictError(
+        'This member already has direct sign-in access. No invitation link is needed.',
+      );
     }
 
     if (!member.user.email) {

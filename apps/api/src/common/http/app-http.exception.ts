@@ -65,6 +65,28 @@ export function conflictError(
   });
 }
 
+export function tooManyRequestsError(
+  message = 'Too many requests. Please try again later.',
+  context?: Record<string, unknown>,
+): AppHttpException {
+  return new AppHttpException(HttpStatus.TOO_MANY_REQUESTS, {
+    code: 'TOO_MANY_REQUESTS',
+    message,
+    ...(context ? { context } : {}),
+  });
+}
+
+export function serviceUnavailableError(
+  message = 'Service temporarily unavailable',
+  context?: Record<string, unknown>,
+): AppHttpException {
+  return new AppHttpException(HttpStatus.SERVICE_UNAVAILABLE, {
+    code: 'SERVICE_UNAVAILABLE',
+    message,
+    ...(context ? { context } : {}),
+  });
+}
+
 export function sessionConflictError(
   message: string,
   context?: Record<string, unknown>,

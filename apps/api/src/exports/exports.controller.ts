@@ -18,7 +18,6 @@ type CsvReply = {
 
 @Controller('api/v1/shops/:shopId/exports')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.csvExports)
 @ApiTags('Shop Exports')
 @ApiBearerAuth('access-token')
 export class ShopExportsController {
@@ -26,6 +25,7 @@ export class ShopExportsController {
 
   @Get('orders.csv')
   @RequirePermissions(permissions.ordersRead)
+  @RequirePlanFeatures(subscriptionFeatures.csvExports)
   @ApiOperation({ summary: 'Export shop orders as CSV' })
   @ApiProduces('text/csv')
   async exportOrders(
@@ -41,6 +41,7 @@ export class ShopExportsController {
 
   @Get('customers.csv')
   @RequirePermissions(permissions.customersRead)
+  @RequirePlanFeatures(subscriptionFeatures.csvExports)
   @ApiOperation({ summary: 'Export shop customers as CSV' })
   @ApiProduces('text/csv')
   async exportCustomers(
@@ -56,6 +57,7 @@ export class ShopExportsController {
 
   @Get('deliveries.csv')
   @RequirePermissions(permissions.deliveriesRead)
+  @RequirePlanFeatures(subscriptionFeatures.csvExports)
   @ApiOperation({ summary: 'Export shop deliveries as CSV' })
   @ApiProduces('text/csv')
   async exportDeliveries(

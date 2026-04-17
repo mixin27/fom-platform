@@ -344,7 +344,7 @@ export default async function LandingPage() {
                 width={320}
                 height={693}
                 priority
-                className="relative rounded-[2rem] border-[6px] border-[#1a1a28] shadow-[0_48px_96px_rgba(0,0,0,0.7)] animate-hero-float lg:rounded-[2.5rem] lg:border-[8px]"
+                className="animate-hero-float relative rounded-[2rem] border-[6px] border-[#1a1a28] shadow-[0_48px_96px_rgba(0,0,0,0.7)] lg:rounded-[2.5rem] lg:border-[8px]"
               />
             </div>
           </div>
@@ -357,7 +357,7 @@ export default async function LandingPage() {
       >
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="max-w-[520px]">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
               Why FOM
             </p>
             <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
@@ -398,7 +398,7 @@ export default async function LandingPage() {
       <section id="features" className="bg-[var(--fom-marketing-bg)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="max-w-[560px]">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
               Core capability
             </p>
             <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
@@ -443,7 +443,7 @@ export default async function LandingPage() {
                       alt={feature.title}
                       width={280}
                       height={580}
-                      className={`w-full max-w-[280px] rounded-t-[20px] border-x-[4px] border-t-[4px] sm:border-x-[6px] sm:border-t-[6px] border-[#1a1a28] object-cover object-top shadow-[0_32px_80px_rgba(0,0,0,0.15)] ${feature.colSpan === "md:col-span-2" ? "h-[240px] sm:h-[280px] md:h-[380px]" : "h-[240px] sm:h-[280px]"}`}
+                      className={`w-full max-w-[280px] rounded-t-[20px] border-x-[4px] border-t-[4px] border-[#1a1a28] object-cover object-top shadow-[0_32px_80px_rgba(0,0,0,0.15)] sm:border-x-[6px] sm:border-t-[6px] ${feature.colSpan === "md:col-span-2" ? "h-[240px] sm:h-[280px] md:h-[380px]" : "h-[240px] sm:h-[280px]"}`}
                     />
                   </div>
                 </div>
@@ -453,74 +453,133 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="ecosystem" className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]">
+      <section
+        id="ecosystem"
+        className="border-t border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]"
+      >
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
               One Platform, All Workflows
             </p>
             <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
               Tools for every part of your business
             </h2>
             <p className="mt-4 text-base leading-8 text-[var(--fom-slate)] md:text-lg">
-              Whether you're processing orders on the go or analyzing monthly reports at your desk, FOM has a tailored interface for the job.
+              Whether you're processing orders on the go or analyzing monthly
+              reports at your desk, FOM has a tailored interface for the job.
             </p>
           </div>
-          
+
           <Tabs defaultValue="mobile" className="w-full">
             <div className="mb-8 flex justify-center md:mb-12">
               <TabsList className="flex h-auto w-full flex-col bg-[var(--fom-marketing-border)]/50 p-1 sm:w-auto sm:flex-row">
-                <TabsTrigger value="mobile" className="w-full rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-[var(--fom-marketing-surface)] data-[state=active]:text-[var(--fom-orange)] data-[state=active]:shadow-sm sm:w-auto md:px-8">
+                <TabsTrigger
+                  value="mobile"
+                  className="w-full rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-[var(--fom-marketing-surface)] data-[state=active]:text-[var(--fom-orange)] data-[state=active]:shadow-sm sm:w-auto md:px-8"
+                >
                   Mobile Assistant
                 </TabsTrigger>
-                <TabsTrigger value="admin" className="w-full rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-[var(--fom-marketing-surface)] data-[state=active]:text-[var(--fom-teal)] data-[state=active]:shadow-sm sm:w-auto md:px-8">
-                  Shop Admin Portal <Badge className="ml-2 border-0 bg-[var(--fom-teal)]/10 px-1.5 py-0 text-[10px] text-[var(--fom-teal)] shadow-none hover:bg-[var(--fom-teal)]/20">Soon</Badge>
+                <TabsTrigger
+                  value="admin"
+                  className="w-full rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-[var(--fom-marketing-surface)] data-[state=active]:text-[var(--fom-teal)] data-[state=active]:shadow-sm sm:w-auto md:px-8"
+                >
+                  Shop Admin Portal{" "}
+                  <Badge className="ml-2 border-0 bg-[var(--fom-teal)]/10 px-1.5 py-0 text-[10px] text-[var(--fom-teal)] shadow-none hover:bg-[var(--fom-teal)]/20">
+                    Soon
+                  </Badge>
                 </TabsTrigger>
               </TabsList>
             </div>
-            
-            <TabsContent value="mobile" className="mt-0 animate-in fade-in-50 duration-500">
+
+            <TabsContent
+              value="mobile"
+              className="mt-0 animate-in duration-500 fade-in-50"
+            >
               <div className="columns-2 gap-5 space-y-5 md:columns-3 lg:columns-4">
                 {[
-                  {src: "/screenshots/add-order-manual.png", alt: "Manual order entry"},
-                  {src: "/screenshots/add-order-success.png", alt: "Order success confirmation"},
-                  {src: "/screenshots/order-invoice.png", alt: "Professional order invoice"},
-                  {src: "/screenshots/invoice-export-options.png", alt: "Flexible export options"},
-                  {src: "/screenshots/customer-detail.png", alt: "Customer details and history"},
-                  {src: "/screenshots/weekly-report.png", alt: "Weekly revenue summary"},
-                  {src: "/screenshots/monthly-report.png", alt: "Monthly performance report"},
-                  {src: "/screenshots/shop-data-export-download.png", alt: "Data export tools"},
+                  {
+                    src: "/screenshots/add-order-manual.png",
+                    alt: "Manual order entry",
+                  },
+                  {
+                    src: "/screenshots/add-order-success.png",
+                    alt: "Order success confirmation",
+                  },
+                  {
+                    src: "/screenshots/order-invoice.png",
+                    alt: "Professional order invoice",
+                  },
+                  {
+                    src: "/screenshots/invoice-export-options.png",
+                    alt: "Flexible export options",
+                  },
+                  {
+                    src: "/screenshots/customer-detail.png",
+                    alt: "Customer details and history",
+                  },
+                  {
+                    src: "/screenshots/weekly-report.png",
+                    alt: "Weekly revenue summary",
+                  },
+                  {
+                    src: "/screenshots/monthly-report.png",
+                    alt: "Monthly performance report",
+                  },
+                  {
+                    src: "/screenshots/shop-data-export-download.png",
+                    alt: "Data export tools",
+                  },
                 ].map((shot, i) => (
-                  <div key={i} className="group relative break-inside-avoid overflow-hidden rounded-[1.5rem] border-[4px] border-[#1a1a28] shadow-xl md:border-[5px]">
-                    <Image 
-                      src={shot.src} 
-                      alt={shot.alt} 
-                      width={300} 
-                      height={600} 
-                      className="h-auto w-full transform object-cover transition-transform duration-700 group-hover:scale-[1.03]" 
+                  <div
+                    key={i}
+                    className="group relative break-inside-avoid overflow-hidden rounded-[1.5rem] border-[4px] border-[#1a1a28] shadow-xl md:border-[5px]"
+                  >
+                    <Image
+                      src={shot.src}
+                      alt={shot.alt}
+                      width={300}
+                      height={600}
+                      className="h-auto w-full transform object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
                     <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-[#1a1a28]/95 via-black/20 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:p-5">
-                      <p className="translate-y-4 text-sm font-semibold text-white drop-shadow-md transition-transform duration-300 group-hover:translate-y-0">{shot.alt}</p>
+                      <p className="translate-y-4 text-sm font-semibold text-white drop-shadow-md transition-transform duration-300 group-hover:translate-y-0">
+                        {shot.alt}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             </TabsContent>
-            
-            <TabsContent value="admin" className="mt-0 animate-in fade-in-50 duration-500">
-              <div className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)] shadow-sm aspect-[4/3] md:aspect-[21/9]">
-                 <div className="absolute inset-0 bg-gradient-to-br from-[var(--fom-teal)]/5 to-[var(--fom-orange)]/5 opacity-50"></div>
-                 <div className="fom-marketing-grid absolute inset-0 opacity-30"></div>
-                 <div className="relative z-10 mx-auto flex max-w-[600px] flex-col items-center gap-4 p-8 text-center">
-                    <div className="mb-2 inline-flex size-16 items-center justify-center rounded-full bg-white shadow-xl shadow-[var(--fom-teal)]/20">
-                      <LayoutDashboard className="size-6 text-[var(--fom-teal)]" />
-                    </div>
-                    <div>
-                      <h3 className="mb-2 text-xl font-bold text-[var(--fom-ink)] sm:mb-3 sm:text-2xl">Desktop Control Center</h3>
-                      <p className="text-sm leading-7 text-[var(--fom-slate)] sm:text-base">A dedicated high-density web portal for owners to manage teams, analyze long-term trends, and run the back-office efficiently on larger screens.</p>
-                    </div>
-                    <Badge variant="outline" className="mt-4 border-[var(--fom-teal)]/30 bg-white/50 px-3 py-1 text-xs text-[var(--fom-teal)] backdrop-blur-sm">Design systems in progress</Badge>
-                 </div>
+
+            <TabsContent
+              value="admin"
+              className="mt-0 animate-in duration-500 fade-in-50"
+            >
+              <div className="relative flex aspect-[4/3] w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-surface)] shadow-sm md:aspect-[21/9]">
+                <div className="absolute inset-0 bg-gradient-to-br from-[var(--fom-teal)]/5 to-[var(--fom-orange)]/5 opacity-50"></div>
+                <div className="fom-marketing-grid absolute inset-0 opacity-30"></div>
+                <div className="relative z-10 mx-auto flex max-w-[600px] flex-col items-center gap-4 p-8 text-center">
+                  <div className="mb-2 inline-flex size-16 items-center justify-center rounded-full bg-white shadow-[var(--fom-teal)]/20 shadow-xl">
+                    <LayoutDashboard className="size-6 text-[var(--fom-teal)]" />
+                  </div>
+                  <div>
+                    <h3 className="mb-2 text-xl font-bold text-[var(--fom-ink)] sm:mb-3 sm:text-2xl">
+                      Desktop Control Center
+                    </h3>
+                    <p className="text-sm leading-7 text-[var(--fom-slate)] sm:text-base">
+                      A dedicated high-density web portal for owners to manage
+                      teams, analyze long-term trends, and run the back-office
+                      efficiently on larger screens.
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="mt-4 border-[var(--fom-teal)]/30 bg-white/50 px-3 py-1 text-xs text-[var(--fom-teal)] backdrop-blur-sm"
+                  >
+                    Design systems in progress
+                  </Badge>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
@@ -530,7 +589,7 @@ export default async function LandingPage() {
       <section id="how" className="bg-[var(--fom-marketing-surface)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
               Workflow
             </p>
             <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
@@ -572,7 +631,7 @@ export default async function LandingPage() {
       <section id="pricing" className="bg-[var(--fom-marketing-bg)]">
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
               Pricing
             </p>
             <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">
@@ -737,7 +796,7 @@ export default async function LandingPage() {
       >
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-10 px-6 py-16 md:gap-12 md:py-24">
           <div className="mx-auto max-w-[520px] text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--fom-orange)]">
+            <p className="mb-3 text-xs font-semibold tracking-[0.08em] text-[var(--fom-orange)] uppercase">
               FAQ
             </p>
             <h2 className="fom-display text-3xl leading-[1.12] text-[var(--fom-ink)] sm:text-4xl md:text-5xl">

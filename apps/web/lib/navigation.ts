@@ -14,6 +14,10 @@ export type NavIconName =
   | "plans"
   | "subscriptions"
   | "support"
+  | "billing"
+  | "payments"
+  | "contact"
+  | "announcements"
 
 export type NavItem = {
   href: string
@@ -28,6 +32,11 @@ export const shopPortalNav: NavItem[] = [
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
   { href: "/dashboard/customers", label: "Customers", icon: "customers" },
   { href: "/dashboard/staffs", label: "Staffs", icon: "staffs" },
+  {
+    href: "/dashboard/billing",
+    label: "Billing",
+    icon: "billing",
+  },
   {
     href: "/dashboard/deliveries",
     label: "Deliveries",
@@ -52,6 +61,17 @@ export const platformPortalNav: NavItem[] = [
     href: "/platform/subscriptions",
     label: "Subscriptions",
     icon: "subscriptions",
+  },
+  { href: "/platform/payments", label: "Payments", icon: "payments" },
+  {
+    href: "/platform/announcements",
+    label: "Announcements",
+    icon: "announcements",
+  },
+  {
+    href: "/platform/contact-form",
+    label: "Contact Form",
+    icon: "contact",
   },
   { href: "/platform/exports", label: "Exports", icon: "exports" },
   { href: "/platform/support", label: "Support", icon: "support" },

@@ -88,6 +88,13 @@ export class UpdatePlatformPlanDto {
   is_active?: boolean;
 
   @ApiPropertyOptional({
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  marketing_visible?: boolean;
+
+  @ApiPropertyOptional({
     example: 20,
   })
   @IsOptional()

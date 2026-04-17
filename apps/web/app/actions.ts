@@ -53,7 +53,9 @@ type SignInActionState = {
   } | null
 }
 
-function parseSignInSessionConflict(error: AuthApiError): SignInActionState["sessionConflict"] {
+function parseSignInSessionConflict(
+  error: AuthApiError
+): SignInActionState["sessionConflict"] {
   const rawConflict = error.context?.session_conflict
   if (!rawConflict || typeof rawConflict !== "object") {
     return null
@@ -104,7 +106,8 @@ export async function submitSignInAction(
 ) {
   const email = getFieldValue(formData, "email").toLowerCase()
   const password = getFieldValue(formData, "password")
-  const logoutOtherDevice = getFieldValue(formData, "logoutOtherDevice") === "true"
+  const logoutOtherDevice =
+    getFieldValue(formData, "logoutOtherDevice") === "true"
 
   if (!ensureEmail(email) || password.length < 8) {
     return {
@@ -155,8 +158,19 @@ export async function registerAction(formData: FormData) {
   const shopName = getFieldValue(formData, "shopName")
   const email = getFieldValue(formData, "email").toLowerCase()
   const password = getFieldValue(formData, "password")
+  const acceptedTerms = getFieldValue(formData, "acceptedTerms") === "true"
+  const acceptedPrivacy = getFieldValue(formData, "acceptedPrivacy") === "true"
 
-  if (!fullName || !shopName || !ensureEmail(email) || password.length < 8) {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
+  if (
+    !fullName ||
+    !shopName ||
+    !ensureEmail(email) ||
+    password.length < 8 ||
+    !passwordRegex.test(password) ||
+    !acceptedTerms ||
+    !acceptedPrivacy
+  ) {
     redirect("/register?error=invalid_registration")
   }
 
@@ -167,6 +181,8 @@ export async function registerAction(formData: FormData) {
       email,
       password,
       locale: "my",
+      accepted_terms: true,
+      accepted_privacy: true,
       headers: clientHeaders,
     })
 
@@ -202,8 +218,20 @@ export async function registerAction(formData: FormData) {
     await persistSession(session)
     redirect(defaultPathForSession(session))
   } catch (error) {
-    if (error instanceof AuthApiError && error.code === "CONFLICT") {
-      redirect("/register?error=email_in_use")
+    if (error instanceof AuthApiError) {
+      if (error.code === "CONFLICT") {
+        redirect("/register?error=email_in_use")
+      }
+
+      if (error.code === "VALIDATION_ERROR" || error.status === 422) {
+        const passwordError = error.details?.find((d) => d.field === "password")
+          ?.errors[0]
+        const genericMessage =
+          passwordError || error.message || "Invalid registration data"
+        redirect(
+          `/register?error=validation_error&message=${encodeURIComponent(genericMessage)}`
+        )
+      }
     }
 
     redirect("/register?error=registration_failed")
@@ -337,7 +365,9 @@ export async function resetPasswordAction(formData: FormData) {
   const confirmPassword = getFieldValue(formData, "confirmPassword")
 
   if (!token || password.length < 8 || password !== confirmPassword) {
-    redirect(`/reset-password?token=${encodeURIComponent(token)}&error=invalid_reset`)
+    redirect(
+      `/reset-password?token=${encodeURIComponent(token)}&error=invalid_reset`
+    )
   }
 
   try {
@@ -353,10 +383,14 @@ export async function resetPasswordAction(formData: FormData) {
       error instanceof AuthApiError &&
       (error.code === "UNAUTHORIZED" || error.status === 401)
     ) {
-      redirect(`/reset-password?token=${encodeURIComponent(token)}&error=expired`)
+      redirect(
+        `/reset-password?token=${encodeURIComponent(token)}&error=expired`
+      )
     }
 
-    redirect(`/reset-password?token=${encodeURIComponent(token)}&error=reset_failed`)
+    redirect(
+      `/reset-password?token=${encodeURIComponent(token)}&error=reset_failed`
+    )
   }
 }
 
@@ -366,7 +400,9 @@ export async function acceptInvitationAction(formData: FormData) {
   const confirmPassword = getFieldValue(formData, "confirmPassword")
 
   if (!token || password.length < 8 || password !== confirmPassword) {
-    redirect(`/accept-invite?token=${encodeURIComponent(token)}&error=invalid_invite`)
+    redirect(
+      `/accept-invite?token=${encodeURIComponent(token)}&error=invalid_invite`
+    )
   }
 
   let nextPath = `/accept-invite?token=${encodeURIComponent(token)}&error=invite_failed`
@@ -473,9 +509,12 @@ export async function sendEmailVerificationAction(formData: FormData) {
 
 export async function markNotificationReadAction(formData: FormData) {
   const notificationId = getFieldValue(formData, "notificationId")
-  const returnTo = getFieldValue(formData, "returnTo") || "/dashboard/notifications"
+  const returnTo =
+    getFieldValue(formData, "returnTo") || "/dashboard/notifications"
   const requiredAccess =
-    getFieldValue(formData, "requiredAccess") === "platform" ? "platform" : "shop"
+    getFieldValue(formData, "requiredAccess") === "platform"
+      ? "platform"
+      : "shop"
 
   if (!notificationId) {
     redirect(withStatusQuery(returnTo, "error", "invalid_notification"))
@@ -507,9 +546,12 @@ export async function markNotificationReadAction(formData: FormData) {
 }
 
 export async function markAllNotificationsReadAction(formData: FormData) {
-  const returnTo = getFieldValue(formData, "returnTo") || "/dashboard/notifications"
+  const returnTo =
+    getFieldValue(formData, "returnTo") || "/dashboard/notifications"
   const requiredAccess =
-    getFieldValue(formData, "requiredAccess") === "platform" ? "platform" : "shop"
+    getFieldValue(formData, "requiredAccess") === "platform"
+      ? "platform"
+      : "shop"
   const shopId = getFieldValue(formData, "shopId") || undefined
 
   let nextPath = withStatusQuery(returnTo, "notice", "notifications_read")
@@ -541,9 +583,12 @@ export async function markAllNotificationsReadAction(formData: FormData) {
 }
 
 export async function updateNotificationPreferencesAction(formData: FormData) {
-  const returnTo = getFieldValue(formData, "returnTo") || "/dashboard/notifications"
+  const returnTo =
+    getFieldValue(formData, "returnTo") || "/dashboard/notifications"
   const requiredAccess =
-    getFieldValue(formData, "requiredAccess") === "platform" ? "platform" : "shop"
+    getFieldValue(formData, "requiredAccess") === "platform"
+      ? "platform"
+      : "shop"
   const categories = getFieldValue(formData, "categories")
     .split(",")
     .map((value) => value.trim())

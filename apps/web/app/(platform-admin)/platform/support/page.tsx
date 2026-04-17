@@ -1,4 +1,10 @@
-import { AlertTriangle, CheckCircle2, LifeBuoy, MessagesSquare } from "lucide-react"
+import Link from "next/link"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  LifeBuoy,
+  MessagesSquare,
+} from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
@@ -42,8 +48,18 @@ export default async function PlatformSupportPage({
     <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Support"
-        title="Support queue and operational follow-up"
-        description="This workspace tracks billing risk, renewals, onboarding gaps, and low-adoption tenants."
+        title="Operational support queue"
+        description="Track renewal risk, onboarding follow-up, and manual platform issues here. Payments and website contact messages now live on dedicated routes."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/platform/payments">Payments</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/platform/contact-form">Contact Form</Link>
+            </Button>
+          </div>
+        }
       />
 
       {notice ? (
@@ -57,7 +73,7 @@ export default async function PlatformSupportPage({
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <DashboardStatCard
           title="Open items"
           value={String(data.overview.open_items)}
@@ -69,7 +85,7 @@ export default async function PlatformSupportPage({
         <DashboardStatCard
           title="Billing items"
           value={String(data.overview.billing_items)}
-          detail="Invoices or payment follow-up issues."
+          detail="Invoices or renewals that may need follow-up."
           delta="Billing"
           icon={AlertTriangle}
           accent="ink"
@@ -94,11 +110,13 @@ export default async function PlatformSupportPage({
 
       <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
         <PlatformDataTable
-          title="Current operator tasks"
-          description="Open queue"
+          title="Operator issues"
+          description="Current support queue"
           rows={data.issues}
           emptyMessage="No open operator tasks right now."
-          footer={`Showing ${data.issues.length} current issues`}
+          footer={`Showing ${data.issues.length} current issue${
+            data.issues.length === 1 ? "" : "s"
+          }`}
           columns={[
             {
               key: "shop",
@@ -108,7 +126,9 @@ export default async function PlatformSupportPage({
                   <span className="font-semibold text-[var(--fom-ink)]">
                     {issue.shop_name}
                   </span>
-                  <span className="text-xs text-muted-foreground">{issue.kind}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {issue.kind}
+                  </span>
                 </div>
               ),
             },
@@ -148,6 +168,8 @@ export default async function PlatformSupportPage({
             {
               key: "actions",
               header: "Actions",
+              className: "w-[220px] px-4 py-2.5 text-right",
+              cellClassName: "px-4 py-3 text-right",
               render: (issue) => (
                 <div className="flex flex-wrap justify-end gap-2">
                   {issue.status === "open" ? (
@@ -185,8 +207,6 @@ export default async function PlatformSupportPage({
                   </form>
                 </div>
               ),
-              className: "w-[220px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
             },
           ]}
         />
@@ -211,10 +231,14 @@ export default async function PlatformSupportPage({
                   label: "Overdue invoices",
                   value: String(data.health.overdue_invoices),
                 },
+                {
+                  label: "Public contact inbox",
+                  value: String(data.overview.public_contact_inbox),
+                },
               ].map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center justify-between rounded-xl bg-[var(--fom-admin-surface)] px-3.5 py-3"
+                  className="flex items-center justify-between rounded-xl bg-[var(--fom-surface-variant)] px-3.5 py-3"
                 >
                   <span className="text-sm text-muted-foreground">{item.label}</span>
                   <span className="text-sm font-semibold text-[var(--fom-ink)]">
@@ -260,11 +284,7 @@ export default async function PlatformSupportPage({
                     <option value="low">Low</option>
                   </select>
                 </div>
-                <Input
-                  name="shop_id"
-                  placeholder="Optional shop ID"
-                  className="h-9"
-                />
+                <Input name="shop_id" placeholder="Optional shop ID" className="h-9" />
                 <Input name="title" placeholder="Issue title" className="h-9" />
                 <Textarea
                   name="detail"
@@ -279,36 +299,6 @@ export default async function PlatformSupportPage({
           </Card>
         </div>
       </div>
-
-      <PlatformDataTable
-        title="Recent tenant activity"
-        description="Activity snapshot"
-        rows={data.recent_activity}
-        emptyMessage="No recent tenant activity."
-        footer={`Showing ${data.recent_activity.length} tenant activity rows`}
-        columns={[
-          {
-            key: "shop",
-            header: "Shop",
-            render: (row) => row.shop_name,
-          },
-          {
-            key: "status",
-            header: "Status",
-            render: (row) => <PlatformStatusBadge status={row.status} />,
-          },
-          {
-            key: "orders",
-            header: "Orders",
-            render: (row) => row.total_orders.toLocaleString(),
-          },
-          {
-            key: "last_active",
-            header: "Last active",
-            render: (row) => formatRelativeDate(row.last_active_at),
-          },
-        ]}
-      />
     </div>
   )
 }

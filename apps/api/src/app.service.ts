@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AppConfigService } from './config/app-config.service';
 import {
   defaultRoleCatalog,
   permissionCatalog,
@@ -6,11 +7,22 @@ import {
 
 @Injectable()
 export class AppService {
+  constructor(private readonly config: AppConfigService) {}
+
+  getHealth() {
+    return {
+      status: 'ok',
+      service: 'facebook-order-manager-api',
+      version: '0.1.0',
+      environment: this.config.environment,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   getOverview() {
-    const platformOwnerEmail =
-      process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() ||
-      process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase() ||
-      'owner@fom-platform.local';
+    const platformOwner = this.config.getPlatformOwner();
+    const docsEnabled = this.isApiDocsEnabled();
+    const isProduction = this.isProduction();
 
     return {
       name: 'facebook-order-manager-api',
@@ -27,15 +39,18 @@ export class AppService {
           'shops.roles',
           'shops.permissions',
         ],
-        demo_credentials: {
-          platform_owner_email: platformOwnerEmail,
-          platform_owner_password:
-            process.env.PLATFORM_OWNER_PASSWORD ?? 'Password123!',
-          owner_email: 'maaye@example.com',
-          owner_password: 'Password123!',
-          staff_email: 'komin@example.com',
-          staff_password: 'Password123!',
-        },
+        ...(isProduction
+          ? {}
+          : {
+              demo_credentials: {
+                platform_owner_email: platformOwner.email,
+                platform_owner_password: platformOwner.password,
+                owner_email: 'maaye@example.com',
+                owner_password: 'Password123!',
+                staff_email: 'komin@example.com',
+                staff_password: 'Password123!',
+              },
+            }),
         otp_note:
           'Use debug_otp_code from /api/v1/auth/phone/start in development',
       },
@@ -44,10 +59,15 @@ export class AppService {
         orm: 'prisma',
       },
       docs: {
-        swagger_ui: '/docs',
-        openapi_json: '/openapi.json',
-        openapi_yaml: '/openapi.yaml',
-        scalar: '/reference',
+        enabled: docsEnabled,
+        ...(docsEnabled
+          ? {
+              swagger_ui: '/docs',
+              openapi_json: '/openapi.json',
+              openapi_yaml: '/openapi.yaml',
+              scalar: '/reference',
+            }
+          : {}),
       },
       scope: {
         implemented: [
@@ -78,5 +98,17 @@ export class AppService {
         permissions: permissionCatalog,
       },
     };
+  }
+
+  getPublicLaunchConfig() {
+    return this.config.getPublicLaunchConfig();
+  }
+
+  isApiDocsEnabled() {
+    return this.config.isApiDocsEnabled();
+  }
+
+  private isProduction() {
+    return this.config.isProduction();
   }
 }

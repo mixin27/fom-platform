@@ -18,6 +18,7 @@ export type SessionClientPlatform = 'web' | 'mobile' | 'unknown';
 export interface RequestWithContext {
   headers?: Record<string, string | string[] | undefined>;
   ip?: string;
+  rawBody?: string | Buffer | null;
   requestId?: string;
   ipAddress?: string | null;
   userAgent?: string | null;

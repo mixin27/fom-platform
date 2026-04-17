@@ -19,6 +19,7 @@ import { hashPassword, verifyPassword } from '../common/auth/password';
 import { EmailOutboxService } from '../email/email-outbox.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShopsService } from '../shops/shops.service';
+import { AuthRateLimitService } from './auth-rate-limit.service';
 import type { ConfirmEmailVerificationDto } from './dto/confirm-email-verification.dto';
 import type { ForgotPasswordDto } from './dto/forgot-password.dto';
 import type { LoginDto } from './dto/login.dto';
@@ -97,11 +98,18 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly emailOutbox: EmailOutboxService,
     private readonly realtimeService: RealtimeService,
+    private readonly authRateLimit: AuthRateLimitService,
   ) {}
 
   async register(body: RegisterDto, metadata: SessionRequestMetadata) {
     const normalizedEmail = body.email.trim().toLowerCase();
     const normalizedPhone = this.normalizePhone(body.phone);
+    const consentedAt = new Date();
+
+    this.consumeAuthAttempt('register', metadata, normalizedEmail, {
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    });
 
     await this.assertUniqueIdentifiers(normalizedEmail, normalizedPhone);
 
@@ -111,6 +119,9 @@ export class AuthService {
         email: normalizedEmail,
         phone: normalizedPhone,
         locale: body.locale ?? 'my',
+        termsAcceptedAt: consentedAt,
+        privacyAcceptedAt: consentedAt,
+        legalConsentVersion: this.getLegalConsentVersion(),
       },
     });
 
@@ -138,6 +149,11 @@ export class AuthService {
 
   async login(body: LoginDto, metadata: SessionRequestMetadata) {
     const normalizedEmail = body.email.trim().toLowerCase();
+
+    this.consumeAuthAttempt('login', metadata, normalizedEmail, {
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
 
     const user = await this.prisma.user.findUnique({
       where: {
@@ -278,7 +294,9 @@ export class AuthService {
     }
 
     if (!user.email) {
-      throw conflictError('An email address is required before it can be verified');
+      throw conflictError(
+        'An email address is required before it can be verified',
+      );
     }
 
     if (user.emailVerifiedAt) {
@@ -343,6 +361,12 @@ export class AuthService {
     metadata: SessionRequestMetadata,
   ) {
     const normalizedEmail = body.email.trim().toLowerCase();
+
+    this.consumeAuthAttempt('forgot_password', metadata, normalizedEmail, {
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+
     const user = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
       include: {
@@ -356,8 +380,7 @@ export class AuthService {
 
     return {
       accepted: true,
-      message:
-        'If the account exists, a password reset email has been queued.',
+      message: 'If the account exists, a password reset email has been queued.',
     };
   }
 
@@ -571,6 +594,11 @@ export class AuthService {
     if (!normalizedPhone) {
       throw unauthorizedError('Phone number is required');
     }
+
+    this.authRateLimit.consume(`phone_start`, normalizedPhone, {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
 
     const user = await this.prisma.user.findUnique({
       where: { phone: normalizedPhone },
@@ -864,14 +892,14 @@ export class AuthService {
             throw sessionConflictError(
               'Your session is active in another device.',
               {
-              session_conflict: {
-                platform: effectivePlatform,
-                active_session_count: conflictingSessions.length,
-                active_session: this.serializeActiveSession(
-                  conflictingSessions[0],
-                ),
+                session_conflict: {
+                  platform: effectivePlatform,
+                  active_session_count: conflictingSessions.length,
+                  active_session: this.serializeActiveSession(
+                    conflictingSessions[0],
+                  ),
+                },
               },
-            },
             );
           }
 
@@ -1452,6 +1480,29 @@ export class AuthService {
       process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
       'http://localhost:3000'
     ).replace(/\/+$/, '');
+  }
+
+  private getLegalConsentVersion() {
+    return process.env.LEGAL_CONSENT_VERSION?.trim() || '2026-04-16';
+  }
+
+  private consumeAuthAttempt(
+    scope: string,
+    metadata: SessionRequestMetadata,
+    subject: string,
+    options: { limit: number; windowMs: number },
+  ) {
+    const requestFingerprint =
+      metadata.ipAddress?.trim() ||
+      metadata.deviceId?.trim() ||
+      metadata.userAgent?.trim() ||
+      'unknown';
+
+    this.authRateLimit.consume(
+      scope,
+      `${requestFingerprint}:${subject.trim().toLowerCase()}`,
+      options,
+    );
   }
 
   private describeDuration(valueMs: number) {

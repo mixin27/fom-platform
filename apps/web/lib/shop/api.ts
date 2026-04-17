@@ -3,6 +3,7 @@ import "server-only"
 import { redirect } from "next/navigation"
 
 import { type ApiSuccess } from "@/lib/auth/api"
+import type { PortalAnnouncement } from "@/lib/announcements/types"
 import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
 import {
   defaultPathForSession,
@@ -244,6 +245,11 @@ export type ShopTemplate = {
 export type ShopBilling = {
   shop_id: string
   shop_name: string
+  payment_provider: {
+    code: string
+    label: string
+    is_enabled: boolean
+  }
   overview: {
     status: string | null
     auto_renews: boolean
@@ -299,6 +305,101 @@ export type ShopBilling = {
     paid_at: string | null
     created_at: string
     updated_at: string
+    latest_transaction: {
+      id: string
+      provider: string
+      provider_order_id: string
+      status: string
+      expires_at: string | null
+      paid_at: string | null
+      created_at: string
+    } | null
+  }>
+  payment_proofs: Array<{
+    id: string
+    payment_id: string
+    invoice_no: string
+    amount_claimed: number
+    currency_claimed: string
+    payment_channel: string
+    paid_at: string | null
+    sender_name: string | null
+    sender_phone: string | null
+    transaction_ref: string | null
+    note: string | null
+    status: string
+    admin_note: string | null
+    reviewed_at: string | null
+    reviewed_by: {
+      id: string
+      name: string
+    } | null
+    created_at: string
+  }>
+}
+
+export type ShopBillingInvoiceDetail = {
+  id: string
+  invoice_no: string
+  amount: number
+  currency: string
+  status: string
+  payment_method: string | null
+  provider_ref: string | null
+  due_at: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+  payment_provider: {
+    code: string
+    label: string
+    is_enabled: boolean
+  }
+  subscription: {
+    id: string
+    status: string
+    auto_renews: boolean
+    start_at: string
+    end_at: string | null
+    shop_id: string
+    shop_name: string
+    plan_code: string
+    plan_name: string
+    plan_price: number
+    plan_currency: string
+    billing_period: string
+  }
+  latest_transaction: {
+    id: string
+    provider: string
+    provider_txn_id: string | null
+    provider_order_id: string
+    status: string
+    amount: number
+    currency: string
+    qr_payload: string | null
+    qr_image_url: string | null
+    payment_url: string | null
+    expires_at: string | null
+    paid_at: string | null
+    created_at: string
+    updated_at: string | null
+  } | null
+  transactions: Array<{
+    id: string
+    provider: string
+    provider_txn_id: string | null
+    provider_order_id: string
+    status: string
+    amount: number
+    currency: string
+    qr_payload: string | null
+    qr_image_url: string | null
+    payment_url: string | null
+    expires_at: string | null
+    paid_at: string | null
+    created_at: string
+    updated_at: string | null
   }>
 }
 
@@ -467,7 +568,8 @@ export async function getShopPortalContext() {
 async function shopRequest<T>(
   path: string,
   searchParams?: SearchParamsRecord,
-  retryPath = "/dashboard"
+  retryPath = "/dashboard",
+  allowForbidden = false
 ): Promise<ApiSuccess<T>> {
   const { activeShop } = await getShopPortalContext()
 
@@ -475,6 +577,7 @@ async function shopRequest<T>(
     path: `/api/v1/shops/${activeShop.id}${path}${buildQueryString(searchParams)}`,
     retryPath,
     requiredAccess: "shop",
+    allowForbidden,
   })
 }
 
@@ -488,7 +591,7 @@ export async function getShopMembers(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/settings${buildQueryString(searchParams)}`
-  return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath)
+  return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopRoles(retryPath = "/dashboard/staffs") {
@@ -504,8 +607,28 @@ export async function getShopAuditLogs(
   return shopRequest<ShopAuditLog[]>("/audit-logs", searchParams, resolvedRetryPath)
 }
 
-export async function getShopBilling(retryPath = "/dashboard/settings") {
-  return shopRequest<ShopBilling>("/billing", undefined, retryPath)
+export async function getShopBilling(retryPath = "/dashboard/billing") {
+  return shopRequest<ShopBilling>("/billing", undefined, retryPath, true)
+}
+
+export async function getShopAnnouncements(retryPath = "/dashboard") {
+  return shopRequest<{ announcements: PortalAnnouncement[] }>(
+    "/announcements",
+    undefined,
+    retryPath
+  )
+}
+
+export async function getShopBillingInvoice(
+  invoiceId: string,
+  retryPath = "/dashboard/billing"
+) {
+  return shopRequest<ShopBillingInvoiceDetail>(
+    `/billing/invoices/${invoiceId}`,
+    undefined,
+    retryPath,
+    true
+  )
 }
 
 export async function getShopOrders(
@@ -514,11 +637,11 @@ export async function getShopOrders(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/orders${buildQueryString(searchParams)}`
-  return shopRequest<ShopOrder[]>("/orders", searchParams, resolvedRetryPath)
+  return shopRequest<ShopOrder[]>("/orders", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopOrder(orderId: string, retryPath = "/dashboard/orders") {
-  return shopRequest<ShopOrder>(`/orders/${orderId}`, undefined, retryPath)
+  return shopRequest<ShopOrder>(`/orders/${orderId}`, undefined, retryPath, true)
 }
 
 export async function getShopCustomers(
@@ -527,14 +650,14 @@ export async function getShopCustomers(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/customers${buildQueryString(searchParams)}`
-  return shopRequest<ShopCustomer[]>("/customers", searchParams, resolvedRetryPath)
+  return shopRequest<ShopCustomer[]>("/customers", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopCustomer(
   customerId: string,
   retryPath = "/dashboard/customers"
 ) {
-  return shopRequest<ShopCustomer>(`/customers/${customerId}`, undefined, retryPath)
+  return shopRequest<ShopCustomer>(`/customers/${customerId}`, undefined, retryPath, true)
 }
 
 export async function getShopDeliveries(
@@ -543,7 +666,7 @@ export async function getShopDeliveries(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/deliveries${buildQueryString(searchParams)}`
-  return shopRequest<ShopDelivery[]>("/deliveries", searchParams, resolvedRetryPath)
+  return shopRequest<ShopDelivery[]>("/deliveries", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopTemplates(
@@ -552,7 +675,7 @@ export async function getShopTemplates(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/templates${buildQueryString(searchParams)}`
-  return shopRequest<ShopTemplate[]>("/templates", searchParams, resolvedRetryPath)
+  return shopRequest<ShopTemplate[]>("/templates", searchParams, resolvedRetryPath, true)
 }
 
 export async function getShopDailySummary(
@@ -561,7 +684,12 @@ export async function getShopDailySummary(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/reports${buildQueryString(searchParams)}`
-  return shopRequest<ShopDailySummary>("/summaries/daily", searchParams, resolvedRetryPath)
+  return shopRequest<ShopDailySummary>(
+    "/summaries/daily",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
 export async function getShopWeeklyReport(

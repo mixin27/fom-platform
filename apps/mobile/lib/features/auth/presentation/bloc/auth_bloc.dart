@@ -196,6 +196,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> with LoggerMixin {
         name: event.name,
         email: event.email,
         password: event.password,
+        acceptedTerms: event.acceptedTerms,
+        acceptedPrivacy: event.acceptedPrivacy,
         phone: event.phone,
         locale: event.locale,
       ),

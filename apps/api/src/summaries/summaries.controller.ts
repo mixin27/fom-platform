@@ -15,7 +15,6 @@ import { SummariesService } from './summaries.service';
 
 @Controller('api/v1/shops/:shopId/summaries')
 @UseGuards(AuthGuard, RbacGuard, SubscriptionFeatureGuard)
-@RequirePlanFeatures(subscriptionFeatures.reportsAnalytics)
 @ApiTags('Summaries')
 @ApiBearerAuth('access-token')
 export class SummariesController {
@@ -23,6 +22,7 @@ export class SummariesController {
 
   @Get('daily')
   @RequirePermissions(permissions.summariesRead)
+  @RequirePlanFeatures(subscriptionFeatures.reportsAnalytics)
   @ApiOperation({ summary: 'Get the daily summary for a shop' })
   getDailySummary(
     @CurrentUser() currentUser: AuthenticatedUser,

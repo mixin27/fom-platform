@@ -11,6 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AnnouncementsService } from '../announcements/announcements.service';
+import { CreatePlatformAnnouncementDto } from '../announcements/dto/create-platform-announcement.dto';
+import { ListPlatformAnnouncementsQueryDto } from '../announcements/dto/list-platform-announcements-query.dto';
+import { UpdatePlatformAnnouncementDto } from '../announcements/dto/update-platform-announcement.dto';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
@@ -32,14 +36,23 @@ import { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings
 import { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
+import {
+  UpdatePlatformPaymentProofDto,
+} from './dto/update-platform-payment-proof.dto';
 import { PlatformService } from './platform.service';
+import { UpdatePublicContactSubmissionDto } from '../public-contact/dto/update-public-contact-submission.dto';
+import { PublicContactService } from '../public-contact/public-contact.service';
 
 @Controller('api/v1/platform')
 @UseGuards(AuthGuard)
 @ApiTags('Platform')
 @ApiBearerAuth('access-token')
 export class PlatformController {
-  constructor(private readonly platformService: PlatformService) {}
+  constructor(
+    private readonly platformService: PlatformService,
+    private readonly publicContactService: PublicContactService,
+    private readonly announcementsService: AnnouncementsService,
+  ) {}
 
   @Get('dashboard')
   @UseGuards(RbacGuard)
@@ -119,10 +132,90 @@ export class PlatformController {
     return ok(this.platformService.getSubscriptions(query));
   }
 
+  @Get('payments')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsRead)
+  @ApiOperation({ summary: 'Get payment and invoice records' })
+  getPayments(@Query() query: ListPlatformSubscriptionsQueryDto) {
+    return ok(this.platformService.getPayments(query));
+  }
+
+  @Get('payments/:invoiceId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsRead)
+  @ApiOperation({ summary: 'Get payment details for a single invoice' })
+  getPayment(@Param('invoiceId') invoiceId: string) {
+    return ok(this.platformService.getPayment(invoiceId));
+  }
+
+  @Get('announcements/live')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformDashboardRead)
+  @ApiOperation({ summary: 'Get active platform announcements for the admin portal' })
+  getLiveAnnouncements() {
+    return ok(this.announcementsService.listPlatformSurfaceAnnouncements());
+  }
+
+  @Get('announcements')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformDashboardRead)
+  @ApiOperation({ summary: 'List platform announcements and workflow states' })
+  listAnnouncements(@Query() query: ListPlatformAnnouncementsQueryDto) {
+    return ok(this.announcementsService.listPlatformAnnouncements(query));
+  }
+
+  @Get('announcements/:announcementId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformDashboardRead)
+  @ApiOperation({ summary: 'Get announcement details' })
+  getAnnouncement(@Param('announcementId') announcementId: string) {
+    return ok(this.announcementsService.getAnnouncementById(announcementId));
+  }
+
+  @Post('announcements')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Create a new platform announcement' })
+  createAnnouncement(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body() body: CreatePlatformAnnouncementDto,
+  ) {
+    return ok(this.announcementsService.createAnnouncement(currentUser, body));
+  }
+
+  @Patch('announcements/:announcementId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Update a platform announcement' })
+  updateAnnouncement(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('announcementId') announcementId: string,
+    @Body() body: UpdatePlatformAnnouncementDto,
+  ) {
+    return ok(
+      this.announcementsService.updateAnnouncement(
+        currentUser,
+        announcementId,
+        body,
+      ),
+    );
+  }
+
+  @Delete('announcements/:announcementId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete a platform announcement' })
+  async deleteAnnouncement(@Param('announcementId') announcementId: string) {
+    await this.announcementsService.deleteAnnouncement(announcementId);
+  }
+
   @Patch('subscriptions/:subscriptionId')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSubscriptionsWrite)
-  @ApiOperation({ summary: 'Update a shop subscription from the platform workspace' })
+  @ApiOperation({
+    summary: 'Update a shop subscription from the platform workspace',
+  })
   updateSubscription(
     @Param('subscriptionId') subscriptionId: string,
     @Body() body: UpdatePlatformSubscriptionDto,
@@ -160,6 +253,26 @@ export class PlatformController {
     return ok(this.platformService.getSupport());
   }
 
+  @Get('public-contact-submissions')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportRead)
+  @ApiOperation({ summary: 'Get public website contact submissions' })
+  listPublicContactSubmissions() {
+    return ok(
+      this.publicContactService.listInboxForPlatform({ includeArchived: true }),
+    );
+  }
+
+  @Get('public-contact-submissions/:submissionId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportRead)
+  @ApiOperation({ summary: 'Get a single public contact submission' })
+  getPublicContactSubmission(@Param('submissionId') submissionId: string) {
+    return ok(
+      this.publicContactService.getSubmissionForPlatform(submissionId),
+    );
+  }
+
   @Post('support/issues')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSupportWrite)
@@ -180,6 +293,35 @@ export class PlatformController {
     @Body() body: UpdatePlatformSupportIssueDto,
   ) {
     return ok(this.platformService.updateSupportIssue(issueId, body));
+  }
+
+  @Patch('public-contact-submissions/:submissionId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportWrite)
+  @ApiOperation({
+    summary: 'Update notes or archive a public website contact submission',
+  })
+  updatePublicContactSubmission(
+    @Param('submissionId') submissionId: string,
+    @Body() body: UpdatePublicContactSubmissionDto,
+  ) {
+    return ok(
+      this.publicContactService.updateSubmissionAsPlatform(submissionId, body),
+    );
+  }
+
+  @Patch('payment-proofs/:proofId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportWrite)
+  @ApiOperation({
+    summary: 'Retired manual payment proof review endpoint',
+  })
+  updatePaymentProof(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('proofId') proofId: string,
+    @Body() body: UpdatePlatformPaymentProofDto,
+  ) {
+    return ok(this.platformService.updatePaymentProof(currentUser, proofId, body));
   }
 
   @Get('settings')
@@ -224,7 +366,9 @@ export class PlatformController {
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSettingsWrite)
   @HttpCode(204)
-  @ApiOperation({ summary: 'Delete an unused billing plan from platform settings' })
+  @ApiOperation({
+    summary: 'Delete an unused billing plan from platform settings',
+  })
   async deleteSettingsPlan(@Param('planId') planId: string) {
     await this.platformService.deleteSettingsPlan(planId);
   }
