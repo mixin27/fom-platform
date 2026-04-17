@@ -98,6 +98,11 @@ export default async function MarketingLayout({
             <Link href="#faq">FAQ</Link>
             <Link href={launchConfig.legal.terms_url}>Terms</Link>
             <Link href={launchConfig.legal.privacy_url}>Privacy</Link>
+            <Link
+              href={launchConfig.legal.account_deletion_url ?? "/account-deletion"}
+            >
+              Delete account
+            </Link>
             <Link href={launchConfig.support.url}>
               {launchConfig.support.label}
             </Link>

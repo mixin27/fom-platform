@@ -28,7 +28,7 @@ export function LegalDocument({
           </div>
         ) : null}
       </header>
-      <div className="flex flex-col gap-10 sm:gap-12 [&_a]:font-semibold [&_a]:text-[var(--fom-orange)] [&_a]:underline [&_a]:underline-offset-4">
+      <div className="flex flex-col gap-10 sm:gap-12 [&_a:not(.legal-skip)]:font-semibold [&_a:not(.legal-skip)]:text-[var(--fom-orange)] [&_a:not(.legal-skip)]:underline [&_a:not(.legal-skip)]:underline-offset-4">
         {children}
       </div>
     </article>

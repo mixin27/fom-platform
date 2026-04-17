@@ -125,6 +125,9 @@ export class AppService {
           process.env.PUBLIC_TERMS_URL?.trim() || `${webBaseUrl}/terms`,
         privacy_url:
           process.env.PUBLIC_PRIVACY_URL?.trim() || `${webBaseUrl}/privacy`,
+        account_deletion_url:
+          process.env.PUBLIC_ACCOUNT_DELETION_URL?.trim() ||
+          `${webBaseUrl}/account-deletion`,
       },
       notice: {
         enabled:

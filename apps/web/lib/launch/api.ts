@@ -12,6 +12,7 @@ export type PublicLaunchConfig = {
     consent_version: string
     terms_url: string
     privacy_url: string
+    account_deletion_url?: string
   }
   notice: {
     enabled: boolean
@@ -40,6 +41,7 @@ const fallbackLaunchConfig: PublicLaunchConfig = {
     consent_version: "2026-04-16",
     terms_url: "/terms",
     privacy_url: "/privacy",
+    account_deletion_url: "/account-deletion",
   },
   notice: {
     enabled: false,
