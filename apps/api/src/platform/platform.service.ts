@@ -87,8 +87,7 @@ type PaymentRow = {
   plan_name: string;
   amount: number;
   currency: string;
-  payment_method: string | null;
-  provider_ref: string | null;
+  latest_transaction_id: string | null;
   status: string;
   due_at: string | null;
   paid_at: string | null;
@@ -816,7 +815,7 @@ export class PlatformService {
       return [
         payment.invoice_no,
         payment.shop_name,
-        payment.provider_ref ?? '',
+        payment.latest_transaction_id ?? '',
         payment.plan_name,
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
@@ -916,7 +915,7 @@ export class PlatformService {
       return [
         payment.invoice_no,
         payment.shop_name,
-        payment.provider_ref ?? '',
+        payment.latest_transaction_id ?? '',
         payment.plan_name,
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
@@ -1047,8 +1046,6 @@ export class PlatformService {
           amount: body.amount ?? subscription.plan.price,
           currency: body.currency?.trim() || subscription.plan.currency,
           status: invoiceStatus,
-          paymentMethod: body.payment_method?.trim() || null,
-          providerRef: body.provider_ref?.trim() || null,
           dueAt,
           paidAt,
         },
@@ -1090,8 +1087,6 @@ export class PlatformService {
       body.amount === undefined &&
       body.currency === undefined &&
       body.status === undefined &&
-      body.payment_method === undefined &&
-      body.provider_ref === undefined &&
       body.due_at === undefined &&
       body.paid_at === undefined
     ) {
@@ -1119,12 +1114,6 @@ export class PlatformService {
           ...(body.amount !== undefined ? { amount: body.amount } : {}),
           ...(body.currency !== undefined ? { currency: body.currency.trim() } : {}),
           ...(body.status !== undefined ? { status: body.status } : {}),
-          ...(body.payment_method !== undefined
-            ? { paymentMethod: body.payment_method?.trim() || null }
-            : {}),
-          ...(body.provider_ref !== undefined
-            ? { providerRef: body.provider_ref?.trim() || null }
-            : {}),
           ...(body.due_at !== undefined ? { dueAt: nextDueAt } : {}),
           ...(body.paid_at !== undefined || body.status !== undefined
             ? { paidAt: nextPaidAt }
@@ -2667,6 +2656,10 @@ export class PlatformService {
             plan: true,
           },
         },
+        transactions: {
+          orderBy: [{ createdAt: "desc" }],
+          take: 1,
+        },
       },
     })) as any[];
 
@@ -2680,8 +2673,7 @@ export class PlatformService {
       plan_name: payment.subscription.plan.name,
       amount: payment.amount,
       currency: payment.currency,
-      payment_method: payment.paymentMethod,
-      provider_ref: payment.providerRef,
+      latest_transaction_id: payment.transactions?.[0]?.providerOrderId ?? null,
       status: payment.status,
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
@@ -2698,6 +2690,10 @@ export class PlatformService {
             shop: true,
             plan: true,
           },
+        },
+        transactions: {
+          orderBy: [{ createdAt: "desc" }],
+          take: 1,
         },
       },
     });
@@ -2716,8 +2712,7 @@ export class PlatformService {
       plan_name: payment.subscription.plan.name,
       amount: payment.amount,
       currency: payment.currency,
-      payment_method: payment.paymentMethod,
-      provider_ref: payment.providerRef,
+      latest_transaction_id: payment.transactions?.[0]?.providerOrderId ?? null,
       status: payment.status,
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
@@ -2755,8 +2750,7 @@ export class PlatformService {
       amount: payment.amount,
       currency: payment.currency,
       status: payment.status,
-      payment_method: payment.paymentMethod,
-      provider_ref: payment.providerRef,
+      latest_transaction_id: payment.transactions?.[0]?.providerOrderId ?? null,
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
       created_at: payment.createdAt.toISOString(),
@@ -2834,6 +2828,10 @@ export class PlatformService {
                 plan: true,
               },
             },
+            transactions: {
+              orderBy: [{ createdAt: 'desc' }],
+              take: 1,
+            },
           },
         },
       },
@@ -2852,8 +2850,7 @@ export class PlatformService {
               plan_name: subscription.plan.name,
               amount: subscription.payments[0].amount,
               currency: subscription.payments[0].currency,
-              payment_method: subscription.payments[0].paymentMethod,
-              provider_ref: subscription.payments[0].providerRef,
+              latest_transaction_id: subscription.payments[0].transactions?.[0]?.providerOrderId ?? null,
               status: subscription.payments[0].status,
               due_at: subscription.payments[0].dueAt?.toISOString() ?? null,
               paid_at: subscription.payments[0].paidAt?.toISOString() ?? null,
@@ -3361,6 +3358,10 @@ export class PlatformService {
             },
           },
         },
+        transactions: {
+          orderBy: [{ createdAt: 'desc' }],
+          take: 1,
+        },
       },
     });
 
@@ -3405,10 +3406,8 @@ export class PlatformService {
         ctaLabel: 'Open billing',
         ctaUrl: `${this.getWebAppBaseUrl()}/dashboard/settings`,
         footerText:
-          invoice.paymentMethod || invoice.providerRef
-            ? `Payment method: ${invoice.paymentMethod ?? 'n/a'}${
-                invoice.providerRef ? ` · Ref: ${invoice.providerRef}` : ''
-              }`
+          invoice.transactions?.[0]?.providerOrderId
+            ? `Payment Ref: ${invoice.transactions[0].providerOrderId}`
             : `Invoice status: ${statusLabel}`,
       },
     });

@@ -47,30 +47,6 @@ export class UpdatePlatformInvoiceDto {
   status?: (typeof platformInvoiceStatuses)[number];
 
   @ApiPropertyOptional({
-    description: 'Updated payment channel',
-    example: 'KBZPay',
-    nullable: true,
-  })
-  @Transform(trimString)
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(60)
-  payment_method?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Updated provider reference',
-    example: 'KBZ-20260407-001',
-    nullable: true,
-  })
-  @Transform(trimString)
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  provider_ref?: string | null;
-
-  @ApiPropertyOptional({
     description: 'Updated due date, or null to clear',
     example: '2026-04-15T00:00:00.000Z',
     nullable: true,

@@ -76,8 +76,6 @@ export async function updatePlatformPaymentFromFormAction(formData: FormData) {
   const amount = normalizeIntegerField(formData.get("amount"))
   const currency = normalizeTextField(formData.get("currency"))
   const status = normalizeTextField(formData.get("status"))
-  const paymentMethod = normalizeTextField(formData.get("payment_method"))
-  const providerRef = normalizeTextField(formData.get("provider_ref"))
   const dueAt = normalizeDateField(formData.get("due_at"))
   const paidAt = normalizeDateField(formData.get("paid_at"))
 
@@ -104,8 +102,6 @@ export async function updatePlatformPaymentFromFormAction(formData: FormData) {
           ...(amount !== undefined ? { amount } : {}),
           ...(currency ? { currency } : {}),
           ...(status ? { status } : {}),
-          payment_method: paymentMethod || null,
-          provider_ref: providerRef || null,
           due_at: dueAt,
           paid_at: paidAt,
         },

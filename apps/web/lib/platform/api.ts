@@ -33,8 +33,9 @@ export type PlatformInvoice = {
   plan_name: string
   amount: number
   currency: string
-  payment_method: string | null
-  provider_ref: string | null
+  payment_method?: string | null
+  provider_ref?: string | null
+  latest_transaction_id?: string | null
   status: string
   due_at: string | null
   paid_at: string | null
@@ -198,8 +199,9 @@ export type PlatformPaymentDetail = {
   amount: number
   currency: string
   status: string
-  payment_method: string | null
-  provider_ref: string | null
+  payment_method?: string | null
+  provider_ref?: string | null
+  latest_transaction_id?: string | null
   due_at: string | null
   paid_at: string | null
   created_at: string

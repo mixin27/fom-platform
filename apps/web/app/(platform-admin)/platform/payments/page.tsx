@@ -45,7 +45,7 @@ export default async function PlatformPaymentsPage({
       <PageIntro
         eyebrow="Payments"
         title="Invoice payments"
-        description="Track invoice status, payment references, and MyanMyanPay session activity from a dedicated billing workspace."
+        description="Track invoice status, transaction references, and provider session activity from a dedicated billing workspace."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
@@ -152,7 +152,7 @@ export default async function PlatformPaymentsPage({
                   {invoice.invoice_no}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {invoice.provider_ref ?? "No provider reference"}
+                  {invoice.latest_transaction_id ?? "No provider reference"}
                 </span>
               </div>
             ),
@@ -180,7 +180,8 @@ export default async function PlatformPaymentsPage({
           {
             key: "method",
             header: "Method",
-            render: (invoice) => invoice.payment_method ?? "—",
+            render: (invoice: any) =>
+              invoice.latest_transaction_id ? "Provider" : "—",
           },
           {
             key: "status",

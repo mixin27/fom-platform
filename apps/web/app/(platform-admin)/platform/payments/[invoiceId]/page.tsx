@@ -52,7 +52,7 @@ export default async function PlatformPaymentPage({
       <PageIntro
         eyebrow="Payments"
         title={payment.invoice_no}
-        description="Invoice detail, payment references, and provider transaction history."
+        description="Invoice detail and provider transaction history."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/platform/payments">
@@ -181,24 +181,6 @@ export default async function PlatformPaymentPage({
                   <option value="overdue">overdue</option>
                   <option value="failed">failed</option>
                 </select>
-              </div>
-              <div className="md:col-span-1">
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Payment method
-                </label>
-                <Input
-                  name="payment_method"
-                  defaultValue={payment.payment_method ?? ""}
-                />
-              </div>
-              <div className="md:col-span-1">
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Provider reference
-                </label>
-                <Input
-                  name="provider_ref"
-                  defaultValue={payment.provider_ref ?? ""}
-                />
               </div>
               <div className="md:col-span-1">
                 <label className="mb-1.5 block text-sm font-medium text-foreground">
