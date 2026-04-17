@@ -4,24 +4,12 @@ import { cache } from "react"
 
 import { requestApi } from "@/lib/auth/api"
 
-export type LaunchNoticeSeverity = "info" | "warning" | "critical" | string
-export type LaunchNoticeAudience = "all" | "public" | "tenant" | string
-
 export type PublicLaunchConfig = {
   legal: {
     consent_version: string
     terms_url: string
     privacy_url: string
     account_deletion_url?: string
-  }
-  notice: {
-    enabled: boolean
-    severity: LaunchNoticeSeverity
-    audience: LaunchNoticeAudience
-    title: string
-    body: string
-    cta_label: string | null
-    cta_url: string | null
   }
   support: {
     label: string
@@ -42,15 +30,6 @@ const fallbackLaunchConfig: PublicLaunchConfig = {
     terms_url: "/terms",
     privacy_url: "/privacy",
     account_deletion_url: "/account-deletion",
-  },
-  notice: {
-    enabled: false,
-    severity: "info",
-    audience: "all",
-    title: "",
-    body: "",
-    cta_label: null,
-    cta_url: null,
   },
   support: {
     label: "Contact support",

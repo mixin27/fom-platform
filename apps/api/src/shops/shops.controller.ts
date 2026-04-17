@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { AnnouncementsService } from '../announcements/announcements.service';
 import { CursorPaginationQueryDto } from '../common/dto/cursor-pagination-query.dto';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
@@ -37,7 +38,10 @@ import { ShopsService } from './shops.service';
 @ApiTags('Shops')
 @ApiBearerAuth('access-token')
 export class ShopsController {
-  constructor(private readonly shopsService: ShopsService) {}
+  constructor(
+    private readonly shopsService: ShopsService,
+    private readonly announcementsService: AnnouncementsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List current user shops or stores' })
@@ -89,6 +93,14 @@ export class ShopsController {
     @Param('shopId') shopId: string,
   ) {
     return ok(this.shopsService.getBilling(currentUser, shopId));
+  }
+
+  @Get(':shopId/announcements')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Get active shop portal announcements and billing notices' })
+  getAnnouncements(@Param('shopId') shopId: string) {
+    return ok(this.announcementsService.listShopAnnouncements(shopId));
   }
 
   @Post(':shopId/billing/payment-proofs')

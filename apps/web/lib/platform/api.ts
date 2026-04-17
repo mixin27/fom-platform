@@ -1,6 +1,7 @@
 import "server-only"
 
 import { type ApiSuccess } from "@/lib/auth/api"
+import type { PortalAnnouncement } from "@/lib/announcements/types"
 import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
 
 type SearchParamsValue = string | string[] | undefined
@@ -252,6 +253,21 @@ export type PlatformPublicContactSubmission = {
   updated_at?: string
 }
 
+export type PlatformAnnouncement = PortalAnnouncement & {
+  created_at: string
+  updated_at: string
+  created_by: {
+    id: string
+    name: string
+    email: string | null
+  } | null
+  updated_by: {
+    id: string
+    name: string
+    email: string | null
+  } | null
+}
+
 function buildQueryString(searchParams?: SearchParamsRecord) {
   const query = new URLSearchParams()
 
@@ -461,6 +477,41 @@ export async function getPlatformPayment(
 ) {
   return platformRequest<PlatformPaymentDetail>(
     `/api/v1/platform/payments/${invoiceId}`,
+    undefined,
+    retryPath
+  )
+}
+
+export async function getPlatformLiveAnnouncements() {
+  return platformRequest<{
+    announcements: PortalAnnouncement[]
+  }>("/api/v1/platform/announcements/live", undefined, "/platform")
+}
+
+export async function getPlatformAnnouncements(
+  searchParams?: SearchParamsRecord
+) {
+  const retryPath = `/platform/announcements${buildQueryString(searchParams)}`
+
+  return platformRequest<{
+    overview: {
+      total: number
+      active: number
+      scheduled: number
+      draft: number
+      ended: number
+      archived: number
+    }
+    announcements: PlatformAnnouncement[]
+  }>("/api/v1/platform/announcements", searchParams, retryPath)
+}
+
+export async function getPlatformAnnouncement(
+  announcementId: string,
+  retryPath = "/platform/announcements"
+) {
+  return platformRequest<PlatformAnnouncement>(
+    `/api/v1/platform/announcements/${announcementId}`,
     undefined,
     retryPath
   )

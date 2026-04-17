@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { LayoutDashboard, LogIn } from "lucide-react"
+import { AnnouncementBannerStack } from "@/components/announcement-banner-stack"
 import { BrandMark } from "@/components/brand-mark"
-import { LaunchNoticeBanner } from "@/components/launch-notice-banner"
+import { getPublicAnnouncements } from "@/lib/announcements/api"
 import { defaultPathForSession, getSession } from "@/lib/auth/session"
 import { getPublicLaunchConfig } from "@/lib/launch/api"
 import { Button } from "@workspace/ui/components/button"
@@ -23,14 +24,12 @@ export default async function MarketingLayout({
     getSession(),
     getPublicLaunchConfig(),
   ])
+  const announcements = await getPublicAnnouncements("public")
   const dashboardHref = session ? defaultPathForSession(session) : null
-  const showNotice =
-    launchConfig.notice.enabled &&
-    ["all", "public"].includes(launchConfig.notice.audience)
 
   return (
     <div className="fom-marketing-canvas min-h-screen">
-      {showNotice ? <LaunchNoticeBanner notice={launchConfig.notice} /> : null}
+      <AnnouncementBannerStack announcements={announcements} />
       <header className="sticky top-0 z-20 border-b border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]/80 backdrop-blur">
         <div className="mx-auto flex h-[66px] w-full max-w-[1120px] items-center gap-10 px-6">
           <BrandMark />

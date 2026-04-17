@@ -143,6 +143,8 @@ class _FakeAuthRepository implements AuthRepository {
     required String name,
     required String email,
     required String password,
+    required bool acceptedTerms,
+    required bool acceptedPrivacy,
     String? phone,
     String? locale,
   }) async {

@@ -71,6 +71,8 @@ model User {
   createdSupportIssues  PlatformSupportIssue[] @relation("SupportIssueCreator")
   shopAuditLogs      ShopAuditLog[]      @relation("ShopAuditActor")
   reviewedPaymentProofs PaymentProofSubmission[] @relation("PaymentProofReviewer")
+  createdAnnouncements Announcement[]    @relation("AnnouncementCreator")
+  updatedAnnouncements Announcement[]    @relation("AnnouncementUpdater")
 }
 
 model Shop {
@@ -583,6 +585,32 @@ model Notification {
   @@index([userId, readAt, createdAt])
   @@index([shopId, category, createdAt])
   @@map("notifications")
+}
+
+model Announcement {
+  id              String   @id @default(cuid())
+  title           String
+  body            String
+  severity        String   @default("info")
+  status          String   @default("draft")
+  audiences       String[]
+  ctaLabel        String?
+  ctaUrl          String?
+  startsAt        DateTime?
+  endsAt          DateTime?
+  pinned          Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdByUserId String?
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdByUser   User?    @relation("AnnouncementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser   User?    @relation("AnnouncementUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, startsAt, endsAt])
+  @@index([pinned, sortOrder, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@map("announcements")
 }
 
 model NotificationPreference {

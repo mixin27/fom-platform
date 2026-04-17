@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MMPaySDK, type PaymentResponse } from 'mmpay-node-sdk';
 import { serviceUnavailableError } from '../common/http/app-http.exception';
+import { AppConfigService } from '../config/app-config.service';
 
 type CreateMmqrSessionInput = {
   invoiceNo: string;
@@ -25,13 +26,10 @@ type MyanmyanpaySession = {
 export class MyanmyanpayService {
   private client: ReturnType<typeof MMPaySDK> | null = null;
 
+  constructor(private readonly config: AppConfigService) {}
+
   isConfigured() {
-    return Boolean(
-      this.readEnv('MYANMYANPAY_APP_ID') &&
-      this.readEnv('MYANMYANPAY_API_BASE_URL') &&
-      this.readEnv('MYANMYANPAY_PUBLISHABLE_KEY', 'MYANMYANPAY_PUBLIC_KEY') &&
-      this.readEnv('MYANMYANPAY_SECRET_KEY'),
-    );
+    return this.config.getMyanmyanpayConfig().isConfigured;
   }
 
   async createMmqrSession(input: CreateMmqrSessionInput) {
@@ -88,13 +86,8 @@ export class MyanmyanpayService {
       return this.client;
     }
 
-    const appId = this.readEnv('MYANMYANPAY_APP_ID');
-    const apiBaseUrl = this.readEnv('MYANMYANPAY_API_BASE_URL');
-    const publishableKey = this.readEnv(
-      'MYANMYANPAY_PUBLISHABLE_KEY',
-      'MYANMYANPAY_PUBLIC_KEY',
-    );
-    const secretKey = this.readEnv('MYANMYANPAY_SECRET_KEY');
+    const { appId, apiBaseUrl, publishableKey, secretKey } =
+      this.config.getMyanmyanpayConfig();
 
     if (!appId || !apiBaseUrl || !publishableKey || !secretKey) {
       throw serviceUnavailableError(
@@ -113,22 +106,11 @@ export class MyanmyanpayService {
   }
 
   private useSandbox() {
-    const raw = this.readEnv('MYANMYANPAY_USE_SANDBOX');
-    return raw ? ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase()) : false;
+    return this.config.getMyanmyanpayConfig().useSandbox;
   }
 
   private resolveCallbackUrl() {
-    const explicit = this.readEnv('MYANMYANPAY_CALLBACK_URL');
-    if (explicit) {
-      return explicit;
-    }
-
-    const apiBaseUrl =
-      this.readEnv('PUBLIC_API_BASE_URL') ||
-      this.readEnv('API_BASE_URL') ||
-      'http://localhost:4000';
-
-    return `${apiBaseUrl.replace(/\/+$/, '')}/api/v1/payments/webhooks/myanmyanpay`;
+    return this.config.getMyanmyanpayConfig().callbackUrl;
   }
 
   private normalizeSessionResponse(
@@ -195,17 +177,6 @@ export class MyanmyanpayService {
   private normalizeNullableString(value: string | null | undefined) {
     const normalized = value?.trim();
     return normalized ? normalized : null;
-  }
-
-  private readEnv(...names: string[]) {
-    for (const name of names) {
-      const value = process.env[name]?.trim();
-      if (value) {
-        return value;
-      }
-    }
-
-    return null;
   }
 
   private buildErrorContext(error: unknown) {

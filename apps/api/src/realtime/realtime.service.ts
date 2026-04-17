@@ -8,6 +8,7 @@ import {
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { generateId } from '../common/utils/id';
+import { AppConfigService } from '../config/app-config.service';
 import { jwtConfig } from '../auth/jwt.config';
 import type { CreateRealtimeTicketQueryDto } from './dto/create-realtime-ticket-query.dto';
 
@@ -54,9 +55,6 @@ type SerializedNotification = {
 @Injectable()
 export class RealtimeService {
   private readonly logger = new Logger(RealtimeService.name);
-  private readonly ticketTtlSeconds = this.resolveTicketTtlSeconds();
-  private readonly ticketSecret =
-    process.env.REALTIME_JWT_SECRET?.trim() || jwtConfig.accessSecret;
   private readonly ticketAudience = `${jwtConfig.audience}:realtime`;
   private readonly connections = new Map<string, RealtimeConnectionRecord>();
   private readonly userConnectionIndex = new Map<string, Set<string>>();
@@ -65,6 +63,7 @@ export class RealtimeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly config: AppConfigService,
   ) {}
 
   async issueTicket(
@@ -493,8 +492,14 @@ export class RealtimeService {
   }
 
   private resolveTicketTtlSeconds() {
-    const rawValue = process.env.REALTIME_TICKET_TTL_SECONDS?.trim();
-    const parsed = Number.parseInt(rawValue ?? '', 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 300;
+    return this.config.getRealtimeConfig().ticketTtlSeconds;
+  }
+
+  private get ticketTtlSeconds() {
+    return this.resolveTicketTtlSeconds();
+  }
+
+  private get ticketSecret() {
+    return this.config.getRealtimeConfig().jwtSecret || jwtConfig.accessSecret;
   }
 }

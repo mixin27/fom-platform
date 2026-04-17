@@ -3,14 +3,17 @@ import Link from "next/link"
 import { Plus, Search } from "lucide-react"
 
 import { signOutAction } from "@/app/actions"
+import { AnnouncementBannerStack } from "@/components/announcement-banner-stack"
 import { AppSideNav } from "@/components/app-side-nav"
 import { BrandMark } from "@/components/brand-mark"
-import { LaunchNoticeBanner } from "@/components/launch-notice-banner"
 import { PortalRealtimeBellButton } from "@/components/portal-realtime-bell-button"
-import { getPublicLaunchConfig } from "@/lib/launch/api"
 import { getNotificationUnreadCount } from "@/lib/notifications/api"
 import { shopPortalNav } from "@/lib/navigation"
-import { getCurrentUserProfile, getShopPortalContext } from "@/lib/shop/api"
+import {
+  getCurrentUserProfile,
+  getShopAnnouncements,
+  getShopPortalContext,
+} from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
 import { ShopSwitcher } from "./_components/shop-switcher"
 
@@ -29,22 +32,22 @@ export default async function ShopAppLayout({
   const visibleNavItems = navItems.filter(
     (item) => item.href !== "/dashboard/billing" || canManageShop
   )
-  const [profileResponse, unreadResponse, launchConfig] = await Promise.all([
-    getCurrentUserProfile("/dashboard"),
-    getNotificationUnreadCount({
-      requiredAccess: "shop",
-      retryPath: "/dashboard",
-      searchParams: {
-        shop_id: activeShop.id,
-      },
-    }),
-    getPublicLaunchConfig(),
-  ])
+  const [profileResponse, unreadResponse, announcementResponse] = await Promise.all(
+    [
+      getCurrentUserProfile("/dashboard"),
+      getNotificationUnreadCount({
+        requiredAccess: "shop",
+        retryPath: "/dashboard",
+        searchParams: {
+          shop_id: activeShop.id,
+        },
+      }),
+      getShopAnnouncements("/dashboard"),
+    ]
+  )
   const profile = profileResponse.data
   const unreadCount = unreadResponse.data.unread_count
-  const showNotice =
-    launchConfig.notice.enabled &&
-    ["all", "tenant"].includes(launchConfig.notice.audience)
+  const announcements = announcementResponse.data.announcements
 
   return (
     <div className="fom-portal-canvas min-h-screen">
@@ -111,12 +114,10 @@ export default async function ShopAppLayout({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-portal-bg)]">
-          {showNotice ? (
-            <LaunchNoticeBanner
-              notice={launchConfig.notice}
-              className="border-b-0"
-            />
-          ) : null}
+          <AnnouncementBannerStack
+            announcements={announcements}
+            className="border-b-0"
+          />
           <header className="flex h-14 items-center gap-4 border-b border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] px-5">
             <div className="flex flex-col">
               <span className="text-[13px] font-semibold text-foreground">

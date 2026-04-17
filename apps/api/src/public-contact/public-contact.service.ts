@@ -7,19 +7,11 @@ import {
 import type { RequestWithContext } from '../common/http/request-context';
 import { ensureRequestContext } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AppConfigService } from '../config/app-config.service';
 import { EmailOutboxService } from '../email/email-outbox.service';
 import { CreatePublicContactSubmissionDto } from './dto/create-public-contact-submission.dto';
 import { UpdatePublicContactSubmissionDto } from './dto/update-public-contact-submission.dto';
 import { PublicContactRateLimitService } from './public-contact-rate-limit.service';
-
-function readIntEnv(name: string, fallback: number) {
-  const raw = process.env[name]?.trim();
-  if (!raw) {
-    return fallback;
-  }
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
-}
 
 @Injectable()
 export class PublicContactService {
@@ -27,6 +19,7 @@ export class PublicContactService {
     private readonly prisma: PrismaService,
     private readonly emailOutbox: EmailOutboxService,
     private readonly rateLimit: PublicContactRateLimitService,
+    private readonly config: AppConfigService,
   ) {}
 
   async submitFromPublic(
@@ -52,16 +45,14 @@ export class PublicContactService {
     }
 
     const ip = request.ipAddress?.trim() || 'unknown';
+    const contactConfig = this.config.getPublicContactConfig();
     this.rateLimit.consumeIp(ip, {
-      limit: readIntEnv('PUBLIC_CONTACT_RL_IP_LIMIT', 5),
-      windowMs: readIntEnv('PUBLIC_CONTACT_RL_IP_WINDOW_MS', 60 * 60 * 1000),
+      limit: contactConfig.ipRateLimit.limit,
+      windowMs: contactConfig.ipRateLimit.windowMs,
     });
     this.rateLimit.consumeEmail(email, {
-      limit: readIntEnv('PUBLIC_CONTACT_RL_EMAIL_LIMIT', 3),
-      windowMs: readIntEnv(
-        'PUBLIC_CONTACT_RL_EMAIL_WINDOW_MS',
-        24 * 60 * 60 * 1000,
-      ),
+      limit: contactConfig.emailRateLimit.limit,
+      windowMs: contactConfig.emailRateLimit.windowMs,
     });
 
     const ipFingerprint = this.fingerprintIp(request.ipAddress);
@@ -231,13 +222,7 @@ export class PublicContactService {
   }
 
   private resolveInboxEmail() {
-    const configured =
-      process.env.PUBLIC_CONTACT_INBOX_EMAIL?.trim() ||
-      process.env.EMAIL_SUPPORT_EMAIL?.trim();
-    if (configured) {
-      return configured;
-    }
-    return 'support@fom-platform.local';
+    return this.config.getPublicContactConfig().inboxEmail;
   }
 
   private fingerprintIp(ip: string | null | undefined) {
@@ -245,10 +230,7 @@ export class PublicContactService {
     if (!raw || raw === 'unknown') {
       return null;
     }
-    const salt =
-      process.env.PUBLIC_CONTACT_IP_SALT?.trim() ||
-      process.env.JWT_ACCESS_SECRET?.trim() ||
-      'public_contact_ip';
+    const salt = this.config.getPublicContactConfig().ipSalt;
     return createHash('sha256')
       .update(`${salt}:${raw}`)
       .digest('hex')

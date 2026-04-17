@@ -17,6 +17,7 @@ export type NavIconName =
   | "billing"
   | "payments"
   | "contact"
+  | "announcements"
 
 export type NavItem = {
   href: string
@@ -62,6 +63,11 @@ export const platformPortalNav: NavItem[] = [
     icon: "subscriptions",
   },
   { href: "/platform/payments", label: "Payments", icon: "payments" },
+  {
+    href: "/platform/announcements",
+    label: "Announcements",
+    icon: "announcements",
+  },
   {
     href: "/platform/contact-form",
     label: "Contact Form",

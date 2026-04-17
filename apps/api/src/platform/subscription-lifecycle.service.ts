@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { conflictError } from '../common/http/app-http.exception';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AppConfigService } from '../config/app-config.service';
 import { DEFAULT_TRIAL_PLAN_CODE } from './platform-billing.constants';
 
 type TrialSubscriptionOptions = {
@@ -10,12 +11,13 @@ type TrialSubscriptionOptions = {
 
 @Injectable()
 export class SubscriptionLifecycleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: AppConfigService,
+  ) {}
 
   getDefaultTrialDurationDays() {
-    const parsed = Number.parseInt(process.env.DEFAULT_TRIAL_DAYS ?? '7', 10);
-
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+    return this.config.getDefaultTrialDays();
   }
 
   buildTrialWindow(referenceDate = new Date()) {

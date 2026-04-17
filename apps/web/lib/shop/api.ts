@@ -3,6 +3,7 @@ import "server-only"
 import { redirect } from "next/navigation"
 
 import { type ApiSuccess } from "@/lib/auth/api"
+import type { PortalAnnouncement } from "@/lib/announcements/types"
 import { requestAuthenticatedApiEnvelope } from "@/lib/auth/request"
 import {
   defaultPathForSession,
@@ -608,6 +609,14 @@ export async function getShopAuditLogs(
 
 export async function getShopBilling(retryPath = "/dashboard/billing") {
   return shopRequest<ShopBilling>("/billing", undefined, retryPath, true)
+}
+
+export async function getShopAnnouncements(retryPath = "/dashboard") {
+  return shopRequest<{ announcements: PortalAnnouncement[] }>(
+    "/announcements",
+    undefined,
+    retryPath
+  )
 }
 
 export async function getShopBillingInvoice(

@@ -1,5 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AnnouncementsService } from './announcements/announcements.service';
+import { ListPublicAnnouncementsQueryDto } from './announcements/dto/list-public-announcements-query.dto';
 import { ok } from './common/http/api-result';
 import { AppService } from './app.service';
 import { PlatformService } from './platform/platform.service';
@@ -10,6 +12,7 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly platformService: PlatformService,
+    private readonly announcementsService: AnnouncementsService,
   ) {}
 
   @Get()
@@ -38,5 +41,17 @@ export class AppController {
   })
   getPublicLaunchConfig() {
     return ok(this.appService.getPublicLaunchConfig());
+  }
+
+  @Get('public/announcements')
+  @ApiOperation({
+    summary: 'Get active public announcements for marketing and auth surfaces',
+  })
+  getPublicAnnouncements(@Query() query: ListPublicAnnouncementsQueryDto) {
+    return ok(
+      this.announcementsService.listPublicAnnouncements(
+        query.audience ?? 'public',
+      ),
+    );
   }
 }

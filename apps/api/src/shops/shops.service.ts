@@ -15,6 +15,7 @@ import {
 import { paged } from '../common/http/api-result';
 import { paginate } from '../common/utils/pagination';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AppConfigService } from '../config/app-config.service';
 import { EmailOutboxService } from '../email/email-outbox.service';
 import {
   permissionCatalog,
@@ -58,6 +59,7 @@ export class ShopsService {
     private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
     private readonly myanmyanpay: MyanmyanpayService,
+    private readonly config: AppConfigService,
   ) {}
 
   async listUserShops(userId: string) {
@@ -430,10 +432,6 @@ export class ShopsService {
       return this.serializePaymentTransaction(activeTransaction);
     }
 
-    const expiresInSeconds = Number.parseInt(
-      process.env.MYANMYANPAY_QR_EXPIRY_SECONDS ?? '900',
-      10,
-    );
     const providerOrderId = `MMP-${payment.invoiceNo}-${randomBytes(3).toString('hex').toUpperCase()}`;
 
     const session = await this.myanmyanpay.createMmqrSession({
@@ -441,7 +439,7 @@ export class ShopsService {
       amount: payment.amount,
       currency: payment.currency,
       orderId: providerOrderId,
-      expiresInSeconds: Number.isFinite(expiresInSeconds) ? expiresInSeconds : 900,
+      expiresInSeconds: this.config.getMyanmyanpayConfig().qrExpirySeconds,
     });
 
     const transaction = await this.prisma.paymentTransaction.create({

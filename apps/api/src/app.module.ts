@@ -6,8 +6,10 @@ import {
 } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { AnnouncementsService } from './announcements/announcements.service';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AppConfigService } from './config/app-config.service';
 import { AuthController } from './auth/auth.controller';
 import { AuthRateLimitService } from './auth/auth-rate-limit.service';
 import { AuthService } from './auth/auth.service';
@@ -93,7 +95,9 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     PaymentsController,
   ],
   providers: [
+    AppConfigService,
     AppService,
+    AnnouncementsService,
     PrismaService,
     AuthService,
     AuthRateLimitService,

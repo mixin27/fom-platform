@@ -11,6 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AnnouncementsService } from '../announcements/announcements.service';
+import { CreatePlatformAnnouncementDto } from '../announcements/dto/create-platform-announcement.dto';
+import { ListPlatformAnnouncementsQueryDto } from '../announcements/dto/list-platform-announcements-query.dto';
+import { UpdatePlatformAnnouncementDto } from '../announcements/dto/update-platform-announcement.dto';
 import { ok } from '../common/http/api-result';
 import { AuthGuard } from '../common/http/auth.guard';
 import { CurrentUser } from '../common/http/current-user.decorator';
@@ -47,6 +51,7 @@ export class PlatformController {
   constructor(
     private readonly platformService: PlatformService,
     private readonly publicContactService: PublicContactService,
+    private readonly announcementsService: AnnouncementsService,
   ) {}
 
   @Get('dashboard')
@@ -141,6 +146,68 @@ export class PlatformController {
   @ApiOperation({ summary: 'Get payment details for a single invoice' })
   getPayment(@Param('invoiceId') invoiceId: string) {
     return ok(this.platformService.getPayment(invoiceId));
+  }
+
+  @Get('announcements/live')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformDashboardRead)
+  @ApiOperation({ summary: 'Get active platform announcements for the admin portal' })
+  getLiveAnnouncements() {
+    return ok(this.announcementsService.listPlatformSurfaceAnnouncements());
+  }
+
+  @Get('announcements')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformDashboardRead)
+  @ApiOperation({ summary: 'List platform announcements and workflow states' })
+  listAnnouncements(@Query() query: ListPlatformAnnouncementsQueryDto) {
+    return ok(this.announcementsService.listPlatformAnnouncements(query));
+  }
+
+  @Get('announcements/:announcementId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformDashboardRead)
+  @ApiOperation({ summary: 'Get announcement details' })
+  getAnnouncement(@Param('announcementId') announcementId: string) {
+    return ok(this.announcementsService.getAnnouncementById(announcementId));
+  }
+
+  @Post('announcements')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Create a new platform announcement' })
+  createAnnouncement(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body() body: CreatePlatformAnnouncementDto,
+  ) {
+    return ok(this.announcementsService.createAnnouncement(currentUser, body));
+  }
+
+  @Patch('announcements/:announcementId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @ApiOperation({ summary: 'Update a platform announcement' })
+  updateAnnouncement(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('announcementId') announcementId: string,
+    @Body() body: UpdatePlatformAnnouncementDto,
+  ) {
+    return ok(
+      this.announcementsService.updateAnnouncement(
+        currentUser,
+        announcementId,
+        body,
+      ),
+    );
+  }
+
+  @Delete('announcements/:announcementId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSettingsWrite)
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete a platform announcement' })
+  async deleteAnnouncement(@Param('announcementId') announcementId: string) {
+    await this.announcementsService.deleteAnnouncement(announcementId);
   }
 
   @Patch('subscriptions/:subscriptionId')

@@ -115,7 +115,9 @@ class _CustomerOrdersViewState extends State<_CustomerOrdersView> {
                       },
                       todayOrdersCount: state.totalOrdersCount,
                       todayOrdersLabel: "Total Orders",
-                      todayRevenueText: _formatCompactAmount(state.totalRevenue),
+                      todayRevenueText: _formatCompactAmount(
+                        state.totalRevenue,
+                      ),
                       revenueLabel: "Total Spent",
                       revenueSubtitle: "Total MMK",
                       pendingCount: state.countForTab(OrdersHomeTab.pending),

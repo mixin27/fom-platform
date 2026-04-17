@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { AppConfigService } from './config/app-config.service';
 import { AppService } from './app.service';
 import { RealtimeService } from './realtime/realtime.service';
 
@@ -9,9 +10,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, new FastifyAdapter(), {
     rawBody: true,
   });
-  assertProductionReadiness();
+  const config = app.get(AppConfigService);
+
+  config.assertProductionReadiness();
   app.enableCors({
-    origin: resolveCorsOrigins(),
+    origin: config.getCorsOrigins(),
     credentials: true,
   });
 
@@ -29,9 +32,7 @@ async function bootstrap() {
           'Backend API for the FOM Platform ([getfom.com](https://getfom.com))',
         )
         .setVersion('0.1.0')
-        .addServer(
-          process.env.PUBLIC_API_BASE_URL?.trim() || 'http://localhost:4000',
-        )
+        .addServer(config.getPublicApiBaseUrl())
         .addBearerAuth(
           {
             type: 'http',
@@ -68,50 +69,8 @@ async function bootstrap() {
   }
 
   await app.listen(
-    process.env.PORT ? Number(process.env.PORT) : 4000,
+    config.getPort(),
     '0.0.0.0',
   );
 }
 bootstrap();
-
-function resolveCorsOrigins() {
-  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-
-  if (configuredOrigins.length === 0) {
-    if ((process.env.NODE_ENV?.trim().toLowerCase() || '') === 'production') {
-      return false;
-    }
-
-    return true;
-  }
-
-  return configuredOrigins;
-}
-
-function assertProductionReadiness() {
-  const isProduction =
-    (process.env.NODE_ENV?.trim().toLowerCase() || '') === 'production';
-  if (!isProduction) {
-    return;
-  }
-
-  const emailProvider =
-    process.env.EMAIL_PROVIDER?.trim().toLowerCase() ||
-    process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase() ||
-    'log';
-
-  if (['disabled', 'log'].includes(emailProvider)) {
-    throw new Error(
-      'Production startup blocked: configure EMAIL_PROVIDER to smtp or sendgrid.',
-    );
-  }
-
-  if ((process.env.CORS_ALLOWED_ORIGINS ?? '').trim().length === 0) {
-    throw new Error(
-      'Production startup blocked: set CORS_ALLOWED_ORIGINS to explicit allowed origins.',
-    );
-  }
-}
