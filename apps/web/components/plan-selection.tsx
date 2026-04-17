@@ -36,10 +36,15 @@ export function PlanSelection({ plans, currentPlanCode }: PlanSelectionProps) {
             "Please complete your payment via MMQR to activate or renew your plan.",
         })
         router.push(`/dashboard/billing/${response.data.id}`)
+      } else if (response.meta?.error) {
+        const errorMsg = (response.meta.error as any).message || "Failed to initiate subscription. Please try again."
+        toast.error("Subscription Error", {
+          description: errorMsg,
+        })
       }
     } catch (error) {
-      toast.error("Error", {
-        description: "Failed to initiate subscription. Please try again.",
+      toast.error("Network Error", {
+        description: "Failed to connect to the server. Please check your connection.",
       })
     } finally {
       setLoadingCode(null)

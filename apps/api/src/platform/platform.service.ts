@@ -2518,7 +2518,7 @@ export class PlatformService {
     now: Date,
     where?: Record<string, unknown>,
   ): Promise<TenantSnapshot[]> {
-    await this.subscriptionLifecycle.expireElapsedTrials(now);
+    await this.subscriptionLifecycle.processSubscriptionExpirations(now);
 
     const shops = (await (this.prisma as any).shop.findMany({
       ...(where ? { where } : {}),
@@ -2803,7 +2803,7 @@ export class PlatformService {
   }
 
   private async loadSubscriptionRows(): Promise<SubscriptionRow[]> {
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const subscriptions = (await (this.prisma as any).subscription.findMany({
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],

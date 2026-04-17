@@ -68,7 +68,7 @@ export class ShopsService {
   ) {}
 
   async listUserShops(userId: string) {
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const memberships = await this.prisma.shopMember.findMany({
       where: {
@@ -179,7 +179,7 @@ export class ShopsService {
 
   async getBilling(currentUser: AuthenticatedUser, shopId: string) {
     await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -961,7 +961,7 @@ export class ShopsService {
     body: CreateShopSubscriptionInvoiceDto,
   ) {
     await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const plan = defaultPlanCatalog.find((p) => p.code === body.plan_code);
     if (!plan || !plan.isActive || plan.code === DEFAULT_TRIAL_PLAN_CODE) {
@@ -988,13 +988,15 @@ export class ShopsService {
     }
 
     if (!shop.subscription) {
-      throw conflictError('Shop does not have an active subscription record');
+      // should not happen for shops going through standard registration, but creates a record if missing
+      throw conflictError('Shop does not have a valid subscription record. Please contact support.');
     }
 
-    // prevent duplicate pending invoices for the same plan
+    // prevent duplicate pending invoices for the EXACT same plan and price
     const existingPending = shop.subscription.payments.find(
-      (p) => p.amount === plan.price && p.status === 'pending',
+      (p) => p.amount === plan.price && p.status === 'pending'
     );
+    
     if (existingPending) {
       return this.getBillingInvoice(currentUser, shopId, existingPending.id);
     }
@@ -1544,7 +1546,7 @@ export class ShopsService {
   }
 
   private async loadOperationalPlanContext(shopId: string) {
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const subscription = await this.prisma.subscription.findUnique({
       where: { shopId },
@@ -1679,7 +1681,7 @@ export class ShopsService {
   }
 
   async serializeShop(shopId: string) {
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },

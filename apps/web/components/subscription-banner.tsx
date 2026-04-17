@@ -17,7 +17,7 @@ export function SubscriptionBanner({
   endAt,
   className,
 }: SubscriptionBannerProps) {
-  if (status !== "trialing" || !endAt) {
+  if (!endAt) {
     return null
   }
 
@@ -27,8 +27,52 @@ export function SubscriptionBanner({
     (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   )
 
-  // Only show if trial is ending in 3 days or less
-  if (diffDays > 3) {
+  // Grace Period Logic (Overdue status)
+  if (status === "overdue") {
+    const gracePeriodDays = 3
+    const daysSinceExpiry = Math.floor((now.getTime() - expiryDate.getTime()) / (1000 * 60 * 60 * 24))
+    const daysLeftInGrace = gracePeriodDays - daysSinceExpiry
+
+    if (daysLeftInGrace <= 0) return null
+
+    return (
+      <div
+        className={cn(
+          "border-b border-rose-200 bg-rose-50 px-5 py-3",
+          className
+        )}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm">
+              <AlertCircle className="size-4" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-rose-900 uppercase tracking-tight">
+                Action Required: Subscription Expired
+              </p>
+              <p className="text-[11px] text-rose-700">
+                You have <span className="font-bold underline">{daysLeftInGrace} {daysLeftInGrace === 1 ? 'day' : 'days'}</span> left to renew before your shop access is restricted.
+              </p>
+            </div>
+          </div>
+          <Button
+            asChild
+            size="sm"
+            className="bg-rose-600 text-white hover:bg-rose-700"
+          >
+            <Link href="/dashboard/billing">
+              Renew Now
+              <ArrowRight data-icon="inline-end" className="size-3.5" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Pre-expiry Warning (Trial or Active if ending soon)
+  if (status !== "trialing" || diffDays > 3) {
     return null
   }
 

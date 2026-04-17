@@ -68,18 +68,32 @@ export class SubscriptionLifecycleService {
     });
   }
 
-  async expireElapsedTrials(referenceDate = new Date()) {
-    const result = await (this.prisma as any).subscription.updateMany({
+  async processSubscriptionExpirations(referenceDate = new Date()) {
+    const gracePeriodEnd = new Date(referenceDate);
+    gracePeriodEnd.setDate(gracePeriodEnd.getDate() - 3);
+
+    // Stage 1: Active/Trialing subscriptions that have reached endAt -> Overdue
+    const overdueCount = await (this.prisma as any).subscription.updateMany({
       where: {
-        status: 'trialing',
+        status: { in: ['active', 'trialing'] },
         endAt: {
           not: null,
           lte: referenceDate,
         },
-        plan: {
-          is: {
-            billingPeriod: 'trial',
-          },
+      },
+      data: {
+        status: 'overdue',
+        autoRenews: false,
+      },
+    });
+
+    // Stage 2: Overdue subscriptions that have exceeded the 3-day grace period -> Expired
+    const expiredCount = await (this.prisma as any).subscription.updateMany({
+      where: {
+        status: 'overdue',
+        endAt: {
+          not: null,
+          lte: gracePeriodEnd,
         },
       },
       data: {
@@ -88,6 +102,9 @@ export class SubscriptionLifecycleService {
       },
     });
 
-    return result.count;
+    return {
+      overdue: overdueCount.count,
+      expired: expiredCount.count,
+    };
   }
 }

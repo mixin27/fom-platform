@@ -730,9 +730,11 @@ export async function createSubscriptionInvoice(
   const { activeShop } = await getShopPortalContext()
 
   return requestAuthenticatedApiEnvelope<ShopBilling["invoices"][number]>({
-    method: "POST",
     path: `/api/v1/shops/${activeShop.id}/billing/subscriptions`,
-    body: { plan_code: planCode },
+    init: {
+      method: "POST",
+      json: { plan_code: planCode },
+    },
     retryPath,
     requiredAccess: "shop",
   })

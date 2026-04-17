@@ -31,7 +31,7 @@ export class EnterpriseService {
     }
 
     const now = new Date();
-    await this.subscriptionLifecycle.expireElapsedTrials(now);
+    await this.subscriptionLifecycle.processSubscriptionExpirations(now);
 
     const shops = (await this.prisma.shop.findMany({
       where: {
