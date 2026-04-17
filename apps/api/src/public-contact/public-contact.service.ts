@@ -205,6 +205,31 @@ export class PublicContactService {
     };
   }
 
+  async getSubmissionForPlatform(submissionId: string) {
+    const row = await this.prisma.publicContactSubmission.findUnique({
+      where: { id: submissionId },
+    });
+
+    if (!row) {
+      throw notFoundError('Contact submission not found');
+    }
+
+    return {
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      subject: row.subject,
+      message: row.message,
+      email_status: row.emailStatus,
+      ip_fingerprint: row.ipFingerprint,
+      user_agent: row.userAgent,
+      archived: row.archived,
+      admin_note: row.adminNote,
+      created_at: row.createdAt.toISOString(),
+      updated_at: row.updatedAt.toISOString(),
+    };
+  }
+
   private resolveInboxEmail() {
     const configured =
       process.env.PUBLIC_CONTACT_INBOX_EMAIL?.trim() ||

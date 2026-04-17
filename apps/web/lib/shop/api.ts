@@ -244,6 +244,11 @@ export type ShopTemplate = {
 export type ShopBilling = {
   shop_id: string
   shop_name: string
+  payment_provider: {
+    code: string
+    label: string
+    is_enabled: boolean
+  }
   overview: {
     status: string | null
     auto_renews: boolean
@@ -305,6 +310,7 @@ export type ShopBilling = {
       provider_order_id: string
       status: string
       expires_at: string | null
+      paid_at: string | null
       created_at: string
     } | null
   }>
@@ -328,6 +334,71 @@ export type ShopBilling = {
       name: string
     } | null
     created_at: string
+  }>
+}
+
+export type ShopBillingInvoiceDetail = {
+  id: string
+  invoice_no: string
+  amount: number
+  currency: string
+  status: string
+  payment_method: string | null
+  provider_ref: string | null
+  due_at: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+  payment_provider: {
+    code: string
+    label: string
+    is_enabled: boolean
+  }
+  subscription: {
+    id: string
+    status: string
+    auto_renews: boolean
+    start_at: string
+    end_at: string | null
+    shop_id: string
+    shop_name: string
+    plan_code: string
+    plan_name: string
+    plan_price: number
+    plan_currency: string
+    billing_period: string
+  }
+  latest_transaction: {
+    id: string
+    provider: string
+    provider_txn_id: string | null
+    provider_order_id: string
+    status: string
+    amount: number
+    currency: string
+    qr_payload: string | null
+    qr_image_url: string | null
+    payment_url: string | null
+    expires_at: string | null
+    paid_at: string | null
+    created_at: string
+    updated_at: string | null
+  } | null
+  transactions: Array<{
+    id: string
+    provider: string
+    provider_txn_id: string | null
+    provider_order_id: string
+    status: string
+    amount: number
+    currency: string
+    qr_payload: string | null
+    qr_image_url: string | null
+    payment_url: string | null
+    expires_at: string | null
+    paid_at: string | null
+    created_at: string
+    updated_at: string | null
   }>
 }
 
@@ -535,8 +606,20 @@ export async function getShopAuditLogs(
   return shopRequest<ShopAuditLog[]>("/audit-logs", searchParams, resolvedRetryPath)
 }
 
-export async function getShopBilling(retryPath = "/dashboard/settings") {
+export async function getShopBilling(retryPath = "/dashboard/billing") {
   return shopRequest<ShopBilling>("/billing", undefined, retryPath, true)
+}
+
+export async function getShopBillingInvoice(
+  invoiceId: string,
+  retryPath = "/dashboard/billing"
+) {
+  return shopRequest<ShopBillingInvoiceDetail>(
+    `/billing/invoices/${invoiceId}`,
+    undefined,
+    retryPath,
+    true
+  )
 }
 
 export async function getShopOrders(

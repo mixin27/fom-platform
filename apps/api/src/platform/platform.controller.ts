@@ -127,6 +127,22 @@ export class PlatformController {
     return ok(this.platformService.getSubscriptions(query));
   }
 
+  @Get('payments')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsRead)
+  @ApiOperation({ summary: 'Get payment and invoice records' })
+  getPayments(@Query() query: ListPlatformSubscriptionsQueryDto) {
+    return ok(this.platformService.getPayments(query));
+  }
+
+  @Get('payments/:invoiceId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSubscriptionsRead)
+  @ApiOperation({ summary: 'Get payment details for a single invoice' })
+  getPayment(@Param('invoiceId') invoiceId: string) {
+    return ok(this.platformService.getPayment(invoiceId));
+  }
+
   @Patch('subscriptions/:subscriptionId')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSubscriptionsWrite)
@@ -170,6 +186,26 @@ export class PlatformController {
     return ok(this.platformService.getSupport());
   }
 
+  @Get('public-contact-submissions')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportRead)
+  @ApiOperation({ summary: 'Get public website contact submissions' })
+  listPublicContactSubmissions() {
+    return ok(
+      this.publicContactService.listInboxForPlatform({ includeArchived: true }),
+    );
+  }
+
+  @Get('public-contact-submissions/:submissionId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportRead)
+  @ApiOperation({ summary: 'Get a single public contact submission' })
+  getPublicContactSubmission(@Param('submissionId') submissionId: string) {
+    return ok(
+      this.publicContactService.getSubmissionForPlatform(submissionId),
+    );
+  }
+
   @Post('support/issues')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSupportWrite)
@@ -211,7 +247,7 @@ export class PlatformController {
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSupportWrite)
   @ApiOperation({
-    summary: 'Review a submitted manual payment proof',
+    summary: 'Retired manual payment proof review endpoint',
   })
   updatePaymentProof(
     @CurrentUser() currentUser: AuthenticatedUser,

@@ -175,7 +175,7 @@ export const defaultPlanCatalog = [
     name: 'Shop Monthly',
     description:
       'Single-shop monthly plan for daily Facebook order operations.',
-    price: 15000,
+    price: 88000,
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
@@ -338,7 +338,7 @@ export const defaultPlanCatalog = [
     name: 'Shop Yearly',
     description:
       'Discounted yearly plan for shops running the workflow every day.',
-    price: 150000,
+    price: 880000,
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
@@ -520,7 +520,8 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.ordersManagement,
         label: 'Order management',
-        description: 'Full operational order management across enterprise shops.',
+        description:
+          'Full operational order management across enterprise shops.',
         availabilityStatus: 'available',
         sortOrder: 1,
       },
@@ -593,8 +594,7 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.multiShopManagement,
         label: 'Enterprise multi-shop workspace',
-        description:
-          'Aggregate eligible shops into one enterprise workspace.',
+        description: 'Aggregate eligible shops into one enterprise workspace.',
         availabilityStatus: 'available',
         sortOrder: 21,
       },

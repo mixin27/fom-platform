@@ -56,8 +56,7 @@ export const subscriptionFeatureCatalog: ReadonlyArray<{
     code: subscriptionFeatures.ordersImportSpreadsheet,
     category: 'operations',
     name: 'Spreadsheet order import',
-    description:
-      'Import historical orders from Excel-compatible spreadsheets.',
+    description: 'Import historical orders from Excel-compatible spreadsheets.',
     launchPhase: 'phase_one',
   },
   {
@@ -106,7 +105,8 @@ export const subscriptionFeatureCatalog: ReadonlyArray<{
     code: subscriptionFeatures.billingAnnualDiscount,
     category: 'billing',
     name: 'Annual discount',
-    description: 'Lower annual billing compared with paying monthly for a year.',
+    description:
+      'Lower annual billing compared with paying monthly for a year.',
     launchPhase: 'phase_one',
   },
   {
@@ -162,7 +162,8 @@ export const subscriptionFeatureCatalog: ReadonlyArray<{
     code: subscriptionFeatures.multiShopManagement,
     category: 'enterprise',
     name: 'Multi-shop management',
-    description: 'Operate multiple shop workspaces under expanded plan controls.',
+    description:
+      'Operate multiple shop workspaces under expanded plan controls.',
     launchPhase: 'future',
   },
   {

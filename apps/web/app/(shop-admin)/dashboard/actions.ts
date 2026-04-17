@@ -8,6 +8,7 @@ import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 
 function revalidateShopWorkspace() {
   revalidatePath("/dashboard")
+  revalidatePath("/dashboard/billing")
   revalidatePath("/dashboard/orders")
   revalidatePath("/dashboard/orders/paste-from-messenger")
   revalidatePath("/dashboard/customers")
@@ -1897,68 +1898,8 @@ export async function updateShopMemberFromFormAction(formData: FormData) {
   redirectToPath(returnTo, redirectInput)
 }
 
-export async function submitShopPaymentProofFromFormAction(formData: FormData) {
-  const returnTo = getReturnTo(formData, "/dashboard/settings")
-  const shopId = normalizeTextField(formData.get("shop_id"))
-  const invoiceNo = normalizeTextField(formData.get("invoice_no"))
-  const paymentChannel = normalizeTextField(formData.get("payment_channel"))
-  const amountClaimed = normalizeIntegerField(formData.get("amount_claimed"))
-  const currencyClaimed = normalizeTextField(formData.get("currency_claimed"))
-  const senderName = normalizeTextField(formData.get("sender_name"))
-  const senderPhone = normalizeTextField(formData.get("sender_phone"))
-  const transactionRef = normalizeTextField(formData.get("transaction_ref"))
-  const note = normalizeTextField(formData.get("note"))
-  const paidAt = normalizeDateTimeField(formData.get("paid_at"))
-
-  if (!shopId || !invoiceNo || !paymentChannel) {
-    redirectToPath(returnTo, {
-      error: "Invoice number and payment channel are required.",
-    })
-  }
-  if (!Number.isFinite(amountClaimed) || (amountClaimed ?? -1) < 0) {
-    redirectToPath(returnTo, {
-      error: "Amount claimed must be a non-negative integer.",
-    })
-  }
-  if (paidAt === null) {
-    redirectToPath(returnTo, {
-      error: "Paid at must be a valid date and time.",
-    })
-  }
-
-  let redirectInput: { notice?: string; error?: string }
-  try {
-    await requestAuthenticatedActionApiEnvelope({
-      path: `/api/v1/shops/${shopId}/billing/payment-proofs`,
-      preferFreshSession: true,
-      requiredAccess: "shop",
-      init: {
-        method: "POST",
-        json: {
-          invoice_no: invoiceNo,
-          amount_claimed: amountClaimed,
-          payment_channel: paymentChannel,
-          ...(currencyClaimed ? { currency_claimed: currencyClaimed } : {}),
-          ...(senderName ? { sender_name: senderName } : {}),
-          ...(senderPhone ? { sender_phone: senderPhone } : {}),
-          ...(transactionRef ? { transaction_ref: transactionRef } : {}),
-          ...(note ? { note } : {}),
-          ...(paidAt ? { paid_at: paidAt } : {}),
-        },
-      },
-    })
-    revalidateShopWorkspace()
-    redirectInput = { notice: "Payment proof submitted for review." }
-  } catch (error) {
-    redirectInput = {
-      error: toActionMessage(error, "Unable to submit payment proof right now."),
-    }
-  }
-  redirectToPath(returnTo, redirectInput)
-}
-
 export async function createInvoiceMmqrSessionFromFormAction(formData: FormData) {
-  const returnTo = getReturnTo(formData, "/dashboard/settings")
+  const returnTo = getReturnTo(formData, "/dashboard/billing")
   const shopId = normalizeTextField(formData.get("shop_id"))
   const invoiceId = normalizeTextField(formData.get("invoice_id"))
 
@@ -1979,10 +1920,13 @@ export async function createInvoiceMmqrSessionFromFormAction(formData: FormData)
       },
     })
     revalidateShopWorkspace()
-    redirectInput = { notice: "MMQR session generated for invoice." }
+    redirectInput = { notice: "MyanMyanPay payment session is ready." }
   } catch (error) {
     redirectInput = {
-      error: toActionMessage(error, "Unable to generate MMQR session right now."),
+      error: toActionMessage(
+        error,
+        "Unable to create a MyanMyanPay payment session right now."
+      ),
     }
   }
   redirectToPath(returnTo, redirectInput)

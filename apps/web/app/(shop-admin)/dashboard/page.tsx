@@ -92,7 +92,7 @@ export default async function ShopDashboardPage({
               revenue tracking, and customer analytics.
             </p>
             <Button asChild variant="outline" className="w-fit">
-              <Link href="/dashboard/settings/billing">Upgrade now</Link>
+              <Link href="/dashboard/billing">Upgrade now</Link>
             </Button>
           </CardContent>
         </Card>

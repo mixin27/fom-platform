@@ -21,10 +21,14 @@ export default async function ShopAppLayout({
 }) {
   const portalContext = await getShopPortalContext()
   const { session, activeShop } = portalContext
+  const canManageShop = activeShop.membership.permissions.includes("shops.write")
   const navItems =
     session.shops.length > 1
       ? shopPortalNav
       : shopPortalNav.filter((item) => item.href !== "/dashboard/workspace")
+  const visibleNavItems = navItems.filter(
+    (item) => item.href !== "/dashboard/billing" || canManageShop
+  )
   const [profileResponse, unreadResponse, launchConfig] = await Promise.all([
     getCurrentUserProfile("/dashboard"),
     getNotificationUnreadCount({
@@ -70,7 +74,7 @@ export default async function ShopAppLayout({
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-3">
-              <AppSideNav items={navItems} tone="shop" />
+              <AppSideNav items={visibleNavItems} tone="shop" />
             </div>
 
             <div className="border-t border-[var(--fom-border-subtle)] px-4 py-3">

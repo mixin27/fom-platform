@@ -76,6 +76,17 @@ export function tooManyRequestsError(
   });
 }
 
+export function serviceUnavailableError(
+  message = 'Service temporarily unavailable',
+  context?: Record<string, unknown>,
+): AppHttpException {
+  return new AppHttpException(HttpStatus.SERVICE_UNAVAILABLE, {
+    code: 'SERVICE_UNAVAILABLE',
+    message,
+    ...(context ? { context } : {}),
+  });
+}
+
 export function sessionConflictError(
   message: string,
   context?: Record<string, unknown>,

@@ -6,7 +6,9 @@ import { AppService } from './app.service';
 import { RealtimeService } from './realtime/realtime.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, new FastifyAdapter());
+  const app = await NestFactory.create(AppModule, new FastifyAdapter(), {
+    rawBody: true,
+  });
   assertProductionReadiness();
   app.enableCors({
     origin: resolveCorsOrigins(),

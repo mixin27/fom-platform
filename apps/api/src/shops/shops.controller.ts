@@ -94,13 +94,27 @@ export class ShopsController {
   @Post(':shopId/billing/payment-proofs')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.shopsRead)
-  @ApiOperation({ summary: 'Submit manual payment proof for billing review' })
+  @ApiOperation({ summary: 'Retired manual payment proof endpoint' })
   submitPaymentProof(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Param('shopId') shopId: string,
     @Body() body: CreateShopPaymentProofDto,
   ) {
     return ok(this.shopsService.submitPaymentProof(currentUser, shopId, body));
+  }
+
+  @Get(':shopId/billing/invoices/:invoiceId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Get a single billing invoice for the current shop' })
+  getBillingInvoice(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return ok(
+      this.shopsService.getBillingInvoice(currentUser, shopId, invoiceId),
+    );
   }
 
   @Post(':shopId/billing/invoices/:invoiceId/mmqr-session')

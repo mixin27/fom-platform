@@ -103,6 +103,14 @@ export class AppService {
 
   getPublicLaunchConfig() {
     const webBaseUrl = this.getWebAppBaseUrl();
+    const hasMyanmyanpay =
+      Boolean(process.env.MYANMYANPAY_APP_ID?.trim()) &&
+      Boolean(process.env.MYANMYANPAY_SECRET_KEY?.trim()) &&
+      Boolean(
+        process.env.MYANMYANPAY_PUBLISHABLE_KEY?.trim() ||
+          process.env.MYANMYANPAY_PUBLIC_KEY?.trim(),
+      ) &&
+      Boolean(process.env.MYANMYANPAY_API_BASE_URL?.trim());
     const noticeEnabled = this.readBoolEnv('PLATFORM_NOTICE_ENABLED', false);
     const noticeTitle = process.env.PLATFORM_NOTICE_TITLE?.trim() || '';
     const noticeBody = process.env.PLATFORM_NOTICE_BODY?.trim() || '';
@@ -151,7 +159,9 @@ export class AppService {
           'How to pay and activate your shop',
         body:
           process.env.PLATFORM_PAYMENT_INSTRUCTIONS_BODY?.trim() ||
-          'After your trial, contact the platform team to receive your invoice and payment instructions. Access is activated once payment is confirmed.',
+          (hasMyanmyanpay
+            ? 'Open Billing & Subscription, choose the invoice, and pay directly with MyanMyanPay. Your subscription updates automatically after confirmation.'
+            : 'Billing is available from the Billing & Subscription page. Configure MyanMyanPay to enable direct payment and automatic activation.'),
         channels: paymentChannels,
         contact_label: supportLabel,
         contact_url: supportUrl,

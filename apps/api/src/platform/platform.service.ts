@@ -895,6 +895,53 @@ export class PlatformService {
     };
   }
 
+  async getPayments(query: ListPlatformSubscriptionsQueryDto) {
+    const normalizedSearch = query.search?.trim().toLowerCase() ?? '';
+    const normalizedStatus = query.status ?? 'all';
+    const normalizedPlan = query.plan?.trim().toLowerCase() ?? '';
+    const payments = await this.loadPaymentRows();
+    const filteredInvoices = payments.filter((payment) => {
+      if (normalizedStatus !== 'all' && payment.status !== normalizedStatus) {
+        return false;
+      }
+
+      if (normalizedPlan && payment.plan_code.toLowerCase() !== normalizedPlan) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        payment.invoice_no,
+        payment.shop_name,
+        payment.provider_ref ?? '',
+        payment.plan_name,
+      ].some((value) => value.toLowerCase().includes(normalizedSearch));
+    });
+    const page = paginate(filteredInvoices, query.limit, query.cursor);
+
+    return {
+      overview: {
+        total_invoices: payments.length,
+        paid_invoices: payments.filter((payment) => payment.status === 'paid').length,
+        pending_invoices: payments.filter((payment) => payment.status === 'pending')
+          .length,
+        overdue_invoices: payments.filter((payment) => payment.status === 'overdue')
+          .length,
+        failed_invoices: payments.filter((payment) => payment.status === 'failed')
+          .length,
+      },
+      invoices: page.items,
+      invoices_pagination: page.pagination,
+    };
+  }
+
+  async getPayment(invoiceId: string) {
+    return this.loadPaymentDetailById(invoiceId);
+  }
+
   async updateSubscription(
     subscriptionId: string,
     body: UpdatePlatformSubscriptionDto,
@@ -1109,30 +1156,6 @@ export class PlatformService {
     const issues = await this.syncAndLoadSupportIssues(tenants, payments, now);
     const publicContact = await this.publicContactService.listInboxForPlatform();
 
-    const paymentProofs = await this.prisma.paymentProofSubmission.findMany({
-      where: {
-        status: {
-          in: ['submitted', 'suspicious'],
-        },
-      },
-      orderBy: [{ createdAt: 'desc' }],
-      take: 100,
-      include: {
-        shop: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        reviewedByUser: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
     return {
       overview: {
         open_items: issues.length,
@@ -1142,36 +1165,11 @@ export class PlatformService {
           .length,
         billing_items: issues.filter((issue) => issue.kind === 'billing').length,
         public_contact_inbox: publicContact.open_count,
-        payment_proof_queue: paymentProofs.length,
+        payment_proof_queue: 0,
       },
       issues,
       public_contact: publicContact,
-      payment_proofs: paymentProofs.map((proof) => ({
-        id: proof.id,
-        shop_id: proof.shopId,
-        shop_name: proof.shop?.name ?? 'Unknown shop',
-        payment_id: proof.paymentId,
-        invoice_no: proof.invoiceNoSnapshot,
-        amount_claimed: proof.amountClaimed,
-        currency_claimed: proof.currencyClaimed,
-        payment_channel: proof.paymentChannel,
-        paid_at: proof.paidAt?.toISOString() ?? null,
-        sender_name: proof.senderName,
-        sender_phone: proof.senderPhone,
-        transaction_ref: proof.transactionRef,
-        note: proof.note,
-        status: proof.status,
-        admin_note: proof.adminNote,
-        reviewed_at: proof.reviewedAt?.toISOString() ?? null,
-        reviewed_by:
-          proof.reviewedByUser === null
-            ? null
-            : {
-                id: proof.reviewedByUser.id,
-                name: proof.reviewedByUser.name,
-              },
-        created_at: proof.createdAt.toISOString(),
-      })),
+      payment_proofs: [],
       health: {
         total_shops: tenants.length,
         active_shops: tenants.filter((tenant) => tenant.status === 'active')
@@ -1196,82 +1194,14 @@ export class PlatformService {
     proofId: string,
     body: UpdatePlatformPaymentProofDto,
   ) {
-    const proof = await this.prisma.paymentProofSubmission.findUnique({
-      where: { id: proofId },
-      include: {
-        payment: {
-          include: {
-            subscription: true,
-          },
-        },
-      },
-    });
+    void currentUser;
+    void proofId;
+    void body;
+    void paymentProofStatuses;
 
-    if (!proof) {
-      throw notFoundError('Payment proof not found');
-    }
-
-    if (body.status === undefined && body.admin_note === undefined) {
-      throw validationError([
-        {
-          field: 'body',
-          errors: ['Provide status or admin_note to update'],
-        },
-      ]);
-    }
-
-    const nextStatusRaw = body.status ?? proof.status;
-    if (!paymentProofStatuses.includes(nextStatusRaw as (typeof paymentProofStatuses)[number])) {
-      throw validationError([
-        { field: 'status', errors: ['Invalid payment proof status'] },
-      ]);
-    }
-    const nextStatus = nextStatusRaw as (typeof paymentProofStatuses)[number];
-
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.paymentProofSubmission.update({
-        where: { id: proofId },
-        data: {
-          ...(body.status !== undefined ? { status: body.status } : {}),
-          ...(body.admin_note !== undefined
-            ? { adminNote: body.admin_note?.trim() || null }
-            : {}),
-          ...(body.status !== undefined
-            ? {
-                reviewedByUserId: currentUser.id,
-                reviewedAt: new Date(),
-              }
-            : {}),
-        },
-      });
-
-      if (nextStatus === 'approved' && proof.payment.status !== 'paid') {
-        await tx.payment.update({
-          where: { id: proof.paymentId },
-          data: {
-            status: 'paid',
-            paidAt: proof.paidAt ?? new Date(),
-            paymentMethod: proof.paymentChannel,
-            providerRef: proof.transactionRef ?? proof.payment.providerRef,
-          },
-        });
-        await this.syncSubscriptionStatusFromInvoices(tx, proof.payment.subscriptionId);
-      }
-
-      return row;
-    });
-
-    void this.emitPlatformInvalidation({
-      resource: 'support',
-      action: 'payment_proof_updated',
-    });
-
-    return {
-      id: updated.id,
-      status: updated.status,
-      admin_note: updated.adminNote,
-      reviewed_at: updated.reviewedAt?.toISOString() ?? null,
-    };
+    throw conflictError(
+      'Manual payment proof flow has been retired. Billing is now handled through MyanMyanPay invoice sessions.',
+    );
   }
 
   async createSupportIssue(
@@ -2792,6 +2722,89 @@ export class PlatformService {
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
       created_at: payment.createdAt.toISOString(),
+    };
+  }
+
+  private async loadPaymentDetailById(paymentId: string) {
+    const payment = await (this.prisma as any).payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        subscription: {
+          include: {
+            shop: {
+              include: {
+                owner: true,
+              },
+            },
+            plan: true,
+          },
+        },
+        transactions: {
+          orderBy: [{ createdAt: 'desc' }],
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    return {
+      id: payment.id,
+      invoice_no: payment.invoiceNo,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      payment_method: payment.paymentMethod,
+      provider_ref: payment.providerRef,
+      due_at: payment.dueAt?.toISOString() ?? null,
+      paid_at: payment.paidAt?.toISOString() ?? null,
+      created_at: payment.createdAt.toISOString(),
+      updated_at: payment.updatedAt.toISOString(),
+      subscription: {
+        id: payment.subscription.id,
+        status: payment.subscription.status,
+        auto_renews: payment.subscription.autoRenews,
+        start_at: payment.subscription.startAt.toISOString(),
+        end_at: payment.subscription.endAt?.toISOString() ?? null,
+        shop_id: payment.subscription.shopId,
+        shop_name: payment.subscription.shop.name,
+        owner_name: payment.subscription.shop.owner.name,
+        owner_email: payment.subscription.shop.owner.email,
+        plan_code: payment.subscription.plan.code,
+        plan_name: payment.subscription.plan.name,
+        plan_price: payment.subscription.plan.price,
+        plan_currency: payment.subscription.plan.currency,
+        billing_period: payment.subscription.plan.billingPeriod,
+      },
+      transactions: payment.transactions.map((transaction: any) => {
+        const rawCreateResponse =
+          transaction.rawCreateResponse &&
+          typeof transaction.rawCreateResponse === 'object' &&
+          !Array.isArray(transaction.rawCreateResponse)
+            ? (transaction.rawCreateResponse as Record<string, unknown>)
+            : null;
+
+        return {
+          id: transaction.id,
+          provider: transaction.provider,
+          provider_txn_id: transaction.providerTxnId,
+          provider_order_id: transaction.providerOrderId,
+          status: transaction.status,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          qr_payload: transaction.qrPayload,
+          qr_image_url: transaction.qrImageUrl,
+          payment_url:
+            rawCreateResponse && typeof rawCreateResponse.url === 'string'
+              ? rawCreateResponse.url
+              : null,
+          expires_at: transaction.expiresAt?.toISOString() ?? null,
+          paid_at: transaction.paidAt?.toISOString() ?? null,
+          created_at: transaction.createdAt.toISOString(),
+          updated_at: transaction.updatedAt.toISOString(),
+        };
+      }),
     };
   }
 

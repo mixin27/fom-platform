@@ -222,25 +222,14 @@ export class ShopsService {
       .filter((payment) => payment.dueAt)
       .sort((left, right) => left.dueAt!.getTime() - right.dueAt!.getTime())[0];
 
-    const paymentProofs = await this.prisma.paymentProofSubmission.findMany({
-      where: {
-        shopId,
-      },
-      orderBy: [{ createdAt: 'desc' }],
-      take: 20,
-      include: {
-        reviewedByUser: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
     return {
       shop_id: shop.id,
       shop_name: shop.name,
+      payment_provider: {
+        code: 'myanmyanpay',
+        label: 'MyanMyanPay',
+        is_enabled: this.myanmyanpay.isConfigured(),
+      },
       overview: {
         status: subscription?.status ?? null,
         auto_renews: subscription?.autoRenews ?? false,
@@ -316,39 +305,82 @@ export class ShopsService {
         latest_transaction:
           payment.transactions?.[0] === undefined
             ? null
-            : {
-                id: payment.transactions[0].id,
-                provider: payment.transactions[0].provider,
-                provider_order_id: payment.transactions[0].providerOrderId,
-                status: payment.transactions[0].status,
-                expires_at: payment.transactions[0].expiresAt?.toISOString() ?? null,
-                created_at: payment.transactions[0].createdAt.toISOString(),
-              },
+            : this.serializePaymentTransactionSummary(payment.transactions[0]),
       })),
-      payment_proofs: paymentProofs.map((proof) => ({
-        id: proof.id,
-        payment_id: proof.paymentId,
-        invoice_no: proof.invoiceNoSnapshot,
-        amount_claimed: proof.amountClaimed,
-        currency_claimed: proof.currencyClaimed,
-        payment_channel: proof.paymentChannel,
-        paid_at: proof.paidAt?.toISOString() ?? null,
-        sender_name: proof.senderName,
-        sender_phone: proof.senderPhone,
-        transaction_ref: proof.transactionRef,
-        note: proof.note,
-        status: proof.status,
-        admin_note: proof.adminNote,
-        reviewed_at: proof.reviewedAt?.toISOString() ?? null,
-        reviewed_by:
-          proof.reviewedByUser === null
-            ? null
-            : {
-                id: proof.reviewedByUser.id,
-                name: proof.reviewedByUser.name,
-              },
-        created_at: proof.createdAt.toISOString(),
-      })),
+      payment_proofs: [],
+    };
+  }
+
+  async getBillingInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    invoiceId: string,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: invoiceId,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        subscription: {
+          include: {
+            shop: true,
+            plan: true,
+          },
+        },
+        transactions: {
+          where: { provider: 'myanmyanpay' },
+          orderBy: [{ createdAt: 'desc' }],
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    return {
+      id: payment.id,
+      invoice_no: payment.invoiceNo,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      payment_method: payment.paymentMethod,
+      provider_ref: payment.providerRef,
+      due_at: payment.dueAt?.toISOString() ?? null,
+      paid_at: payment.paidAt?.toISOString() ?? null,
+      created_at: payment.createdAt.toISOString(),
+      updated_at: payment.updatedAt.toISOString(),
+      payment_provider: {
+        code: 'myanmyanpay',
+        label: 'MyanMyanPay',
+        is_enabled: this.myanmyanpay.isConfigured(),
+      },
+      subscription: {
+        id: payment.subscription.id,
+        status: payment.subscription.status,
+        auto_renews: payment.subscription.autoRenews,
+        start_at: payment.subscription.startAt.toISOString(),
+        end_at: payment.subscription.endAt?.toISOString() ?? null,
+        shop_id: payment.subscription.shopId,
+        shop_name: payment.subscription.shop.name,
+        plan_code: payment.subscription.plan.code,
+        plan_name: payment.subscription.plan.name,
+        plan_price: payment.subscription.plan.price,
+        plan_currency: payment.subscription.plan.currency,
+        billing_period: payment.subscription.plan.billingPeriod,
+      },
+      latest_transaction:
+        payment.transactions[0] === undefined
+          ? null
+          : this.serializePaymentTransaction(payment.transactions[0]),
+      transactions: payment.transactions.map((transaction) =>
+        this.serializePaymentTransaction(transaction),
+      ),
     };
   }
 
@@ -372,6 +404,11 @@ export class ShopsService {
             shop: true,
           },
         },
+        transactions: {
+          where: { provider: 'myanmyanpay' },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 1,
+        },
       },
     });
 
@@ -381,6 +418,16 @@ export class ShopsService {
 
     if (payment.status === 'paid') {
       throw conflictError('Invoice is already paid');
+    }
+
+    const activeTransaction = payment.transactions[0] ?? null;
+    if (
+      activeTransaction &&
+      activeTransaction.status === 'pending' &&
+      activeTransaction.expiresAt &&
+      activeTransaction.expiresAt.getTime() > Date.now()
+    ) {
+      return this.serializePaymentTransaction(activeTransaction);
     }
 
     const expiresInSeconds = Number.parseInt(
@@ -413,16 +460,7 @@ export class ShopsService {
       },
     });
 
-    return {
-      id: transaction.id,
-      provider: transaction.provider,
-      provider_order_id: transaction.providerOrderId,
-      status: transaction.status,
-      qr_payload: transaction.qrPayload,
-      qr_image_url: transaction.qrImageUrl,
-      expires_at: transaction.expiresAt?.toISOString() ?? null,
-      created_at: transaction.createdAt.toISOString(),
-    };
+    return this.serializePaymentTransaction(transaction);
   }
 
   async getMmqrSessionForInvoice(
@@ -457,17 +495,7 @@ export class ShopsService {
       return null;
     }
 
-    return {
-      id: transaction.id,
-      provider: transaction.provider,
-      provider_order_id: transaction.providerOrderId,
-      status: transaction.status,
-      qr_payload: transaction.qrPayload,
-      qr_image_url: transaction.qrImageUrl,
-      expires_at: transaction.expiresAt?.toISOString() ?? null,
-      paid_at: transaction.paidAt?.toISOString() ?? null,
-      created_at: transaction.createdAt.toISOString(),
-    };
+    return this.serializePaymentTransaction(transaction);
   }
 
   async submitPaymentProof(
@@ -476,86 +504,74 @@ export class ShopsService {
     body: CreateShopPaymentProofDto,
   ) {
     await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+    void body;
 
-    const invoiceNo = body.invoice_no.trim();
-    const payment = await this.prisma.payment.findFirst({
-      where: {
-        invoiceNo,
-        subscription: {
-          shopId,
-        },
-      },
-      include: {
-        subscription: {
-          include: {
-            shop: true,
-            plan: true,
-          },
-        },
-      },
-    });
+    throw conflictError(
+      'Manual payment proof flow has been retired. Open the invoice and pay with MyanMyanPay instead.',
+    );
+  }
 
-    if (!payment) {
-      throw validationError([
-        {
-          field: 'invoice_no',
-          errors: ['Invoice not found for this shop.'],
-        },
-      ]);
-    }
+  private serializePaymentTransactionSummary(transaction: {
+    id: string;
+    provider: string;
+    providerOrderId: string;
+    status: string;
+    expiresAt: Date | null;
+    paidAt?: Date | null;
+    createdAt: Date;
+  }) {
+    return {
+      id: transaction.id,
+      provider: transaction.provider,
+      provider_order_id: transaction.providerOrderId,
+      status: transaction.status,
+      expires_at: transaction.expiresAt?.toISOString() ?? null,
+      paid_at: transaction.paidAt?.toISOString() ?? null,
+      created_at: transaction.createdAt.toISOString(),
+    };
+  }
 
-    const proof = await this.prisma.paymentProofSubmission.create({
-      data: {
-        shopId,
-        paymentId: payment.id,
-        invoiceNoSnapshot: payment.invoiceNo,
-        amountClaimed: body.amount_claimed,
-        currencyClaimed: body.currency_claimed?.trim() || payment.currency,
-        paymentChannel: body.payment_channel.trim(),
-        paidAt: body.paid_at ? new Date(body.paid_at) : null,
-        senderName: body.sender_name?.trim() || null,
-        senderPhone: body.sender_phone?.trim() || null,
-        transactionRef: body.transaction_ref?.trim() || null,
-        note: body.note?.trim() || null,
-        status: 'submitted',
-      },
-    });
-
-    await this.emailOutbox.queueAndSendEmail({
-      shopId,
-      category: 'payment_proof',
-      toEmail:
-        process.env.PUBLIC_CONTACT_INBOX_EMAIL?.trim() ||
-        process.env.EMAIL_SUPPORT_EMAIL?.trim() ||
-        'support@fom-platform.local',
-      subject: `[FOM Billing] Payment proof ${payment.invoiceNo} (${payment.subscription.shop.name})`,
-      textBody: [
-        `Shop: ${payment.subscription.shop.name}`,
-        `Invoice: ${payment.invoiceNo}`,
-        `Claimed amount: ${body.amount_claimed.toLocaleString()} ${body.currency_claimed?.trim() || payment.currency}`,
-        `Channel: ${body.payment_channel.trim()}`,
-        body.transaction_ref?.trim()
-          ? `Transaction ref: ${body.transaction_ref.trim()}`
-          : null,
-        body.sender_name?.trim() ? `Sender: ${body.sender_name.trim()}` : null,
-        body.sender_phone?.trim() ? `Sender phone: ${body.sender_phone.trim()}` : null,
-        body.note?.trim() ? `Note: ${body.note.trim()}` : null,
-        `Proof ID: ${proof.id}`,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      metadata: {
-        payment_proof_id: proof.id,
-        invoice_no: payment.invoiceNo,
-        shop_id: shopId,
-      },
-    });
+  private serializePaymentTransaction(transaction: {
+    id: string;
+    provider: string;
+    providerTxnId: string | null;
+    providerOrderId: string;
+    status: string;
+    amount: number;
+    currency: string;
+    qrPayload: string | null;
+    qrImageUrl: string | null;
+    expiresAt: Date | null;
+    paidAt: Date | null;
+    createdAt: Date;
+    updatedAt?: Date;
+    rawCreateResponse?: Prisma.JsonValue | null;
+  }) {
+    const rawResponse =
+      transaction.rawCreateResponse &&
+      typeof transaction.rawCreateResponse === 'object' &&
+      !Array.isArray(transaction.rawCreateResponse)
+        ? (transaction.rawCreateResponse as Record<string, unknown>)
+        : null;
 
     return {
-      id: proof.id,
-      status: proof.status,
-      invoice_no: proof.invoiceNoSnapshot,
-      created_at: proof.createdAt.toISOString(),
+      id: transaction.id,
+      provider: transaction.provider,
+      provider_txn_id: transaction.providerTxnId,
+      provider_order_id: transaction.providerOrderId,
+      status: transaction.status,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      qr_payload: transaction.qrPayload,
+      qr_image_url: transaction.qrImageUrl,
+      payment_url:
+        rawResponse && typeof rawResponse.url === 'string'
+          ? rawResponse.url
+          : null,
+      expires_at: transaction.expiresAt?.toISOString() ?? null,
+      paid_at: transaction.paidAt?.toISOString() ?? null,
+      created_at: transaction.createdAt.toISOString(),
+      updated_at: transaction.updatedAt?.toISOString() ?? null,
     };
   }
 

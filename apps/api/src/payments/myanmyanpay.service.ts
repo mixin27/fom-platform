@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { MMPaySDK, type PaymentResponse } from 'mmpay-node-sdk';
+import { serviceUnavailableError } from '../common/http/app-http.exception';
 
 type CreateMmqrSessionInput = {
   invoiceNo: string;
@@ -8,32 +10,228 @@ type CreateMmqrSessionInput = {
   expiresInSeconds: number;
 };
 
+type MyanmyanpaySession = {
+  provider_order_id: string;
+  provider_txn_id: string | null;
+  status: string;
+  qr_payload: string | null;
+  qr_image_url: string | null;
+  payment_url: string | null;
+  expires_at: Date;
+  raw_response: Record<string, unknown>;
+};
+
 @Injectable()
 export class MyanmyanpayService {
+  private client: ReturnType<typeof MMPaySDK> | null = null;
+
+  isConfigured() {
+    return Boolean(
+      this.readEnv('MYANMYANPAY_APP_ID') &&
+      this.readEnv('MYANMYANPAY_API_BASE_URL') &&
+      this.readEnv('MYANMYANPAY_PUBLISHABLE_KEY', 'MYANMYANPAY_PUBLIC_KEY') &&
+      this.readEnv('MYANMYANPAY_SECRET_KEY'),
+    );
+  }
+
   async createMmqrSession(input: CreateMmqrSessionInput) {
-    // Phase-1 scaffold: deterministic mock payload, no external provider call yet.
+    const client = this.getClient();
     const expiresAt = new Date(Date.now() + input.expiresInSeconds * 1000);
-    const qrPayload = [
-      'MMQR',
-      `invoice=${encodeURIComponent(input.invoiceNo)}`,
-      `amount=${input.amount}`,
-      `currency=${encodeURIComponent(input.currency)}`,
-      `order_id=${encodeURIComponent(input.orderId)}`,
-      `exp=${expiresAt.toISOString()}`,
-    ].join('|');
+    const payload = {
+      orderId: input.orderId,
+      amount: input.amount,
+      currency: input.currency,
+      callbackUrl: this.resolveCallbackUrl(),
+      customMessage: `Invoice ${input.invoiceNo}`,
+      items: [
+        {
+          name: `Invoice ${input.invoiceNo}`,
+          amount: input.amount,
+          quantity: 1,
+        },
+      ],
+    };
+
+    let response: PaymentResponse;
+    try {
+      response = this.useSandbox()
+        ? await client.sandboxPay(payload)
+        : await client.pay(payload);
+    } catch (error) {
+      throw serviceUnavailableError(
+        'Unable to start a MyanMyanPay payment session right now.',
+        this.buildErrorContext(error),
+      );
+    }
+
+    return this.normalizeSessionResponse(response, expiresAt);
+  }
+
+  async verifyCallback(payload: string, nonce?: string, signature?: string) {
+    if (!this.isConfigured()) {
+      return false;
+    }
+
+    if (!payload || !nonce || !signature) {
+      return false;
+    }
+
+    try {
+      return await this.getClient().verifyCb(payload, nonce, signature);
+    } catch {
+      return false;
+    }
+  }
+
+  private getClient() {
+    if (this.client) {
+      return this.client;
+    }
+
+    const appId = this.readEnv('MYANMYANPAY_APP_ID');
+    const apiBaseUrl = this.readEnv('MYANMYANPAY_API_BASE_URL');
+    const publishableKey = this.readEnv(
+      'MYANMYANPAY_PUBLISHABLE_KEY',
+      'MYANMYANPAY_PUBLIC_KEY',
+    );
+    const secretKey = this.readEnv('MYANMYANPAY_SECRET_KEY');
+
+    if (!appId || !apiBaseUrl || !publishableKey || !secretKey) {
+      throw serviceUnavailableError(
+        'MyanMyanPay is not configured yet for this environment.',
+      );
+    }
+
+    this.client = MMPaySDK({
+      appId,
+      apiBaseUrl,
+      publishableKey,
+      secretKey,
+    });
+
+    return this.client;
+  }
+
+  private useSandbox() {
+    const raw = this.readEnv('MYANMYANPAY_USE_SANDBOX');
+    return raw ? ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase()) : false;
+  }
+
+  private resolveCallbackUrl() {
+    const explicit = this.readEnv('MYANMYANPAY_CALLBACK_URL');
+    if (explicit) {
+      return explicit;
+    }
+
+    const apiBaseUrl =
+      this.readEnv('PUBLIC_API_BASE_URL') ||
+      this.readEnv('API_BASE_URL') ||
+      'http://localhost:4000';
+
+    return `${apiBaseUrl.replace(/\/+$/, '')}/api/v1/payments/webhooks/myanmyanpay`;
+  }
+
+  private normalizeSessionResponse(
+    response: PaymentResponse,
+    expiresAt: Date,
+  ): MyanmyanpaySession {
+    if (!response || typeof response.orderId !== 'string') {
+      throw serviceUnavailableError(
+        'MyanMyanPay returned an invalid payment session response.',
+      );
+    }
+
+    const qrPayload = this.normalizeNullableString(response.qr);
+    const paymentUrl = this.normalizeNullableString(response.url);
 
     return {
-      provider_order_id: input.orderId,
-      provider_txn_id: null as string | null,
-      status: 'pending' as const,
+      provider_order_id: response.orderId.trim(),
+      provider_txn_id: null,
+      status: this.normalizeStatus(response.status),
       qr_payload: qrPayload,
-      qr_image_url: null as string | null,
+      qr_image_url: this.resolveQrImageUrl(qrPayload),
+      payment_url: paymentUrl,
       expires_at: expiresAt,
       raw_response: {
-        mode: 'mock',
-        provider: 'myanmyanpay',
-        provider_order_id: input.orderId,
-      } as Record<string, unknown>,
+        orderId: response.orderId,
+        amount: response.amount,
+        currency: response.currency ?? 'MMK',
+        status: response.status,
+        qr: response.qr,
+        url: response.url,
+      },
+    };
+  }
+
+  private resolveQrImageUrl(qrPayload: string | null) {
+    if (!qrPayload) {
+      return null;
+    }
+
+    if (
+      qrPayload.startsWith('data:image/') ||
+      qrPayload.startsWith('http://') ||
+      qrPayload.startsWith('https://')
+    ) {
+      return qrPayload;
+    }
+
+    return qrPayload;
+
+    // return `data:image/png;base64,${qrPayload}`;
+  }
+
+  private normalizeStatus(value: string | null | undefined) {
+    switch ((value ?? '').trim().toUpperCase()) {
+      case 'SUCCESS':
+        return 'paid';
+      case 'FAILED':
+        return 'failed';
+      default:
+        return 'pending';
+    }
+  }
+
+  private normalizeNullableString(value: string | null | undefined) {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
+  }
+
+  private readEnv(...names: string[]) {
+    for (const name of names) {
+      const value = process.env[name]?.trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  private buildErrorContext(error: unknown) {
+    if (typeof error !== 'object' || error === null) {
+      return undefined;
+    }
+
+    const status =
+      'response' in error &&
+      typeof error.response === 'object' &&
+      error.response !== null &&
+      'status' in error.response &&
+      typeof error.response.status === 'number'
+        ? error.response.status
+        : undefined;
+    const data =
+      'response' in error &&
+      typeof error.response === 'object' &&
+      error.response !== null &&
+      'data' in error.response
+        ? error.response.data
+        : undefined;
+
+    return {
+      ...(status !== undefined ? { status } : {}),
+      ...(data !== undefined ? { data } : {}),
     };
   }
 }
