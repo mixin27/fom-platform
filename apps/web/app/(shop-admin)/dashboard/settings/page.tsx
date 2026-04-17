@@ -26,6 +26,7 @@ import {
   formatRelativeDate,
 } from "@/lib/platform/format"
 import {
+  createInvoiceMmqrSessionFromFormAction,
   addShopMemberFromFormAction,
   submitShopPaymentProofFromFormAction,
   updateCurrentUserProfileFromFormAction,
@@ -553,6 +554,21 @@ export default async function ShopSettingsPage({
                 ),
               },
               {
+                key: "mmqr",
+                header: "MMQR",
+                render: (invoice) =>
+                  invoice.latest_transaction ? (
+                    <PlatformStatusBadge
+                      status={invoice.latest_transaction.status}
+                      label={`MMQR ${formatCodeLabel(
+                        invoice.latest_transaction.status
+                      )}`}
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Not generated</span>
+                  ),
+              },
+              {
                 key: "amount",
                 header: "Amount",
                 render: (invoice) =>
@@ -569,6 +585,25 @@ export default async function ShopSettingsPage({
                 header: "Paid",
                 render: (invoice) =>
                   invoice.paid_at ? formatDate(invoice.paid_at) : "—",
+              },
+              {
+                key: "actions",
+                header: "Actions",
+                render: (invoice) =>
+                  invoice.status === "paid" ? (
+                    <span className="text-xs text-muted-foreground">Paid</span>
+                  ) : (
+                    <form action={createInvoiceMmqrSessionFromFormAction}>
+                      <input type="hidden" name="return_to" value={currentHref} />
+                      <input type="hidden" name="shop_id" value={activeShop.id} />
+                      <input type="hidden" name="invoice_id" value={invoice.id} />
+                      <Button type="submit" size="sm" variant="outline">
+                        Generate MMQR
+                      </Button>
+                    </form>
+                  ),
+                className: "w-[170px] px-4 py-2.5 text-right",
+                cellClassName: "px-4 py-3 text-right",
               },
             ]}
           />

@@ -215,6 +215,7 @@ model Payment {
   updatedAt      DateTime     @updatedAt
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   paymentProofSubmissions PaymentProofSubmission[]
+  transactions  PaymentTransaction[]
 
   @@index([subscriptionId, status])
   @@index([status, dueAt])
@@ -686,4 +687,44 @@ model PaymentProofSubmission {
   @@index([status, createdAt])
   @@index([transactionRef])
   @@map("payment_proof_submissions")
+}
+
+model PaymentTransaction {
+  id                 String   @id @default(cuid())
+  paymentId          String
+  provider           String
+  providerTxnId      String?  @unique
+  providerOrderId    String   @unique
+  status             String   @default("created")
+  amount             Int
+  currency           String   @default("MMK")
+  qrPayload          String?
+  qrImageUrl         String?
+  expiresAt          DateTime?
+  paidAt             DateTime?
+  rawCreateResponse  Json?
+  rawWebhookPayload  Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  payment            Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, status, createdAt])
+  @@index([provider, status, createdAt])
+  @@map("payment_transactions")
+}
+
+model PaymentWebhookEvent {
+  id             String   @id @default(cuid())
+  provider       String
+  eventId        String?
+  signatureValid Boolean  @default(false)
+  payload        Json
+  processed      Boolean  @default(false)
+  processedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  @@index([provider, processed, createdAt])
+  @@unique([provider, eventId])
+  @@map("payment_webhook_events")
 }

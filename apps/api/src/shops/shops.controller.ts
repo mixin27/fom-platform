@@ -103,6 +103,34 @@ export class ShopsController {
     return ok(this.shopsService.submitPaymentProof(currentUser, shopId, body));
   }
 
+  @Post(':shopId/billing/invoices/:invoiceId/mmqr-session')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Create MMQR payment session for invoice' })
+  createMmqrSession(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return ok(
+      this.shopsService.createMmqrSessionForInvoice(currentUser, shopId, invoiceId),
+    );
+  }
+
+  @Get(':shopId/billing/invoices/:invoiceId/mmqr-session')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'Get latest MMQR payment session for invoice' })
+  getMmqrSession(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return ok(
+      this.shopsService.getMmqrSessionForInvoice(currentUser, shopId, invoiceId),
+    );
+  }
+
   @Get(':shopId/members')
   @UseGuards(RbacGuard, SubscriptionFeatureGuard)
   @RequirePermissions(permissions.membersRead)

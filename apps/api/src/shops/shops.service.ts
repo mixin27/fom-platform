@@ -24,6 +24,7 @@ import {
 import { subscriptionLimits } from '../platform/subscription-limit.constants';
 import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
+import { MyanmyanpayService } from '../payments/myanmyanpay.service';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
@@ -56,6 +57,7 @@ export class ShopsService {
     private readonly prisma: PrismaService,
     private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
+    private readonly myanmyanpay: MyanmyanpayService,
   ) {}
 
   async listUserShops(userId: string) {
@@ -185,6 +187,12 @@ export class ShopsService {
             },
             payments: {
               orderBy: [{ dueAt: 'desc' }, { createdAt: 'desc' }],
+              include: {
+                transactions: {
+                  orderBy: [{ createdAt: 'desc' }],
+                  take: 1,
+                },
+              },
             },
           },
         },
@@ -305,6 +313,17 @@ export class ShopsService {
         paid_at: payment.paidAt?.toISOString() ?? null,
         created_at: payment.createdAt.toISOString(),
         updated_at: payment.updatedAt.toISOString(),
+        latest_transaction:
+          payment.transactions?.[0] === undefined
+            ? null
+            : {
+                id: payment.transactions[0].id,
+                provider: payment.transactions[0].provider,
+                provider_order_id: payment.transactions[0].providerOrderId,
+                status: payment.transactions[0].status,
+                expires_at: payment.transactions[0].expiresAt?.toISOString() ?? null,
+                created_at: payment.transactions[0].createdAt.toISOString(),
+              },
       })),
       payment_proofs: paymentProofs.map((proof) => ({
         id: proof.id,
@@ -330,6 +349,124 @@ export class ShopsService {
               },
         created_at: proof.createdAt.toISOString(),
       })),
+    };
+  }
+
+  async createMmqrSessionForInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    invoiceId: string,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: invoiceId,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        subscription: {
+          include: {
+            shop: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    if (payment.status === 'paid') {
+      throw conflictError('Invoice is already paid');
+    }
+
+    const expiresInSeconds = Number.parseInt(
+      process.env.MYANMYANPAY_QR_EXPIRY_SECONDS ?? '900',
+      10,
+    );
+    const providerOrderId = `MMP-${payment.invoiceNo}-${randomBytes(3).toString('hex').toUpperCase()}`;
+
+    const session = await this.myanmyanpay.createMmqrSession({
+      invoiceNo: payment.invoiceNo,
+      amount: payment.amount,
+      currency: payment.currency,
+      orderId: providerOrderId,
+      expiresInSeconds: Number.isFinite(expiresInSeconds) ? expiresInSeconds : 900,
+    });
+
+    const transaction = await this.prisma.paymentTransaction.create({
+      data: {
+        paymentId: payment.id,
+        provider: 'myanmyanpay',
+        providerTxnId: session.provider_txn_id,
+        providerOrderId: session.provider_order_id,
+        status: session.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        qrPayload: session.qr_payload,
+        qrImageUrl: session.qr_image_url,
+        expiresAt: session.expires_at,
+        rawCreateResponse: session.raw_response as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      id: transaction.id,
+      provider: transaction.provider,
+      provider_order_id: transaction.providerOrderId,
+      status: transaction.status,
+      qr_payload: transaction.qrPayload,
+      qr_image_url: transaction.qrImageUrl,
+      expires_at: transaction.expiresAt?.toISOString() ?? null,
+      created_at: transaction.createdAt.toISOString(),
+    };
+  }
+
+  async getMmqrSessionForInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    invoiceId: string,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsRead);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        id: invoiceId,
+        subscription: {
+          shopId,
+        },
+      },
+      include: {
+        transactions: {
+          where: { provider: 'myanmyanpay' },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 1,
+        },
+      },
+    });
+
+    if (!payment) {
+      throw notFoundError('Invoice not found');
+    }
+
+    const transaction = payment.transactions[0] ?? null;
+    if (!transaction) {
+      return null;
+    }
+
+    return {
+      id: transaction.id,
+      provider: transaction.provider,
+      provider_order_id: transaction.providerOrderId,
+      status: transaction.status,
+      qr_payload: transaction.qrPayload,
+      qr_image_url: transaction.qrImageUrl,
+      expires_at: transaction.expiresAt?.toISOString() ?? null,
+      paid_at: transaction.paidAt?.toISOString() ?? null,
+      created_at: transaction.createdAt.toISOString(),
     };
   }
 

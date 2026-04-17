@@ -43,6 +43,9 @@ import { PlatformService } from './platform/platform.service';
 import { PublicContactController } from './public-contact/public-contact.controller';
 import { PublicContactRateLimitService } from './public-contact/public-contact-rate-limit.service';
 import { PublicContactService } from './public-contact/public-contact.service';
+import { MyanmyanpayService } from './payments/myanmyanpay.service';
+import { PaymentsController } from './payments/payments.controller';
+import { PaymentsService } from './payments/payments.service';
 import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.service';
 import { PushController } from './push/push.controller';
 import { PushService } from './push/push.service';
@@ -87,6 +90,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     TemplatesController,
     SummariesController,
     ReportsController,
+    PaymentsController,
   ],
   providers: [
     AppService,
@@ -98,6 +102,8 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     PlatformService,
     PublicContactRateLimitService,
     PublicContactService,
+    MyanmyanpayService,
+    PaymentsService,
     SubscriptionLifecycleService,
     CustomersService,
     OrderMessageParserService,

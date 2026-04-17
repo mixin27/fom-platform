@@ -299,6 +299,14 @@ export type ShopBilling = {
     paid_at: string | null
     created_at: string
     updated_at: string
+    latest_transaction: {
+      id: string
+      provider: string
+      provider_order_id: string
+      status: string
+      expires_at: string | null
+      created_at: string
+    } | null
   }>
   payment_proofs: Array<{
     id: string
