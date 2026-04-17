@@ -26,8 +26,13 @@ import { subscriptionLimits } from '../platform/subscription-limit.constants';
 import type { SubscriptionFeatureCode } from '../platform/subscription-feature.constants';
 import { SubscriptionLifecycleService } from '../platform/subscription-lifecycle.service';
 import { MyanmyanpayService } from '../payments/myanmyanpay.service';
+import {
+  DEFAULT_TRIAL_PLAN_CODE,
+  defaultPlanCatalog,
+} from '../platform/platform-billing.constants';
 import { AddShopMemberDto } from './dto/add-shop-member.dto';
 import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
+import { CreateShopSubscriptionInvoiceDto } from './dto/create-shop-subscription-invoice.dto';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
@@ -153,9 +158,13 @@ export class ShopsService {
         })),
       });
 
-      await this.subscriptionLifecycle.createDefaultTrialSubscription(tx, shop.id, {
-        required: true,
-      });
+      await this.subscriptionLifecycle.createDefaultTrialSubscription(
+        tx,
+        shop.id,
+        {
+          required: true,
+        },
+      );
 
       return shop;
     });
@@ -219,7 +228,9 @@ export class ShopsService {
     })[0];
     const latestPaidInvoice = [...payments]
       .filter((payment) => payment.paidAt)
-      .sort((left, right) => right.paidAt!.getTime() - left.paidAt!.getTime())[0];
+      .sort(
+        (left, right) => right.paidAt!.getTime() - left.paidAt!.getTime(),
+      )[0];
     const nextDueInvoice = [...outstandingInvoices]
       .filter((payment) => payment.dueAt)
       .sort((left, right) => left.dueAt!.getTime() - right.dueAt!.getTime())[0];
@@ -726,7 +737,9 @@ export class ShopsService {
         metadata: {
           role_id: role.id,
           role_name: name,
-          permission_codes: permissionsForRole.map((permission) => permission.code),
+          permission_codes: permissionsForRole.map(
+            (permission) => permission.code,
+          ),
         },
       });
 
@@ -774,15 +787,18 @@ export class ShopsService {
       throw validationError([
         {
           field: 'body',
-          errors: ['Provide name, description, or permission_codes to update the role'],
+          errors: [
+            'Provide name, description, or permission_codes to update the role',
+          ],
         },
       ]);
     }
 
     const name = body.name?.trim();
-    const description = body.description === undefined
-      ? undefined
-      : body.description?.trim() || null;
+    const description =
+      body.description === undefined
+        ? undefined
+        : body.description?.trim() || null;
     const permissionsForRole =
       body.permission_codes !== undefined
         ? await this.requireShopPermissions(body.permission_codes)
@@ -931,6 +947,92 @@ export class ShopsService {
     const rows = records.map((record) => this.serializeAuditLogRecord(record));
     const page = paginate(rows, query.limit, query.cursor);
     return paged(page.items, page.pagination);
+  }
+
+  async listBillingPlans() {
+    return defaultPlanCatalog.filter(
+      (plan) => plan.isActive && plan.marketingVisible,
+    );
+  }
+
+  async createSubscriptionInvoice(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: CreateShopSubscriptionInvoiceDto,
+  ) {
+    await this.assertPermission(currentUser.id, shopId, permissions.shopsWrite);
+    await this.subscriptionLifecycle.expireElapsedTrials();
+
+    const plan = defaultPlanCatalog.find((p) => p.code === body.plan_code);
+    if (!plan || !plan.isActive || plan.code === DEFAULT_TRIAL_PLAN_CODE) {
+      throw validationError([
+        { field: 'plan_code', errors: ['Invalid or inactive plan selected'] },
+      ]);
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        subscription: {
+          include: {
+            payments: {
+              where: { status: 'pending' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw notFoundError('Shop not found');
+    }
+
+    if (!shop.subscription) {
+      throw conflictError('Shop does not have an active subscription record');
+    }
+
+    // prevent duplicate pending invoices for the same plan
+    const existingPending = shop.subscription.payments.find(
+      (p) => p.amount === plan.price && p.status === 'pending',
+    );
+    if (existingPending) {
+      return this.getBillingInvoice(currentUser, shopId, existingPending.id);
+    }
+
+    const invoiceId = await this.prisma.$transaction(async (tx) => {
+      const invoice = await (tx as any).payment.create({
+        data: {
+          subscriptionId: shop.subscription!.id,
+          invoiceNo: await this.generateInvoiceNo(tx),
+          amount: plan.price,
+          currency: plan.currency,
+          status: 'pending',
+          dueAt: shop.subscription!.endAt ?? new Date(),
+        },
+        select: { id: true },
+      });
+
+      return invoice.id;
+    });
+
+    return this.getBillingInvoice(currentUser, shopId, invoiceId);
+  }
+
+  private async generateInvoiceNo(tx: ShopTransaction): Promise<string> {
+    const prefix = 'INV';
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const randomPart = randomBytes(3).toString('hex').toUpperCase();
+    const invoiceNo = `${prefix}-${datePart}-${randomPart}`;
+
+    const existing = await (tx as any).payment.findUnique({
+      where: { invoiceNo },
+    });
+
+    if (existing) {
+      return this.generateInvoiceNo(tx);
+    }
+
+    return invoiceNo;
   }
 
   async addMember(
@@ -1151,7 +1253,9 @@ export class ShopsService {
     }
 
     if (member.status === 'disabled') {
-      throw conflictError('Disabled members cannot receive an invitation link.');
+      throw conflictError(
+        'Disabled members cannot receive an invitation link.',
+      );
     }
 
     if (this.userCanAuthenticateDirectly(member.user)) {
@@ -1242,7 +1346,9 @@ export class ShopsService {
       throw validationError([
         {
           field: 'body',
-          errors: ['Provide status, role_ids, or role_codes to update the shop member'],
+          errors: [
+            'Provide status, role_ids, or role_codes to update the shop member',
+          ],
         },
       ]);
     }
@@ -1270,15 +1376,10 @@ export class ShopsService {
     }
 
     if (isPrimaryOwnerMember && !nextRoleCodes.includes(ownerRoleCode)) {
-      throw conflictError(
-        'The primary shop owner must keep the owner role.',
-      );
+      throw conflictError('The primary shop owner must keep the owner role.');
     }
 
-    if (
-      !isPrimaryOwnerMember &&
-      nextRoleCodes.includes(ownerRoleCode)
-    ) {
+    if (!isPrimaryOwnerMember && nextRoleCodes.includes(ownerRoleCode)) {
       throw conflictError(
         'The owner role is reserved for the primary shop owner account.',
       );
@@ -1424,7 +1525,9 @@ export class ShopsService {
 
     const planContext = await this.loadOperationalPlanContext(shopId);
     const availableFeatures = planContext.availableFeatures;
-    const missing = requested.filter((feature) => !availableFeatures.has(feature));
+    const missing = requested.filter(
+      (feature) => !availableFeatures.has(feature),
+    );
 
     if (missing.length > 0) {
       throw forbiddenError(
@@ -1564,7 +1667,9 @@ export class ShopsService {
       throw notFoundError('Shop member not found');
     }
 
-    const roleCodes = member.roleAssignments.map((assignment) => assignment.role.code);
+    const roleCodes = member.roleAssignments.map(
+      (assignment) => assignment.role.code,
+    );
     if (this.countsTowardActiveStaffSeat('active', roleCodes)) {
       await this.assertStaffSeatAvailability(shopId, {
         excludeMemberId: member.id,
@@ -1643,9 +1748,7 @@ export class ShopsService {
   private async requireRolesByCodes(roleCodes: string[], shopId: string) {
     const uniqueRoleCodes = [
       ...new Set(
-        roleCodes
-          .map((role) => role.trim())
-          .filter((role) => role.length > 0),
+        roleCodes.map((role) => role.trim()).filter((role) => role.length > 0),
       ),
     ].sort();
 
@@ -1879,7 +1982,8 @@ export class ShopsService {
 
   private extractMemberAccess(member: MemberWithAccess) {
     const shopScopedAssignments = member.roleAssignments.filter(
-      (assignment: { role: { scope: string } }) => assignment.role.scope === 'shop',
+      (assignment: { role: { scope: string } }) =>
+        assignment.role.scope === 'shop',
     );
 
     const roles = [...shopScopedAssignments]
@@ -1962,7 +2066,8 @@ export class ShopsService {
     }
 
     const permissionAssignments = [...(role.permissionAssignments ?? [])].sort(
-      (left, right) => left.permission.code.localeCompare(right.permission.code),
+      (left, right) =>
+        left.permission.code.localeCompare(right.permission.code),
     );
 
     return {
@@ -2117,7 +2222,9 @@ export class ShopsService {
     metadata?: SessionRequestMetadata,
   ) {
     if (!user.email) {
-      throw conflictError('An email address is required for invitation delivery');
+      throw conflictError(
+        'An email address is required for invitation delivery',
+      );
     }
 
     const rawToken = randomBytes(32).toString('base64url');

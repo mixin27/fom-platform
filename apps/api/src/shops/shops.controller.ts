@@ -31,6 +31,7 @@ import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
 import { UpdateShopRoleDto } from './dto/update-shop-role.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { CreateShopPaymentProofDto } from './dto/create-shop-payment-proof.dto';
+import { CreateShopSubscriptionInvoiceDto } from './dto/create-shop-subscription-invoice.dto';
 import { ShopsService } from './shops.service';
 
 @Controller('api/v1/shops')
@@ -113,6 +114,28 @@ export class ShopsController {
     @Body() body: CreateShopPaymentProofDto,
   ) {
     return ok(this.shopsService.submitPaymentProof(currentUser, shopId, body));
+  }
+
+  @Get(':shopId/billing/plans')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsRead)
+  @ApiOperation({ summary: 'List available billing plans for shop owner' })
+  listBillingPlans(@Param('shopId') shopId: string) {
+    return ok(this.shopsService.listBillingPlans());
+  }
+
+  @Post(':shopId/billing/subscriptions')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.shopsWrite)
+  @ApiOperation({ summary: 'Create a subscription invoice for a selected plan' })
+  createSubscriptionInvoice(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: CreateShopSubscriptionInvoiceDto,
+  ) {
+    return ok(
+      this.shopsService.createSubscriptionInvoice(currentUser, shopId, body),
+    );
   }
 
   @Get(':shopId/billing/invoices/:invoiceId')

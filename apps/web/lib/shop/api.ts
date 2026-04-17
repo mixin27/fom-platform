@@ -275,7 +275,7 @@ export type ShopBilling = {
     created_at: string
     updated_at: string
   } | null
-  plan: {
+  plans: Array<{
     id: string
     code: string
     name: string
@@ -285,14 +285,13 @@ export type ShopBilling = {
     billing_period: string
     is_active: boolean
     items: Array<{
-      id: string
       code: string
       label: string
       description: string | null
-      availability_status: "available" | "unavailable" | string
+      availability_status: string
       sort_order: number
     }>
-  } | null
+  }>
   invoices: Array<{
     id: string
     invoice_no: string
@@ -718,6 +717,25 @@ export async function getShopAuditLogs(
 
 export async function getShopBilling(retryPath = "/dashboard/billing") {
   return shopRequest<ShopBilling>("/billing", undefined, retryPath, true)
+}
+
+export async function getAvailablePlans(retryPath = "/dashboard/billing") {
+  return shopRequest<ShopBilling["plans"]>("/billing/plans", undefined, retryPath)
+}
+
+export async function createSubscriptionInvoice(
+  planCode: string,
+  retryPath = "/dashboard/billing"
+) {
+  const { activeShop } = await getShopPortalContext()
+
+  return requestAuthenticatedApiEnvelope<ShopBilling["invoices"][number]>({
+    method: "POST",
+    path: `/api/v1/shops/${activeShop.id}/billing/subscriptions`,
+    body: { plan_code: planCode },
+    retryPath,
+    requiredAccess: "shop",
+  })
 }
 
 export async function getShopAnnouncements(retryPath = "/dashboard") {

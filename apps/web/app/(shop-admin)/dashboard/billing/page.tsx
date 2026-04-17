@@ -9,8 +9,10 @@ import { getPublicLaunchConfig } from "@/lib/launch/api"
 import {
   getShopBilling,
   getShopPortalContext,
+  getAvailablePlans,
   type ShopBilling,
 } from "@/lib/shop/api"
+import { PlanSelection } from "@/components/plan-selection"
 import { formatCodeLabel } from "@/lib/shop/format"
 import {
   formatCurrency,
@@ -43,11 +45,13 @@ export default async function ShopBillingPage({
   const { activeShop } = await getShopPortalContext()
   const permissions = new Set(activeShop.membership.permissions)
   const canManageShop = permissions.has("shops.write")
-  const [billingResponse, launchConfig] = await Promise.all([
+  const [billingResponse, plansResponse, launchConfig] = await Promise.all([
     canManageShop ? getShopBilling(returnTo) : Promise.resolve(null),
+    canManageShop ? getAvailablePlans(returnTo) : Promise.resolve({ data: [] }),
     getPublicLaunchConfig(),
   ])
   const billing = billingResponse?.data ?? null
+  const plans = plansResponse?.data ?? []
   const isForbidden = billingResponse?.meta?.forbidden === true
   const notice = getSingleSearchParam(params.notice)
   const error = getSingleSearchParam(params.error)
@@ -147,6 +151,14 @@ export default async function ShopBillingPage({
           accent="ink"
         />
       </section>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-bold text-[var(--fom-ink)]">Available Plans</h2>
+          <p className="text-sm text-muted-foreground">Choose the plan that best fits your shop operations.</p>
+        </div>
+        <PlanSelection plans={plans} currentPlanCode={billing.overview.plan_code} />
+      </div>
 
       <div className="grid gap-3 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">

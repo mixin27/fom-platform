@@ -13,8 +13,12 @@ import {
   getCurrentUserProfile,
   getShopAnnouncements,
   getShopPortalContext,
+  getShopBilling,
+  getAvailablePlans,
 } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
+import { SubscriptionBanner } from "@/components/subscription-banner"
+import { SubscriptionPaywall } from "@/components/subscription-paywall"
 import { ShopSwitcher } from "./_components/shop-switcher"
 
 export default async function ShopAppLayout({
@@ -32,7 +36,7 @@ export default async function ShopAppLayout({
   const visibleNavItems = navItems.filter(
     (item) => item.href !== "/dashboard/billing" || canManageShop
   )
-  const [profileResponse, unreadResponse, announcementResponse] = await Promise.all(
+  const [profileResponse, unreadResponse, announcementResponse, billingResponse] = await Promise.all(
     [
       getCurrentUserProfile("/dashboard"),
       getNotificationUnreadCount({
@@ -43,11 +47,14 @@ export default async function ShopAppLayout({
         },
       }),
       getShopAnnouncements("/dashboard"),
+      getShopBilling("/dashboard"),
     ]
   )
   const profile = profileResponse.data
   const unreadCount = unreadResponse.data.unread_count
   const announcements = announcementResponse.data.announcements
+  const billing = billingResponse.data
+  const plans = await getAvailablePlans("/dashboard").then(res => res.data)
 
   return (
     <div className="fom-portal-canvas min-h-screen">
@@ -114,6 +121,14 @@ export default async function ShopAppLayout({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-portal-bg)]">
+          <SubscriptionPaywall
+            status={billing.overview.status}
+            plans={plans}
+          />
+          <SubscriptionBanner
+            status={billing.overview.status}
+            endAt={billing.overview.current_period_end}
+          />
           <AnnouncementBannerStack
             announcements={announcements}
             className="border-b-0"

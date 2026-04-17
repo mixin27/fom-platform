@@ -28,6 +28,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'trial',
     isActive: true,
+    marketingVisible: false,
     sortOrder: 0,
     items: [
       {
@@ -181,6 +182,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
+    marketingVisible: true,
     sortOrder: 1,
     items: [
       {
@@ -346,6 +348,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
+    marketingVisible: true,
     sortOrder: 2,
     items: [
       {
@@ -513,6 +516,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'enterprise',
     isActive: true,
+    marketingVisible: false,
     sortOrder: 3,
     items: [
       {
