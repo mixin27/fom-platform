@@ -31,6 +31,8 @@ const badgeClasses: Record<string, string> = {
     "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
   expired:
     "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100",
+  sent: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
+  queued: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
   failed: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
   high: "border-red-200 bg-red-50 text-red-700 hover:bg-red-50",
   medium:

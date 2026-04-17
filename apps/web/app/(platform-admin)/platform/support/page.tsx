@@ -1,4 +1,10 @@
-import { AlertTriangle, CheckCircle2, LifeBuoy, MessagesSquare } from "lucide-react"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Inbox,
+  LifeBuoy,
+  MessagesSquare,
+} from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
@@ -11,6 +17,7 @@ import {
   type PlatformSearchParams,
 } from "@/lib/platform/query"
 import {
+  archivePublicContactSubmissionAction,
   createPlatformSupportIssueFromFormAction,
   updatePlatformSupportIssueFromFormAction,
 } from "./actions"
@@ -35,6 +42,8 @@ export default async function PlatformSupportPage({
   const params = (await searchParams) ?? {}
   const response = await getPlatformSupport()
   const data = response.data
+  const publicSubmissions = data.public_contact?.submissions ?? []
+  const publicInboxCount = data.overview.public_contact_inbox ?? 0
   const notice = getSingleSearchParam(params.notice)
   const error = getSingleSearchParam(params.error)
 
@@ -57,7 +66,7 @@ export default async function PlatformSupportPage({
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <DashboardStatCard
           title="Open items"
           value={String(data.overview.open_items)}
@@ -90,7 +99,79 @@ export default async function PlatformSupportPage({
           icon={CheckCircle2}
           accent="default"
         />
+        <DashboardStatCard
+          title="Public contact inbox"
+          value={String(publicInboxCount)}
+          detail="Unarchived website form messages."
+          delta="Contact form"
+          icon={Inbox}
+          accent="teal"
+        />
       </div>
+
+      <PlatformDataTable
+        title="Public contact queue"
+        description="Website contact form (persisted + email outbox)"
+        rows={publicSubmissions}
+        emptyMessage="No messages in the public contact inbox."
+        footer={`Showing ${publicSubmissions.length} inbox message(s)`}
+        columns={[
+          {
+            key: "from",
+            header: "From",
+            render: (row) => (
+              <div className="flex flex-col gap-0.5">
+                <span className="font-medium text-[var(--fom-ink)]">{row.email}</span>
+                {row.name ? (
+                  <span className="text-xs text-muted-foreground">{row.name}</span>
+                ) : null}
+              </div>
+            ),
+          },
+          {
+            key: "preview",
+            header: "Message",
+            render: (row) => (
+              <div className="flex max-w-[min(100%,320px)] flex-col gap-1">
+                {row.subject ? (
+                  <span className="text-sm font-medium text-[var(--fom-ink)]">
+                    {row.subject}
+                  </span>
+                ) : null}
+                <span className="line-clamp-2 text-xs text-muted-foreground">
+                  {row.message}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "email_status",
+            header: "Email",
+            render: (row) => (
+              <PlatformStatusBadge status={row.email_status} label={row.email_status} />
+            ),
+          },
+          {
+            key: "when",
+            header: "Received",
+            render: (row) => formatRelativeDate(row.created_at),
+          },
+          {
+            key: "actions",
+            header: "",
+            render: (row) => (
+              <form action={archivePublicContactSubmissionAction} className="inline">
+                <input type="hidden" name="submission_id" value={row.id} />
+                <Button type="submit" size="sm" variant="outline">
+                  Archive
+                </Button>
+              </form>
+            ),
+            className: "w-[120px] px-4 py-2.5 text-right",
+            cellClassName: "px-4 py-3 text-right",
+          },
+        ]}
+      />
 
       <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
         <PlatformDataTable

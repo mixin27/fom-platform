@@ -31,6 +31,7 @@ import { platformSubscriptionStatuses } from './platform-billing.constants';
 import { subscriptionFeatureCatalog } from './subscription-feature.constants';
 import { subscriptionLimitCatalog } from './subscription-limit.constants';
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
+import { PublicContactService } from '../public-contact/public-contact.service';
 import {
   platformSupportIssueKinds,
   platformSupportIssueSeverities,
@@ -224,6 +225,7 @@ export class PlatformService {
     private readonly emailOutbox: EmailOutboxService,
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
     private readonly realtimeService: RealtimeService,
+    private readonly publicContactService: PublicContactService,
   ) {}
 
   async getDashboard() {
@@ -1101,6 +1103,7 @@ export class PlatformService {
     const tenants = await this.loadTenantSnapshots(now);
     const payments = await this.loadPaymentRows();
     const issues = await this.syncAndLoadSupportIssues(tenants, payments, now);
+    const publicContact = await this.publicContactService.listInboxForPlatform();
 
     return {
       overview: {
@@ -1110,8 +1113,10 @@ export class PlatformService {
         onboarding_items: issues.filter((issue) => issue.kind === 'onboarding')
           .length,
         billing_items: issues.filter((issue) => issue.kind === 'billing').length,
+        public_contact_inbox: publicContact.open_count,
       },
       issues,
+      public_contact: publicContact,
       health: {
         total_shops: tenants.length,
         active_shops: tenants.filter((tenant) => tenant.status === 'active')

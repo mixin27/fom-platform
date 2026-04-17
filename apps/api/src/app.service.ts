@@ -115,7 +115,7 @@ export class AppService {
     const supportLabel =
       process.env.PLATFORM_SUPPORT_LABEL?.trim() || 'Contact support';
     const supportUrl =
-      process.env.PLATFORM_SUPPORT_URL?.trim() || `${webBaseUrl}/register`;
+      process.env.PLATFORM_SUPPORT_URL?.trim() || `${webBaseUrl}/contact`;
 
     return {
       legal: {

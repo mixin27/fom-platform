@@ -379,6 +379,7 @@ export async function getPlatformSupport() {
       high_priority_items: number
       onboarding_items: number
       billing_items: number
+      public_contact_inbox: number
     }
     issues: Array<{
       id: string
@@ -396,6 +397,22 @@ export async function getPlatformSupport() {
       resolution_note: string | null
       resolved_at: string | null
     }>
+    public_contact: {
+      open_count: number
+      submissions: Array<{
+        id: string
+        email: string
+        name: string | null
+        subject: string | null
+        message: string
+        email_status: string
+        ip_fingerprint: string | null
+        user_agent: string | null
+        archived: boolean
+        admin_note: string | null
+        created_at: string
+      }>
+    }
     health: {
       total_shops: number
       active_shops: number

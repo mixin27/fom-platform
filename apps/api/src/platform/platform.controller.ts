@@ -33,13 +33,18 @@ import { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
 import { PlatformService } from './platform.service';
+import { UpdatePublicContactSubmissionDto } from '../public-contact/dto/update-public-contact-submission.dto';
+import { PublicContactService } from '../public-contact/public-contact.service';
 
 @Controller('api/v1/platform')
 @UseGuards(AuthGuard)
 @ApiTags('Platform')
 @ApiBearerAuth('access-token')
 export class PlatformController {
-  constructor(private readonly platformService: PlatformService) {}
+  constructor(
+    private readonly platformService: PlatformService,
+    private readonly publicContactService: PublicContactService,
+  ) {}
 
   @Get('dashboard')
   @UseGuards(RbacGuard)
@@ -122,7 +127,9 @@ export class PlatformController {
   @Patch('subscriptions/:subscriptionId')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSubscriptionsWrite)
-  @ApiOperation({ summary: 'Update a shop subscription from the platform workspace' })
+  @ApiOperation({
+    summary: 'Update a shop subscription from the platform workspace',
+  })
   updateSubscription(
     @Param('subscriptionId') subscriptionId: string,
     @Body() body: UpdatePlatformSubscriptionDto,
@@ -182,6 +189,21 @@ export class PlatformController {
     return ok(this.platformService.updateSupportIssue(issueId, body));
   }
 
+  @Patch('public-contact-submissions/:submissionId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformSupportWrite)
+  @ApiOperation({
+    summary: 'Update notes or archive a public website contact submission',
+  })
+  updatePublicContactSubmission(
+    @Param('submissionId') submissionId: string,
+    @Body() body: UpdatePublicContactSubmissionDto,
+  ) {
+    return ok(
+      this.publicContactService.updateSubmissionAsPlatform(submissionId, body),
+    );
+  }
+
   @Get('settings')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSettingsWrite)
@@ -224,7 +246,9 @@ export class PlatformController {
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformSettingsWrite)
   @HttpCode(204)
-  @ApiOperation({ summary: 'Delete an unused billing plan from platform settings' })
+  @ApiOperation({
+    summary: 'Delete an unused billing plan from platform settings',
+  })
   async deleteSettingsPlan(@Param('planId') planId: string) {
     await this.platformService.deleteSettingsPlan(planId);
   }

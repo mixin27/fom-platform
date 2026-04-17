@@ -54,14 +54,14 @@ const fallbackLaunchConfig: PublicLaunchConfig = {
   },
   support: {
     label: "Contact support",
-    url: "/register",
+    url: "/contact",
   },
   billing: {
     title: "How to pay and activate your shop",
     body: "After your trial, contact the platform team to receive your invoice and payment instructions. Access is activated once payment is confirmed.",
     channels: [],
     contact_label: "Contact support",
-    contact_url: "/register",
+    contact_url: "/contact",
   },
 }
 

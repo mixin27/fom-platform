@@ -116,3 +116,31 @@ export async function updatePlatformSupportIssueFromFormAction(formData: FormDat
 
   redirectSupport({ notice: "Support issue updated." })
 }
+
+export async function archivePublicContactSubmissionAction(formData: FormData) {
+  const submissionId = normalizeTextField(formData.get("submission_id"))
+
+  if (!submissionId) {
+    redirectSupport({ error: "Submission ID is required." })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/platform/public-contact-submissions/${submissionId}`,
+      preferFreshSession: true,
+      requiredAccess: "platform",
+      init: {
+        method: "PATCH",
+        json: { archived: true },
+      },
+    })
+
+    revalidatePlatformSupportWorkspace()
+  } catch (error) {
+    redirectSupport({
+      error: toActionMessage(error, "Unable to archive that submission."),
+    })
+  }
+
+  redirectSupport({ notice: "Contact message archived." })
+}
