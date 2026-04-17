@@ -9,6 +9,7 @@ import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 function revalidateShopWorkspace() {
   revalidatePath("/dashboard")
   revalidatePath("/dashboard/billing")
+  revalidatePath("/dashboard/inbox")
   revalidatePath("/dashboard/orders")
   revalidatePath("/dashboard/orders/paste-from-messenger")
   revalidatePath("/dashboard/customers")
@@ -46,6 +47,12 @@ function normalizeDateTimeField(value: FormDataEntryValue | null) {
   }
 
   return parsed.toISOString()
+}
+
+function normalizeBooleanField(value: FormDataEntryValue | null) {
+  return typeof value === "string"
+    ? ["1", "true", "yes", "on"].includes(value.trim().toLowerCase())
+    : false
 }
 
 function getReturnTo(formData: FormData, fallbackPath: string) {
@@ -809,7 +816,7 @@ export async function createShopOrderFromParsedDraftAction(
       message: "Unable to create the order from the parsed draft right now.",
     }
   }
-}
+    }
 
 export type ShopOrderCreateInput = {
   customer: {
@@ -851,6 +858,308 @@ export type ShopCustomerInput = {
   township?: string | null
   address?: string | null
   notes?: string | null
+}
+
+export type ShopMessengerAutoReplyRuleInput = {
+  name: string
+  match_type: "contains" | "exact"
+  pattern: string
+  reply_text: string
+  is_active: boolean
+}
+
+export async function updateShopMessengerConnectionFromFormAction(
+  formData: FormData
+) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const pageId = normalizeTextField(formData.get("page_id"))
+  const pageName = normalizeTextField(formData.get("page_name"))
+  const pageAccessToken = normalizeTextField(formData.get("page_access_token"))
+
+  if (!shopId || !pageId || !pageAccessToken) {
+    redirectToPath(returnTo, {
+      error: "Page ID and page access token are required.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/connection`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PUT",
+        json: {
+          page_id: pageId,
+          ...(pageName ? { page_name: pageName } : {}),
+          page_access_token: pageAccessToken,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath(returnTo)
+    redirectToPath(returnTo, {
+      notice: "Messenger page connection updated.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(
+        error,
+        "Unable to save the Messenger page connection right now."
+      ),
+    })
+  }
+}
+
+export async function disconnectShopMessengerConnectionFromFormAction(
+  formData: FormData
+) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+
+  if (!shopId) {
+    redirectToPath(returnTo, {
+      error: "Shop context is missing.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/connection`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath(returnTo)
+    redirectToPath(returnTo, {
+      notice: "Messenger page disconnected.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(
+        error,
+        "Unable to disconnect the Messenger page right now."
+      ),
+    })
+  }
+}
+
+export async function markShopMessengerThreadReadFromFormAction(
+  formData: FormData
+) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const threadId = normalizeTextField(formData.get("thread_id"))
+
+  if (!shopId || !threadId) {
+    redirectToPath(returnTo, {
+      error: "Messenger thread context is missing.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/threads/${threadId}/read`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath(returnTo)
+    redirectToPath(returnTo, {
+      notice: "Thread marked as read.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(error, "Unable to update the thread right now."),
+    })
+  }
+}
+
+export async function sendShopMessengerReplyFromFormAction(formData: FormData) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const threadId = normalizeTextField(formData.get("thread_id"))
+  const text = normalizeTextField(formData.get("text"))
+
+  if (!shopId || !threadId || !text) {
+    redirectToPath(returnTo, {
+      error: "Reply text is required before sending.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/threads/${threadId}/reply`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          text,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath(returnTo)
+    redirectToPath(returnTo, {
+      notice: "Reply sent to Messenger.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(
+        error,
+        "Unable to send the Messenger reply right now."
+      ),
+    })
+  }
+}
+
+export async function createShopMessengerAutoReplyRuleFromFormAction(
+  formData: FormData
+) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const name = normalizeTextField(formData.get("name"))
+  const matchType = normalizeTextField(formData.get("match_type"))
+  const pattern = normalizeTextField(formData.get("pattern"))
+  const replyText = normalizeTextField(formData.get("reply_text"))
+  const isActive = normalizeBooleanField(formData.get("is_active"))
+
+  if (!shopId || !name || !matchType || !pattern || !replyText) {
+    redirectToPath(returnTo, {
+      error: "Rule name, match type, pattern, and reply text are required.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/auto-reply-rules`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          name,
+          match_type: matchType,
+          pattern,
+          reply_text: replyText,
+          is_active: isActive,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath("/dashboard/inbox")
+    redirectToPath(returnTo, {
+      notice: "Auto reply rule created.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(
+        error,
+        "Unable to create the auto reply rule right now."
+      ),
+    })
+  }
+}
+
+export async function updateShopMessengerAutoReplyRuleFromFormAction(
+  formData: FormData
+) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const ruleId = normalizeTextField(formData.get("rule_id"))
+  const name = normalizeTextField(formData.get("name"))
+  const matchType = normalizeTextField(formData.get("match_type"))
+  const pattern = normalizeTextField(formData.get("pattern"))
+  const replyText = normalizeTextField(formData.get("reply_text"))
+  const isActive = normalizeBooleanField(formData.get("is_active"))
+
+  if (!shopId || !ruleId || !name || !matchType || !pattern || !replyText) {
+    redirectToPath(returnTo, {
+      error: "Rule context is incomplete.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/auto-reply-rules/${ruleId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "PATCH",
+        json: {
+          name,
+          match_type: matchType,
+          pattern,
+          reply_text: replyText,
+          is_active: isActive,
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath(returnTo)
+    redirectToPath(returnTo, {
+      notice: "Auto reply rule updated.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(
+        error,
+        "Unable to update the auto reply rule right now."
+      ),
+    })
+  }
+}
+
+export async function deleteShopMessengerAutoReplyRuleFromFormAction(
+  formData: FormData
+) {
+  const returnTo = getReturnTo(formData, "/dashboard/inbox")
+  const shopId = normalizeTextField(formData.get("shop_id"))
+  const ruleId = normalizeTextField(formData.get("rule_id"))
+
+  if (!shopId || !ruleId) {
+    redirectToPath(returnTo, {
+      error: "Auto reply rule context is missing.",
+    })
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/messenger/auto-reply-rules/${ruleId}`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "DELETE",
+      },
+    })
+
+    revalidateShopWorkspace()
+    revalidatePath("/dashboard/inbox")
+    redirectToPath(returnTo, {
+      notice: "Auto reply rule deleted.",
+    })
+  } catch (error) {
+    redirectToPath(returnTo, {
+      error: toActionMessage(
+        error,
+        "Unable to delete the auto reply rule right now."
+      ),
+    })
+  }
 }
 
 export type ShopCustomerUpdateInput = Partial<ShopCustomerInput>

@@ -45,6 +45,9 @@ import { PlatformService } from './platform/platform.service';
 import { PublicContactController } from './public-contact/public-contact.controller';
 import { PublicContactRateLimitService } from './public-contact/public-contact-rate-limit.service';
 import { PublicContactService } from './public-contact/public-contact.service';
+import { MessengerController } from './messenger/messenger.controller';
+import { MessengerService } from './messenger/messenger.service';
+import { MetaMessengerWebhookController } from './messenger/meta-messenger-webhook.controller';
 import { MyanmyanpayService } from './payments/myanmyanpay.service';
 import { PaymentsController } from './payments/payments.controller';
 import { PaymentsService } from './payments/payments.service';
@@ -80,10 +83,12 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     ShopsController,
     PlatformController,
     PublicContactController,
+    MetaMessengerWebhookController,
     RealtimeController,
     PushController,
     CustomersController,
     OrdersController,
+    MessengerController,
     NotificationsController,
     DeliveriesController,
     EnterpriseController,
@@ -106,6 +111,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     PlatformService,
     PublicContactRateLimitService,
     PublicContactService,
+    MessengerService,
     MyanmyanpayService,
     PaymentsService,
     SubscriptionLifecycleService,

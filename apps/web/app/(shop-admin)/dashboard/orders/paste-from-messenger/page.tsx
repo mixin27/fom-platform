@@ -1,13 +1,33 @@
 import Link from "next/link"
 
 import { PageIntro } from "@/components/page-intro"
-import { getShopPortalContext } from "@/lib/shop/api"
+import {
+  getShopMessengerOrderSource,
+  getShopPortalContext,
+} from "@/lib/shop/api"
+import { getSingleSearchParam, type ShopSearchParams } from "@/lib/shop/query"
 import { MessengerOrderWorkspace } from "./_components/messenger-order-workspace"
 import { Button } from "@workspace/ui/components/button"
 
-export default async function PasteFromMessengerPage() {
+type PasteFromMessengerPageProps = {
+  searchParams?: Promise<ShopSearchParams>
+}
+
+export default async function PasteFromMessengerPage({
+  searchParams,
+}: PasteFromMessengerPageProps) {
   const { activeShop } = await getShopPortalContext()
+  const params = (await searchParams) ?? {}
   const canUseParser = activeShop.membership.permissions.includes("orders.write")
+  const threadId = getSingleSearchParam(params.thread_id)
+  const sourceResponse = threadId
+    ? await getShopMessengerOrderSource(
+        threadId,
+        `/dashboard/orders/paste-from-messenger?thread_id=${threadId}`
+      )
+    : null
+  const initialMessage = sourceResponse?.data?.message ?? ""
+  const initialContextLabel = threadId ? `Messenger thread ${threadId}` : null
 
   return (
     <div className="flex flex-col gap-5">
@@ -22,7 +42,13 @@ export default async function PasteFromMessengerPage() {
         }
       />
 
-      <MessengerOrderWorkspace shopId={activeShop.id} canUseParser={canUseParser} />
+      <MessengerOrderWorkspace
+        shopId={activeShop.id}
+        canUseParser={canUseParser}
+        initialMessage={initialMessage}
+        initialContextLabel={initialContextLabel}
+        autoParseOnLoad={Boolean(threadId && initialMessage)}
+      />
     </div>
   )
 }

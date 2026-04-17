@@ -121,14 +121,14 @@ export const subscriptionFeatureCatalog: ReadonlyArray<{
     category: 'facebook',
     name: 'Facebook inbox integration',
     description: 'Sync Facebook inbox activity into the operational workspace.',
-    launchPhase: 'future',
+    launchPhase: 'phase_one',
   },
   {
     code: subscriptionFeatures.automationAutoReply,
     category: 'automation',
     name: 'Auto reply automation',
     description: 'Run keyword or rule-based reply automations.',
-    launchPhase: 'future',
+    launchPhase: 'phase_one',
   },
   {
     code: subscriptionFeatures.automationTagging,

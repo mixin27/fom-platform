@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import {
   AlertTriangle,
@@ -34,6 +34,9 @@ import { Textarea } from "@workspace/ui/components/textarea"
 type MessengerOrderWorkspaceProps = {
   shopId: string
   canUseParser: boolean
+  initialMessage?: string
+  initialContextLabel?: string | null
+  autoParseOnLoad?: boolean
 }
 
 function toDraft(result: ShopParsedOrderResult): ShopParsedOrderDraftInput {
@@ -92,15 +95,19 @@ function emptyDraft(): ShopParsedOrderDraftInput {
 export function MessengerOrderWorkspace({
   shopId,
   canUseParser,
+  initialMessage,
+  initialContextLabel,
+  autoParseOnLoad = false,
 }: MessengerOrderWorkspaceProps) {
   const [isPending, startTransition] = useTransition()
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState(initialMessage ?? "")
   const [parseError, setParseError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
   const [createdNotice, setCreatedNotice] = useState<string | null>(null)
   const [createdOrderNo, setCreatedOrderNo] = useState<string | null>(null)
   const [result, setResult] = useState<ShopParsedOrderResult | null>(null)
   const [draft, setDraft] = useState<ShopParsedOrderDraftInput>(emptyDraft)
+  const hasAutoParsedRef = useRef(false)
 
   function updateCustomerField<
     K extends keyof ShopParsedOrderDraftInput["customer"],
@@ -159,13 +166,22 @@ export function MessengerOrderWorkspace({
     }))
   }
 
-  function handleParse() {
+  function handleParse(sourceMessage?: string) {
     setParseError(null)
     setCreateError(null)
     setCreatedNotice(null)
 
+    const messageToParse = (sourceMessage ?? message).trim()
+
+    if (!messageToParse) {
+      setParseError("Paste a Messenger conversation before parsing.")
+      setResult(null)
+      setDraft(emptyDraft())
+      return
+    }
+
     startTransition(async () => {
-      const response = await parseShopOrderMessageAction(shopId, message)
+      const response = await parseShopOrderMessageAction(shopId, messageToParse)
 
       if (!response.ok) {
         setParseError(response.message)
@@ -178,6 +194,15 @@ export function MessengerOrderWorkspace({
       setDraft(toDraft(response.data))
     })
   }
+
+  useEffect(() => {
+    if (!autoParseOnLoad || !initialMessage?.trim() || hasAutoParsedRef.current) {
+      return
+    }
+
+    hasAutoParsedRef.current = true
+    handleParse(initialMessage)
+  }, [autoParseOnLoad, initialMessage])
 
   function handleCreate() {
     setCreateError(null)
@@ -224,6 +249,11 @@ export function MessengerOrderWorkspace({
           <CardTitle>Paste Messenger conversation</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 pt-0">
+          {initialContextLabel ? (
+            <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-2.5 text-sm text-muted-foreground">
+              Loaded inbound customer messages from {initialContextLabel}.
+            </div>
+          ) : null}
           <Textarea
             value={message}
             onChange={(event) => setMessage(event.target.value)}
@@ -231,7 +261,7 @@ export function MessengerOrderWorkspace({
             className="min-h-[320px]"
           />
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={handleParse} disabled={isPending}>
+            <Button type="button" onClick={() => handleParse()} disabled={isPending}>
               <MessageSquareText data-icon="inline-start" />
               Parse message
             </Button>

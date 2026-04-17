@@ -403,6 +403,97 @@ export type ShopBillingInvoiceDetail = {
   }>
 }
 
+export type ShopMessengerOverview = {
+  connection: {
+    id: string
+    shop_id: string
+    page_id: string
+    page_name: string
+    status: string
+    last_webhook_at: string | null
+    created_at: string
+    updated_at: string
+  } | null
+  setup: {
+    webhook_url: string
+    verify_token_configured: boolean
+    signature_validation_enabled: boolean
+    graph_api_version: string
+  }
+  stats: {
+    thread_count: number
+    unread_count: number
+    auto_reply_rule_count: number
+  }
+}
+
+export type ShopMessengerThread = {
+  id: string
+  shop_id: string
+  connection_id: string
+  customer_psid: string
+  customer_name: string | null
+  customer_locale: string | null
+  customer_label: string
+  last_message_text: string | null
+  last_message_at: string | null
+  unread_count: number
+  message_count?: number
+  created_at: string
+  updated_at: string
+  page: {
+    id: string
+    name: string
+    status: string
+  } | null
+}
+
+export type ShopMessengerMessage = {
+  id: string
+  thread_id: string
+  provider_message_id: string | null
+  direction: "inbound" | "outbound" | string
+  message_type: string
+  sender_psid: string | null
+  recipient_id: string | null
+  text_body: string | null
+  is_echo: boolean
+  sent_at: string
+  created_at: string
+  updated_at: string
+}
+
+export type ShopMessengerThreadDetail = ShopMessengerThread & {
+  connection: NonNullable<ShopMessengerThread["page"]> & {
+    shop_id: string
+    page_id: string
+    page_name: string
+    last_webhook_at: string | null
+    created_at: string
+    updated_at: string
+  }
+  messages: ShopMessengerMessage[]
+}
+
+export type ShopMessengerAutoReplyRule = {
+  id: string
+  shop_id: string
+  name: string
+  match_type: "contains" | "exact" | string
+  pattern: string
+  reply_text: string
+  is_active: boolean
+  last_triggered_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ShopMessengerOrderSource = {
+  thread_id: string
+  message: string
+  line_count: number
+}
+
 export type ShopDailySummary = {
   id: string
   shop_id: string
@@ -616,6 +707,79 @@ export async function getShopAnnouncements(retryPath = "/dashboard") {
     "/announcements",
     undefined,
     retryPath
+  )
+}
+
+export async function getShopMessengerOverview(
+  retryPath = "/dashboard/inbox",
+  allowForbidden = false
+) {
+  return shopRequest<ShopMessengerOverview | null>(
+    "/messenger",
+    undefined,
+    retryPath,
+    allowForbidden
+  )
+}
+
+export async function getShopMessengerThreads(
+  searchParams?: SearchParamsRecord,
+  retryPath?: string
+) {
+  const resolvedRetryPath =
+    retryPath ?? `/dashboard/inbox${buildQueryString(searchParams)}`
+  return shopRequest<ShopMessengerThread[]>(
+    "/messenger/threads",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
+}
+
+export async function getShopMessengerThread(
+  threadId: string,
+  retryPath = "/dashboard/inbox"
+) {
+  return shopRequest<ShopMessengerThreadDetail>(
+    `/messenger/threads/${threadId}`,
+    undefined,
+    retryPath,
+    true
+  )
+}
+
+export async function getShopMessengerOrderSource(
+  threadId: string,
+  retryPath = "/dashboard/orders/paste-from-messenger"
+) {
+  return shopRequest<ShopMessengerOrderSource>(
+    `/messenger/threads/${threadId}/order-source`,
+    undefined,
+    retryPath,
+    true
+  )
+}
+
+export async function getShopMessengerAutoReplyRules(
+  retryPath = "/dashboard/inbox"
+) {
+  return shopRequest<{ rules: ShopMessengerAutoReplyRule[] }>(
+    "/messenger/auto-reply-rules",
+    undefined,
+    retryPath,
+    true
+  )
+}
+
+export async function getShopMessengerAutoReplyRule(
+  ruleId: string,
+  retryPath = "/dashboard/inbox"
+) {
+  return shopRequest<ShopMessengerAutoReplyRule>(
+    `/messenger/auto-reply-rules/${ruleId}`,
+    undefined,
+    retryPath,
+    true
   )
 }
 

@@ -32,6 +32,7 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   deliveries: PackageCheck,
   templates: MessageSquareText,
   reports: BarChart3,
+  inbox: Inbox,
   exports: Download,
   settings: Settings,
   shops: Store,
