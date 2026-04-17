@@ -4,6 +4,7 @@ import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
+import { getPublicLaunchConfig } from "@/lib/launch/api"
 import {
   getCurrentUserProfile,
   getShopBilling,
@@ -19,7 +20,11 @@ import {
   type ShopSearchParams,
 } from "@/lib/shop/query"
 import { formatCodeLabel, formatList } from "@/lib/shop/format"
-import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/platform/format"
+import {
+  formatCurrency,
+  formatDate,
+  formatRelativeDate,
+} from "@/lib/platform/format"
 import {
   addShopMemberFromFormAction,
   updateCurrentUserProfileFromFormAction,
@@ -48,25 +53,37 @@ export default async function ShopSettingsPage({
   const { activeShop } = await getShopPortalContext()
   const permissions = new Set(activeShop.membership.permissions)
   const canManageShop = permissions.has("shops.write")
-  const [shopResponse, membersResponse, profileResponse, billingResponse] = await Promise.all([
+  const [
+    shopResponse,
+    membersResponse,
+    profileResponse,
+    billingResponse,
+    launchConfig,
+  ] = await Promise.all([
     getShopDetails(currentHref),
     getShopMembers(params, currentHref),
     getCurrentUserProfile(currentHref),
     canManageShop ? getShopBilling(currentHref) : Promise.resolve(null),
+    getPublicLaunchConfig(),
   ])
   const shop = shopResponse.data
   const members = membersResponse.data
   const profile = profileResponse.data
   const billing = billingResponse?.data ?? null
-  const pagination = membersResponse.meta?.pagination as ShopCursorPagination | undefined
+  const pagination = membersResponse.meta?.pagination as
+    | ShopCursorPagination
+    | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
-  const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
+  const limit = Number(
+    getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20
+  )
   const previousCursor = getPreviousCursor(currentCursor, limit)
   const notice = getSingleSearchParam(params.notice)
   const error = getSingleSearchParam(params.error)
   const canManageMembers = permissions.has("members.manage")
   const currentMembership =
-    profile.shops.find((shopRecord) => shopRecord.id === activeShop.id)?.membership ?? null
+    profile.shops.find((shopRecord) => shopRecord.id === activeShop.id)
+      ?.membership ?? null
 
   return (
     <div className="flex flex-col gap-5">
@@ -100,7 +117,9 @@ export default async function ShopSettingsPage({
           title="Your role"
           value={formatCodeLabel(currentMembership?.role ?? "member")}
           detail={`${currentMembership?.permissions.length ?? 0} effective shop permissions.`}
-          delta={formatList(currentMembership?.roles.map((role) => role.code) ?? [])}
+          delta={formatList(
+            currentMembership?.roles.map((role) => role.code) ?? []
+          )}
           icon={Shield}
           accent="teal"
         />
@@ -122,10 +141,17 @@ export default async function ShopSettingsPage({
           </CardHeader>
           <CardContent className="pt-0">
             {canManageShop ? (
-              <form action={updateShopProfileFromFormAction} className="flex flex-col gap-2.5">
+              <form
+                action={updateShopProfileFromFormAction}
+                className="flex flex-col gap-2.5"
+              >
                 <input type="hidden" name="return_to" value={currentHref} />
                 <input type="hidden" name="shop_id" value={activeShop.id} />
-                <Input name="name" defaultValue={shop.name} placeholder="Shop name" />
+                <Input
+                  name="name"
+                  defaultValue={shop.name}
+                  placeholder="Shop name"
+                />
                 <Input
                   name="timezone"
                   defaultValue={shop.timezone}
@@ -139,7 +165,9 @@ export default async function ShopSettingsPage({
               <div className="text-sm leading-7 text-muted-foreground">
                 <p>{shop.name}</p>
                 <p>{shop.timezone}</p>
-                <p className="mt-2">Your account cannot edit shop identity fields.</p>
+                <p className="mt-2">
+                  Your account cannot edit shop identity fields.
+                </p>
               </div>
             )}
           </CardContent>
@@ -156,7 +184,11 @@ export default async function ShopSettingsPage({
               className="flex flex-col gap-2.5"
             >
               <input type="hidden" name="return_to" value={currentHref} />
-              <Input name="name" defaultValue={profile.name} placeholder="Name" />
+              <Input
+                name="name"
+                defaultValue={profile.name}
+                placeholder="Name"
+              />
               <Input
                 name="email"
                 defaultValue={profile.email ?? ""}
@@ -238,7 +270,9 @@ export default async function ShopSettingsPage({
               header: "Member",
               render: (member) => (
                 <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{member.user.name}</span>
+                  <span className="font-semibold text-foreground">
+                    {member.user.name}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {member.user.email ?? member.user.phone ?? "No contact"}
                   </span>
@@ -263,7 +297,9 @@ export default async function ShopSettingsPage({
             {
               key: "status",
               header: "Status",
-              render: (member) => <PlatformStatusBadge status={member.status} />,
+              render: (member) => (
+                <PlatformStatusBadge status={member.status} />
+              ),
             },
             {
               key: "permissions",
@@ -280,13 +316,20 @@ export default async function ShopSettingsPage({
               header: "Actions",
               render: (member) => {
                 const isCurrentUser = member.user_id === profile.id
-                const isOwner = member.roles.some((role) => role.code === "owner")
+                const isOwner = member.roles.some(
+                  (role) => role.code === "owner"
+                )
 
                 if (!canManageMembers || isCurrentUser || isOwner) {
-                  return <span className="text-xs text-muted-foreground">No actions</span>
+                  return (
+                    <span className="text-xs text-muted-foreground">
+                      No actions
+                    </span>
+                  )
                 }
 
-                const nextStatus = member.status === "disabled" ? "active" : "disabled"
+                const nextStatus =
+                  member.status === "disabled" ? "active" : "disabled"
 
                 return (
                   <form action={updateShopMemberFromFormAction}>
@@ -313,7 +356,10 @@ export default async function ShopSettingsPage({
           </CardHeader>
           <CardContent className="pt-0">
             {canManageMembers ? (
-              <form action={addShopMemberFromFormAction} className="flex flex-col gap-2.5">
+              <form
+                action={addShopMemberFromFormAction}
+                className="flex flex-col gap-2.5"
+              >
                 <input type="hidden" name="return_to" value={currentHref} />
                 <input type="hidden" name="shop_id" value={activeShop.id} />
                 <Input name="name" placeholder="Member name" />
@@ -344,7 +390,8 @@ export default async function ShopSettingsPage({
           title="Current plan"
           value={billing?.overview.plan_name ?? "No plan"}
           detail={
-            billing?.overview.plan_price != null && billing?.overview.plan_currency
+            billing?.overview.plan_price != null &&
+            billing?.overview.plan_currency
               ? `${formatCurrency(
                   billing.overview.plan_price,
                   billing.overview.plan_currency
@@ -392,7 +439,9 @@ export default async function ShopSettingsPage({
               <div className="flex flex-wrap gap-2">
                 <PlatformStatusBadge
                   status={billing?.overview.status ?? "inactive"}
-                  label={formatCodeLabel(billing?.overview.status ?? "inactive")}
+                  label={formatCodeLabel(
+                    billing?.overview.status ?? "inactive"
+                  )}
                 />
                 {billing?.overview.latest_invoice_status ? (
                   <PlatformStatusBadge
@@ -406,7 +455,7 @@ export default async function ShopSettingsPage({
 
               <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
                 <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+                  <p className="text-xs tracking-[0.28em] text-muted-foreground uppercase">
                     Next due
                   </p>
                   <p className="mt-2 text-base font-semibold text-foreground">
@@ -416,7 +465,7 @@ export default async function ShopSettingsPage({
                   </p>
                 </div>
                 <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+                  <p className="text-xs tracking-[0.28em] text-muted-foreground uppercase">
                     Last paid
                   </p>
                   <p className="mt-2 text-base font-semibold text-foreground">
@@ -443,9 +492,31 @@ export default async function ShopSettingsPage({
                   .
                 </p>
                 <p>
-                  This section is read-only in the shop portal so billing control
-                  stays on the platform workspace.
+                  This section is read-only in the shop portal so billing
+                  control stays on the platform workspace.
                 </p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--fom-orange)]/20 bg-[rgba(249,122,31,0.06)] p-4 text-sm leading-7 text-[var(--fom-ink)]">
+                <p className="font-semibold">{launchConfig.billing.title}</p>
+                <p className="mt-2 text-muted-foreground">
+                  {launchConfig.billing.body}
+                </p>
+                {launchConfig.billing.channels.length > 0 ? (
+                  <p className="mt-2 text-muted-foreground">
+                    Accepted channels:{" "}
+                    {launchConfig.billing.channels.join(", ")}.
+                  </p>
+                ) : null}
+                <Button
+                  asChild
+                  size="sm"
+                  className="mt-4 bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
+                >
+                  <a href={launchConfig.billing.contact_url}>
+                    {launchConfig.billing.contact_label}
+                  </a>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -476,12 +547,15 @@ export default async function ShopSettingsPage({
               {
                 key: "status",
                 header: "Status",
-                render: (invoice) => <PlatformStatusBadge status={invoice.status} />,
+                render: (invoice) => (
+                  <PlatformStatusBadge status={invoice.status} />
+                ),
               },
               {
                 key: "amount",
                 header: "Amount",
-                render: (invoice) => formatCurrency(invoice.amount, invoice.currency),
+                render: (invoice) =>
+                  formatCurrency(invoice.amount, invoice.currency),
               },
               {
                 key: "due",
@@ -502,11 +576,13 @@ export default async function ShopSettingsPage({
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
             <CardDescription>Billing visibility</CardDescription>
-            <CardTitle>Subscription details stay with shop management access</CardTitle>
+            <CardTitle>
+              Subscription details stay with shop management access
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 text-sm leading-7 text-muted-foreground">
-            The billing plan, invoice state, and renewal window are only shown to
-            members who can manage shop settings.
+            The billing plan, invoice state, and renewal window are only shown
+            to members who can manage shop settings.
           </CardContent>
         </Card>
       )}

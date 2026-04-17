@@ -9,6 +9,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthController } from './auth/auth.controller';
+import { AuthRateLimitService } from './auth/auth-rate-limit.service';
 import { AuthService } from './auth/auth.service';
 import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
@@ -87,6 +88,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     AppService,
     PrismaService,
     AuthService,
+    AuthRateLimitService,
     UsersService,
     ShopsService,
     PlatformService,

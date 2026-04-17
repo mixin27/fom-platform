@@ -1,7 +1,9 @@
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  Equals,
   IsEmail,
+  IsBoolean,
   IsIn,
   IsOptional,
   IsString,
@@ -59,4 +61,27 @@ export class RegisterDto {
   @IsOptional()
   @IsIn(['en', 'my'])
   locale?: 'en' | 'my';
+
+  @ApiProperty({
+    example: true,
+    description:
+      'Must be true to confirm agreement to the Terms and Conditions',
+  })
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  @Equals(true, {
+    message: 'accepted_terms must be true',
+  })
+  accepted_terms!: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'Must be true to confirm agreement to the Privacy Policy',
+  })
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  @Equals(true, {
+    message: 'accepted_privacy must be true',
+  })
+  accepted_privacy!: boolean;
 }

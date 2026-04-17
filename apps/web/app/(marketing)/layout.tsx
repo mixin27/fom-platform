@@ -2,7 +2,9 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { LayoutDashboard, LogIn } from "lucide-react"
 import { BrandMark } from "@/components/brand-mark"
+import { LaunchNoticeBanner } from "@/components/launch-notice-banner"
 import { defaultPathForSession, getSession } from "@/lib/auth/session"
+import { getPublicLaunchConfig } from "@/lib/launch/api"
 import { Button } from "@workspace/ui/components/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -17,11 +19,18 @@ export default async function MarketingLayout({
 }: {
   children: ReactNode
 }) {
-  const session = await getSession()
+  const [session, launchConfig] = await Promise.all([
+    getSession(),
+    getPublicLaunchConfig(),
+  ])
   const dashboardHref = session ? defaultPathForSession(session) : null
+  const showNotice =
+    launchConfig.notice.enabled &&
+    ["all", "public"].includes(launchConfig.notice.audience)
 
   return (
     <div className="fom-marketing-canvas min-h-screen">
+      {showNotice ? <LaunchNoticeBanner notice={launchConfig.notice} /> : null}
       <header className="sticky top-0 z-20 border-b border-[var(--fom-marketing-border)] bg-[var(--fom-marketing-bg)]/80 backdrop-blur">
         <div className="mx-auto flex h-[66px] w-full max-w-[1120px] items-center gap-10 px-6">
           <BrandMark />
@@ -87,6 +96,11 @@ export default async function MarketingLayout({
             <Link href="#features">Features</Link>
             <Link href="#pricing">Pricing</Link>
             <Link href="#faq">FAQ</Link>
+            <Link href={launchConfig.legal.terms_url}>Terms</Link>
+            <Link href={launchConfig.legal.privacy_url}>Privacy</Link>
+            <Link href={launchConfig.support.url}>
+              {launchConfig.support.label}
+            </Link>
           </div>
         </div>
       </footer>

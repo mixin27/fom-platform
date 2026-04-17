@@ -87,6 +87,8 @@ class AuthRepositoryImpl with LoggerMixin implements AuthRepository {
     required String name,
     required String email,
     required String password,
+    required bool acceptedTerms,
+    required bool acceptedPrivacy,
     String? phone,
     String? locale,
   }) {
@@ -95,6 +97,8 @@ class AuthRepositoryImpl with LoggerMixin implements AuthRepository {
         name: name,
         email: email,
         password: password,
+        acceptedTerms: acceptedTerms,
+        acceptedPrivacy: acceptedPrivacy,
         phone: phone,
         locale: locale,
       ),

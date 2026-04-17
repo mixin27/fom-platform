@@ -30,6 +30,8 @@ final class AuthRegisterSubmitted extends AuthEvent {
     required this.name,
     required this.email,
     required this.password,
+    required this.acceptedTerms,
+    required this.acceptedPrivacy,
     this.phone,
     this.locale,
   });
@@ -37,11 +39,21 @@ final class AuthRegisterSubmitted extends AuthEvent {
   final String name;
   final String email;
   final String password;
+  final bool acceptedTerms;
+  final bool acceptedPrivacy;
   final String? phone;
   final String? locale;
 
   @override
-  List<Object?> get props => <Object?>[name, email, password, phone, locale];
+  List<Object?> get props => <Object?>[
+    name,
+    email,
+    password,
+    acceptedTerms,
+    acceptedPrivacy,
+    phone,
+    locale,
+  ];
 }
 
 final class AuthLogoutRequested extends AuthEvent {

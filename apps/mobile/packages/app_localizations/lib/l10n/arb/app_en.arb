@@ -40,6 +40,14 @@
   "authPasswordCreateHint": "At least 8 chars, A-z, 0-9",
   "authConfirmPasswordLabel": "Confirm Password",
   "authConfirmPasswordHint": "Re-enter password",
+  "authTermsConsentTitle": "I agree to the Terms & Conditions",
+  "authPrivacyConsentTitle": "I agree to the Privacy Policy",
+  "authConsentRequiredSubtitle": "Required before creating an account.",
+  "authViewTermsLink": "View terms",
+  "authViewPrivacyLink": "View privacy policy",
+  "authConsentRequiredError": "Accept the Terms & Conditions and Privacy Policy before creating an account.",
+  "authTermsOpenError": "Unable to open the Terms & Conditions right now.",
+  "authPrivacyOpenError": "Unable to open the Privacy Policy right now.",
   "authCreateAccountCta": "Create Account",
   "authAlreadyHaveAccountPrompt": "Already have an account? ",
   "authAlreadyHaveAccountAction": "Sign in",
@@ -124,6 +132,8 @@
   "settingsBillingOutstandingBalanceTitle": "Outstanding balance",
   "settingsBillingAllSettled": "All invoices are settled",
   "settingsBillingPaymentNeeded": "Payment needed to keep the shop active",
+  "settingsBillingPaymentHelpTitle": "Payment instructions",
+  "settingsBillingPaymentHelpSubtitle": "Open the FOM website for invoice, payment, and activation help.",
   "settingsBillingTrialActiveTitle": "Free trial is active",
   "settingsBillingTrialActiveMessage": "You can continue using the shop while the trial is active.",
   "settingsBillingTrialEndsIn": "Trial ends in {duration}.",
@@ -213,5 +223,6 @@
   "notificationsDailySummaryDesc": "End-of-day report and recap",
   "notificationsProductUpdates": "Product Updates",
   "notificationsProductUpdatesDesc": "Feature news and selling tips",
-  "notificationsChannelInAppEmail": "In-app + email"
+  "notificationsChannelInAppEmail": "In-app + email",
+  "settingsSupportOpenError": "Unable to open the website right now."
 }

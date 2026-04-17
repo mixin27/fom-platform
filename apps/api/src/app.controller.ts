@@ -18,9 +18,25 @@ export class AppController {
     return this.appService.getOverview();
   }
 
+  @Get('health')
+  @ApiOperation({ summary: 'Get service health status' })
+  health() {
+    return ok(this.appService.getHealth());
+  }
+
   @Get('public/plans')
-  @ApiOperation({ summary: 'Get public subscription plans for the marketing site' })
+  @ApiOperation({
+    summary: 'Get public subscription plans for the marketing site',
+  })
   getPublicPlans() {
     return ok(this.platformService.getPublicPlans());
+  }
+
+  @Get('public/launch-config')
+  @ApiOperation({
+    summary: 'Get public launch, legal, and tenant billing metadata',
+  })
+  getPublicLaunchConfig() {
+    return ok(this.appService.getPublicLaunchConfig());
   }
 }

@@ -151,7 +151,9 @@ export async function requestApiEnvelope<T>(
     ...init,
     headers: requestHeaders,
     body:
-      init?.json !== undefined ? JSON.stringify(init.json) : (init?.body ?? null),
+      init?.json !== undefined
+        ? JSON.stringify(init.json)
+        : (init?.body ?? null),
     cache: "no-store",
   })
 
@@ -267,6 +269,8 @@ export async function registerWithPassword(input: {
   password: string
   phone?: string
   locale?: string
+  accepted_terms: boolean
+  accepted_privacy: boolean
   headers?: HeadersInit
 }) {
   const { headers, ...json } = input

@@ -6,11 +6,23 @@ import {
 
 @Injectable()
 export class AppService {
+  getHealth() {
+    return {
+      status: 'ok',
+      service: 'facebook-order-manager-api',
+      version: '0.1.0',
+      environment: process.env.NODE_ENV?.trim() || 'development',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   getOverview() {
     const platformOwnerEmail =
       process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() ||
       process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase() ||
       'owner@fom-platform.local';
+    const docsEnabled = this.isApiDocsEnabled();
+    const isProduction = this.isProduction();
 
     return {
       name: 'facebook-order-manager-api',
@@ -27,15 +39,19 @@ export class AppService {
           'shops.roles',
           'shops.permissions',
         ],
-        demo_credentials: {
-          platform_owner_email: platformOwnerEmail,
-          platform_owner_password:
-            process.env.PLATFORM_OWNER_PASSWORD ?? 'Password123!',
-          owner_email: 'maaye@example.com',
-          owner_password: 'Password123!',
-          staff_email: 'komin@example.com',
-          staff_password: 'Password123!',
-        },
+        ...(isProduction
+          ? {}
+          : {
+              demo_credentials: {
+                platform_owner_email: platformOwnerEmail,
+                platform_owner_password:
+                  process.env.PLATFORM_OWNER_PASSWORD ?? 'Password123!',
+                owner_email: 'maaye@example.com',
+                owner_password: 'Password123!',
+                staff_email: 'komin@example.com',
+                staff_password: 'Password123!',
+              },
+            }),
         otp_note:
           'Use debug_otp_code from /api/v1/auth/phone/start in development',
       },
@@ -44,10 +60,15 @@ export class AppService {
         orm: 'prisma',
       },
       docs: {
-        swagger_ui: '/docs',
-        openapi_json: '/openapi.json',
-        openapi_yaml: '/openapi.yaml',
-        scalar: '/reference',
+        enabled: docsEnabled,
+        ...(docsEnabled
+          ? {
+              swagger_ui: '/docs',
+              openapi_json: '/openapi.json',
+              openapi_yaml: '/openapi.yaml',
+              scalar: '/reference',
+            }
+          : {}),
       },
       scope: {
         implemented: [
@@ -78,5 +99,90 @@ export class AppService {
         permissions: permissionCatalog,
       },
     };
+  }
+
+  getPublicLaunchConfig() {
+    const webBaseUrl = this.getWebAppBaseUrl();
+    const noticeEnabled = this.readBoolEnv('PLATFORM_NOTICE_ENABLED', false);
+    const noticeTitle = process.env.PLATFORM_NOTICE_TITLE?.trim() || '';
+    const noticeBody = process.env.PLATFORM_NOTICE_BODY?.trim() || '';
+    const noticeCtaLabel = process.env.PLATFORM_NOTICE_CTA_LABEL?.trim() || '';
+    const noticeCtaUrl = process.env.PLATFORM_NOTICE_CTA_URL?.trim() || '';
+    const paymentChannels = (process.env.PLATFORM_PAYMENT_CHANNELS ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    const supportLabel =
+      process.env.PLATFORM_SUPPORT_LABEL?.trim() || 'Contact support';
+    const supportUrl =
+      process.env.PLATFORM_SUPPORT_URL?.trim() || `${webBaseUrl}/register`;
+
+    return {
+      legal: {
+        consent_version:
+          process.env.LEGAL_CONSENT_VERSION?.trim() || '2026-04-16',
+        terms_url:
+          process.env.PUBLIC_TERMS_URL?.trim() || `${webBaseUrl}/terms`,
+        privacy_url:
+          process.env.PUBLIC_PRIVACY_URL?.trim() || `${webBaseUrl}/privacy`,
+      },
+      notice: {
+        enabled:
+          noticeEnabled && noticeTitle.length > 0 && noticeBody.length > 0,
+        severity:
+          process.env.PLATFORM_NOTICE_SEVERITY?.trim().toLowerCase() || 'info',
+        audience:
+          process.env.PLATFORM_NOTICE_AUDIENCE?.trim().toLowerCase() || 'all',
+        title: noticeTitle,
+        body: noticeBody,
+        cta_label: noticeCtaLabel || null,
+        cta_url: noticeCtaUrl || null,
+      },
+      support: {
+        label: supportLabel,
+        url: supportUrl,
+      },
+      billing: {
+        title:
+          process.env.PLATFORM_PAYMENT_INSTRUCTIONS_TITLE?.trim() ||
+          'How to pay and activate your shop',
+        body:
+          process.env.PLATFORM_PAYMENT_INSTRUCTIONS_BODY?.trim() ||
+          'After your trial, contact the platform team to receive your invoice and payment instructions. Access is activated once payment is confirmed.',
+        channels: paymentChannels,
+        contact_label: supportLabel,
+        contact_url: supportUrl,
+      },
+    };
+  }
+
+  isApiDocsEnabled() {
+    if (process.env.API_DOCS_ENABLED?.trim().toLowerCase() === 'true') {
+      return true;
+    }
+
+    return !this.isProduction();
+  }
+
+  private isProduction() {
+    return (process.env.NODE_ENV?.trim().toLowerCase() || '') === 'production';
+  }
+
+  private getWebAppBaseUrl() {
+    return (
+      process.env.WEB_APP_BASE_URL?.trim() ||
+      process.env.APP_WEB_BASE_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_BASE_URL?.trim() ||
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+  }
+
+  private readBoolEnv(name: string, fallback: boolean) {
+    const rawValue = process.env[name]?.trim().toLowerCase();
+    if (!rawValue) {
+      return fallback;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(rawValue);
   }
 }

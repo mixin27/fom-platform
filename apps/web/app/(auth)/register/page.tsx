@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 
 import { registerAction } from "@/app/actions"
 import { defaultPathForSession, getSession } from "@/lib/auth/session"
+import { getPublicLaunchConfig } from "@/lib/launch/api"
 import {
   Field,
   FieldDescription,
@@ -31,6 +32,7 @@ export default async function RegisterPage({
   searchParams,
 }: RegisterPageProps) {
   const session = await getSession()
+  const launchConfig = await getPublicLaunchConfig()
 
   if (session) {
     redirect(defaultPathForSession(session))
@@ -48,7 +50,7 @@ export default async function RegisterPage({
   const customMessage = params?.message
 
   return (
-    <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr] transition-all duration-300">
+    <div className="grid w-full max-w-5xl gap-6 transition-all duration-300 lg:grid-cols-[0.95fr_1.05fr]">
       <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)]">
         <CardHeader>
           <CardDescription>Get started</CardDescription>
@@ -56,58 +58,132 @@ export default async function RegisterPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {hasError ? (
-            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              Fill in all fields with a valid email and a password of at least 1 uppercase, 1 lowercase, 1 number and 8 characters long.
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+              Fill in all fields with a valid email and a password of at least 1
+              uppercase, 1 lowercase, 1 number and 8 characters long.
             </div>
           ) : null}
           {validationError ? (
-            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 first-letter:uppercase">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 first-letter:uppercase dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
               {customMessage || "Invalid registration data provided."}
             </div>
           ) : null}
           {emailInUse ? (
-            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              That email is already registered. Sign in instead or use another email.
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+              That email is already registered. Sign in instead or use another
+              email.
             </div>
           ) : null}
           {shopSetupFailed ? (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-              Your account was created, but the initial shop setup did not complete. Try signing in and create the shop again later.
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+              Your account was created, but the initial shop setup did not
+              complete. Try signing in and create the shop again later.
             </div>
           ) : null}
           {trialUnavailable ? (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-              Self-serve registration is available, but the free trial plan is currently disabled. Ask the platform owner to enable the trial plan.
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+              Self-serve registration is available, but the free trial plan is
+              currently disabled. Ask the platform owner to enable the trial
+              plan.
             </div>
           ) : null}
           {registrationFailed ? (
-            <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              Registration could not be completed right now. Check the API connection and try again.
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+              Registration could not be completed right now. Check the API
+              connection and try again.
             </div>
           ) : null}
           <form action={registerAction} className="flex flex-col gap-5">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="fullName">Your name</FieldLabel>
-                <Input id="fullName" name="fullName" placeholder="Daw Aye Aye" required />
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  placeholder="Daw Aye Aye"
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="shopName">Shop name</FieldLabel>
-                <Input id="shopName" name="shopName" placeholder="Aye Fashion House" required />
+                <Input
+                  id="shopName"
+                  name="shopName"
+                  placeholder="Aye Fashion House"
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" name="email" type="email" placeholder="owner@shop.com" required />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="owner@shop.com"
+                  required
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  required
+                />
                 <FieldDescription>
-                  Registration creates your account, provisions the first shop, starts that shop on a free trial, then signs you into the dashboard.
+                  Registration creates your account, provisions the first shop,
+                  starts that shop on a free trial, then signs you into the
+                  dashboard.
                 </FieldDescription>
               </Field>
             </FieldGroup>
-            <Button type="submit" size="lg" className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]">
+            <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
+              <label className="flex items-start gap-3 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  name="acceptedTerms"
+                  value="true"
+                  className="mt-1 size-4 rounded border border-[var(--fom-border-strong)]"
+                  required
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link
+                    href={launchConfig.legal.terms_url}
+                    className="font-medium text-foreground underline underline-offset-4"
+                  >
+                    Terms & Conditions
+                  </Link>
+                  .
+                </span>
+              </label>
+              <label className="mt-3 flex items-start gap-3 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  name="acceptedPrivacy"
+                  value="true"
+                  className="mt-1 size-4 rounded border border-[var(--fom-border-strong)]"
+                  required
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link
+                    href={launchConfig.legal.privacy_url}
+                    className="font-medium text-foreground underline underline-offset-4"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+            </div>
+            <Button
+              type="submit"
+              size="lg"
+              className="bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
+            >
               Create account
               <ArrowRight data-icon="inline-end" />
             </Button>
@@ -136,7 +212,10 @@ export default async function RegisterPage({
             "Free trial starts automatically with the first self-serve shop",
             "RBAC-ready staff expansion once the shop grows",
           ].map((item) => (
-            <div key={item} className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-4 text-sm leading-7 text-muted-foreground">
+            <div
+              key={item}
+              className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] p-4 text-sm leading-7 text-muted-foreground"
+            >
               {item}
             </div>
           ))}

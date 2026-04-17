@@ -4,6 +4,7 @@ import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/config/app_locale_controller.dart';
 import '../../../../app/di/injection_container.dart';
@@ -33,6 +34,8 @@ class _RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<_RegisterView> {
+  static final Uri _termsUri = Uri.parse('https://getfom.com/terms');
+  static final Uri _privacyUri = Uri.parse('https://getfom.com/privacy');
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -40,6 +43,8 @@ class _RegisterViewState extends State<_RegisterView> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  bool _acceptedTerms = false;
+  bool _acceptedPrivacy = false;
 
   @override
   void dispose() {
@@ -170,6 +175,38 @@ class _RegisterViewState extends State<_RegisterView> {
                           ),
                           validator: _validateConfirmPassword,
                         ),
+                        const SizedBox(height: 18),
+                        _ConsentTile(
+                          value: _acceptedTerms,
+                          title: l10n.authTermsConsentTitle,
+                          subtitle: l10n.authConsentRequiredSubtitle,
+                          linkLabel: l10n.authViewTermsLink,
+                          onChanged: (value) {
+                            setState(() {
+                              _acceptedTerms = value ?? false;
+                            });
+                          },
+                          onOpenLink: () => _launchLegalUrl(
+                            _termsUri,
+                            fallbackMessage: l10n.authTermsOpenError,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _ConsentTile(
+                          value: _acceptedPrivacy,
+                          title: l10n.authPrivacyConsentTitle,
+                          subtitle: l10n.authConsentRequiredSubtitle,
+                          linkLabel: l10n.authViewPrivacyLink,
+                          onChanged: (value) {
+                            setState(() {
+                              _acceptedPrivacy = value ?? false;
+                            });
+                          },
+                          onOpenLink: () => _launchLegalUrl(
+                            _privacyUri,
+                            fallbackMessage: l10n.authPrivacyOpenError,
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         AppButton(
                           text: l10n.authCreateAccountCta,
@@ -217,6 +254,16 @@ class _RegisterViewState extends State<_RegisterView> {
       return;
     }
 
+    if (!_acceptedTerms || !_acceptedPrivacy) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.authConsentRequiredError),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final localeCode =
         getIt<AppLocaleController>().locale?.languageCode ??
         Localizations.localeOf(context).languageCode;
@@ -226,6 +273,8 @@ class _RegisterViewState extends State<_RegisterView> {
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        acceptedTerms: _acceptedTerms,
+        acceptedPrivacy: _acceptedPrivacy,
         phone: _phoneController.text.trim().isEmpty
             ? null
             : _phoneController.text.trim(),
@@ -296,5 +345,109 @@ class _RegisterViewState extends State<_RegisterView> {
     }
 
     return null;
+  }
+
+  Future<void> _launchLegalUrl(
+    Uri uri, {
+    required String fallbackMessage,
+  }) async {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (launched || !mounted) {
+        return;
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(fallbackMessage),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+class _ConsentTile extends StatelessWidget {
+  const _ConsentTile({
+    required this.value,
+    required this.title,
+    required this.subtitle,
+    required this.linkLabel,
+    required this.onChanged,
+    required this.onOpenLink,
+  });
+
+  final bool value;
+  final String title;
+  final String subtitle;
+  final String linkLabel;
+  final ValueChanged<bool?> onChanged;
+  final VoidCallback onOpenLink;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Checkbox(
+              value: value,
+              activeColor: AppColors.softOrange,
+              onChanged: onChanged,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textDark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMid,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: AppColors.softOrange,
+                  ),
+                  onPressed: onOpenLink,
+                  child: Text(linkLabel),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
