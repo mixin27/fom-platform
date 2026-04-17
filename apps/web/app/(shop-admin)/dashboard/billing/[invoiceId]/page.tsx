@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card"
 import QRView from "@/components/qr-view"
+import { MmqrAutoActivator } from "@/components/mmqr-auto-activator"
 
 type ShopBillingInvoicePageProps = {
   params: Promise<{
@@ -73,8 +74,14 @@ export default async function ShopBillingInvoicePage({
     )
   }
 
+  const latestTxn = invoice?.latest_transaction
+  const needsAutoMmqr =
+    invoice?.status === "pending" &&
+    (!latestTxn || latestTxn.status === "expired" || latestTxn.status === "failed")
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-1 flex-col gap-8 pb-12">
+      <MmqrAutoActivator invoiceId={invoiceId} active={needsAutoMmqr} />
       <PageIntro
         eyebrow="Billing"
         title={invoice.invoice_no}

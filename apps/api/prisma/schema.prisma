@@ -216,7 +216,8 @@ model Payment {
   providerRef    String?
   dueAt          DateTime?
   paidAt         DateTime?
-  createdAt      DateTime     @default(now())
+  metadata      Json?
+  createdAt     DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   paymentProofSubmissions PaymentProofSubmission[]

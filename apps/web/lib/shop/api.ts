@@ -740,6 +740,22 @@ export async function createSubscriptionInvoice(
   })
 }
 
+export async function createInvoiceMmqrSession(
+  invoiceId: string,
+  retryPath?: string
+) {
+  const { activeShop } = await getShopPortalContext()
+
+  return requestAuthenticatedApiEnvelope({
+    path: `/api/v1/shops/${activeShop.id}/billing/invoices/${invoiceId}/mmqr-session`,
+    init: {
+      method: "POST",
+    },
+    retryPath,
+    requiredAccess: "shop",
+  })
+}
+
 export async function getShopAnnouncements(retryPath = "/dashboard") {
   return shopRequest<{ announcements: PortalAnnouncement[] }>(
     "/announcements",

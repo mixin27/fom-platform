@@ -992,11 +992,11 @@ export class ShopsService {
       throw conflictError('Shop does not have a valid subscription record. Please contact support.');
     }
 
-    // prevent duplicate pending invoices for the EXACT same plan and price
+    // prevent duplicate pending invoices for the EXACT same plan
     const existingPending = shop.subscription.payments.find(
-      (p) => p.amount === plan.price && p.status === 'pending'
+      (p) => p.status === 'pending' && (p.metadata as any)?.planCode === plan.code,
     );
-    
+
     if (existingPending) {
       return this.getBillingInvoice(currentUser, shopId, existingPending.id);
     }
@@ -1010,6 +1010,10 @@ export class ShopsService {
           currency: plan.currency,
           status: 'pending',
           dueAt: shop.subscription!.endAt ?? new Date(),
+          metadata: {
+            planCode: plan.code,
+            billingPeriod: plan.billingPeriod,
+          },
         },
         select: { id: true },
       });
