@@ -1,12 +1,11 @@
 import Link from "next/link"
 
-import { getPublicLaunchConfig } from "@/lib/launch/api"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
+  LegalDocument,
+  LegalDocumentFooter,
+  LegalSection,
+} from "@/components/legal-document"
+import { getPublicLaunchConfig } from "@/lib/launch/api"
 
 const sections = [
   {
@@ -149,52 +148,21 @@ export default async function PrivacyPage() {
   const launchConfig = await getPublicLaunchConfig()
 
   return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-6 px-6 py-16">
-      <div className="space-y-3">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[var(--fom-orange)] uppercase">
-          Legal
-        </p>
-        <h1 className="fom-display text-4xl text-[var(--fom-ink)]">
-          Privacy Policy
-        </h1>
-        <p className="max-w-[720px] text-base leading-8 text-[var(--fom-slate)]">
-          This policy describes how FOM handles account, billing, and shop
-          operation data.
-        </p>
-      </div>
+    <LegalDocument
+      title="Privacy Policy"
+      description="This policy describes how FOM handles account, billing, and shop operation data."
+    >
+      {sections.map((section) => (
+        <LegalSection key={section.title} title={section.title}>
+          {section.body}
+        </LegalSection>
+      ))}
 
-      <div className="grid gap-4">
-        {sections.map((section) => (
-          <Card
-            key={section.title}
-            className="border border-[var(--fom-border-subtle)] bg-[var(--fom-marketing-surface)]"
-          >
-            <CardHeader>
-              <CardTitle className="text-xl">{section.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm leading-7 text-[var(--fom-slate)]">
-              {section.body}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-marketing-surface)]">
-        <CardHeader>
-          <CardTitle>Contact</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm leading-7 text-[var(--fom-slate)]">
-          Questions about privacy, account access, or data handling can be sent
-          to{" "}
-          <Link
-            href={launchConfig.support.url}
-            className="font-semibold text-[var(--fom-orange)] underline underline-offset-4"
-          >
-            {launchConfig.support.label}
-          </Link>
-          .
-        </CardContent>
-      </Card>
-    </div>
+      <LegalDocumentFooter title="Contact">
+        Questions about privacy, account access, or data handling can be sent to{" "}
+        <Link href={launchConfig.support.url}>{launchConfig.support.label}</Link>
+        .
+      </LegalDocumentFooter>
+    </LegalDocument>
   )
 }

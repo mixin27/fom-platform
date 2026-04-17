@@ -1,12 +1,11 @@
 import Link from "next/link"
 
-import { getPublicLaunchConfig } from "@/lib/launch/api"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
+  LegalDocument,
+  LegalDocumentFooter,
+  LegalSection,
+} from "@/components/legal-document"
+import { getPublicLaunchConfig } from "@/lib/launch/api"
 
 const sections = [
   {
@@ -121,29 +120,21 @@ export default async function TermsPage() {
   const launchConfig = await getPublicLaunchConfig()
 
   return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-6 px-6 py-16">
-      <div className="space-y-3">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[var(--fom-orange)] uppercase">
-          Legal
-        </p>
-        <h1 className="fom-display text-4xl text-[var(--fom-ink)]">
-          Terms & Conditions
-        </h1>
-        <p className="max-w-[720px] text-base leading-8 text-[var(--fom-slate)]">
+    <LegalDocument
+      title="Terms & Conditions"
+      description={
+        <>
           These terms govern access to the FOM platform for shop owners and
           staff. Consent version:{" "}
-          <span className="font-semibold">
+          <span className="font-semibold text-[var(--fom-ink)]">
             {launchConfig.legal.consent_version}
           </span>
           .
-        </p>
-      </div>
-
-      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-marketing-surface)]">
-        <CardHeader>
-          <CardTitle>Service summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm leading-7 text-[var(--fom-slate)]">
+        </>
+      }
+    >
+      <LegalSection title="Service summary">
+        <div className="space-y-4">
           <p>
             FOM provides hosted order operations software for Facebook-first
             shops, including order tracking, customer history, reporting, and
@@ -152,48 +143,22 @@ export default async function TermsPage() {
           <p>
             By registering, signing in, or using the service, you agree to these
             terms and to the{" "}
-            <Link
-              href={launchConfig.legal.privacy_url}
-              className="font-semibold text-[var(--fom-orange)] underline underline-offset-4"
-            >
-              Privacy Policy
-            </Link>
-            .
+            <Link href={launchConfig.legal.privacy_url}>Privacy Policy</Link>.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </LegalSection>
 
-      <div className="grid gap-4">
-        {sections.map((section) => (
-          <Card
-            key={section.title}
-            className="border border-[var(--fom-border-subtle)] bg-[var(--fom-marketing-surface)]"
-          >
-            <CardHeader>
-              <CardTitle className="text-xl">{section.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm leading-7 text-[var(--fom-slate)]">
-              {section.body}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {sections.map((section) => (
+        <LegalSection key={section.title} title={section.title}>
+          {section.body}
+        </LegalSection>
+      ))}
 
-      <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-marketing-surface)]">
-        <CardHeader>
-          <CardTitle>Questions</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm leading-7 text-[var(--fom-slate)]">
-          For billing, legal, or account questions, use{" "}
-          <Link
-            href={launchConfig.support.url}
-            className="font-semibold text-[var(--fom-orange)] underline underline-offset-4"
-          >
-            {launchConfig.support.label}
-          </Link>
-          .
-        </CardContent>
-      </Card>
-    </div>
+      <LegalDocumentFooter title="Questions">
+        For billing, legal, or account questions, use{" "}
+        <Link href={launchConfig.support.url}>{launchConfig.support.label}</Link>
+        .
+      </LegalDocumentFooter>
+    </LegalDocument>
   )
 }
