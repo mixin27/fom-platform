@@ -4,6 +4,7 @@ import { Shield } from "lucide-react"
 
 import { AnnouncementBannerStack } from "@/components/announcement-banner-stack"
 import { PortalRealtimeBellButton } from "@/components/portal-realtime-bell-button"
+import { PortalBreadcrumb } from "@/features/portal-shell/components/portal-breadcrumb"
 import { PortalMobileSidebar } from "@/features/portal-shell/components/portal-mobile-sidebar"
 import { PortalSidebarPanel } from "@/features/portal-shell/components/portal-sidebar-panel"
 import { PortalSidebarToggle } from "@/features/portal-shell/components/portal-sidebar-toggle"
@@ -83,9 +84,7 @@ export default async function PlatformLayout({
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-4 md:px-[26px]">
             <div className="flex min-w-0 items-center gap-3">
               <PortalSidebarToggle />
-              <div className="hidden text-[12px] text-muted-foreground md:block">
-                Admin Portal /
-              </div>
+              <PortalBreadcrumb mode="platform" />
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold text-[var(--fom-ink)]">
                   Platform workspace
