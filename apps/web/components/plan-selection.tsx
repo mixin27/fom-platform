@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { Check, Loader2 } from "lucide-react"
 
-import { initiateSubscriptionAction } from "../app/(shop-admin)/dashboard/billing/actions"
 import { type ShopBilling } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -14,43 +12,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 
 interface PlanSelectionProps {
   plans: ShopBilling["plans"]
   currentPlanCode: string | null
+  loadingCode?: string | null
+  onSelectPlan?: (planCode: string) => Promise<unknown> | void
 }
 
-export function PlanSelection({ plans, currentPlanCode }: PlanSelectionProps) {
-  const router = useRouter()
-  const [loadingCode, setLoadingCode] = useState<string | null>(null)
-
-  const handleSelectPlan = async (planCode: string) => {
-    setLoadingCode(planCode)
-    try {
-      const response = await initiateSubscriptionAction(planCode)
-      if (response.data) {
-        toast.success("Invoice created", {
-          description:
-            "Please complete your payment via MMQR to activate or renew your plan.",
-        })
-        router.push(`/dashboard/billing/${response.data.id}`)
-      } else if (response.meta?.error) {
-        const errorMsg = (response.meta.error as any).message || "Failed to initiate subscription. Please try again."
-        toast.error("Subscription Error", {
-          description: errorMsg,
-        })
-      }
-    } catch (error) {
-      toast.error("Network Error", {
-        description: "Failed to connect to the server. Please check your connection.",
-      })
-    } finally {
-      setLoadingCode(null)
-    }
-  }
-
+export function PlanSelection({
+  plans,
+  currentPlanCode,
+  loadingCode = null,
+  onSelectPlan,
+}: PlanSelectionProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {plans.map((plan) => {
@@ -98,8 +73,12 @@ export function PlanSelection({ plans, currentPlanCode }: PlanSelectionProps) {
               <Button
                 className="w-full"
                 variant={isCurrent ? "outline" : "default"}
-                disabled={loadingCode !== null}
-                onClick={() => !isCurrent && handleSelectPlan(plan.code)}
+                disabled={loadingCode !== null || isCurrent || !onSelectPlan}
+                onClick={() => {
+                  if (!isCurrent && onSelectPlan) {
+                    void onSelectPlan(plan.code)
+                  }
+                }}
               >
                 {loadingCode === plan.code ? (
                   <>

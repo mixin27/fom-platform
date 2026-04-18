@@ -1,37 +1,80 @@
 "use client"
 
 import { useState } from "react"
-import { type ShopBilling } from "@/lib/shop/api"
+import Link from "next/link"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Receipt } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+
 import { PageIntro } from "@/components/page-intro"
+import { PlanSelection } from "@/components/plan-selection"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
-import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/platform/format"
-import { formatCodeLabel } from "@/lib/shop/format"
-import { Button } from "@workspace/ui/components/button"
-import { Receipt } from "lucide-react"
-import Link from "next/link"
 import { SubscriptionStatusCard } from "@/components/subscription-status-card"
-import { PlanSelection } from "@/components/plan-selection"
+import {
+  createShopSubscriptionInvoice,
+  fetchShopBillingWorkspace,
+  getShopBillingWorkspaceQueryKey,
+  type ShopBillingWorkspaceData,
+} from "@/features/shop/billing/client"
+import { ClientApiError } from "@/features/shared/client/api-client"
+import { formatCodeLabel } from "@/lib/shop/format"
+import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/platform/format"
+import { Button } from "@workspace/ui/components/button"
 
-interface BillingViewProps {
-  billing: ShopBilling
-  plans: ShopBilling["plans"]
-  canManageShop: boolean
+type ShopBillingScreenProps = {
+  initialData: ShopBillingWorkspaceData
 }
 
-function canShowPayAction(billing: ShopBilling, invoiceStatus: string) {
+function canShowPayAction(
+  billing: ShopBillingWorkspaceData["billing"],
+  invoiceStatus: string
+) {
   return billing.payment_provider.is_enabled && invoiceStatus !== "paid"
 }
 
-export function BillingView({ billing, plans, canManageShop }: BillingViewProps) {
+export function ShopBillingScreen({ initialData }: ShopBillingScreenProps) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [showPlans, setShowPlans] = useState(false)
+  const { data } = useQuery({
+    queryKey: getShopBillingWorkspaceQueryKey(),
+    queryFn: fetchShopBillingWorkspace,
+    initialData,
+  })
+
+  const createInvoiceMutation = useMutation({
+    mutationFn: createShopSubscriptionInvoice,
+    onSuccess: (invoice) => {
+      toast.success("Invoice created", {
+        description: "Complete the payment to activate or renew the plan.",
+      })
+      void queryClient.invalidateQueries({
+        queryKey: getShopBillingWorkspaceQueryKey(),
+      })
+      router.push(`/dashboard/billing/${invoice.id}`)
+      router.refresh()
+    },
+    onError: (error) => {
+      toast.error("Unable to start this subscription", {
+        description:
+          error instanceof ClientApiError
+            ? error.message
+            : "Please try again in a moment.",
+      })
+    },
+  })
+
+  const billing = data.billing
+  const plans = data.plans
 
   return (
     <div className="flex flex-col gap-8">
       <PageIntro
         eyebrow="Billing"
         title="Billing & Subscription"
-        description="Manage your shop subscription, renewal periods, and review your payment history."
+        description="Manage your plan, renewal periods, and invoice history from one dedicated billing workspace."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/settings">Settings</Link>
@@ -39,21 +82,30 @@ export function BillingView({ billing, plans, canManageShop }: BillingViewProps)
         }
       />
 
-      <SubscriptionStatusCard 
-        overview={billing.overview} 
+      <SubscriptionStatusCard
+        overview={billing.overview}
         isShowingPlans={showPlans}
-        onManageClick={() => setShowPlans(!showPlans)}
+        onManageClick={() => setShowPlans((current) => !current)}
       />
 
-      {showPlans && (
-        <div className="flex animate-in fade-in slide-in-from-top-4 duration-500 flex-col gap-4">
+      {showPlans ? (
+        <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-bold text-[var(--fom-ink)]">Available Plans</h2>
-            <p className="text-sm text-muted-foreground">Choose the plan that best fits your shop operations.</p>
+            <h2 className="text-lg font-semibold text-[var(--fom-ink)]">
+              Available plans
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Choose the billing tier that fits your current shop operations.
+            </p>
           </div>
-          <PlanSelection plans={plans} currentPlanCode={billing.overview.plan_code} />
+          <PlanSelection
+            plans={plans}
+            currentPlanCode={billing.overview.plan_code}
+            loadingCode={createInvoiceMutation.variables ?? null}
+            onSelectPlan={(planCode) => createInvoiceMutation.mutateAsync(planCode)}
+          />
         </div>
-      )}
+      ) : null}
 
       <PlatformDataTable
         title="Invoices"
@@ -95,9 +147,7 @@ export function BillingView({ billing, plans, canManageShop }: BillingViewProps)
                   )}`}
                 />
               ) : canShowPayAction(billing, invoice.status) ? (
-                <span className="text-xs text-muted-foreground">
-                  Not started
-                </span>
+                <span className="text-xs text-muted-foreground">Not started</span>
               ) : (
                 <span className="text-xs text-muted-foreground">
                   Awaiting action

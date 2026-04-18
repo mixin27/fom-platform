@@ -19,7 +19,6 @@ import {
 import { formatCodeLabel } from "@/lib/shop/format"
 import {
   formatCurrency,
-  formatDate,
   formatPercent,
   formatRelativeDate,
 } from "@/lib/platform/format"
@@ -131,14 +130,12 @@ export default async function ShopDashboardPage({
   }
 
   const deliveryRate = summary.delivered_rate / 100
-  const topProduct = summary.top_products[0]
-
   return (
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Dashboard"
-        title={`Run ${activeShop.name} from one operational workspace`}
-        description="Revenue, order flow, customer momentum, and dispatch progress stay visible without jumping between sections."
+        title={`${activeShop.name} overview`}
+        description="Track orders, revenue, customers, and dispatch from one operational workspace."
         actions={
           <Button
             asChild
@@ -152,27 +149,6 @@ export default async function ShopDashboardPage({
           </Button>
         }
       />
-
-      <div className="flex flex-wrap gap-2">
-        <PlatformStatusBadge
-          status="active"
-          label={formatDate(summary.summary_date)}
-        />
-        <PlatformStatusBadge
-          status="confirmed"
-          label={`${summary.total_orders} orders in focus`}
-        />
-        <PlatformStatusBadge
-          status="out_for_delivery"
-          label={`${deliveries.length} active deliveries`}
-        />
-        {topProduct ? (
-          <PlatformStatusBadge
-            status="active"
-            label={`Top product: ${topProduct.product_name}`}
-          />
-        ) : null}
-      </div>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardStatCard

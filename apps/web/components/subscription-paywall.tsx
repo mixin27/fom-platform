@@ -1,9 +1,12 @@
 "use client"
 
-import { useState } from "react"
 import { Check, Lock, ShieldCheck, Zap } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
-import { initiateSubscriptionAction } from "../app/(shop-admin)/dashboard/billing/actions"
+import { ClientApiError } from "@/features/shared/client/api-client"
+import { createShopSubscriptionInvoice } from "@/features/shop/billing/client"
 import { type ShopBilling } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -14,8 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 
 interface SubscriptionPaywallProps {
   status: string | null
@@ -27,30 +28,27 @@ export function SubscriptionPaywall({
   plans,
 }: SubscriptionPaywallProps) {
   const router = useRouter()
-  const [loadingCode, setLoadingCode] = useState<string | null>(null)
+  const createInvoiceMutation = useMutation({
+    mutationFn: createShopSubscriptionInvoice,
+    onSuccess: (invoice) => {
+      toast.success("Invoice created", {
+        description: "Please complete your payment via MMQR to reactivate your shop.",
+      })
+      router.push(`/dashboard/billing/${invoice.id}`)
+      router.refresh()
+    },
+    onError: (error) => {
+      toast.error("Unable to initiate subscription", {
+        description:
+          error instanceof ClientApiError
+            ? error.message
+            : "Please try again in a moment.",
+      })
+    },
+  })
 
   if (status !== "expired" && status !== "inactive") {
     return null
-  }
-
-  const handleSelectPlan = async (planCode: string) => {
-    setLoadingCode(planCode)
-    try {
-      const response = await initiateSubscriptionAction(planCode)
-      if (response.data) {
-        toast.success("Invoice created", {
-          description:
-            "Please complete your payment via MMQR to reactivate your shop.",
-        })
-        router.push(`/dashboard/billing/${response.data.id}`)
-      }
-    } catch (error) {
-      toast.error("Error", {
-        description: "Failed to initiate subscription. Please try again.",
-      })
-    } finally {
-      setLoadingCode(null)
-    }
   }
 
   return (
@@ -112,10 +110,12 @@ export function SubscriptionPaywall({
               <CardFooter>
                 <Button
                   className="w-full bg-[var(--fom-orange)] text-white hover:bg-[var(--fom-orange-dark)]"
-                  disabled={loadingCode !== null}
-                  onClick={() => handleSelectPlan(plan.code)}
+                  disabled={createInvoiceMutation.isPending}
+                  onClick={() => createInvoiceMutation.mutate(plan.code)}
                 >
-                  {loadingCode === plan.code ? "Initiating..." : "Select Plan"}
+                  {createInvoiceMutation.variables === plan.code
+                    ? "Initiating..."
+                    : "Select Plan"}
                 </Button>
               </CardFooter>
             </Card>

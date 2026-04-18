@@ -27,55 +27,95 @@ export type NavItem = {
   exact?: boolean
 }
 
-export const shopPortalNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
-  { href: "/dashboard/workspace", label: "Workspace", icon: "workspace" },
-  { href: "/dashboard/orders", label: "Orders", icon: "orders" },
-  { href: "/dashboard/inbox", label: "Inbox", icon: "inbox" },
-  { href: "/dashboard/customers", label: "Customers", icon: "customers" },
-  { href: "/dashboard/staffs", label: "Staffs", icon: "staffs" },
+export type NavSection = {
+  label: string
+  items: NavItem[]
+}
+
+export const shopPortalNav: NavSection[] = [
   {
-    href: "/dashboard/billing",
-    label: "Billing",
-    icon: "billing",
+    label: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
+    ],
   },
   {
-    href: "/dashboard/deliveries",
-    label: "Deliveries",
-    icon: "deliveries",
+    label: "Operations",
+    items: [
+      { href: "/dashboard/orders", label: "Orders", icon: "orders" },
+      { href: "/dashboard/inbox", label: "Inbox", icon: "inbox" },
+      { href: "/dashboard/customers", label: "Customers", icon: "customers" },
+      {
+        href: "/dashboard/deliveries",
+        label: "Deliveries",
+        icon: "deliveries",
+      },
+    ],
   },
   {
-    href: "/dashboard/templates",
-    label: "Templates",
-    icon: "templates",
+    label: "Management",
+    items: [
+      { href: "/dashboard/staffs", label: "Staffs", icon: "staffs" },
+      {
+        href: "/dashboard/billing",
+        label: "Billing",
+        icon: "billing",
+      },
+      {
+        href: "/dashboard/templates",
+        label: "Templates",
+        icon: "templates",
+      },
+      { href: "/dashboard/reports", label: "Reports", icon: "reports" },
+    ],
   },
-  { href: "/dashboard/reports", label: "Reports", icon: "reports" },
-  { href: "/dashboard/exports", label: "Exports", icon: "exports" },
-  { href: "/dashboard/settings", label: "Settings", icon: "settings" },
+  {
+    label: "System",
+    items: [
+      { href: "/dashboard/settings", label: "Settings", icon: "settings" },
+    ],
+  },
 ]
 
-export const platformPortalNav: NavItem[] = [
-  { href: "/platform", label: "Dashboard", icon: "dashboard", exact: true },
-  { href: "/platform/shops", label: "Shops", icon: "shops" },
-  { href: "/platform/users", label: "Users", icon: "users" },
-  { href: "/platform/plans", label: "Plans", icon: "plans" },
+export const platformPortalNav: NavSection[] = [
   {
-    href: "/platform/subscriptions",
-    label: "Subscriptions",
-    icon: "subscriptions",
-  },
-  { href: "/platform/payments", label: "Payments", icon: "payments" },
-  {
-    href: "/platform/announcements",
-    label: "Announcements",
-    icon: "announcements",
+    label: "Overview",
+    items: [{ href: "/platform", label: "Dashboard", icon: "dashboard", exact: true }],
   },
   {
-    href: "/platform/contact-form",
-    label: "Contact Form",
-    icon: "contact",
+    label: "Operations",
+    items: [
+      { href: "/platform/shops", label: "Shops", icon: "shops" },
+      { href: "/platform/users", label: "Users", icon: "users" },
+      {
+        href: "/platform/contact-form",
+        label: "Contact Form",
+        icon: "contact",
+      },
+      { href: "/platform/support", label: "Support", icon: "support" },
+    ],
   },
-  { href: "/platform/exports", label: "Exports", icon: "exports" },
-  { href: "/platform/support", label: "Support", icon: "support" },
-  { href: "/platform/settings", label: "Settings", icon: "settings" },
+  {
+    label: "Billing",
+    items: [
+      { href: "/platform/plans", label: "Plans", icon: "plans" },
+      {
+        href: "/platform/subscriptions",
+        label: "Subscriptions",
+        icon: "subscriptions",
+      },
+      { href: "/platform/payments", label: "Payments", icon: "payments" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      {
+        href: "/platform/announcements",
+        label: "Announcements",
+        icon: "announcements",
+      },
+      { href: "/platform/settings", label: "Settings", icon: "settings" },
+    ],
+  },
 ]

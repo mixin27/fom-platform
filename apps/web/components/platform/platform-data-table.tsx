@@ -56,22 +56,24 @@ export function PlatformDataTable<T>({
   pagination,
 }: PlatformDataTableProps<T>) {
   return (
-    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
-      <CardHeader className="flex flex-col gap-3 pb-3 md:flex-row md:items-start md:justify-between">
+    <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <CardHeader className="flex flex-col gap-3 border-b border-[var(--fom-border-subtle)] pb-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <CardDescription>{description}</CardDescription>
-          <CardTitle>{title}</CardTitle>
+          <CardDescription className="text-[10px] font-semibold tracking-[0.12em] uppercase">
+            {description}
+          </CardDescription>
+          <CardTitle className="mt-1 text-[1rem]">{title}</CardTitle>
         </div>
         {toolbar}
       </CardHeader>
       <CardContent className="overflow-hidden p-0">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/5 hover:bg-muted/5">
+            <TableRow className="bg-[var(--fom-surface-variant)] hover:bg-[var(--fom-surface-variant)]">
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
-                  className={column.className ?? "px-4 py-2.5"}
+                  className={column.className ?? "px-4 py-2.5 text-[10px] font-semibold tracking-[0.08em] uppercase text-muted-foreground"}
                 >
                   {column.header}
                 </TableHead>
@@ -85,7 +87,7 @@ export function PlatformDataTable<T>({
                   {columns.map((column) => (
                     <TableCell
                       key={column.key}
-                      className={column.cellClassName ?? "px-4 py-3"}
+                      className={column.cellClassName ?? "px-4 py-3 text-[13px]"}
                     >
                       {column.render(row)}
                     </TableCell>

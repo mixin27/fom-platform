@@ -3,7 +3,7 @@
   --fom-orange-dark: #e0521c;
   --fom-teal: #1e9e96;
   --fom-ink: #1c1c1e;
-  --fom-slate: #555558;
+  --fom-slate: #65625c;
   --fom-marketing-bg: #fafaf8;
   --fom-marketing-fg: var(--fom-ink);
   --fom-marketing-border: #e8e8e4;
@@ -11,15 +11,15 @@
   --fom-marketing-muted: var(--fom-slate);
   --fom-marketing-featured-bg: #1c1c1e;
   --fom-marketing-featured-fg: #ffffff;
-  --fom-admin-bg: #f8f8f8;
+  --fom-admin-bg: #f4f3ef;
   --fom-admin-surface: #ffffff;
-  --fom-admin-sidebar: #1c1c1e;
-  --fom-portal-bg: #f7f4ef;
+  --fom-admin-sidebar: #ffffff;
+  --fom-portal-bg: #f4f3ef;
   --fom-portal-surface: #ffffff;
   --fom-portal-sidebar: #ffffff;
-  --fom-surface-variant: #fcfbf9;
-  --fom-border-subtle: rgba(0, 0, 0, 0.06);
-  --fom-border-strong: rgba(0, 0, 0, 0.12);
+  --fom-surface-variant: #faf9f7;
+  --fom-border-subtle: #e3e0d8;
+  --fom-border-strong: #ccc9c0;
   --font-sans:
     var(--font-web-sans), var(--font-web-myanmar), "Inter", "Segoe UI",
     system-ui, -apple-system, BlinkMacSystemFont,
@@ -90,16 +90,12 @@ body {
 
 .fom-admin-shell {
   background: var(--fom-admin-surface);
-  box-shadow:
-    0 32px 80px rgba(14, 15, 26, 0.22),
-    0 0 0 1px rgba(14, 15, 26, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
 
 .fom-portal-shell {
   background: var(--fom-portal-surface);
-  box-shadow:
-    0 32px 80px rgba(26, 20, 16, 0.22),
-    0 0 0 1px rgba(26, 20, 16, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
 
 .fom-marketing-hero {
