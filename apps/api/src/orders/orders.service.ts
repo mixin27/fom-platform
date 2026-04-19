@@ -131,6 +131,7 @@ export class OrdersService {
     );
 
     const createdOrder = await this.prisma.$transaction(async (tx) => {
+      await this.acquireShopOrderNumberLock(tx, shopId);
       const customer = await this.resolveCustomer(tx, shopId, body);
       const items = this.extractItems(body);
       const deliveryFee = body.delivery_fee ?? 0;
@@ -305,6 +306,7 @@ export class OrdersService {
     let importedOrderIds: string[];
     try {
       importedOrderIds = await this.prisma.$transaction(async (tx) => {
+        await this.acquireShopOrderNumberLock(tx, shopId);
         await tx.orderImportBatch.create({
           data: {
             shopId,
@@ -1104,6 +1106,16 @@ export class OrdersService {
       select: { lineTotal: true },
     });
     return items.reduce((sum, item) => sum + item.lineTotal, 0);
+  }
+
+  /**
+   * Serializes order number allocation per shop within the current transaction.
+   * Without this, concurrent creates can read the same max sequence and collide on `orderNo`.
+   */
+  private async acquireShopOrderNumberLock(db: DbClient, shopId: string) {
+    await db.$executeRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${shopId}::text)::bigint)`,
+    );
   }
 
   private async nextOrderNumber(db: DbClient, shopId: string): Promise<string> {
