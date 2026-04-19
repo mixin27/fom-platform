@@ -22,6 +22,12 @@ function revalidateShopWorkspace() {
   revalidatePath("/dashboard/settings")
 }
 
+/** Inbox actions only need inbox + current thread — not the whole dashboard tree. */
+function revalidateMessengerInboxPaths(returnTo: string) {
+  revalidatePath("/dashboard/inbox")
+  revalidatePath(returnTo)
+}
+
 function normalizeTextField(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : ""
 }
@@ -892,8 +898,8 @@ export async function disconnectShopMessengerConnectionFromFormAction(
       },
     })
 
-    revalidateShopWorkspace()
-    revalidatePath(returnTo)
+    revalidateMessengerInboxPaths(returnTo)
+    revalidatePath("/dashboard/orders/paste-from-messenger")
     redirectToPath(returnTo, {
       notice: "Messenger page disconnected.",
     })
@@ -939,8 +945,9 @@ export async function completeShopMessengerOauthSelectionFromFormAction(
     })
 
     cookieStore.delete(SHOP_MESSENGER_OAUTH_SELECTION_COOKIE)
-    revalidateShopWorkspace()
+    revalidatePath("/dashboard/inbox")
     revalidatePath("/dashboard/inbox/connect-meta/select")
+    revalidatePath("/dashboard/orders/paste-from-messenger")
     redirectToPath("/dashboard/inbox", {
       notice: "Messenger page connected.",
     })
@@ -978,8 +985,7 @@ export async function markShopMessengerThreadReadFromFormAction(
       },
     })
 
-    revalidateShopWorkspace()
-    revalidatePath(returnTo)
+    revalidateMessengerInboxPaths(returnTo)
     redirectToPath(returnTo, {
       notice: "Thread marked as read.",
     })
@@ -1015,8 +1021,7 @@ export async function sendShopMessengerReplyFromFormAction(formData: FormData) {
       },
     })
 
-    revalidateShopWorkspace()
-    revalidatePath(returnTo)
+    revalidateMessengerInboxPaths(returnTo)
     redirectToPath(returnTo, {
       notice: "Reply sent to Messenger.",
     })
@@ -1064,8 +1069,7 @@ export async function createShopMessengerAutoReplyRuleFromFormAction(
       },
     })
 
-    revalidateShopWorkspace()
-    revalidatePath("/dashboard/inbox")
+    revalidateMessengerInboxPaths(returnTo)
     redirectToPath(returnTo, {
       notice: "Auto reply rule created.",
     })
@@ -1114,8 +1118,7 @@ export async function updateShopMessengerAutoReplyRuleFromFormAction(
       },
     })
 
-    revalidateShopWorkspace()
-    revalidatePath(returnTo)
+    revalidateMessengerInboxPaths(returnTo)
     redirectToPath(returnTo, {
       notice: "Auto reply rule updated.",
     })
@@ -1152,8 +1155,7 @@ export async function deleteShopMessengerAutoReplyRuleFromFormAction(
       },
     })
 
-    revalidateShopWorkspace()
-    revalidatePath("/dashboard/inbox")
+    revalidateMessengerInboxPaths(returnTo)
     redirectToPath(returnTo, {
       notice: "Auto reply rule deleted.",
     })

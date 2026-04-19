@@ -165,6 +165,8 @@ export async function requestAuthenticatedActionApiEnvelope<T>({
   requiredAccess = "any",
   preferFreshSession = false,
 }: Omit<AuthenticatedRequestOptions, "retryPath">): Promise<ApiSuccess<T>> {
+  void preferFreshSession
+
   const session = await getSession()
 
   if (!session) {
@@ -172,14 +174,6 @@ export async function requestAuthenticatedActionApiEnvelope<T>({
   }
 
   let activeSession = session
-
-  if (preferFreshSession) {
-    const refreshedSession = await refreshSessionForRequest(activeSession)
-
-    if (refreshedSession) {
-      activeSession = refreshedSession
-    }
-  }
 
   assertSessionAccessForAction(activeSession, requiredAccess)
 

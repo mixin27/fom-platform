@@ -6,7 +6,7 @@ import {
   randomBytes,
   timingSafeEqual,
 } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   conflictError,
   forbiddenError,
@@ -93,6 +93,8 @@ const MESSENGER_PROFILE_FIELDS = [
 
 @Injectable()
 export class MessengerService {
+  private readonly logger = new Logger(MessengerService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
@@ -147,8 +149,28 @@ export class MessengerService {
       };
     }
 
-    const entries = Array.isArray(input.body.entry) ? input.body.entry : [];
-    let processedEvents = 0;
+    // Acknowledge immediately so Meta does not wait on DB + Graph round-trips.
+    // Processing continues on the event loop (auto-reply, profile fetch, etc.).
+    setImmediate(() => {
+      void this.processWebhookMessagingEntries(input.body).catch((error) => {
+        this.logger.error(
+          `Messenger webhook async processing failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      });
+    });
+
+    return {
+      received: true,
+      processed_events: 0,
+      queued: true,
+    };
+  }
+
+  private async processWebhookMessagingEntries(body: Record<string, unknown>) {
+    const entries = Array.isArray(body.entry) ? body.entry : [];
 
     for (const entry of entries) {
       const messagingEvents =
@@ -160,14 +182,8 @@ export class MessengerService {
 
       for (const event of messagingEvents) {
         await this.processMessagingEvent(event);
-        processedEvents += 1;
       }
     }
-
-    return {
-      received: true,
-      processed_events: processedEvents,
-    };
   }
 
   async getOverview(shopId: string) {
@@ -677,6 +693,8 @@ export class MessengerService {
       );
     }
 
+    await this.subscribePageToAppWebhooks(pageId, pageAccessToken);
+
     const encryptedToken = this.encryptAccessToken(pageAccessToken);
     const connection = existingConnection
       ? await this.prisma.messengerConnection.update({
@@ -700,6 +718,67 @@ export class MessengerService {
 
     await this.backfillMissingThreadProfiles(connection);
     return this.serializeConnection(connection);
+  }
+
+  /**
+   * Subscribe this Facebook Page to our Meta app so webhook events (messages,
+   * postbacks, etc.) are delivered to {@link handleWebhookEvent}.
+   * Without this, Graph shows the Page as "connected" in our DB but Meta sends no events.
+   */
+  private async subscribePageToAppWebhooks(
+    pageId: string,
+    pageAccessToken: string,
+  ) {
+    const messengerConfig = this.config.getMetaMessengerConfig();
+    const normalizedPath = `${pageId}/subscribed_apps`.replace(/^\/+/, '');
+    const url = new URL(
+      `${messengerConfig.graphApiBaseUrl}/${messengerConfig.graphApiVersion}/${normalizedPath}`,
+    );
+    url.searchParams.set('access_token', pageAccessToken);
+    const appSecretProof = this.buildAppSecretProof(pageAccessToken);
+    if (appSecretProof) {
+      url.searchParams.set('appsecret_proof', appSecretProof);
+    }
+
+    const body = new URLSearchParams();
+    body.set(
+      'subscribed_fields',
+      [
+        'messages',
+        'messaging_postbacks',
+        'messaging_optins',
+        'messaging_deliveries',
+        'messaging_reads',
+      ].join(','),
+    );
+
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      });
+    } catch (error) {
+      throw serviceUnavailableError(
+        'Unable to reach Meta to subscribe this Page to Messenger webhooks.',
+        this.buildFetchErrorContext(error),
+      );
+    }
+
+    const payload = await this.readGraphJson<Record<string, unknown>>(response);
+
+    if (!response.ok) {
+      throw conflictError(
+        'Meta did not subscribe webhook fields for this Page. Ensure the Page access token includes messaging permissions and the app is allowed on this Page.',
+        {
+          status: response.status,
+          body: payload,
+        },
+      );
+    }
   }
 
   private async processMessagingEvent(event: MetaMessagingEvent) {
@@ -813,12 +892,14 @@ export class MessengerService {
       });
     });
 
-    if (created) {
-      await this.enrichThreadProfile(connection, thread.id, customerPsid);
-    }
-
+    // Auto-reply before profile enrichment so the customer sees a response
+    // without waiting on an extra Graph API call for PSID profile data.
     if (textBody) {
       await this.runAutoReplyRules(connection, thread.id, customerPsid, textBody);
+    }
+
+    if (created) {
+      await this.enrichThreadProfile(connection, thread.id, customerPsid);
     }
   }
 
