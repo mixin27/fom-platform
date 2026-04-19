@@ -16,6 +16,7 @@ import "../bloc/order_details_state.dart";
 import "../bloc/order_document_export_bloc.dart";
 import "../bloc/order_document_export_event.dart";
 import "../bloc/order_document_export_state.dart";
+import "../widgets/order_cancellation_confirm_sheet.dart";
 import "../widgets/order_details_widgets.dart";
 import "../widgets/order_document_export_bottom_sheet.dart";
 import "../widgets/update_status_bottom_sheet.dart";
@@ -381,8 +382,7 @@ class _OrderDetailsView extends StatelessWidget {
       return;
     }
 
-    if (selection.status == OrderStatus.cancelled &&
-        !await _confirmCancellation(context)) {
+    if (!await confirmOrderCancellationIfNeeded(context, selection.status)) {
       return;
     }
 
@@ -412,8 +412,7 @@ class _OrderDetailsView extends StatelessWidget {
       return;
     }
 
-    if (requestedStatus == OrderStatus.cancelled &&
-        !await _confirmCancellation(context)) {
+    if (!await confirmOrderCancellationIfNeeded(context, requestedStatus)) {
       return;
     }
 
@@ -433,78 +432,6 @@ class _OrderDetailsView extends StatelessWidget {
         behavior: SnackBarBehavior.floating,
       ),
     );
-  }
-
-  Future<bool> _confirmCancellation(BuildContext context) async {
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Color(0xFFFEE2E2),
-                      child: Icon(
-                        Icons.cancel_outlined,
-                        size: 18,
-                        color: Color(0xFFB91C1C),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "Cancel this order?",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "This order will move to Cancelled and cannot continue in the delivery flow.",
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMid,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                AppButton(
-                  text: "Keep Order",
-                  variant: AppButtonVariant.secondary,
-                  onPressed: () => Navigator.of(sheetContext).pop(false),
-                ),
-                const SizedBox(height: 10),
-                AppButton(
-                  text: "Cancel Order",
-                  onPressed: () => Navigator.of(sheetContext).pop(true),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    return confirmed == true;
   }
 
   Future<void> _launchPhoneCall(

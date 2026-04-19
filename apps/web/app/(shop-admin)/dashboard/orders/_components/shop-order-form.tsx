@@ -2,16 +2,24 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { PlusIcon, SaveIcon, Trash2Icon } from "lucide-react"
+import { PlusIcon, Trash2Icon } from "lucide-react"
 
 import type { ShopOrder } from "@/lib/shop/api"
 import {
   createShopOrderAction,
   updateShopOrderAction,
-  addShopOrderItemAction,
-  updateShopOrderItemAction,
-  removeShopOrderItemAction,
+  updateShopOrderStatusAction,
 } from "../../actions"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@workspace/ui/components/alert-dialog"
 import { Button } from "@workspace/ui/components/button"
 import {
   Field,
@@ -21,7 +29,6 @@ import {
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { Textarea } from "@workspace/ui/components/textarea"
-import { cn } from "@workspace/ui/lib/utils"
 
 type EditableItem = {
   id?: string
@@ -30,18 +37,72 @@ type EditableItem = {
   unit_price: string
 }
 
+type ShopOrderFormStatus =
+  | "new"
+  | "confirmed"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled"
+
 type FormValues = {
   customer_name: string
   customer_phone: string
   customer_township: string
   customer_address: string
-  status: "new" | "confirmed"
+  status: ShopOrderFormStatus
   source: "manual" | "messenger"
   currency: string
   delivery_fee: string
   note: string
   items: EditableItem[]
   newItem: EditableItem
+}
+
+function normalizeStatusFromApi(status: string | undefined): ShopOrderFormStatus {
+  switch (status) {
+    case "confirmed":
+    case "out_for_delivery":
+    case "delivered":
+    case "cancelled":
+      return status
+    default:
+      return "new"
+  }
+}
+
+function allowedEditStatuses(
+  current: ShopOrderFormStatus,
+): ShopOrderFormStatus[] {
+  if (current === "delivered" || current === "cancelled") {
+    return [current]
+  }
+  switch (current) {
+    case "new":
+      return ["new", "confirmed", "cancelled"]
+    case "confirmed":
+      return ["confirmed", "out_for_delivery", "cancelled"]
+    case "out_for_delivery":
+      return ["out_for_delivery", "delivered", "cancelled"]
+    default:
+      return [normalizeStatusFromApi(current)]
+  }
+}
+
+function statusOptionLabel(status: ShopOrderFormStatus) {
+  switch (status) {
+    case "new":
+      return "New"
+    case "confirmed":
+      return "Confirmed"
+    case "out_for_delivery":
+      return "Out for delivery"
+    case "delivered":
+      return "Delivered"
+    case "cancelled":
+      return "Cancelled"
+    default:
+      return status
+  }
 }
 
 function emptyItem(): EditableItem {
@@ -58,7 +119,7 @@ function getInitialValues(order?: ShopOrder | null): FormValues {
     customer_phone: order?.customer.phone ?? "",
     customer_township: order?.customer.township ?? "",
     customer_address: order?.customer.address ?? "",
-    status: order?.status === "confirmed" ? "confirmed" : "new",
+    status: normalizeStatusFromApi(order?.status),
     source: order?.source === "messenger" ? "messenger" : "manual",
     currency: order?.currency ?? "MMK",
     delivery_fee: String(order?.delivery_fee ?? 0),
@@ -97,8 +158,15 @@ export function ShopOrderForm({
   const [values, setValues] = useState<FormValues>(getInitialValues(order))
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
   const isEdit = mode === "edit"
+  const initialEditStatus = order
+    ? normalizeStatusFromApi(order.status)
+    : ("new" satisfies ShopOrderFormStatus)
+  const statusSelectOptions = isEdit
+    ? allowedEditStatuses(initialEditStatus)
+    : (["new", "confirmed"] as const)
 
   function updateValue<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((current) => ({
@@ -140,6 +208,20 @@ export function ShopOrderForm({
     setFormError(null)
     setFieldErrors({})
 
+    if (
+      isEdit &&
+      order &&
+      values.status === "cancelled" &&
+      order.status !== "cancelled"
+    ) {
+      setCancelDialogOpen(true)
+      return
+    }
+
+    submitOrder()
+  }
+
+  function submitOrder() {
     startTransition(async () => {
       const deliveryFee = parseInteger(values.delivery_fee)
       if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
@@ -148,9 +230,22 @@ export function ShopOrderForm({
       }
 
       if (isEdit && order) {
-        // In edit mode, we only update metadata here. Items are handled separately in the original sheet logic,
-        // but for a dedicated edit page, we might want to sync all.
-        // For now, let's stick to the existing action structure which updates metadata.
+        if (values.status !== normalizeStatusFromApi(order.status)) {
+          const statusResult = await updateShopOrderStatusAction(
+            shopId,
+            order.id,
+            {
+              status: values.status,
+            },
+          )
+
+          if (!statusResult.ok) {
+            setFormError(statusResult.message)
+            setFieldErrors(statusResult.fieldErrors ?? {})
+            return
+          }
+        }
+
         const result = await updateShopOrderAction(shopId, order.id, {
           delivery_fee: deliveryFee,
           currency: values.currency.trim() || "MMK",
@@ -177,6 +272,9 @@ export function ShopOrderForm({
           return
         }
 
+        const createStatus =
+          values.status === "confirmed" ? "confirmed" : "new"
+
         const result = await createShopOrderAction(shopId, {
           customer: {
             name: values.customer_name.trim(),
@@ -185,7 +283,7 @@ export function ShopOrderForm({
             address: values.customer_address.trim() || null,
           },
           items,
-          status: values.status,
+          status: createStatus,
           source: values.source,
           currency: values.currency.trim() || "MMK",
           delivery_fee: deliveryFee,
@@ -199,6 +297,7 @@ export function ShopOrderForm({
         }
       }
 
+      setCancelDialogOpen(false)
       router.refresh()
       onSuccess?.()
       if (!onSuccess) {
@@ -249,12 +348,32 @@ export function ShopOrderForm({
             <FieldLabel>Status</FieldLabel>
             <select
               value={values.status}
-              onChange={(e) => updateValue("status", e.target.value as any)}
-              className="h-10 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-3 text-[13px] font-medium"
+              onChange={(e) =>
+                updateValue(
+                  "status",
+                  e.target.value as ShopOrderFormStatus,
+                )
+              }
+              disabled={
+                isEdit &&
+                (initialEditStatus === "delivered" ||
+                  initialEditStatus === "cancelled")
+              }
+              className="h-10 rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-3 text-[13px] font-medium disabled:opacity-60"
             >
-              <option value="new">New Order</option>
-              <option value="confirmed">Confirmed</option>
+              {statusSelectOptions.map((s) => (
+                <option key={s} value={s}>
+                  {statusOptionLabel(s)}
+                </option>
+              ))}
             </select>
+            {isEdit &&
+            (initialEditStatus === "delivered" ||
+              initialEditStatus === "cancelled") ? (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Status is final for this order. Use the queue for new work.
+              </p>
+            ) : null}
           </Field>
           <Field>
             <FieldLabel>Delivery Fee</FieldLabel>
@@ -342,6 +461,29 @@ export function ShopOrderForm({
       <Button onClick={handleSubmit} disabled={isPending} className="h-11 font-bold">
         {isPending ? "Processing..." : isEdit ? "Update Order" : "Record Order"}
       </Button>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This order will move to Cancelled and cannot continue in the
+              delivery flow.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep order</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                submitOrder()
+              }}
+            >
+              Cancel order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

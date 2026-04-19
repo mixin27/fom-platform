@@ -54,9 +54,10 @@ const fallbackPlans: MarketingPlan[] = [
     id: "pro_monthly",
     code: "pro_monthly",
     name: "Shop Monthly",
-    description: "Single-shop monthly plan for daily Facebook order operations.",
+    description:
+      "Single-shop monthly plan for daily Facebook order operations.",
     billing_period: "monthly",
-    price: 15000,
+    price: 88000,
     currency: "MMK",
     is_active: true,
     marketing_visible: true,
@@ -68,9 +69,10 @@ const fallbackPlans: MarketingPlan[] = [
     id: "pro_yearly",
     code: "pro_yearly",
     name: "Shop Yearly",
-    description: "Discounted yearly plan for shops running the workflow every day.",
+    description:
+      "Discounted yearly plan for shops running the workflow every day.",
     billing_period: "yearly",
-    price: 150000,
+    price: 880000,
     currency: "MMK",
     is_active: true,
     marketing_visible: true,
@@ -82,7 +84,11 @@ const fallbackPlans: MarketingPlan[] = [
 
 export async function getMarketingPlans() {
   try {
-    return await requestApi<MarketingPlan[]>("/api/v1/public/plans")
+    const plans = await requestApi<MarketingPlan[]>("/api/v1/public/plans")
+    if (plans.length === 0) {
+      return fallbackPlans
+    }
+    return plans
   } catch {
     return fallbackPlans
   }

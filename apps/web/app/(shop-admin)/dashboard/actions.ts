@@ -1306,6 +1306,48 @@ export async function updateShopOrderAction(
   }
 }
 
+export async function updateShopOrderStatusAction(
+  shopId: string,
+  orderId: string,
+  input: { status: string; note?: string | null },
+): Promise<ShopMutationActionResult> {
+  if (!shopId || !orderId || !input.status) {
+    return {
+      ok: false,
+      message: "Order context is missing.",
+    }
+  }
+
+  try {
+    await requestAuthenticatedActionApiEnvelope({
+      path: `/api/v1/shops/${shopId}/orders/${orderId}/status`,
+      preferFreshSession: true,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          status: input.status,
+          ...(input.note !== undefined && input.note !== null && input.note !== ""
+            ? { note: input.note }
+            : {}),
+        },
+      },
+    })
+
+    revalidateShopWorkspace()
+
+    return {
+      ok: true,
+      message: "Order status updated.",
+    }
+  } catch (error) {
+    return toMutationActionError(
+      error,
+      "Unable to update the order status right now.",
+    )
+  }
+}
+
 export async function addShopOrderItemAction(
   shopId: string,
   orderId: string,

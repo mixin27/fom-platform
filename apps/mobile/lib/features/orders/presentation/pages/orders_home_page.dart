@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_logger/app_logger.dart';
 import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
@@ -17,6 +19,7 @@ import '../bloc/orders_home_bloc.dart';
 import '../bloc/orders_home_event.dart';
 import '../bloc/orders_home_state.dart';
 import '../models/orders_home_tab.dart';
+import '../widgets/order_cancellation_confirm_sheet.dart';
 
 class OrdersHomePage extends StatelessWidget {
   const OrdersHomePage({
@@ -294,11 +297,8 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
                 AppRoutePaths.orderDetails.replaceFirst(':id', order.id),
               ),
               onStatusChange: (nextStatus) {
-                context.read<OrdersHomeBloc>().add(
-                  OrdersHomeOrderStatusChangeRequested(
-                    orderId: order.id,
-                    nextStatus: nextStatus,
-                  ),
+                unawaited(
+                  _requestHomeOrderStatusChange(context, order.id, nextStatus),
                 );
               },
             ),
@@ -389,6 +389,25 @@ class _OrdersHomeViewState extends State<_OrdersHomeView> {
   Future<void> _onRefresh(BuildContext context) async {
     context.read<OrdersHomeBloc>().add(const OrdersHomeRefreshRequested());
     await Future<void>.delayed(const Duration(milliseconds: 800));
+  }
+
+  Future<void> _requestHomeOrderStatusChange(
+    BuildContext context,
+    String orderId,
+    OrderStatus nextStatus,
+  ) async {
+    if (!await confirmOrderCancellationIfNeeded(context, nextStatus)) {
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
+    context.read<OrdersHomeBloc>().add(
+      OrdersHomeOrderStatusChangeRequested(
+        orderId: orderId,
+        nextStatus: nextStatus,
+      ),
+    );
   }
 
   void _onSearchChanged() {
