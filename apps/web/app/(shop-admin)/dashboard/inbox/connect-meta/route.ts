@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 
+import { AuthApiError } from "@/lib/auth/api"
 import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 import { getActiveShop, getSession } from "@/lib/auth/session"
+import { buildAppUrl } from "@/lib/app/base-url"
 
 function redirectWithError(requestUrl: string, message: string) {
   const url = new URL("/dashboard/inbox", requestUrl)
@@ -11,13 +13,13 @@ function redirectWithError(requestUrl: string, message: string) {
 
 export async function GET(request: Request) {
   const session = await getSession()
-  const shopId = session ? getActiveShop(session)?.id ?? null : null
+  const shopId = session ? (getActiveShop(session)?.id ?? null) : null
 
   if (!shopId) {
     return NextResponse.redirect(new URL("/sign-in", request.url))
   }
 
-  const redirectUri = new URL(
+  const redirectUri = buildAppUrl(
     "/dashboard/inbox/connect-meta/callback",
     request.url
   ).toString()
@@ -38,10 +40,12 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.redirect(response.data.authorization_url)
-  } catch {
+  } catch (error) {
     return redirectWithError(
       request.url,
-      "Unable to start Messenger connect right now."
+      error instanceof AuthApiError
+        ? error.message
+        : "Unable to start Messenger connect right now."
     )
   }
 }

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 
+import { AuthApiError } from "@/lib/auth/api"
 import type { ShopMessengerOauthCompleteResult } from "@/lib/shop/api"
 import {
   encodeShopMessengerOauthSelection,
   SHOP_MESSENGER_OAUTH_SELECTION_COOKIE,
 } from "@/lib/messenger/oauth"
+import { buildAppUrl } from "@/lib/app/base-url"
 import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 import { getActiveShop, getSession } from "@/lib/auth/session"
 
@@ -30,7 +32,7 @@ function buildInboxRedirect(
 
 export async function GET(request: Request) {
   const session = await getSession()
-  const shopId = session ? getActiveShop(session)?.id ?? null : null
+  const shopId = session ? (getActiveShop(session)?.id ?? null) : null
 
   if (!shopId) {
     return NextResponse.redirect(new URL("/sign-in", request.url))
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
     })
   }
 
-  const redirectUri = new URL(
+  const redirectUri = buildAppUrl(
     "/dashboard/inbox/connect-meta/callback",
     request.url
   ).toString()
@@ -108,9 +110,12 @@ export async function GET(request: Request) {
     })
 
     return redirectResponse
-  } catch {
+  } catch (error) {
     return buildInboxRedirect(request.url, {
-      error: "Unable to finish Messenger connect right now.",
+      error:
+        error instanceof AuthApiError
+          ? error.message
+          : "Unable to finish Messenger connect right now.",
     })
   }
 }
