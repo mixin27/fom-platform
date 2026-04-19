@@ -1,4 +1,8 @@
+"use client"
+
 import type { ReactNode } from "react"
+import { usePathname } from "next/navigation"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
 
 type PageIntroProps = {
   eyebrow?: string
@@ -7,28 +11,13 @@ type PageIntroProps = {
   actions?: ReactNode
 }
 
-export function PageIntro({
-  eyebrow,
-  title,
-  description,
-  actions,
-}: PageIntroProps) {
-  return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-      <div className="flex max-w-3xl flex-col gap-1">
-        {eyebrow ? (
-          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1 className="text-[1.55rem] leading-tight font-semibold tracking-[-0.03em] text-foreground md:text-[1.8rem]">
-          {title}
-        </h1>
-        <p className="max-w-2xl text-[13px] leading-6 text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
-    </div>
-  )
+export function PageIntro({ title, actions }: PageIntroProps) {
+  const pathname = usePathname()
+  const mode = pathname.startsWith("/platform")
+    ? "platform"
+    : pathname.startsWith("/dashboard")
+      ? "shop"
+      : undefined
+
+  return <AdminHeader title={title} actions={actions} mode={mode} />
 }

@@ -1,14 +1,20 @@
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import {
+  KeyRound,
+  ShieldCheck,
+  Store,
+  Users,
+} from "lucide-react"
 
-import { PageIntro } from "@/components/page-intro"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getCurrentUserProfile,
   getShopDetails,
   getShopPortalContext,
 } from "@/lib/shop/api"
-import { formatCodeLabel } from "@/lib/shop/format"
+import { formatCodeLabel, formatList } from "@/lib/shop/format"
 import { formatRelativeDate } from "@/lib/platform/format"
 import { getSingleSearchParam, type ShopSearchParams } from "@/lib/shop/query"
 import {
@@ -51,24 +57,16 @@ export default async function ShopSettingsPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <PageIntro
-        eyebrow="Settings"
-        title="Account and shop settings"
-        description="Keep this page focused on profile, shop identity, and current access. Team management and billing stay on their own dedicated pages."
+      <AdminHeader
+        title="Settings"
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/staffs">
-                Staffs
-                <ArrowRight data-icon="inline-end" />
-              </Link>
+              <Link href="/dashboard/staffs">Staffs</Link>
             </Button>
             {canManageShop ? (
               <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard/billing">
-                  Billing & Subscription
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
+                <Link href="/dashboard/billing">Billing</Link>
               </Button>
             ) : null}
           </div>
@@ -86,13 +84,64 @@ export default async function ShopSettingsPage({
         </div>
       ) : null}
 
-      <div className="grid gap-3 xl:grid-cols-[1fr_1fr_0.9fr]">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <AdminStatCard
+          label="Shop"
+          value={shop.name}
+          detail={shop.timezone}
+          icon={Store}
+          accent="sunset"
+        />
+        <AdminStatCard
+          label="Team Members"
+          value={String(shop.member_count)}
+          detail="Current shop access"
+          icon={Users}
+          accent="teal"
+        />
+        <AdminStatCard
+          label="Your Role"
+          value={formatCodeLabel(currentMembership?.role ?? "member")}
+          detail={`${currentMembership?.permissions.length ?? 0} permissions`}
+          icon={ShieldCheck}
+          accent="ink"
+        />
+        <AdminStatCard
+          label="Sign-in"
+          value={String(profile.auth_methods.length)}
+          detail={formatList(profile.auth_methods) || "No methods"}
+          icon={KeyRound}
+        />
+      </section>
+
+      <div className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Shop profile</CardDescription>
-            <CardTitle>Identity and timezone</CardTitle>
+            <CardDescription>Shop</CardDescription>
+            <CardTitle>Profile</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="flex flex-col gap-4 pt-0">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { label: "Shop Name", value: shop.name },
+                { label: "Timezone", value: shop.timezone },
+                { label: "Members", value: String(shop.member_count) },
+                { label: "Created", value: formatRelativeDate(shop.created_at) },
+              ].map((row) => (
+                <div
+                  key={row.label}
+                  className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {row.label}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">
+                    {row.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
             {canManageShop ? (
               <form
                 action={updateShopProfileFromFormAction}
@@ -110,17 +159,13 @@ export default async function ShopSettingsPage({
                   defaultValue={shop.timezone}
                   placeholder="Timezone"
                 />
-                <Button type="submit" size="sm">
-                  Update shop
+                <Button type="submit" size="sm" className="w-fit">
+                  Save shop
                 </Button>
               </form>
             ) : (
-              <div className="text-sm leading-7 text-muted-foreground">
-                <p>{shop.name}</p>
-                <p>{shop.timezone}</p>
-                <p className="mt-2">
-                  Your account can view these fields but cannot edit them.
-                </p>
+              <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3 text-sm text-muted-foreground">
+                You can view this shop profile, but only shop managers can edit it.
               </div>
             )}
           </CardContent>
@@ -128,8 +173,8 @@ export default async function ShopSettingsPage({
 
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Your profile</CardDescription>
-            <CardTitle>Sign-in identity</CardTitle>
+            <CardDescription>Account</CardDescription>
+            <CardTitle>Your Profile</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <form
@@ -156,71 +201,45 @@ export default async function ShopSettingsPage({
                 <option value="en">en</option>
                 <option value="my">my</option>
               </select>
-              <Button type="submit" size="sm">
-                Update profile
+              <Button type="submit" size="sm" className="w-fit">
+                Save profile
               </Button>
             </form>
           </CardContent>
         </Card>
+      </div>
 
+      <div className="grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Access summary</CardDescription>
-            <CardTitle>Current role and permissions</CardTitle>
+            <CardDescription>Access</CardDescription>
+            <CardTitle>Roles & Permissions</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 pt-0">
-            <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3">
-              <p className="text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                Current role
-              </p>
-              <p className="mt-2 text-sm font-semibold text-foreground">
-                {formatCodeLabel(currentMembership?.role ?? "member")}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {currentMembership?.permissions.length ?? 0} effective permissions
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(currentMembership?.permissions ?? []).length > 0 ? (
-                currentMembership?.permissions.map((permission) => (
-                  <PlatformStatusBadge
-                    key={permission}
-                    status="active"
-                    label={permission}
-                  />
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No shop permissions are currently assigned.
+          <CardContent className="flex flex-col gap-4 pt-0">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Member Status
                 </p>
-              )}
-            </div>
-            {[
-              { label: "Shop", value: shop.name },
-              { label: "Timezone", value: shop.timezone },
-              { label: "Members", value: String(shop.member_count) },
-              {
-                label: "Member status",
-                value: formatCodeLabel(currentMembership?.status ?? "active"),
-              },
-              {
-                label: "Joined",
-                value: formatRelativeDate(shop.created_at),
-              },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="flex items-center justify-between rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3"
-              >
-                <span className="text-xs text-muted-foreground">{row.label}</span>
-                <span className="font-medium text-foreground">{row.value}</span>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {formatCodeLabel(currentMembership?.status ?? "active")}
+                </p>
               </div>
-            ))}
-            <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3">
-              <p className="text-xs font-semibold tracking-[0.24em] text-muted-foreground uppercase">
-                Assigned roles
+              <div className="rounded-xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] px-3.5 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Permission Count
+                </p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {currentMembership?.permissions.length ?? 0}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Assigned Roles
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {(currentMembership?.roles ?? []).length > 0 ? (
                   currentMembership?.roles.map((role) => (
                     <PlatformStatusBadge
@@ -231,21 +250,55 @@ export default async function ShopSettingsPage({
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No roles are assigned yet.
+                    No roles assigned.
                   </p>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link href="/dashboard/staffs">Open Staffs</Link>
-              </Button>
-              {canManageShop ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/dashboard/billing">Open Billing</Link>
-                </Button>
-              ) : null}
+
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Permissions
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(currentMembership?.permissions ?? []).length > 0 ? (
+                  currentMembership?.permissions.map((permission) => (
+                    <PlatformStatusBadge
+                      key={permission}
+                      status="active"
+                      label={permission}
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No permissions assigned.
+                  </p>
+                )}
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+          <CardHeader className="pb-3">
+            <CardDescription>Shortcuts</CardDescription>
+            <CardTitle>Related Pages</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2.5 pt-0">
+            <Button asChild variant="outline" className="justify-start">
+              <Link href="/dashboard/staffs">Open Staffs</Link>
+            </Button>
+            {canManageShop ? (
+              <Button asChild variant="outline" className="justify-start">
+                <Link href="/dashboard/billing">Open Billing</Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="outline" className="justify-start">
+              <Link href="/dashboard/notifications">Open Notifications</Link>
+            </Button>
+            <Button asChild variant="outline" className="justify-start">
+              <Link href="/dashboard/orders">Open Orders</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

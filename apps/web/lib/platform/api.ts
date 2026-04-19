@@ -381,12 +381,28 @@ export async function getPlatformShops(searchParams?: SearchParamsRecord) {
   )
 }
 
+export async function getPlatformShop(shopId: string, retryPath = "/platform/shops") {
+  return platformRequest<PlatformShop>(
+    `/api/v1/platform/shops/${shopId}`,
+    undefined,
+    retryPath
+  )
+}
+
 export async function getPlatformUsers(searchParams?: SearchParamsRecord) {
   const retryPath = `/platform/users${buildQueryString(searchParams)}`
 
   return platformRequest<Array<PlatformUser>>(
     "/api/v1/platform/users",
     searchParams,
+    retryPath
+  )
+}
+
+export async function getPlatformUser(userId: string, retryPath = "/platform/users") {
+  return platformRequest<PlatformUser>(
+    `/api/v1/platform/users/${userId}`,
+    undefined,
     retryPath
   )
 }

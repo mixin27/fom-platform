@@ -1,10 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 
-import {
-  Card,
-  CardContent,
-} from "@workspace/ui/components/card"
-import { cn } from "@workspace/ui/lib/utils"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
 
 const accentClasses = {
   default: "bg-primary/10 text-primary",
@@ -30,41 +26,16 @@ export function DashboardStatCard({
   delta,
   icon: Icon,
   accent = "default",
-  className,
+  className: _className,
 }: DashboardStatCardProps) {
   return (
-    <Card
-      className={cn(
-        "border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
-        className
-      )}
-    >
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <span
-            className={cn(
-              "inline-flex size-8 items-center justify-center rounded-md",
-              accentClasses[accent]
-            )}
-          >
-            <Icon className="size-4" />
-          </span>
-          {delta ? (
-            <span className="text-[10px] font-semibold tracking-[0.04em] uppercase text-muted-foreground">
-              {delta}
-            </span>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-1">
-          <p className="text-[11px] font-semibold tracking-[0.08em] uppercase text-muted-foreground">
-            {title}
-          </p>
-          <p className="text-[1.7rem] leading-none font-semibold tracking-[-0.04em] text-foreground">
-            {value}
-          </p>
-          <p className="text-[12px] leading-5 text-muted-foreground">{detail}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <AdminStatCard
+      label={title}
+      value={value}
+      icon={Icon}
+      detail={detail}
+      trend={delta ? { value: delta, neutral: true } : undefined}
+      iconClassName={accentClasses[accent]}
+    />
   )
 }

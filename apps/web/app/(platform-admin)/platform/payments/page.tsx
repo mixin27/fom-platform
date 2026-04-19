@@ -44,7 +44,7 @@ export default async function PlatformPaymentsPage({
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Payments"
-        title="Invoice payments"
+        title="Payments"
         description="Track invoice status, transaction references, and provider session activity from a dedicated billing workspace."
         actions={
           <div className="flex flex-wrap gap-2">

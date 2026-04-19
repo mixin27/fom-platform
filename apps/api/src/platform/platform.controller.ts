@@ -78,6 +78,14 @@ export class PlatformController {
     return this.platformService.listUsers(query);
   }
 
+  @Get('users/:userId')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformShopsRead)
+  @ApiOperation({ summary: 'Get a single user from the platform workspace' })
+  getUser(@Param('userId') userId: string) {
+    return ok(this.platformService.getUser(userId));
+  }
+
   @Get('owner-accounts')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformShopsRead)

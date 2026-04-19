@@ -1,8 +1,6 @@
-import { HeartHandshake, MapPinned, Users } from "lucide-react"
-
-import { DashboardStatCard } from "@/components/dashboard-stat-card"
-import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
+import { AdminDataTable } from "@/features/portal-shell/components/admin/admin-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getShopCustomers,
@@ -22,7 +20,15 @@ import {
 } from "@/lib/platform/format"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
-import { ShopCustomerSheet } from "./_components/shop-customer-sheet"
+import { PlusIcon, UserIcon, MapPinIcon, BadgeCheckIcon } from "lucide-react"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@workspace/ui/components/pagination"
+import Link from "next/link"
 
 type CustomersPageProps = {
   searchParams?: Promise<ShopSearchParams>
@@ -71,18 +77,17 @@ export default async function CustomersPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <PageIntro
-        eyebrow="Customers"
-        title="Customer relationships"
-        description="Track repeat buyers, segment recent activity, and update customer delivery notes without leaving the shop workspace."
+      <AdminHeader
+        title="Customers"
         actions={
-          canWriteCustomers ? (
-            <ShopCustomerSheet
-              shopId={activeShop.id}
-              triggerLabel="Create customer"
-              triggerVariant="default"
-            />
-          ) : undefined
+          canWriteCustomers && (
+            <Button asChild size="sm">
+              <Link href="/dashboard/customers/new">
+                <PlusIcon data-icon="inline-start" />
+                New Customer
+              </Link>
+            </Button>
+          )
         }
       />
 
@@ -98,87 +103,60 @@ export default async function CustomersPage({
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-3">
-        <DashboardStatCard
-          title="Repeat buyers"
+        <AdminStatCard
+          label="Retention Rate"
           value={formatPercent(repeatRate)}
-          detail="Average delivered-rate across the customers in the current view."
-          delta={`${vipCount} VIP`}
-          icon={HeartHandshake}
-          accent="sunset"
+          detail={`${vipCount} VIP buyers`}
+          icon={BadgeCheckIcon}
+          trend={{ value: "Stable", neutral: true }}
         />
-        <DashboardStatCard
-          title="Visible customers"
+        <AdminStatCard
+          label="Total Database"
           value={String(rows.length)}
-          detail="Filtered customers currently in the workspace."
-          delta={`${newCount} new this week`}
-          icon={Users}
-          accent="teal"
+          detail={`${newCount} new this week`}
+          icon={UserIcon}
         />
-        <DashboardStatCard
-          title="Top township"
+        <AdminStatCard
+          label="Hot Location"
           value={topTownship}
-          detail="Most common township in the current filtered list."
-          delta={segment === "all" ? "All segments" : segment}
-          icon={MapPinned}
-          accent="ink"
+          detail="Most frequent mailing township"
+          icon={MapPinIcon}
         />
       </section>
 
-      <PlatformDataTable
-        title="Customer list"
-        description="Recent buyer activity"
-        rows={rows}
-        emptyMessage="No customers matched the current filters."
-        footer={`Showing ${rows.length} customer${rows.length === 1 ? "" : "s"}`}
-        pagination={
-          pagination
-            ? {
-                previousHref: previousCursor
-                  ? buildQueryHref("/dashboard/customers", params, {
-                      cursor: previousCursor,
-                    })
-                  : currentCursor
-                    ? buildQueryHref("/dashboard/customers", params, {
-                        cursor: null,
-                      })
-                    : null,
-                nextHref: pagination.next_cursor
-                  ? buildQueryHref("/dashboard/customers", params, {
-                      cursor: pagination.next_cursor,
-                    })
-                  : null,
-              }
-            : undefined
-        }
+      <AdminDataTable
+        title="Contact Ledger"
+        data={rows}
+        emptyMessage="No customer records found."
         toolbar={
-          <form method="GET" className="flex flex-wrap gap-2">
+          <form method="GET" className="flex flex-wrap items-center gap-2">
             <Input
               name="search"
               defaultValue={search}
-              placeholder="Search customers"
-              className="h-9 w-[220px]"
+              placeholder="Search by Name or Phone"
+              className="h-8 w-[200px] text-[13px]"
             />
             <select
               name="segment"
               defaultValue={segment}
-              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
+              className="h-8 rounded-lg border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-2 text-[12px] font-medium"
             >
-              <option value="all">All</option>
-              <option value="vip">VIP</option>
-              <option value="new_this_week">New this week</option>
-              <option value="top_spenders">Top spenders</option>
+              <option value="all">Every Customer</option>
+              <option value="vip">Only VIP</option>
+              <option value="new_this_week">Recent Joiners</option>
+              <option value="top_spenders">High Rollers</option>
             </select>
             <select
               name="sort"
               defaultValue={sort}
-              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-portal-surface)] px-3 text-sm"
+              className="h-8 rounded-lg border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-2 text-[12px] font-medium"
             >
-              <option value="recent">Recent</option>
-              <option value="top_spenders">Top spenders</option>
-              <option value="name">Name</option>
+              <option value="recent">Recent Entry</option>
+              <option value="top_spenders">Highest Value</option>
+              <option value="name">Alphabetical</option>
             </select>
             <input type="hidden" name="limit" value={String(limit)} />
-            <Button type="submit" size="sm" variant="outline">
+            <Button type="submit" size="sm" className="h-8">
               Filter
             </Button>
           </form>
@@ -186,76 +164,112 @@ export default async function CustomersPage({
         columns={[
           {
             key: "customer",
-            header: "Customer",
+            header: "Profile",
             render: (customer) => (
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold text-foreground">{customer.name}</span>
-                <span className="text-xs text-muted-foreground">{customer.phone}</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-foreground">
+                  {customer.name}
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium font-mono">
+                  {customer.phone}
+                </span>
               </div>
             ),
           },
           {
             key: "location",
-            header: "Location",
+            header: "Presence",
             render: (customer) => (
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="text-foreground">{customer.township ?? "—"}</span>
-                <span className="text-xs text-muted-foreground">
-                  {customer.address ?? "No saved address"}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[12px] font-bold text-foreground">
+                  {customer.township ?? "—"}
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium truncate max-w-[150px]">
+                  {customer.address ?? "No address"}
                 </span>
               </div>
             ),
           },
           {
-            key: "orders",
-            header: "Orders",
+            key: "activity",
+            header: "Purchases",
             render: (customer) => (
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="text-foreground">
-                  {customer.total_orders.toLocaleString()} orders
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[12px] font-bold text-foreground">
+                  {customer.total_orders} orders
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  Last {formatRelativeDate(customer.last_order_at)}
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {customer.last_order_at ? `Last ${formatRelativeDate(customer.last_order_at)}` : "No orders"}
                 </span>
               </div>
             ),
           },
           {
-            key: "spend",
-            header: "Spend",
-            render: (customer) => formatCurrency(customer.total_spent),
+            key: "value",
+            header: "Total Value",
+            render: (customer) => (
+              <span className="font-bold text-foreground">
+                {formatCurrency(customer.total_spent)}
+              </span>
+            ),
           },
           {
             key: "flags",
-            header: "Flags",
+            header: "Badges",
             render: (customer) => (
-              <div className="flex flex-wrap gap-2">
-                {customer.is_vip ? (
-                  <PlatformStatusBadge status="active" label="VIP" />
-                ) : null}
-                {customer.is_new_this_week ? (
-                  <PlatformStatusBadge status="new" label="New this week" />
-                ) : null}
+              <div className="flex flex-wrap gap-1">
+                {customer.is_vip && (
+                  <PlatformStatusBadge status="active" label="VIP" className="h-4 px-1.5 text-[9px]" />
+                )}
                 <PlatformStatusBadge
                   status={customer.delivered_rate >= 70 ? "active" : "pending"}
-                  label={`${Math.round(customer.delivered_rate)}% delivered`}
+                  label={`${Math.round(customer.delivered_rate)}% rate`}
+                  className="h-4 px-1.5 text-[9px]"
                 />
               </div>
             ),
           },
           {
             key: "actions",
-            header: "Actions",
-            render: (customer) =>
-              canWriteCustomers ? (
-                <ShopCustomerSheet shopId={activeShop.id} customer={customer} />
-              ) : (
-                <span className="text-xs text-muted-foreground">No actions</span>
-              ),
-            className: "w-[120px] px-4 py-2.5 text-right",
-            cellClassName: "px-4 py-3 text-right",
+            header: "",
+            render: (customer) => (
+              <div className="flex justify-end">
+                <Button asChild size="xs" variant="ghost" className="h-7 px-2 font-bold text-muted-foreground hover:text-foreground">
+                  <Link href={`/dashboard/customers/${customer.id}`}>
+                    Manage
+                  </Link>
+                </Button>
+              </div>
+            ),
           },
         ]}
+        footer={
+          pagination && (
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+                Showing {rows.length} customers
+              </p>
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    {previousCursor ? (
+                      <PaginationPrevious href={buildQueryHref("/dashboard/customers", params, { cursor: previousCursor })} />
+                    ) : (
+                      <PaginationPrevious className="pointer-events-none opacity-40" />
+                    )}
+                  </PaginationItem>
+                  <PaginationItem>
+                    {pagination.next_cursor ? (
+                      <PaginationNext href={buildQueryHref("/dashboard/customers", params, { cursor: pagination.next_cursor })} />
+                    ) : (
+                      <PaginationNext className="pointer-events-none opacity-40" />
+                    )}
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )
+        }
       />
     </div>
   )

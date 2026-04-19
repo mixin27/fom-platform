@@ -193,6 +193,32 @@ export class ShopsController {
     return this.shopsService.listMembers(currentUser, shopId, query);
   }
 
+  @Get(':shopId/members/:memberId')
+  @UseGuards(RbacGuard, SubscriptionFeatureGuard)
+  @RequirePermissions(permissions.membersRead)
+  @RequirePlanFeatures(subscriptionFeatures.teamMembers)
+  @ApiOperation({ summary: 'Get a single shop member' })
+  getMember(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return ok(this.shopsService.getMember(currentUser, shopId, memberId));
+  }
+
+  @Get(':shopId/members/user/:userId')
+  @UseGuards(RbacGuard, SubscriptionFeatureGuard)
+  @RequirePermissions(permissions.membersRead)
+  @RequirePlanFeatures(subscriptionFeatures.teamMembers)
+  @ApiOperation({ summary: 'Get a single shop member by user id' })
+  getMemberByUserId(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Param('userId') userId: string,
+  ) {
+    return ok(this.shopsService.getMemberByUserId(currentUser, shopId, userId));
+  }
+
   @Post(':shopId/members')
   @UseGuards(RbacGuard, SubscriptionFeatureGuard)
   @RequirePermissions(permissions.membersManage)

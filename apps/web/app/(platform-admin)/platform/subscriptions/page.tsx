@@ -50,7 +50,7 @@ export default async function PlatformSubscriptionsPage({
     <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Subscriptions"
-        title="Billing and plan health"
+        title="Subscriptions"
         description="Review recurring revenue, invoices, renewals, and the current plan mix from one route."
         actions={
           <Button asChild variant="outline" size="sm">

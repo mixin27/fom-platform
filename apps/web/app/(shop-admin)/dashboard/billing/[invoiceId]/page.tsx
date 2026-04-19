@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react"
 
 import { PageIntro } from "@/components/page-intro"
 import { ShopBillingInvoiceScreen } from "@/features/shop/billing/components/shop-billing-invoice-screen"
+import { toClientSafe } from "@/features/shared/server/to-client-safe"
 import { getShopBillingInvoice, getShopPortalContext } from "@/lib/shop/api"
 import { type ShopSearchParams } from "@/lib/shop/query"
 import { Button } from "@workspace/ui/components/button"
@@ -49,5 +50,10 @@ export default async function ShopBillingInvoicePage({
     )
   }
 
-  return <ShopBillingInvoiceScreen invoiceId={invoiceId} initialData={invoice} />
+  return (
+    <ShopBillingInvoiceScreen
+      invoiceId={invoiceId}
+      initialData={toClientSafe(invoice)}
+    />
+  )
 }

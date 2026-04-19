@@ -1,4 +1,5 @@
 import { PlatformPaymentDetailScreen } from "@/features/platform/payments/components/platform-payment-detail-screen"
+import { toClientSafe } from "@/features/shared/server/to-client-safe"
 import { getPlatformPayment } from "@/lib/platform/api"
 import { type PlatformSearchParams } from "@/lib/platform/query"
 
@@ -20,7 +21,7 @@ export default async function PlatformPaymentPage({
   return (
     <PlatformPaymentDetailScreen
       invoiceId={invoiceId}
-      initialData={response.data}
+      initialData={toClientSafe(response.data)}
     />
   )
 }

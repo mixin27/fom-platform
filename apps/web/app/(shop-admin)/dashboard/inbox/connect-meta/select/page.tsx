@@ -40,8 +40,8 @@ export default async function ShopMessengerConnectSelectionPage() {
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Inbox"
-        title="Choose a Facebook Page"
-        description="This Meta account manages more than one Page. Pick the Page that should sync Messenger conversations into this shop workspace."
+        title="Select Page"
+        description="Choose the Facebook Page that should connect to this shop."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/inbox">

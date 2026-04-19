@@ -1,4 +1,5 @@
 import { PlatformContactSubmissionScreen } from "@/features/platform/contact-form/components/platform-contact-submission-screen"
+import { toClientSafe } from "@/features/shared/server/to-client-safe"
 import { getPlatformPublicContactSubmission } from "@/lib/platform/api"
 import { type PlatformSearchParams } from "@/lib/platform/query"
 
@@ -20,7 +21,7 @@ export default async function PlatformContactSubmissionPage({
   return (
     <PlatformContactSubmissionScreen
       submissionId={submissionId}
-      initialData={response.data}
+      initialData={toClientSafe(response.data)}
     />
   )
 }

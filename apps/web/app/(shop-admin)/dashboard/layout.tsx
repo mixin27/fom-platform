@@ -20,7 +20,6 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { SubscriptionBanner } from "@/components/subscription-banner"
 import { SubscriptionPaywall } from "@/components/subscription-paywall"
-import { ShopSwitcher } from "./_components/shop-switcher"
 
 function getInitials(name: string) {
   return name
@@ -38,7 +37,8 @@ export default async function ShopAppLayout({
 }) {
   const portalContext = await getShopPortalContext()
   const { session, activeShop } = portalContext
-  const canManageShop = activeShop.membership.permissions.includes("shops.write")
+  const canManageShop =
+    activeShop.membership.permissions.includes("shops.write")
   const visibleNavSections = shopPortalNav
     .map((section) => ({
       ...section,
@@ -47,27 +47,32 @@ export default async function ShopAppLayout({
       ),
     }))
     .filter((section) => section.items.length > 0)
-  const [profileResponse, unreadResponse, announcementResponse, billingResponse, plansResponse] =
-    await Promise.all([
-      getCurrentUserProfile("/dashboard"),
-      getNotificationUnreadCount({
-        requiredAccess: "shop",
-        retryPath: "/dashboard",
-        searchParams: {
-          shop_id: activeShop.id,
-        },
-      }),
-      getShopAnnouncements("/dashboard"),
-      getShopBilling("/dashboard"),
-      getAvailablePlans("/dashboard"),
-    ])
+  const [
+    profileResponse,
+    unreadResponse,
+    announcementResponse,
+    billingResponse,
+    plansResponse,
+  ] = await Promise.all([
+    getCurrentUserProfile("/dashboard"),
+    getNotificationUnreadCount({
+      requiredAccess: "shop",
+      retryPath: "/dashboard",
+      searchParams: {
+        shop_id: activeShop.id,
+      },
+    }),
+    getShopAnnouncements("/dashboard"),
+    getShopBilling("/dashboard"),
+    getAvailablePlans("/dashboard"),
+  ])
   const profile = profileResponse.data
   const unreadCount = unreadResponse.data.unread_count
   const announcements = announcementResponse.data.announcements
   const billing = billingResponse.data
   const plans = plansResponse.data
   const workspaceSlot = (
-    <div className="space-y-3">
+    <div>
       <div>
         <p className="text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
           Active shop
@@ -75,11 +80,10 @@ export default async function ShopAppLayout({
         <p className="mt-1 text-[13px] font-semibold text-foreground">
           {activeShop.name}
         </p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {activeShop.membership.role ?? "Current workspace"}
+        </p>
       </div>
-      <ShopSwitcher
-        shops={session.shops}
-        activeShopId={activeShop?.id ?? session.activeShopId}
-      />
     </div>
   )
   const primaryAction = (
@@ -123,10 +127,7 @@ export default async function ShopAppLayout({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col bg-[var(--fom-portal-bg)]">
-          <SubscriptionPaywall
-            status={billing.overview.status}
-            plans={plans}
-          />
+          <SubscriptionPaywall status={billing.overview.status} plans={plans} />
           <SubscriptionBanner
             status={billing.overview.status}
             endAt={billing.overview.current_period_end}
@@ -139,14 +140,14 @@ export default async function ShopAppLayout({
             <div className="flex min-w-0 items-center gap-3">
               <PortalSidebarToggle />
               <PortalBreadcrumb mode="shop" />
-              <div className="min-w-0">
+              {/* <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold text-foreground">
                   {activeShop.name}
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">
                   Orders, customers, delivery, templates, and billing
                 </p>
-              </div>
+              </div> */}
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button

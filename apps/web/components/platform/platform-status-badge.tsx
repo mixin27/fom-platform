@@ -53,11 +53,13 @@ const badgeClasses: Record<string, string> = {
 type PlatformStatusBadgeProps = {
   status: string | null | undefined
   label?: string | null
+  className?: string
 }
 
 export function PlatformStatusBadge({
   status,
   label,
+  className,
 }: PlatformStatusBadgeProps) {
   const normalized = status?.toLowerCase() ?? "inactive"
 
@@ -66,7 +68,8 @@ export function PlatformStatusBadge({
       variant="outline"
       className={cn(
         "font-medium capitalize",
-        badgeClasses[normalized] ?? badgeClasses.inactive
+        badgeClasses[normalized] ?? badgeClasses.inactive,
+        className
       )}
     >
       {label ?? normalized.replace(/_/g, " ")}

@@ -1,14 +1,19 @@
 import Link from "next/link"
-import { ArrowRight, Bot, Link2, MessageSquareText, PlugZap } from "lucide-react"
+import {
+  ArrowRight,
+  Bot,
+  CheckCircle2,
+  Link2,
+  MessageSquareText,
+  PlugZap,
+  Unplug,
+} from "lucide-react"
 
 import { DashboardStatCard } from "@/components/dashboard-stat-card"
 import { PageIntro } from "@/components/page-intro"
 import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
-import {
-  disconnectShopMessengerConnectionFromFormAction,
-  updateShopMessengerConnectionFromFormAction,
-} from "@/app/(shop-admin)/dashboard/actions"
+import { disconnectShopMessengerConnectionFromFormAction } from "@/app/(shop-admin)/dashboard/actions"
 import {
   getShopMessengerAutoReplyRules,
   getShopMessengerOverview,
@@ -96,7 +101,7 @@ export default async function ShopInboxPage({
       <PageIntro
         eyebrow="Inbox"
         title="Messenger inbox"
-        description="Connect one Facebook Page per shop, review inbound conversations, reply manually, and hand message history into the order parser."
+        description="Connect your Facebook Page, review conversations, and turn messages into orders."
         actions={
           <div className="flex flex-wrap gap-2">
             {canManageRules ? (
@@ -121,7 +126,7 @@ export default async function ShopInboxPage({
         <DashboardStatCard
           title="Connected page"
           value={overview.connection?.page_name ?? "Not connected"}
-          detail={overview.connection?.page_id ?? "Connect a Facebook Page token to start syncing."}
+          detail={overview.connection?.page_id ?? "Connect your Facebook Page to start syncing."}
           delta={overview.connection?.status ?? "inactive"}
           icon={PlugZap}
           accent="sunset"
@@ -137,7 +142,7 @@ export default async function ShopInboxPage({
         <DashboardStatCard
           title="Unread"
           value={String(overview.stats.unread_count)}
-          detail="Inbound messages that still need operator review."
+          detail="Inbound messages still waiting for review."
           delta="Needs follow-up"
           icon={Link2}
           accent="ink"
@@ -145,7 +150,7 @@ export default async function ShopInboxPage({
         <DashboardStatCard
           title="Auto reply rules"
           value={String(overview.stats.auto_reply_rule_count)}
-          detail="Keyword-based reply rules for common customer questions."
+          detail="Keyword-based replies for common questions."
           delta={canManageRules ? "Automation enabled" : "Read only"}
           icon={Bot}
           accent="default"
@@ -155,85 +160,88 @@ export default async function ShopInboxPage({
       <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Page connection</CardDescription>
-            <CardTitle>Connect a Facebook Page</CardTitle>
+            <CardDescription>Connection</CardDescription>
+            <CardTitle>Facebook Page</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {canManageConnection ? (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3">
+                <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
+                  {overview.connection ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <PlatformStatusBadge status="active" label="Connected" />
+                        <PlatformStatusBadge
+                          status={overview.connection.status}
+                          label={overview.connection.page_name}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {overview.connection.page_name}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {overview.connection.page_id}
+                        </p>
+                      </div>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Reconnect if you changed permissions or want to switch to another Page.
+                      </p>
+                    </div>
+                  ) : overview.setup.oauth_connect_enabled ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-foreground">
+                        <CheckCircle2 className="size-4 text-[var(--fom-orange)]" />
+                        <p className="text-sm font-semibold">
+                          One-click Facebook connection
+                        </p>
+                      </div>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Click connect, finish the Facebook screens, and FOM will handle the Page setup automatically.
+                        If the Facebook account manages more than one Page, you will choose the Page once.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <PlatformStatusBadge
+                        status="pending"
+                        label="Platform setup required"
+                      />
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Messenger OAuth is not configured on this environment yet.
+                        Ask the platform admin to complete the Meta app setup first.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {overview.setup.oauth_connect_enabled ? (
-                  <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
-                    <p className="text-sm font-medium text-foreground">
-                      Recommended: connect with Meta OAuth
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Sign in with the Facebook account that manages your Page. FOM
-                      will discover the Pages you can access and store the Page
-                      access token for messaging automatically.
-                    </p>
-                    <Button asChild size="sm" className="mt-4 w-fit">
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild size="sm">
                       <Link href="/dashboard/inbox/connect-meta">
-                        {overview.connection ? "Reconnect with Meta" : "Connect with Meta"}
+                        {overview.connection ? "Reconnect Page" : "Connect Facebook Page"}
                         <ArrowRight data-icon="inline-end" />
                       </Link>
                     </Button>
+                    {overview.connection ? (
+                      <form action={disconnectShopMessengerConnectionFromFormAction}>
+                        <input type="hidden" name="return_to" value="/dashboard/inbox" />
+                        <input type="hidden" name="shop_id" value={activeShop.id} />
+                        <Button type="submit" size="sm" variant="outline">
+                          <Unplug data-icon="inline-start" />
+                          Disconnect
+                        </Button>
+                      </form>
+                    ) : null}
                   </div>
-                ) : null}
-
-                <div className="rounded-2xl border border-dashed border-[var(--fom-border-subtle)] p-4">
-                  <p className="text-sm font-medium text-foreground">
-                    Manual token fallback
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Use this only if the Meta OAuth flow is not ready in your app
-                    configuration yet.
-                  </p>
-                  <form
-                    action={updateShopMessengerConnectionFromFormAction}
-                    className="mt-4 flex flex-col gap-2.5"
-                  >
-                    <input type="hidden" name="return_to" value="/dashboard/inbox" />
-                    <input type="hidden" name="shop_id" value={activeShop.id} />
-                    <Input
-                      name="page_id"
-                      defaultValue={overview.connection?.page_id ?? ""}
-                      placeholder="Facebook Page ID"
-                    />
-                    <Input
-                      name="page_name"
-                      defaultValue={overview.connection?.page_name ?? ""}
-                      placeholder="Page label"
-                    />
-                    <Input
-                      name="page_access_token"
-                      type="password"
-                      placeholder={
-                        overview.connection
-                          ? "Paste a fresh page access token to update the connection"
-                          : "Page access token"
-                      }
-                    />
-                    <Button type="submit" size="sm" variant="outline" className="w-fit">
-                      {overview.connection ? "Save manual token" : "Connect manually"}
-                    </Button>
-                  </form>
-                </div>
-                {overview.connection ? (
-                  <form action={disconnectShopMessengerConnectionFromFormAction}>
-                    <input type="hidden" name="return_to" value="/dashboard/inbox" />
-                    <input type="hidden" name="shop_id" value={activeShop.id} />
-                    <Button type="submit" size="sm" variant="outline">
-                      Disconnect
-                    </Button>
-                  </form>
                 ) : null}
               </div>
             ) : (
-              <div className="text-sm leading-7 text-muted-foreground">
+              <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4 text-sm leading-7 text-muted-foreground">
                 <p>{overview.connection?.page_name ?? "No page connected."}</p>
                 <p>{overview.connection?.page_id ?? "Page ID unavailable."}</p>
                 <p className="mt-2">
-                  Your role can view connection status but cannot change shop integrations.
+                  Your role can view the connection status but cannot change shop integrations.
                 </p>
               </div>
             )}
@@ -242,8 +250,8 @@ export default async function ShopInboxPage({
 
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Meta app setup</CardDescription>
-            <CardTitle>Webhook endpoint status</CardTitle>
+            <CardDescription>Setup</CardDescription>
+            <CardTitle>Status</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0 text-sm">
             <div className="flex flex-wrap gap-2">
@@ -251,7 +259,7 @@ export default async function ShopInboxPage({
                 status={overview.setup.verify_token_configured ? "active" : "pending"}
                 label={
                   overview.setup.verify_token_configured
-                    ? "Verify token configured"
+                    ? "Verify token ready"
                     : "Verify token missing"
                 }
               />
@@ -261,28 +269,22 @@ export default async function ShopInboxPage({
                 }
                 label={
                   overview.setup.signature_validation_enabled
-                    ? "Signature validation on"
-                    : "Signature validation off"
+                    ? "Signature check on"
+                    : "Signature check off"
                 }
               />
             </div>
-            <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4">
-              <p className="font-medium text-foreground">Webhook URL</p>
-              <p className="mt-2 break-all text-muted-foreground">
-                {overview.setup.webhook_url}
-              </p>
-            </div>
             <div className="rounded-2xl border border-[var(--fom-border-subtle)] bg-[var(--fom-surface-variant)] p-4 text-muted-foreground">
-              <p>Graph API version: {overview.setup.graph_api_version}</p>
-              <p className="mt-2">
-                Configure the Meta app webhook with this URL, the server verify token,
-                and Page subscriptions for Messenger events.
-              </p>
+              <p className="font-medium text-foreground">Environment</p>
               <p className="mt-2">
                 OAuth connect:{" "}
                 {overview.setup.oauth_connect_enabled
                   ? "configured"
-                  : "missing META_APP_ID / META_LOGIN_CONFIG_ID / META_APP_SECRET"}
+                  : "missing Meta app environment variables"}
+              </p>
+              <p className="mt-2">Graph API version: {overview.setup.graph_api_version}</p>
+              <p className="mt-2 break-all text-[12px]">
+                Webhook URL: {overview.setup.webhook_url}
               </p>
             </div>
           </CardContent>

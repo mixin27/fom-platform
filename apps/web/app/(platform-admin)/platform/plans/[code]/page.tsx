@@ -7,13 +7,13 @@ import {
   PencilLineIcon,
 } from "lucide-react"
 
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
 import { getPlatformSettings } from "@/lib/platform/api"
 import { formatCurrency } from "@/lib/platform/format"
-import { PageIntro } from "@/components/page-intro"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
@@ -42,10 +42,8 @@ export default async function PlatformPlanDetailPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <PageIntro
-        eyebrow="Plan Details"
+      <AdminHeader
         title={plan.name}
-        description={plan.description ?? "No description provided."}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
@@ -65,189 +63,154 @@ export default async function PlatformPlanDetailPage({
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Status & Identity</CardDescription>
-            <CardTitle>Overview</CardTitle>
+        <Card className="rounded-[14px] border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <CardHeader className="pb-3 border-b border-[var(--fom-border-subtle)]/50">
+            <CardTitle className="text-[13.5px] font-bold">Plan Identity</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">Code:</span>
-              <span className="font-mono text-sm">{plan.code}</span>
+          <CardContent className="flex flex-col gap-3 pt-4">
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Internal Code</span>
+              <span className="font-mono font-bold">{plan.code}</span>
             </div>
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">
-                Status:
-              </span>
-              <Badge variant={plan.is_active ? "secondary" : "outline"}>
-                {plan.is_active ? "Active" : "Inactive"}
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Status</span>
+              <Badge variant={plan.is_active ? "secondary" : "outline"} className="text-[10px] uppercase font-bold px-2 py-0">
+                {plan.is_active ? "Active" : "Draft"}
               </Badge>
             </div>
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">
-                Sort order:
-              </span>
-              <span className="text-sm">{plan.sort_order}</span>
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Display Sort</span>
+              <span className="font-bold">{plan.sort_order}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Pricing</CardDescription>
-            <CardTitle>Billing</CardTitle>
+        <Card className="rounded-[14px] border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <CardHeader className="pb-3 border-b border-[var(--fom-border-subtle)]/50">
+            <CardTitle className="text-[13.5px] font-bold">Standard Billing</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">Price:</span>
-              <span className="text-sm font-medium">
+          <CardContent className="flex flex-col gap-3 pt-4">
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Price Point</span>
+              <span className="font-bold underline decoration-[var(--fom-accent)] underline-offset-4">
                 {formatCurrency(plan.price, plan.currency)}
-                <span className="ml-1 text-muted-foreground">
-                  / {plan.billing_period}
-                </span>
               </span>
             </div>
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">
-                Currency:
-              </span>
-              <span className="text-sm uppercase">{plan.currency}</span>
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Interval</span>
+              <span className="font-bold uppercase tracking-wider">{plan.billing_period}</span>
+            </div>
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Currency</span>
+              <span className="font-bold">{plan.currency}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none lg:col-start-3">
-          <CardHeader className="pb-3">
-            <CardDescription>Performance</CardDescription>
-            <CardTitle>Usage Data</CardTitle>
+        <Card className="rounded-[14px] border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <CardHeader className="pb-3 border-b border-[var(--fom-border-subtle)]/50">
+            <CardTitle className="text-[13.5px] font-bold">Live Stats</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">
-                Subscribed Shops:
-              </span>
-              <span className="text-sm font-medium">{plan.shop_count}</span>
+          <CardContent className="flex flex-col gap-3 pt-4">
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Shop Population</span>
+              <span className="font-bold">{plan.shop_count} active</span>
             </div>
-            <div>
-              <span className="mr-2 text-xs text-muted-foreground">
-                Revenue:
-              </span>
-              <span className="text-sm font-medium">
-                {formatCurrency(plan.collected_revenue, plan.currency)}
-              </span>
+            <div className="flex justify-between items-center text-[13px]">
+              <span className="text-muted-foreground font-medium">Collected Revenue</span>
+              <span className="font-bold">{formatCurrency(plan.collected_revenue, plan.currency)}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
-          <CardHeader className="border-b border-[var(--fom-border-subtle)] pb-3">
+        <Card className="rounded-[14px] border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+          <CardHeader className="pb-3 border-b border-[var(--fom-border-subtle)]/50 bg-muted/5">
             <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>Capabilities</CardDescription>
-                <CardTitle>Features</CardTitle>
-              </div>
-              <div className="flex gap-2">
-                <Badge
-                  variant="outline"
-                  className="bg-emerald-50/50 text-emerald-600"
-                >
-                  <BadgeCheckIcon className="mr-1 size-3" />
-                  {availableItems.length}
-                </Badge>
-                <Badge variant="outline" className="text-muted-foreground">
-                  <CircleSlash2Icon className="mr-1 size-3" />
-                  {unavailableItems.length}
+              <CardTitle className="text-[13.5px] font-bold">Core Features</CardTitle>
+              <div className="flex gap-1.5">
+                <Badge variant="secondary" className="text-[10px] font-bold">
+                  {availableItems.length} Available
                 </Badge>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="p-0">
             {plan.items.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                No features defined for this plan.
+              <p className="py-12 text-center text-[13px] text-muted-foreground italic">
+                No features recorded for this plan.
               </p>
             ) : (
-              <ul className="flex flex-col gap-4">
-                {plan.items.map((item) => (
-                  <li key={item.id} className="flex items-start gap-3">
-                    {item.availability_status === "available" ? (
-                      <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                    ) : (
-                      <CircleSlash2Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    )}
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium text-foreground">
-                        {item.label}
-                      </span>
-                      {item.description ? (
-                        <span className="text-xs text-muted-foreground">
-                          {item.description}
-                        </span>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <table className="w-full text-left text-[13px] border-collapse">
+                <tbody className="divide-y divide-[var(--fom-border-subtle)]/50">
+                  {plan.items.map((item) => (
+                    <tr key={item.id} className="hover:bg-muted/10 transition-colors">
+                      <td className="px-4 py-3 min-w-[32px]">
+                        {item.availability_status === "available" ? (
+                          <BadgeCheckIcon className="size-4 text-emerald-600" />
+                        ) : (
+                          <CircleSlash2Icon className="size-4 text-muted-foreground" />
+                        )}
+                      </td>
+                      <td className="px-1 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-foreground">{item.label}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium">
+                            {item.code}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-none">
-          <CardHeader className="border-b border-[var(--fom-border-subtle)] pb-3">
+        <Card className="rounded-[14px] border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+          <CardHeader className="pb-3 border-b border-[var(--fom-border-subtle)]/50 bg-muted/5">
             <div className="flex items-center justify-between">
-              <div>
-                <CardDescription>Restrictions</CardDescription>
-                <CardTitle>Limits</CardTitle>
-              </div>
-              <Badge variant="outline">{plan.limits.length} limits</Badge>
+              <CardTitle className="text-[13.5px] font-bold">Usage Limits</CardTitle>
+              <Badge variant="outline" className="text-[10px] font-bold">
+                {plan.limits.length} Restrictions
+              </Badge>
             </div>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="p-0">
             {plan.limits.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">
+              <p className="py-12 text-center text-[13px] text-muted-foreground italic">
                 No limits defined for this plan.
               </p>
             ) : (
-              <div className="relative overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-muted/5 text-xs text-muted-foreground uppercase">
-                    <tr>
-                      <th className="px-4 py-2 font-medium">Metric</th>
-                      <th className="px-4 py-2 text-right font-medium">
-                        Quota
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plan.limits.map((limit) => (
-                      <tr
-                        key={limit.id}
-                        className="border-b border-[var(--fom-border-subtle)] last:border-0 hover:bg-muted/5"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-foreground">
-                              {limit.label}
-                            </span>
-                            {limit.description ? (
-                              <span className="mt-0.5 text-xs text-muted-foreground">
-                                {limit.description}
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className="font-medium">
-                            {limit.value === null ? "Unlimited" : limit.value}
+              <table className="w-full text-left text-[13px] border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--fom-border-subtle)]/50">
+                    <th className="px-4 py-2 text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Metric</th>
+                    <th className="px-4 py-2 text-right text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Quota</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--fom-border-subtle)]/50">
+                  {plan.limits.map((limit) => (
+                    <tr key={limit.id} className="hover:bg-muted/10 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-foreground">{limit.label}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium capitalize">
+                            {limit.code.replace(/_/g, " ")}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="font-mono font-bold text-foreground">
+                          {limit.value === null ? "∞" : limit.value.toLocaleString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </CardContent>
         </Card>

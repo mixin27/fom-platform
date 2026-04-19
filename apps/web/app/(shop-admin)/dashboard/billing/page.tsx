@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { PageIntro } from "@/components/page-intro"
 import { ShopBillingScreen } from "@/features/shop/billing/components/shop-billing-screen"
+import { toClientSafe } from "@/features/shared/server/to-client-safe"
 import {
   getAvailablePlans,
   getShopBilling,
@@ -66,10 +67,10 @@ export default async function ShopBillingPage({
 
   return (
     <ShopBillingScreen
-      initialData={{
+      initialData={toClientSafe({
         billing,
         plans,
-      }}
+      })}
     />
   )
 }

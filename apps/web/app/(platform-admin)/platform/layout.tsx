@@ -85,17 +85,22 @@ export default async function PlatformLayout({
             <div className="flex min-w-0 items-center gap-3">
               <PortalSidebarToggle />
               <PortalBreadcrumb mode="platform" />
-              <div className="min-w-0">
+              {/* <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold text-[var(--fom-ink)]">
                   Platform workspace
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">
                   Shops, billing, support, announcements, and platform health
                 </p>
-              </div>
+              </div> */}
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="hidden md:inline-flex"
+              >
                 <Link href="/platform/payments">Payments</Link>
               </Button>
               <PortalRealtimeBellButton
@@ -113,7 +118,8 @@ export default async function PlatformLayout({
             <div className="border-b border-[var(--fom-orange)]/15 bg-[rgba(249,122,31,0.08)] px-4 py-2.5 md:px-[26px]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-[var(--fom-ink)]">
-                  Verify <span className="font-medium">{session.user.email}</span> to
+                  Verify{" "}
+                  <span className="font-medium">{session.user.email}</span> to
                   receive billing, recovery, and platform notices reliably.
                 </p>
                 <Button asChild size="sm" variant="outline">

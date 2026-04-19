@@ -12,7 +12,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@workspace/ui/components/breadcrumb"
-import { platformPortalNav, shopPortalNav, type NavSection } from "@/lib/navigation"
+import {
+  platformPortalNav,
+  shopPortalNav,
+  type NavSection,
+} from "@/lib/navigation"
 
 interface PortalBreadcrumbProps {
   mode: "platform" | "shop"
@@ -40,26 +44,26 @@ export function PortalBreadcrumb({ mode }: PortalBreadcrumbProps) {
 
   const breadcrumbs = React.useMemo(() => {
     const items = []
-    
+
     // Always add the root
     items.push({
       label: rootLabel,
       href: rootHref,
-      isPage: pathname === rootHref
+      isPage: pathname === rootHref,
     })
 
     let currentPath = ""
-    
+
     // segments[0] is always "platform" or "dashboard" in these layouts
     // So we iterate from the second segment onwards
     for (let i = 1; i < segments.length; i++) {
-      const segment = segments[i]
+      const segment = segments[i]!
       currentPath = `/${segments.slice(0, i + 1).join("/")}`
-      
+
       items.push({
         label: getLabel(currentPath, segment),
         href: currentPath,
-        isPage: i === segments.length - 1
+        isPage: i === segments.length - 1,
       })
     }
 
@@ -73,10 +77,15 @@ export function PortalBreadcrumb({ mode }: PortalBreadcrumbProps) {
           <React.Fragment key={item.href}>
             <BreadcrumbItem>
               {item.isPage ? (
-                <BreadcrumbPage className="text-[13px] font-medium">{item.label}</BreadcrumbPage>
+                <BreadcrumbPage className="text-[13px] font-medium">
+                  {item.label}
+                </BreadcrumbPage>
               ) : (
                 <BreadcrumbLink asChild>
-                  <Link href={item.href} className="text-[12px] text-muted-foreground">
+                  <Link
+                    href={item.href}
+                    className="text-[12px] text-muted-foreground"
+                  >
                     {item.label}
                   </Link>
                 </BreadcrumbLink>

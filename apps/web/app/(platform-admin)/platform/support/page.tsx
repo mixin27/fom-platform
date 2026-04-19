@@ -48,7 +48,7 @@ export default async function PlatformSupportPage({
     <div className="flex flex-col gap-4">
       <PageIntro
         eyebrow="Support"
-        title="Operational support queue"
+        title="Support"
         description="Track renewal risk, onboarding follow-up, and manual platform issues here. Payments and website contact messages now live on dedicated routes."
         actions={
           <div className="flex flex-wrap gap-2">

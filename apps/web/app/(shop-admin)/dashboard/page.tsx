@@ -7,9 +7,9 @@ import {
   Users,
 } from "lucide-react"
 
-import { DashboardStatCard } from "@/components/dashboard-stat-card"
-import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
+import { AdminDataTable } from "@/features/portal-shell/components/admin/admin-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getShopDailySummary,
@@ -57,10 +57,8 @@ export default async function ShopDashboardPage({
   if (isSummaryForbidden || !summary) {
     return (
       <div className="flex flex-col gap-6">
-        <PageIntro
-          eyebrow="Dashboard"
-          title={`Welcome back to ${activeShop.name}`}
-          description="Your operational command center. Connect your order flow, dispatch progress, and customer momentum in one place."
+        <AdminHeader
+          title="Dashboard"
           actions={
             <Button
               asChild
@@ -77,9 +75,7 @@ export default async function ShopDashboardPage({
 
         <Card className="border-2 border-dashed border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader>
-            <CardTitle className="text-xl">
-              Reports & Analytics Restricted
-            </CardTitle>
+            <CardTitle className="text-xl">Upgrade Required</CardTitle>
             <CardDescription className="text-base">
               {(summaryResponse.meta?.message as string) ??
                 "Insights and daily summaries are available on paid plans."}
@@ -132,10 +128,8 @@ export default async function ShopDashboardPage({
   const deliveryRate = summary.delivered_rate / 100
   return (
     <div className="flex flex-col gap-5">
-      <PageIntro
-        eyebrow="Dashboard"
-        title={`${activeShop.name} overview`}
-        description="Track orders, revenue, customers, and dispatch from one operational workspace."
+      <AdminHeader
+        title="Dashboard"
         actions={
           <Button
             asChild
@@ -151,45 +145,42 @@ export default async function ShopDashboardPage({
       />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <DashboardStatCard
-          title="Daily revenue"
+        <AdminStatCard
+          label="Daily Revenue"
           value={formatCurrency(summary.total_revenue)}
-          detail={`Average order value ${formatCurrency(summary.average_order_value)}.`}
-          delta={`${summary.revenue_delta_vs_previous_day >= 0 ? "+" : ""}${formatCurrency(summary.revenue_delta_vs_previous_day)}`}
+          detail={`Avg ${formatCurrency(summary.average_order_value)} / order`}
+          trend={{
+            value: `${summary.revenue_delta_vs_previous_day >= 0 ? "+" : ""}${formatCurrency(summary.revenue_delta_vs_previous_day)}`,
+            positive: summary.revenue_delta_vs_previous_day >= 0,
+          }}
           icon={TrendingUp}
-          accent="sunset"
         />
-        <DashboardStatCard
-          title="Orders created"
+        <AdminStatCard
+          label="New Orders"
           value={String(summary.total_orders)}
-          detail={`${summary.pending_count} still pending action.`}
-          delta={`${summary.delivered_count} delivered`}
+          detail={`${summary.pending_count} pending action`}
           icon={PackageCheck}
-          accent="teal"
         />
-        <DashboardStatCard
-          title="Customers touched"
+        <AdminStatCard
+          label="Customers"
           value={String(summary.customer_count)}
-          detail="Distinct customers with orders in the current summary window."
-          delta={`${summary.top_customers.length} top buyers`}
+          detail={`${summary.top_customers.length} repeat buyers`}
           icon={Users}
-          accent="ink"
         />
-        <DashboardStatCard
-          title="Delivered rate"
+        <AdminStatCard
+          label="Success Rate"
           value={formatPercent(deliveryRate)}
-          detail="Delivered orders as a share of today’s order volume."
-          delta={`${summary.status_breakdown.out_for_delivery} out for delivery`}
+          detail={`${summary.status_breakdown.out_for_delivery} in transit`}
           icon={Truck}
-          accent="default"
+          trend={{ value: "Stable", neutral: true }}
         />
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Today's pipeline</CardDescription>
-            <CardTitle>Order movement by status</CardTitle>
+            <CardDescription>Status</CardDescription>
+            <CardTitle>Orders</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {[
@@ -237,8 +228,8 @@ export default async function ShopDashboardPage({
 
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Top customers</CardDescription>
-            <CardTitle>Who is buying most often</CardTitle>
+            <CardDescription>Customers</CardDescription>
+            <CardTitle>Top Buyers</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
             {summary.top_customers.length > 0 ? (
@@ -270,22 +261,20 @@ export default async function ShopDashboardPage({
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-        <PlatformDataTable
-          title="Recent orders"
-          description="Latest shop activity"
-          rows={summary.recent_orders}
-          emptyMessage="No orders have been created yet."
-          footer={`Showing ${summary.recent_orders.length} recent orders`}
+        <AdminDataTable
+          title="Recent Orders"
+          data={summary.recent_orders}
+          emptyMessage="No recent orders found."
           columns={[
             {
               key: "order",
               header: "Order",
               render: (order) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-foreground">
                     {order.order_no}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground font-medium">
                     {formatRelativeDate(order.created_at)}
                   </span>
                 </div>
@@ -295,11 +284,11 @@ export default async function ShopDashboardPage({
               key: "customer",
               header: "Customer",
               render: (order) => (
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-foreground">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-foreground">
                     {order.customer_name}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="max-w-[200px] truncate text-[11px] font-medium text-muted-foreground">
                     {order.product_name}
                   </span>
                 </div>
@@ -313,15 +302,20 @@ export default async function ShopDashboardPage({
             {
               key: "amount",
               header: "Amount",
-              render: (order) => formatCurrency(order.total_price),
+              render: (order) => (
+                <span className="font-bold text-foreground">
+                  {formatCurrency(order.total_price)}
+                </span>
+              ),
+              className: "text-right",
             },
           ]}
         />
 
         <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
           <CardHeader className="pb-3">
-            <CardDescription>Dispatch board</CardDescription>
-            <CardTitle>Orders currently on route</CardTitle>
+            <CardDescription>Delivery</CardDescription>
+            <CardTitle>In Delivery</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-0">
             {deliveries.length > 0 ? (

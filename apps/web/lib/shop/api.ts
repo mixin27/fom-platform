@@ -702,6 +702,14 @@ export async function getShopMembers(
   return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath, true)
 }
 
+export async function getShopMember(memberId: string, retryPath = "/dashboard/staffs") {
+  return shopRequest<ShopMember>(`/members/${memberId}`, undefined, retryPath, true)
+}
+
+export async function getShopMemberByUserId(userId: string, retryPath = "/dashboard/staffs") {
+  return shopRequest<ShopMember>(`/members/user/${userId}`, undefined, retryPath, true)
+}
+
 export async function getShopRoles(retryPath = "/dashboard/staffs") {
   return shopRequest<ShopRoleCatalog>("/roles", undefined, retryPath)
 }

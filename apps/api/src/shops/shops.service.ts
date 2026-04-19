@@ -651,6 +651,80 @@ export class ShopsService {
     return paged(page.items, page.pagination);
   }
 
+  async getMember(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    memberId: string,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersRead,
+    );
+
+    const member = await this.prisma.shopMember.findFirst({
+      where: {
+        id: memberId,
+        shopId,
+      },
+      include: {
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return this.serializeMemberRecord(member);
+  }
+
+  async getMemberByUserId(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    userId: string,
+  ) {
+    await this.assertPermission(
+      currentUser.id,
+      shopId,
+      permissions.membersRead,
+    );
+
+    const member = await this.prisma.shopMember.findFirst({
+      where: {
+        userId,
+        shopId,
+      },
+      include: {
+        user: true,
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return this.serializeMemberRecord(member);
+  }
+
   async listRoles(currentUser: AuthenticatedUser, shopId: string) {
     await this.assertPermission(
       currentUser.id,

@@ -870,51 +870,6 @@ export type ShopMessengerAutoReplyRuleInput = {
   is_active: boolean
 }
 
-export async function updateShopMessengerConnectionFromFormAction(
-  formData: FormData
-) {
-  const returnTo = getReturnTo(formData, "/dashboard/inbox")
-  const shopId = normalizeTextField(formData.get("shop_id"))
-  const pageId = normalizeTextField(formData.get("page_id"))
-  const pageName = normalizeTextField(formData.get("page_name"))
-  const pageAccessToken = normalizeTextField(formData.get("page_access_token"))
-
-  if (!shopId || !pageId || !pageAccessToken) {
-    redirectToPath(returnTo, {
-      error: "Page ID and page access token are required.",
-    })
-  }
-
-  try {
-    await requestAuthenticatedActionApiEnvelope({
-      path: `/api/v1/shops/${shopId}/messenger/connection`,
-      preferFreshSession: true,
-      requiredAccess: "shop",
-      init: {
-        method: "PUT",
-        json: {
-          page_id: pageId,
-          ...(pageName ? { page_name: pageName } : {}),
-          page_access_token: pageAccessToken,
-        },
-      },
-    })
-
-    revalidateShopWorkspace()
-    revalidatePath(returnTo)
-    redirectToPath(returnTo, {
-      notice: "Messenger page connection updated.",
-    })
-  } catch (error) {
-    redirectToPath(returnTo, {
-      error: toActionMessage(
-        error,
-        "Unable to save the Messenger page connection right now."
-      ),
-    })
-  }
-}
-
 export async function disconnectShopMessengerConnectionFromFormAction(
   formData: FormData
 ) {

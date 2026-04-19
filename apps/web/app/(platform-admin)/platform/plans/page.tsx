@@ -9,9 +9,9 @@ import {
   EyeIcon,
 } from "lucide-react"
 
-import { DashboardStatCard } from "@/components/dashboard-stat-card"
-import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
+import { AdminDataTable } from "@/features/portal-shell/components/admin/admin-data-table"
 import { formatCurrency } from "@/lib/platform/format"
 import { getPlatformSettings } from "@/lib/platform/api"
 import { Badge } from "@workspace/ui/components/badge"
@@ -41,76 +41,65 @@ export default async function PlatformPlansPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageIntro
-        eyebrow="Plans"
-        title="Manage subscription plans"
-        description="Control pricing, public plan visibility, and the feature-item matrix that drives runtime subscription enforcement."
+      <AdminHeader
+        title="Subscription Plans"
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href="/platform/subscriptions">Subscriptions</Link>
+              <Link href="/platform/subscriptions">Invoices</Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/platform/settings">Settings</Link>
+            <Button asChild size="sm">
+              <Link href="/platform/plans/new">
+                <PlusIcon data-icon="inline-start" />
+                New Plan
+              </Link>
             </Button>
           </div>
         }
       />
 
       <section className="grid gap-3 md:grid-cols-3">
-        <DashboardStatCard
-          title="Total plans"
+        <AdminStatCard
+          label="Total Plans"
           value={String(plans.length)}
-          detail={`${activePlans} active and visible on current pricing surfaces.`}
-          delta="Commercial catalog"
+          detail={`${activePlans} active plans`}
           icon={WalletCards}
-          accent="sunset"
         />
-        <DashboardStatCard
-          title="Available items"
+        <AdminStatCard
+          label="Active Features"
           value={String(availableItems)}
-          detail="Feature rows currently enabled across the catalog."
-          delta="Runtime allowed"
+          detail="Enabled components"
           icon={BadgeCheck}
-          accent="teal"
+          trend={{ value: "Operational", positive: true }}
         />
-        <DashboardStatCard
-          title="Unavailable items"
+        <AdminStatCard
+          label="Future Features"
           value={String(unavailableItems)}
-          detail="Future or upgrade-only items kept visible but disabled."
-          delta="Reserved capacity"
+          detail="Pending activation"
           icon={CircleSlash2}
-          accent="ink"
+          trend={{ value: "Reserved", neutral: true }}
         />
       </section>
 
-      <PlatformDataTable
-        title="Plan catalog"
-        description="Review pricing, feature posture, and quota restrictions."
-        rows={plans}
-        emptyMessage="No subscription plans are configured yet."
-        footer={`Showing ${plans.length} plan${plans.length === 1 ? "" : "s"}`}
-        toolbar={
-          <Button asChild size="sm">
-            <Link href="/platform/plans/new">
-              <PlusIcon data-icon="inline-start" />
-              New plan
-            </Link>
-          </Button>
-        }
+      <AdminDataTable
+        title="Plan Catalog"
+        data={plans}
+        emptyMessage="No subscription plans found."
         columns={[
           {
             key: "plan",
             header: "Plan",
             render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-foreground">{plan.name}</span>
-                  <Badge variant={plan.is_active ? "secondary" : "outline"}>
-                    {plan.is_active ? "Active" : "Inactive"}
-                  </Badge>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-foreground">{plan.name}</span>
+                  {!plan.is_active && (
+                    <Badge variant="outline" className="text-[10px] uppercase h-4 px-1">
+                      Draft
+                    </Badge>
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground font-medium">
                   {plan.code}
                   {plan.description ? ` · ${plan.description}` : ""}
                 </span>
@@ -121,51 +110,42 @@ export default async function PlatformPlansPage() {
             key: "billing",
             header: "Billing",
             render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-foreground">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-foreground">
                   {formatCurrency(plan.price, plan.currency)}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {plan.billing_period} · sort {plan.sort_order}
+                <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                  {plan.billing_period}
                 </span>
               </div>
             ),
           },
           {
             key: "features",
-            header: "Features",
+            header: "Health",
             render: (plan) => {
               const numAvailableItems = plan.items.filter(
                 (item) => item.availability_status === "available"
               ).length
-              const numUnavailableItems = plan.items.filter(
-                (item) => item.availability_status === "unavailable"
-              ).length
 
               return (
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <BadgeCheckIcon className="size-4 text-emerald-600" />
-                    <span>{numAvailableItems} enabled</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CircleSlash2Icon className="size-3.5" />
-                    <span>{numUnavailableItems} unavailable</span>
-                  </div>
+                <div className="flex items-center gap-2 text-[13px] font-medium text-foreground">
+                  <BadgeCheckIcon className="size-3.5 text-emerald-600" />
+                  <span>{numAvailableItems} active features</span>
                 </div>
               )
             },
           },
           {
             key: "usage",
-            header: "Usage",
+            header: "Population",
             render: (plan) => (
-              <div className="flex flex-col gap-1">
-                <span className="text-sm text-foreground">
-                  {plan.shop_count} subscribed shop{plan.shop_count === 1 ? "" : "s"}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-foreground">
+                  {plan.shop_count} shops
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  Revenue {formatCurrency(plan.collected_revenue, plan.currency)}
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {formatCurrency(plan.collected_revenue, plan.currency)} total
                 </span>
               </div>
             ),
@@ -173,15 +153,14 @@ export default async function PlatformPlansPage() {
           {
             key: "actions",
             header: "",
-            className: "w-[110px] px-4 py-2.5 text-right",
-            cellClassName: "px-4 py-3 text-right",
             render: (plan) => (
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/platform/plans/${plan.code}`}>
-                  <EyeIcon data-icon="inline-start" />
-                  View
-                </Link>
-              </Button>
+              <div className="flex justify-end">
+                <Button asChild size="xs" variant="ghost" className="h-8 px-2 font-bold text-[var(--fom-accent)]">
+                  <Link href={`/platform/plans/${plan.code}`}>
+                    View Details
+                  </Link>
+                </Button>
+              </div>
             ),
           },
         ]}

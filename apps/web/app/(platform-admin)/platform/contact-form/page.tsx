@@ -21,7 +21,7 @@ export default async function PlatformContactFormPage() {
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Contact Form"
-        title="Public contact inbox"
+        title="Contact Form"
         description="Review website contact submissions separately from operational support work."
         actions={
           <Button asChild variant="outline" size="sm">
