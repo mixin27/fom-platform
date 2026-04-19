@@ -12,6 +12,26 @@ Generate one options file per app environment and keep the filenames aligned wit
 
 The mobile app now selects one of those files from `AppEnvironment` before calling `Firebase.initializeApp(...)`.
 
+## GitHub Actions
+
+The Flutter CI workflow now expects these base64-encoded GitHub variables or secrets:
+
+- `MOBILE_FIREBASE_OPTIONS_DEV_B64`
+- `MOBILE_FIREBASE_OPTIONS_STG_B64`
+- `MOBILE_FIREBASE_OPTIONS_PROD_B64`
+
+Each value should be the full contents of the matching generated Dart file, base64-encoded on one line. Example:
+
+```bash
+base64 < apps/mobile/lib/firebase_options_dev.dart | tr -d '\n'
+```
+
+CI writes those values back into:
+
+- `apps/mobile/lib/firebase_options_dev.dart`
+- `apps/mobile/lib/firebase_options_stg.dart`
+- `apps/mobile/lib/firebase_options_prod.dart`
+
 ## Backend
 
 - Set `PUSH_PROVIDER=fcm` in `apps/api`.

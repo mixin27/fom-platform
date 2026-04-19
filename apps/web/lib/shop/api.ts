@@ -443,6 +443,10 @@ export type ShopMessengerOauthCompleteResult =
       pages: ShopMessengerOauthPageChoice[]
     }
 
+export type ShopMessengerOauthSelectionPagesResult = {
+  pages: ShopMessengerOauthPageChoice[]
+}
+
 export type ShopMessengerThread = {
   id: string
   shop_id: string
@@ -809,6 +813,27 @@ export async function getShopMessengerOverview(
     undefined,
     retryPath,
     allowForbidden
+  )
+}
+
+export async function getShopMessengerOauthSelectionPages(
+  selectionToken: string,
+  retryPath = "/dashboard/inbox/connect-meta/select"
+) {
+  const { activeShop } = await getShopPortalContext()
+
+  return requestAuthenticatedApiEnvelope<ShopMessengerOauthSelectionPagesResult>(
+    {
+      path: `/api/v1/shops/${activeShop.id}/messenger/oauth/selection-pages`,
+      retryPath,
+      requiredAccess: "shop",
+      init: {
+        method: "POST",
+        json: {
+          selection_token: selectionToken,
+        },
+      },
+    }
   )
 }
 

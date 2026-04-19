@@ -98,9 +98,7 @@ export async function GET(request: Request) {
       name: SHOP_MESSENGER_OAUTH_SELECTION_COOKIE,
       value: encodeShopMessengerOauthSelection({
         shop_id: shopId,
-        redirect_uri: response.data.redirect_uri,
         selection_token: response.data.selection_token,
-        pages: response.data.pages,
       }),
       httpOnly: true,
       sameSite: "lax",

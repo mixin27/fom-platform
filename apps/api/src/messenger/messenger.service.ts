@@ -23,6 +23,7 @@ import { BeginMessengerOauthDto } from './dto/begin-messenger-oauth.dto';
 import { CompleteMessengerOauthDto } from './dto/complete-messenger-oauth.dto';
 import { CreateMessengerAutoReplyRuleDto } from './dto/create-messenger-auto-reply-rule.dto';
 import { ListMessengerThreadsQueryDto } from './dto/list-messenger-threads-query.dto';
+import { ResolveMessengerOauthSelectionDto } from './dto/resolve-messenger-oauth-selection.dto';
 import { SelectMessengerOauthPageDto } from './dto/select-messenger-oauth-page.dto';
 import { UpdateMessengerConnectionDto } from './dto/update-messenger-connection.dto';
 import { UpdateMessengerAutoReplyRuleDto } from './dto/update-messenger-auto-reply-rule.dto';
@@ -377,19 +378,11 @@ export class MessengerService {
     shopId: string,
     body: SelectMessengerOauthPageDto,
   ) {
-    const selection = this.decryptJsonPayload<MessengerOauthSelectionPayload>(
+    const selection = this.readOauthSelection(
       body.selection_token,
+      currentUser,
+      shopId,
     );
-
-    if (
-      selection.kind !== 'messenger_oauth_selection' ||
-      selection.shop_id !== shopId ||
-      selection.user_id !== currentUser.id
-    ) {
-      throw forbiddenError('Messenger page selection is invalid or expired.');
-    }
-
-    this.assertOauthIssuedAt(selection.issued_at);
 
     const pages = await this.listAvailablePages(selection.user_access_token);
     const selectedPage = pages.find((page) => page.id === body.page_id.trim());
@@ -408,6 +401,32 @@ export class MessengerService {
         body.page_name?.trim() || selectedPage.name,
         selectedPage.access_token,
       ),
+    };
+  }
+
+  async resolveOauthSelectionPages(
+    currentUser: AuthenticatedUser,
+    shopId: string,
+    body: ResolveMessengerOauthSelectionDto,
+  ) {
+    const selection = this.readOauthSelection(
+      body.selection_token,
+      currentUser,
+      shopId,
+    );
+    const pages = await this.listAvailablePages(selection.user_access_token);
+
+    if (pages.length === 0) {
+      throw conflictError(
+        'Meta did not return any Facebook Pages for this account.',
+      );
+    }
+
+    return {
+      pages: pages.map((page) => ({
+        page_id: page.id,
+        page_name: page.name,
+      })),
     };
   }
 
@@ -1554,6 +1573,29 @@ export class MessengerService {
     } catch {
       throw forbiddenError('Messenger OAuth state is invalid or expired.');
     }
+  }
+
+  private readOauthSelection(
+    value: string,
+    currentUser?: AuthenticatedUser,
+    shopId?: string,
+  ) {
+    const selection =
+      this.decryptJsonPayload<MessengerOauthSelectionPayload>(value);
+
+    if (selection.kind !== 'messenger_oauth_selection') {
+      throw forbiddenError('Messenger page selection is invalid or expired.');
+    }
+
+    if (
+      (shopId && selection.shop_id !== shopId) ||
+      (currentUser && selection.user_id !== currentUser.id)
+    ) {
+      throw forbiddenError('Messenger page selection is invalid or expired.');
+    }
+
+    this.assertOauthIssuedAt(selection.issued_at);
+    return selection;
   }
 
   private assertOauthIssuedAt(value: string) {

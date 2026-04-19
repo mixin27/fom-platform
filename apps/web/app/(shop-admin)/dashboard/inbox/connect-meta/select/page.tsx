@@ -5,11 +5,13 @@ import { ArrowRight, Inbox, Link2 } from "lucide-react"
 
 import { completeShopMessengerOauthSelectionFromFormAction } from "@/app/(shop-admin)/dashboard/actions"
 import { PageIntro } from "@/components/page-intro"
+import { AuthApiError } from "@/lib/auth/api"
 import {
   decodeShopMessengerOauthSelection,
   SHOP_MESSENGER_OAUTH_SELECTION_COOKIE,
 } from "@/lib/messenger/oauth"
 import { getActiveShop, requireShopAdmin } from "@/lib/auth/session"
+import { getShopMessengerOauthSelectionPages } from "@/lib/shop/api"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -18,6 +20,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+
+function redirectToInboxWithError(message: string) {
+  redirect(`/dashboard/inbox?error=${encodeURIComponent(message)}`)
+}
 
 export default async function ShopMessengerConnectSelectionPage() {
   const session = await requireShopAdmin()
@@ -32,8 +38,32 @@ export default async function ShopMessengerConnectSelectionPage() {
     cookieStore.get(SHOP_MESSENGER_OAUTH_SELECTION_COOKIE)?.value
   )
 
-  if (!selection || selection.shop_id !== activeShop.id || selection.pages.length === 0) {
-    redirect("/dashboard/inbox?error=Messenger page selection expired.")
+  if (!selection || selection.shop_id !== activeShop.id) {
+    redirectToInboxWithError("Messenger page selection expired.")
+  }
+
+  const validSelection = selection as NonNullable<typeof selection>
+
+  let pages: Array<{ page_id: string; page_name: string }> = []
+
+  try {
+    const pagesResponse = await getShopMessengerOauthSelectionPages(
+      validSelection.selection_token
+    )
+    pages = pagesResponse.data.pages
+  } catch (error) {
+    const message =
+      error instanceof AuthApiError
+        ? error.message
+        : "Unable to load Facebook Pages for this Messenger connection."
+
+    redirectToInboxWithError(message)
+  }
+
+  if (pages.length === 0) {
+    redirectToInboxWithError(
+      "Meta did not return any Facebook Pages for this account."
+    )
   }
 
   return (
@@ -53,7 +83,7 @@ export default async function ShopMessengerConnectSelectionPage() {
       />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {selection.pages.map((page) => (
+        {pages.map((page) => (
           <Card
             key={page.page_id}
             className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none"
@@ -75,7 +105,7 @@ export default async function ShopMessengerConnectSelectionPage() {
                 <input
                   type="hidden"
                   name="selection_token"
-                  value={selection.selection_token}
+                  value={validSelection.selection_token}
                 />
                 <input type="hidden" name="page_id" value={page.page_id} />
                 <input type="hidden" name="page_name" value={page.page_name} />

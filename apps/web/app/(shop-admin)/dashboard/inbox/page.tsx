@@ -53,8 +53,13 @@ export default async function ShopInboxPage({
   const canReadRules = permissions.has("templates.read")
   const canManageRules = permissions.has("templates.write")
   const search = getSingleSearchParam(params.search) ?? ""
+  const notice = getSingleSearchParam(params.notice)
+  const error = getSingleSearchParam(params.error)
 
-  const overviewResponse = await getShopMessengerOverview("/dashboard/inbox", true)
+  const overviewResponse = await getShopMessengerOverview(
+    "/dashboard/inbox",
+    true
+  )
 
   if (!overviewResponse.data || !canReadInbox) {
     return (
@@ -80,7 +85,10 @@ export default async function ShopInboxPage({
   }
 
   const [threadsResponse, rulesResponse] = await Promise.all([
-    getShopMessengerThreads(params, buildQueryHref("/dashboard/inbox", params, {})),
+    getShopMessengerThreads(
+      params,
+      buildQueryHref("/dashboard/inbox", params, {})
+    ),
     canReadRules
       ? getShopMessengerAutoReplyRules("/dashboard/inbox")
       : Promise.resolve({ success: true, data: { rules: [] } }),
@@ -93,7 +101,9 @@ export default async function ShopInboxPage({
     | ShopCursorPagination
     | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
-  const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
+  const limit = Number(
+    getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20
+  )
   const previousCursor = getPreviousCursor(currentCursor, limit)
 
   return (
@@ -122,11 +132,25 @@ export default async function ShopInboxPage({
         }
       />
 
+      {notice ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-800">
+          {notice}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardStatCard
           title="Connected page"
           value={overview.connection?.page_name ?? "Not connected"}
-          detail={overview.connection?.page_id ?? "Connect your Facebook Page to start syncing."}
+          detail={
+            overview.connection?.page_id ??
+            "Connect your Facebook Page to start syncing."
+          }
           delta={overview.connection?.status ?? "inactive"}
           icon={PlugZap}
           accent="sunset"
@@ -170,7 +194,10 @@ export default async function ShopInboxPage({
                   {overview.connection ? (
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <PlatformStatusBadge status="active" label="Connected" />
+                        <PlatformStatusBadge
+                          status="active"
+                          label="Connected"
+                        />
                         <PlatformStatusBadge
                           status={overview.connection.status}
                           label={overview.connection.page_name}
@@ -185,7 +212,8 @@ export default async function ShopInboxPage({
                         </p>
                       </div>
                       <p className="text-sm leading-6 text-muted-foreground">
-                        Reconnect if you changed permissions or want to switch to another Page.
+                        Reconnect if you changed permissions or want to switch
+                        to another Page.
                       </p>
                     </div>
                   ) : overview.setup.oauth_connect_enabled ? (
@@ -197,8 +225,10 @@ export default async function ShopInboxPage({
                         </p>
                       </div>
                       <p className="text-sm leading-6 text-muted-foreground">
-                        Click connect, finish the Facebook screens, and FOM will handle the Page setup automatically.
-                        If the Facebook account manages more than one Page, you will choose the Page once.
+                        Click connect, finish the Facebook screens, and FOM will
+                        handle the Page setup automatically. If the Facebook
+                        account manages more than one Page, you will choose the
+                        Page once.
                       </p>
                     </div>
                   ) : (
@@ -208,8 +238,9 @@ export default async function ShopInboxPage({
                         label="Platform setup required"
                       />
                       <p className="text-sm leading-6 text-muted-foreground">
-                        Messenger OAuth is not configured on this environment yet.
-                        Ask the platform admin to complete the Meta app setup first.
+                        Messenger OAuth is not configured on this environment
+                        yet. Ask the platform admin to complete the Meta app
+                        setup first.
                       </p>
                     </div>
                   )}
@@ -219,14 +250,26 @@ export default async function ShopInboxPage({
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm">
                       <Link href="/dashboard/inbox/connect-meta">
-                        {overview.connection ? "Reconnect Page" : "Connect Facebook Page"}
+                        {overview.connection
+                          ? "Reconnect Page"
+                          : "Connect Facebook Page"}
                         <ArrowRight data-icon="inline-end" />
                       </Link>
                     </Button>
                     {overview.connection ? (
-                      <form action={disconnectShopMessengerConnectionFromFormAction}>
-                        <input type="hidden" name="return_to" value="/dashboard/inbox" />
-                        <input type="hidden" name="shop_id" value={activeShop.id} />
+                      <form
+                        action={disconnectShopMessengerConnectionFromFormAction}
+                      >
+                        <input
+                          type="hidden"
+                          name="return_to"
+                          value="/dashboard/inbox"
+                        />
+                        <input
+                          type="hidden"
+                          name="shop_id"
+                          value={activeShop.id}
+                        />
                         <Button type="submit" size="sm" variant="outline">
                           <Unplug data-icon="inline-start" />
                           Disconnect
@@ -241,7 +284,8 @@ export default async function ShopInboxPage({
                 <p>{overview.connection?.page_name ?? "No page connected."}</p>
                 <p>{overview.connection?.page_id ?? "Page ID unavailable."}</p>
                 <p className="mt-2">
-                  Your role can view the connection status but cannot change shop integrations.
+                  Your role can view the connection status but cannot change
+                  shop integrations.
                 </p>
               </div>
             )}
@@ -256,7 +300,9 @@ export default async function ShopInboxPage({
           <CardContent className="flex flex-col gap-3 pt-0 text-sm">
             <div className="flex flex-wrap gap-2">
               <PlatformStatusBadge
-                status={overview.setup.verify_token_configured ? "active" : "pending"}
+                status={
+                  overview.setup.verify_token_configured ? "active" : "pending"
+                }
                 label={
                   overview.setup.verify_token_configured
                     ? "Verify token ready"
@@ -265,7 +311,9 @@ export default async function ShopInboxPage({
               />
               <PlatformStatusBadge
                 status={
-                  overview.setup.signature_validation_enabled ? "active" : "pending"
+                  overview.setup.signature_validation_enabled
+                    ? "active"
+                    : "pending"
                 }
                 label={
                   overview.setup.signature_validation_enabled
@@ -282,8 +330,10 @@ export default async function ShopInboxPage({
                   ? "configured"
                   : "missing Meta app environment variables"}
               </p>
-              <p className="mt-2">Graph API version: {overview.setup.graph_api_version}</p>
-              <p className="mt-2 break-all text-[12px]">
+              <p className="mt-2">
+                Graph API version: {overview.setup.graph_api_version}
+              </p>
+              <p className="mt-2 text-[12px] break-all">
                 Webhook URL: {overview.setup.webhook_url}
               </p>
             </div>
@@ -430,7 +480,9 @@ export default async function ShopInboxPage({
             header: "Rule",
             render: (rule) => (
               <div className="flex flex-col gap-1">
-                <span className="font-semibold text-foreground">{rule.name}</span>
+                <span className="font-semibold text-foreground">
+                  {rule.name}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {rule.pattern}
                 </span>
@@ -440,7 +492,9 @@ export default async function ShopInboxPage({
           {
             key: "match",
             header: "Match",
-            render: (rule) => <PlatformStatusBadge status="confirmed" label={rule.match_type} />,
+            render: (rule) => (
+              <PlatformStatusBadge status="confirmed" label={rule.match_type} />
+            ),
           },
           {
             key: "reply",

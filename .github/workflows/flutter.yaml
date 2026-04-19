@@ -20,10 +20,17 @@ jobs:
     name: Codegen, Format, Analyze, Test
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      MOBILE_FIREBASE_OPTIONS_DEV_B64: ${{ vars.MOBILE_FIREBASE_OPTIONS_DEV_B64 || secrets.MOBILE_FIREBASE_OPTIONS_DEV_B64 }}
+      MOBILE_FIREBASE_OPTIONS_STG_B64: ${{ vars.MOBILE_FIREBASE_OPTIONS_STG_B64 || secrets.MOBILE_FIREBASE_OPTIONS_STG_B64 }}
+      MOBILE_FIREBASE_OPTIONS_PROD_B64: ${{ vars.MOBILE_FIREBASE_OPTIONS_PROD_B64 || secrets.MOBILE_FIREBASE_OPTIONS_PROD_B64 }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Write Firebase Options
+        run: cd apps/mobile && bash ./scripts/write_firebase_options_from_env.sh
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

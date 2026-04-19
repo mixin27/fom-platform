@@ -1,15 +1,11 @@
 import "server-only"
 
-import type { ShopMessengerOauthPageChoice } from "@/lib/shop/api"
-
 export const SHOP_MESSENGER_OAUTH_SELECTION_COOKIE =
   "fom_messenger_page_selection"
 
 export type ShopMessengerOauthSelectionState = {
   shop_id: string
-  redirect_uri: string
   selection_token: string
-  pages: ShopMessengerOauthPageChoice[]
 }
 
 export function encodeShopMessengerOauthSelection(
@@ -28,12 +24,7 @@ export function decodeShopMessengerOauthSelection(value?: string | null) {
       Buffer.from(value, "base64url").toString("utf8")
     ) as ShopMessengerOauthSelectionState
 
-    if (
-      !parsed.shop_id ||
-      !parsed.redirect_uri ||
-      !parsed.selection_token ||
-      !Array.isArray(parsed.pages)
-    ) {
+    if (!parsed.shop_id || !parsed.selection_token) {
       return null
     }
 

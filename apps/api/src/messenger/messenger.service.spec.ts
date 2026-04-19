@@ -209,6 +209,55 @@ describe('MessengerService', () => {
     });
   });
 
+  it('resolves selectable pages from a selection token', async () => {
+    const { service } = createService();
+    const selectionToken = (service as any).encryptJsonPayload({
+      kind: 'messenger_oauth_selection',
+      shop_id: 'shop-1',
+      user_id: 'user-1',
+      redirect_uri: 'https://getfom.com/dashboard/inbox/connect-meta/callback',
+      user_access_token: 'EAABselectionToken',
+      issued_at: new Date().toISOString(),
+    });
+
+    jest.spyOn(service as any, 'listAvailablePages').mockResolvedValue([
+      {
+        id: 'page-1',
+        name: 'Page One',
+        access_token: 'page-token-1',
+      },
+      {
+        id: 'page-2',
+        name: 'Page Two',
+        access_token: 'page-token-2',
+      },
+    ]);
+
+    await expect(
+      service.resolveOauthSelectionPages(
+        {
+          id: 'user-1',
+          name: 'Owner',
+        } as any,
+        'shop-1',
+        {
+          selection_token: selectionToken,
+        },
+      ),
+    ).resolves.toEqual({
+      pages: [
+        {
+          page_id: 'page-1',
+          page_name: 'Page One',
+        },
+        {
+          page_id: 'page-2',
+          page_name: 'Page Two',
+        },
+      ],
+    });
+  });
+
   it('archives the old page and creates a new active connection when the shop changes pages', async () => {
     const { prisma, service } = createService();
     const activeConnection = buildConnection();

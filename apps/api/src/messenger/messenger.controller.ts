@@ -26,6 +26,7 @@ import { BeginMessengerOauthDto } from './dto/begin-messenger-oauth.dto';
 import { CompleteMessengerOauthDto } from './dto/complete-messenger-oauth.dto';
 import { CreateMessengerAutoReplyRuleDto } from './dto/create-messenger-auto-reply-rule.dto';
 import { ListMessengerThreadsQueryDto } from './dto/list-messenger-threads-query.dto';
+import { ResolveMessengerOauthSelectionDto } from './dto/resolve-messenger-oauth-selection.dto';
 import { SelectMessengerOauthPageDto } from './dto/select-messenger-oauth-page.dto';
 import { SendMessengerReplyDto } from './dto/send-messenger-reply.dto';
 import { UpdateMessengerConnectionDto } from './dto/update-messenger-connection.dto';
@@ -42,7 +43,9 @@ export class MessengerController {
   @Get()
   @RequirePermissions(permissions.ordersRead)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
-  @ApiOperation({ summary: 'Get Messenger inbox connection status and setup details' })
+  @ApiOperation({
+    summary: 'Get Messenger inbox connection status and setup details',
+  })
   getOverview(@Param('shopId') shopId: string) {
     return ok(this.messengerService.getOverview(shopId));
   }
@@ -50,7 +53,9 @@ export class MessengerController {
   @Post('oauth/start')
   @RequirePermissions(permissions.shopsWrite)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
-  @ApiOperation({ summary: 'Start the Meta OAuth flow for connecting a Facebook Page' })
+  @ApiOperation({
+    summary: 'Start the Meta OAuth flow for connecting a Facebook Page',
+  })
   beginOauthConnect(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Param('shopId') shopId: string,
@@ -78,6 +83,27 @@ export class MessengerController {
     );
   }
 
+  @Post('oauth/selection-pages')
+  @RequirePermissions(permissions.shopsWrite)
+  @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
+  @ApiOperation({
+    summary:
+      'Resolve the currently available Facebook Pages from a Messenger OAuth selection token',
+  })
+  resolveOauthSelectionPages(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Param('shopId') shopId: string,
+    @Body() body: ResolveMessengerOauthSelectionDto,
+  ) {
+    return ok(
+      this.messengerService.resolveOauthSelectionPages(
+        currentUser,
+        shopId,
+        body,
+      ),
+    );
+  }
+
   @Post('oauth/select-page')
   @RequirePermissions(permissions.shopsWrite)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
@@ -90,15 +116,15 @@ export class MessengerController {
     @Param('shopId') shopId: string,
     @Body() body: SelectMessengerOauthPageDto,
   ) {
-    return ok(
-      this.messengerService.selectOauthPage(currentUser, shopId, body),
-    );
+    return ok(this.messengerService.selectOauthPage(currentUser, shopId, body));
   }
 
   @Put('connection')
   @RequirePermissions(permissions.shopsWrite)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
-  @ApiOperation({ summary: 'Create or update the connected Facebook Page for this shop' })
+  @ApiOperation({
+    summary: 'Create or update the connected Facebook Page for this shop',
+  })
   updateConnection(
     @Param('shopId') shopId: string,
     @Body() body: UpdateMessengerConnectionDto,
@@ -109,7 +135,9 @@ export class MessengerController {
   @Delete('connection')
   @RequirePermissions(permissions.shopsWrite)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
-  @ApiOperation({ summary: 'Disconnect the current Facebook Page token from this shop' })
+  @ApiOperation({
+    summary: 'Disconnect the current Facebook Page token from this shop',
+  })
   @HttpCode(200)
   disconnectConnection(@Param('shopId') shopId: string) {
     return ok(this.messengerService.disconnectConnection(shopId));
@@ -140,7 +168,9 @@ export class MessengerController {
   @Post('threads/:threadId/read')
   @RequirePermissions(permissions.ordersRead)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
-  @ApiOperation({ summary: 'Mark a Messenger thread as read inside the shop workspace' })
+  @ApiOperation({
+    summary: 'Mark a Messenger thread as read inside the shop workspace',
+  })
   markThreadRead(
     @Param('shopId') shopId: string,
     @Param('threadId') threadId: string,
@@ -163,7 +193,9 @@ export class MessengerController {
   @Get('threads/:threadId/order-source')
   @RequirePermissions(permissions.ordersRead)
   @RequirePlanFeatures(subscriptionFeatures.facebookInboxIntegration)
-  @ApiOperation({ summary: 'Build a parser-ready text block from inbound Messenger messages' })
+  @ApiOperation({
+    summary: 'Build a parser-ready text block from inbound Messenger messages',
+  })
   getThreadOrderSource(
     @Param('shopId') shopId: string,
     @Param('threadId') threadId: string,
