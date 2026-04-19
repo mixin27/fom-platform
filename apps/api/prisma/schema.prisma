@@ -94,8 +94,8 @@ model Shop {
   roles            Role[]            @relation("ShopCustomRoles")
   auditLogs        ShopAuditLog[]
   paymentProofSubmissions PaymentProofSubmission[]
-  messengerConnection MessengerConnection?
-  messengerThreads    MessengerThread[]
+  messengerConnections MessengerConnection[]
+  messengerThreads     MessengerThread[]
   messengerAutoReplyRules MessengerAutoReplyRule[]
 
   @@index([ownerUserId])
@@ -396,9 +396,11 @@ model MessageTemplate {
 
 model MessengerConnection {
   id                       String            @id @default(cuid())
-  shopId                   String            @unique
-  pageId                   String            @unique
+  shopId                   String
+  pageId                   String?           @unique
   pageName                 String?
+  lastConnectedPageId      String?
+  lastConnectedPageName    String?
   pageAccessTokenEncrypted String?
   status                   String            @default("active")
   lastWebhookAt            DateTime?
@@ -407,6 +409,7 @@ model MessengerConnection {
   shop                     Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
   threads                  MessengerThread[]
 
+  @@index([shopId, status, updatedAt])
   @@index([status, updatedAt])
   @@map("messenger_connections")
 }

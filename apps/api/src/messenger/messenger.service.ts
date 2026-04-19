@@ -212,33 +212,37 @@ export class MessengerService {
   //   }
 
   async getOverview(shopId: string) {
-    const connection = await this.prisma.messengerConnection.findUnique({
-      where: { shopId },
-      include: {
-        _count: {
-          select: {
-            threads: true,
+    const [connection, threadCount, threadSummary, autoReplyRuleCount] =
+      await Promise.all([
+        this.prisma.messengerConnection.findFirst({
+          where: {
+            shopId,
+            status: 'active',
           },
-        },
-      },
-    });
-
-    const threadSummary = connection
-      ? await this.prisma.messengerThread.aggregate({
+          orderBy: [{ updatedAt: 'desc' }],
+        }),
+        this.prisma.messengerThread.count({
+          where: { shopId },
+        }),
+        this.prisma.messengerThread.aggregate({
           where: {
             shopId,
           },
           _sum: {
             unreadCount: true,
           },
-        })
-      : null;
-    const autoReplyRuleCount = await this.prisma.messengerAutoReplyRule.count({
-      where: { shopId },
-    });
+        }),
+        this.prisma.messengerAutoReplyRule.count({
+          where: { shopId },
+        }),
+      ]);
+    const activeConnection =
+      connection && this.isConnectionActive(connection) ? connection : null;
 
     return {
-      connection: connection ? this.serializeConnection(connection) : null,
+      connection: activeConnection
+        ? this.serializeConnection(activeConnection)
+        : null,
       setup: {
         webhook_url: this.config.getMetaMessengerConfig().webhookUrl,
         verify_token_configured:
@@ -250,7 +254,7 @@ export class MessengerService {
           this.config.getMetaMessengerConfig().isOauthConfigured,
       },
       stats: {
-        thread_count: connection?._count?.threads ?? 0,
+        thread_count: threadCount,
         unread_count: threadSummary?._sum?.unreadCount ?? 0,
         auto_reply_rule_count: autoReplyRuleCount,
       },
@@ -416,18 +420,33 @@ export class MessengerService {
   }
 
   async disconnectConnection(shopId: string) {
-    const connection = await this.prisma.messengerConnection.findUnique({
-      where: { shopId },
+    const connection = await this.prisma.messengerConnection.findFirst({
+      where: {
+        shopId,
+        status: 'active',
+      },
+      orderBy: [{ updatedAt: 'desc' }],
     });
 
     if (!connection) {
       throw notFoundError('Messenger connection not found');
     }
 
+    await this.tryRemoveConnectionWebhookSubscription(connection);
+
     return this.serializeConnection(
       await this.prisma.messengerConnection.update({
         where: { id: connection.id },
         data: {
+          lastConnectedPageId:
+            connection.pageId ?? connection.lastConnectedPageId ?? null,
+          lastConnectedPageName:
+            connection.pageName ??
+            connection.lastConnectedPageName ??
+            connection.pageId ??
+            null,
+          pageId: null,
+          pageName: null,
           status: 'disconnected',
           pageAccessTokenEncrypted: null,
         },
@@ -456,8 +475,8 @@ export class MessengerService {
             thread.customerName ?? '',
             thread.customerPsid,
             thread.lastMessageText ?? '',
-            thread.connection.pageName ?? '',
-            thread.connection.pageId,
+            this.resolveConnectionPageName(thread.connection),
+            this.resolveConnectionPageId(thread.connection),
           ]
             .join(' ')
             .toLowerCase()
@@ -704,38 +723,61 @@ export class MessengerService {
       );
     }
 
-    const existingConnection = await this.prisma.messengerConnection.findUnique(
-      {
-        where: { shopId },
-        include: {
-          _count: {
-            select: {
-              threads: true,
-            },
-          },
+    const [activeConnection, historicalConnection] = await Promise.all([
+      this.prisma.messengerConnection.findFirst({
+        where: {
+          shopId,
+          status: 'active',
         },
-      },
-    );
+        orderBy: [{ updatedAt: 'desc' }],
+      }),
+      this.prisma.messengerConnection.findFirst({
+        where: {
+          shopId,
+          status: 'disconnected',
+          lastConnectedPageId: pageId,
+        },
+        orderBy: [{ updatedAt: 'desc' }],
+      }),
+    ]);
 
-    if (
-      existingConnection &&
-      existingConnection.pageId !== pageId &&
-      existingConnection._count.threads > 0
-    ) {
-      throw conflictError(
-        'This shop already has Messenger history. Replacing it with a different Page ID is not supported on this connection yet.',
-      );
+    if (activeConnection && activeConnection.pageId !== pageId) {
+      await this.tryRemoveConnectionWebhookSubscription(activeConnection);
+      await this.prisma.messengerConnection.update({
+        where: { id: activeConnection.id },
+        data: {
+          lastConnectedPageId:
+            activeConnection.pageId ??
+            activeConnection.lastConnectedPageId ??
+            null,
+          lastConnectedPageName:
+            activeConnection.pageName ??
+            activeConnection.lastConnectedPageName ??
+            activeConnection.pageId ??
+            null,
+          pageId: null,
+          pageName: null,
+          status: 'disconnected',
+          pageAccessTokenEncrypted: null,
+        },
+      });
     }
 
     await this.subscribePageToAppWebhooks(pageId, pageAccessToken);
 
     const encryptedToken = this.encryptAccessToken(pageAccessToken);
-    const connection = existingConnection
+    const reusableConnection =
+      activeConnection?.pageId === pageId
+        ? activeConnection
+        : historicalConnection;
+    const connection = reusableConnection
       ? await this.prisma.messengerConnection.update({
-          where: { id: existingConnection.id },
+          where: { id: reusableConnection.id },
           data: {
             pageId,
             pageName,
+            lastConnectedPageId: pageId,
+            lastConnectedPageName: pageName ?? pageId,
             pageAccessTokenEncrypted: encryptedToken,
             status: 'active',
           },
@@ -745,6 +787,8 @@ export class MessengerService {
             shopId,
             pageId,
             pageName,
+            lastConnectedPageId: pageId,
+            lastConnectedPageName: pageName ?? pageId,
             pageAccessTokenEncrypted: encryptedToken,
             status: 'active',
           },
@@ -815,6 +859,76 @@ export class MessengerService {
     }
   }
 
+  private async unsubscribePageFromAppWebhooks(
+    pageId: string,
+    pageAccessToken: string,
+  ) {
+    const url = this.buildGraphUrl(
+      `${pageId}/subscribed_apps`,
+      pageAccessToken,
+    );
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      throw serviceUnavailableError(
+        'Unable to reach Meta to disconnect this Page from Messenger webhooks.',
+        this.buildFetchErrorContext(error),
+      );
+    }
+
+    const payload = await this.readGraphJson<Record<string, unknown>>(response);
+
+    if (!response.ok) {
+      throw conflictError(
+        'Meta did not remove webhook fields for this Page during disconnect.',
+        {
+          status: response.status,
+          body: payload,
+        },
+      );
+    }
+  }
+
+  private async tryUnsubscribePageFromAppWebhooks(
+    pageId: string,
+    pageAccessToken: string,
+  ) {
+    try {
+      await this.unsubscribePageFromAppWebhooks(pageId, pageAccessToken);
+    } catch (error) {
+      this.logger.warn(
+        `Messenger webhook unsubscribe failed for page ${pageId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  private async tryRemoveConnectionWebhookSubscription(
+    connection: DbConnection,
+  ) {
+    if (!connection.pageId || !connection.pageAccessTokenEncrypted) {
+      return;
+    }
+
+    try {
+      await this.tryUnsubscribePageFromAppWebhooks(
+        connection.pageId,
+        this.decryptAccessToken(connection.pageAccessTokenEncrypted),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Messenger webhook unsubscribe skipped for connection ${connection.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   private async processMessagingEvent(event: MetaMessagingEvent) {
     const senderId = this.readNestedString(event.sender, 'id');
     const recipientId = this.readNestedString(event.recipient, 'id');
@@ -823,11 +937,14 @@ export class MessengerService {
       return;
     }
 
-    const connection = await this.prisma.messengerConnection.findUnique({
-      where: { pageId: recipientId },
+    const connection = await this.prisma.messengerConnection.findFirst({
+      where: {
+        pageId: recipientId,
+        status: 'active',
+      },
     });
 
-    if (!connection) {
+    if (!connection || !this.isConnectionActive(connection)) {
       return;
     }
 
@@ -1750,11 +1867,14 @@ export class MessengerService {
   }
 
   private serializeConnection(connection: DbConnection) {
+    const pageId = this.resolveConnectionPageId(connection);
+    const pageName = this.resolveConnectionPageName(connection);
+
     return {
       id: connection.id,
       shop_id: connection.shopId,
-      page_id: connection.pageId,
-      page_name: connection.pageName ?? connection.pageId,
+      page_id: pageId,
+      page_name: pageName,
       status: connection.status,
       last_webhook_at: connection.lastWebhookAt?.toISOString() ?? null,
       created_at: connection.createdAt.toISOString(),
@@ -1766,6 +1886,12 @@ export class MessengerService {
     const customerLabel =
       thread.customerName?.trim() ||
       `PSID ${String(thread.customerPsid).slice(-8)}`;
+    const connectionPageId = thread.connection
+      ? this.resolveConnectionPageId(thread.connection)
+      : null;
+    const connectionPageName = thread.connection
+      ? this.resolveConnectionPageName(thread.connection)
+      : null;
 
     return {
       id: thread.id,
@@ -1783,12 +1909,33 @@ export class MessengerService {
       updated_at: thread.updatedAt.toISOString(),
       page: thread.connection
         ? {
-            id: thread.connection.pageId,
-            name: thread.connection.pageName ?? thread.connection.pageId,
+            id: connectionPageId,
+            name: connectionPageName,
             status: thread.connection.status,
           }
         : null,
     };
+  }
+
+  private isConnectionActive(connection: DbConnection) {
+    return Boolean(
+      connection &&
+      connection.status === 'active' &&
+      connection.pageId &&
+      connection.pageAccessTokenEncrypted,
+    );
+  }
+
+  private resolveConnectionPageId(connection: DbConnection) {
+    return connection.pageId ?? connection.lastConnectedPageId ?? connection.id;
+  }
+
+  private resolveConnectionPageName(connection: DbConnection) {
+    return (
+      connection.pageName ??
+      connection.lastConnectedPageName ??
+      this.resolveConnectionPageId(connection)
+    );
   }
 
   private serializeMessage(message: DbMessage) {
