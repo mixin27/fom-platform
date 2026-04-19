@@ -6,7 +6,10 @@ import { redirect } from "next/navigation"
 
 import { AuthApiError } from "@/lib/auth/api"
 import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
-import { SHOP_MESSENGER_OAUTH_SELECTION_COOKIE } from "@/lib/messenger/oauth"
+import {
+  formatMessengerOauthErrorMessage,
+  SHOP_MESSENGER_OAUTH_SELECTION_COOKIE,
+} from "@/lib/messenger/oauth"
 
 function revalidateShopWorkspace() {
   revalidatePath("/dashboard")
@@ -258,7 +261,9 @@ export type ShopMutationActionResult =
     }
 
 function toFieldErrors(details?: Array<{ field: string; errors: string[] }>) {
-  return Object.fromEntries((details ?? []).map((detail) => [detail.field, detail.errors]))
+  return Object.fromEntries(
+    (details ?? []).map((detail) => [detail.field, detail.errors])
+  )
 }
 
 function toMutationActionError(
@@ -373,7 +378,10 @@ export async function createShopOrderFromFormAction(formData: FormData) {
     })
   }
 
-  if (deliveryFee !== undefined && (!Number.isFinite(deliveryFee) || deliveryFee < 0)) {
+  if (
+    deliveryFee !== undefined &&
+    (!Number.isFinite(deliveryFee) || deliveryFee < 0)
+  ) {
     redirectToPath(returnTo, {
       error: "Delivery fee must be a non-negative integer.",
     })
@@ -481,8 +489,7 @@ export async function importShopOrdersSpreadsheetAction(formData: FormData) {
 
     revalidateShopWorkspace()
     redirectInput = {
-      notice:
-        response.data.summary || `Imported orders from ${filename}.`,
+      notice: response.data.summary || `Imported orders from ${filename}.`,
     }
   } catch (error) {
     redirectInput = {
@@ -528,7 +535,10 @@ export async function updateShopOrderStatusFromFormAction(formData: FormData) {
     redirectInput = { notice: "Order status updated." }
   } catch (error) {
     redirectInput = {
-      error: toActionMessage(error, "Unable to update the order status right now."),
+      error: toActionMessage(
+        error,
+        "Unable to update the order status right now."
+      ),
     }
   }
 
@@ -550,7 +560,10 @@ export async function updateShopOrderFromFormAction(formData: FormData) {
     })
   }
 
-  if (deliveryFee !== undefined && (!Number.isFinite(deliveryFee) || deliveryFee < 0)) {
+  if (
+    deliveryFee !== undefined &&
+    (!Number.isFinite(deliveryFee) || deliveryFee < 0)
+  ) {
     redirectToPath(returnTo, {
       error: "Delivery fee must be a non-negative integer.",
     })
@@ -687,7 +700,10 @@ export async function updateShopOrderItemFromFormAction(formData: FormData) {
     redirectInput = { notice: "Order item updated." }
   } catch (error) {
     redirectInput = {
-      error: toActionMessage(error, "Unable to update the order item right now."),
+      error: toActionMessage(
+        error,
+        "Unable to update the order item right now."
+      ),
     }
   }
 
@@ -722,7 +738,10 @@ export async function removeShopOrderItemFromFormAction(formData: FormData) {
     redirectInput = { notice: "Order item removed." }
   } catch (error) {
     redirectInput = {
-      error: toActionMessage(error, "Unable to remove the order item right now."),
+      error: toActionMessage(
+        error,
+        "Unable to remove the order item right now."
+      ),
     }
   }
 
@@ -741,17 +760,18 @@ export async function parseShopOrderMessageAction(
   }
 
   try {
-    const response = await requestAuthenticatedActionApiEnvelope<ShopParsedOrderResult>({
-      path: `/api/v1/shops/${shopId}/orders/parse-message`,
-      preferFreshSession: true,
-      requiredAccess: "shop",
-      init: {
-        method: "POST",
-        json: {
-          message: message.trim(),
+    const response =
+      await requestAuthenticatedActionApiEnvelope<ShopParsedOrderResult>({
+        path: `/api/v1/shops/${shopId}/orders/parse-message`,
+        preferFreshSession: true,
+        requiredAccess: "shop",
+        init: {
+          method: "POST",
+          json: {
+            message: message.trim(),
+          },
         },
-      },
-    })
+      })
 
     return {
       ok: true,
@@ -824,7 +844,7 @@ export async function createShopOrderFromParsedDraftAction(
       message: "Unable to create the order from the parsed draft right now.",
     }
   }
-    }
+}
 
 export type ShopOrderCreateInput = {
   customer: {
@@ -954,7 +974,7 @@ export async function completeShopMessengerOauthSelectionFromFormAction(
   } catch (error) {
     cookieStore.delete(SHOP_MESSENGER_OAUTH_SELECTION_COOKIE)
     redirectToPath("/dashboard/inbox", {
-      error: toActionMessage(
+      error: formatMessengerOauthErrorMessage(
         error,
         "Unable to connect the selected Messenger page right now."
       ),
@@ -1239,14 +1259,18 @@ export async function createShopOrderAction(
             product_name: item.product_name.trim(),
             qty: item.qty,
             unit_price: item.unit_price,
-            ...(item.product_id?.trim() ? { product_id: item.product_id.trim() } : {}),
+            ...(item.product_id?.trim()
+              ? { product_id: item.product_id.trim() }
+              : {}),
           })),
           ...(input.status ? { status: input.status } : {}),
           ...(input.source ? { source: input.source } : {}),
           ...(input.delivery_fee !== undefined
             ? { delivery_fee: input.delivery_fee }
             : {}),
-          ...(input.currency?.trim() ? { currency: input.currency.trim() } : {}),
+          ...(input.currency?.trim()
+            ? { currency: input.currency.trim() }
+            : {}),
           ...(input.note !== undefined
             ? { note: input.note?.trim() ? input.note.trim() : null }
             : {}),
@@ -1311,7 +1335,7 @@ export async function updateShopOrderAction(
 export async function updateShopOrderStatusAction(
   shopId: string,
   orderId: string,
-  input: { status: string; note?: string | null },
+  input: { status: string; note?: string | null }
 ): Promise<ShopMutationActionResult> {
   if (!shopId || !orderId || !input.status) {
     return {
@@ -1329,7 +1353,9 @@ export async function updateShopOrderStatusAction(
         method: "POST",
         json: {
           status: input.status,
-          ...(input.note !== undefined && input.note !== null && input.note !== ""
+          ...(input.note !== undefined &&
+          input.note !== null &&
+          input.note !== ""
             ? { note: input.note }
             : {}),
         },
@@ -1345,7 +1371,7 @@ export async function updateShopOrderStatusAction(
   } catch (error) {
     return toMutationActionError(
       error,
-      "Unable to update the order status right now.",
+      "Unable to update the order status right now."
     )
   }
 }
@@ -1353,7 +1379,9 @@ export async function updateShopOrderStatusAction(
 export async function addShopOrderItemAction(
   shopId: string,
   orderId: string,
-  input: Required<Pick<ShopOrderItemInput, "product_name" | "qty" | "unit_price">> &
+  input: Required<
+    Pick<ShopOrderItemInput, "product_name" | "qty" | "unit_price">
+  > &
     Pick<ShopOrderItemInput, "product_id">
 ): Promise<ShopMutationActionResult> {
   if (!shopId || !orderId || !input.product_name.trim()) {
@@ -1374,7 +1402,9 @@ export async function addShopOrderItemAction(
           product_name: input.product_name.trim(),
           qty: input.qty,
           unit_price: input.unit_price,
-          ...(input.product_id?.trim() ? { product_id: input.product_id.trim() } : {}),
+          ...(input.product_id?.trim()
+            ? { product_id: input.product_id.trim() }
+            : {}),
         },
       },
     })
@@ -1386,7 +1416,10 @@ export async function addShopOrderItemAction(
       message: "Order item added.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to add the order item right now.")
+    return toMutationActionError(
+      error,
+      "Unable to add the order item right now."
+    )
   }
 }
 
@@ -1419,7 +1452,11 @@ export async function updateShopOrderItemAction(
             ? { unit_price: input.unit_price }
             : {}),
           ...(input.product_id !== undefined
-            ? { product_id: input.product_id?.trim() ? input.product_id.trim() : null }
+            ? {
+                product_id: input.product_id?.trim()
+                  ? input.product_id.trim()
+                  : null,
+              }
             : {}),
         },
       },
@@ -1432,7 +1469,10 @@ export async function updateShopOrderItemAction(
       message: "Order item updated.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to update the order item right now.")
+    return toMutationActionError(
+      error,
+      "Unable to update the order item right now."
+    )
   }
 }
 
@@ -1465,7 +1505,10 @@ export async function removeShopOrderItemAction(
       message: "Order item removed.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to remove the order item right now.")
+    return toMutationActionError(
+      error,
+      "Unable to remove the order item right now."
+    )
   }
 }
 
@@ -1490,7 +1533,9 @@ export async function createShopCustomerAction(
         json: {
           name: input.name.trim(),
           phone: input.phone.trim(),
-          ...(input.township?.trim() ? { township: input.township.trim() } : {}),
+          ...(input.township?.trim()
+            ? { township: input.township.trim() }
+            : {}),
           ...(input.address?.trim() ? { address: input.address.trim() } : {}),
           ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
         },
@@ -1504,7 +1549,10 @@ export async function createShopCustomerAction(
       message: "Customer saved.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to save the customer right now.")
+    return toMutationActionError(
+      error,
+      "Unable to save the customer right now."
+    )
   }
 }
 
@@ -1531,7 +1579,9 @@ export async function updateShopCustomerAction(
           ...(input.name !== undefined ? { name: input.name.trim() } : {}),
           ...(input.phone !== undefined ? { phone: input.phone.trim() } : {}),
           ...(input.township !== undefined
-            ? { township: input.township?.trim() ? input.township.trim() : null }
+            ? {
+                township: input.township?.trim() ? input.township.trim() : null,
+              }
             : {}),
           ...(input.address !== undefined
             ? { address: input.address?.trim() ? input.address.trim() : null }
@@ -1550,7 +1600,10 @@ export async function updateShopCustomerAction(
       message: "Customer updated.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to update the customer right now.")
+    return toMutationActionError(
+      error,
+      "Unable to update the customer right now."
+    )
   }
 }
 
@@ -1582,7 +1635,10 @@ export async function deleteShopCustomerAction(
       message: "Customer deleted.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to delete the customer right now.")
+    return toMutationActionError(
+      error,
+      "Unable to delete the customer right now."
+    )
   }
 }
 
@@ -1607,8 +1663,12 @@ export async function createShopTemplateAction(
         json: {
           title: input.title.trim(),
           body: input.body.trim(),
-          ...(input.shortcut?.trim() ? { shortcut: input.shortcut.trim() } : {}),
-          ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
+          ...(input.shortcut?.trim()
+            ? { shortcut: input.shortcut.trim() }
+            : {}),
+          ...(input.is_active !== undefined
+            ? { is_active: input.is_active }
+            : {}),
         },
       },
     })
@@ -1620,7 +1680,10 @@ export async function createShopTemplateAction(
       message: "Template created.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to create the template right now.")
+    return toMutationActionError(
+      error,
+      "Unable to create the template right now."
+    )
   }
 }
 
@@ -1647,9 +1710,13 @@ export async function updateShopTemplateAction(
           ...(input.title !== undefined ? { title: input.title.trim() } : {}),
           ...(input.body !== undefined ? { body: input.body.trim() } : {}),
           ...(input.shortcut !== undefined
-            ? { shortcut: input.shortcut?.trim() ? input.shortcut.trim() : null }
+            ? {
+                shortcut: input.shortcut?.trim() ? input.shortcut.trim() : null,
+              }
             : {}),
-          ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
+          ...(input.is_active !== undefined
+            ? { is_active: input.is_active }
+            : {}),
         },
       },
     })
@@ -1661,7 +1728,10 @@ export async function updateShopTemplateAction(
       message: "Template updated.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to update the template right now.")
+    return toMutationActionError(
+      error,
+      "Unable to update the template right now."
+    )
   }
 }
 
@@ -1706,7 +1776,10 @@ export async function createShopDeliveryAction(
       message: "Delivery created.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to create the delivery right now.")
+    return toMutationActionError(
+      error,
+      "Unable to create the delivery right now."
+    )
   }
 }
 
@@ -1744,8 +1817,12 @@ export async function updateShopDeliveryAction(
                   : null,
               }
             : {}),
-          ...(input.scheduled_at !== undefined ? { scheduled_at: input.scheduled_at } : {}),
-          ...(input.delivered_at !== undefined ? { delivered_at: input.delivered_at } : {}),
+          ...(input.scheduled_at !== undefined
+            ? { scheduled_at: input.scheduled_at }
+            : {}),
+          ...(input.delivered_at !== undefined
+            ? { delivered_at: input.delivered_at }
+            : {}),
         },
       },
     })
@@ -1757,7 +1834,10 @@ export async function updateShopDeliveryAction(
       message: "Delivery updated.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to update the delivery right now.")
+    return toMutationActionError(
+      error,
+      "Unable to update the delivery right now."
+    )
   }
 }
 
@@ -1868,7 +1948,10 @@ export async function createShopDeliveryFromFormAction(formData: FormData) {
     })
   }
 
-  if (deliveryFee !== undefined && (!Number.isFinite(deliveryFee) || deliveryFee < 0)) {
+  if (
+    deliveryFee !== undefined &&
+    (!Number.isFinite(deliveryFee) || deliveryFee < 0)
+  ) {
     redirectToPath(returnTo, {
       error: "Delivery fee must be a non-negative integer.",
     })
@@ -1992,7 +2075,9 @@ export async function createShopTemplateFromFormAction(formData: FormData) {
   redirectToPath(returnTo, redirectInput)
 }
 
-export async function updateShopTemplateStateFromFormAction(formData: FormData) {
+export async function updateShopTemplateStateFromFormAction(
+  formData: FormData
+) {
   const returnTo = getReturnTo(formData, "/dashboard/templates")
   const shopId = normalizeTextField(formData.get("shop_id"))
   const templateId = normalizeTextField(formData.get("template_id"))
@@ -2113,14 +2198,19 @@ export async function updateShopProfileFromFormAction(formData: FormData) {
     redirectInput = { notice: "Shop settings updated." }
   } catch (error) {
     redirectInput = {
-      error: toActionMessage(error, "Unable to update the shop settings right now."),
+      error: toActionMessage(
+        error,
+        "Unable to update the shop settings right now."
+      ),
     }
   }
 
   redirectToPath(returnTo, redirectInput)
 }
 
-export async function updateCurrentUserProfileFromFormAction(formData: FormData) {
+export async function updateCurrentUserProfileFromFormAction(
+  formData: FormData
+) {
   const returnTo = getReturnTo(formData, "/dashboard/settings")
   const name = normalizeTextField(formData.get("name"))
   const email = normalizeTextField(formData.get("email"))
@@ -2256,7 +2346,9 @@ export async function updateShopMemberFromFormAction(formData: FormData) {
   redirectToPath(returnTo, redirectInput)
 }
 
-export async function createInvoiceMmqrSessionFromFormAction(formData: FormData) {
+export async function createInvoiceMmqrSessionFromFormAction(
+  formData: FormData
+) {
   const returnTo = getReturnTo(formData, "/dashboard/billing")
   const shopId = normalizeTextField(formData.get("shop_id"))
   const invoiceId = normalizeTextField(formData.get("invoice_id"))
@@ -2318,7 +2410,11 @@ export async function createShopMemberAction(
   shopId: string,
   input: ShopMemberInput
 ): Promise<ShopMutationActionResult> {
-  if (!shopId || (!input.email?.trim() && !input.phone?.trim()) || input.role_ids.length === 0) {
+  if (
+    !shopId ||
+    (!input.email?.trim() && !input.phone?.trim()) ||
+    input.role_ids.length === 0
+  ) {
     return {
       ok: false,
       message: "Member contact and at least one role are required.",
@@ -2334,7 +2430,9 @@ export async function createShopMemberAction(
         method: "POST",
         json: {
           ...(input.name?.trim() ? { name: input.name.trim() } : {}),
-          ...(input.email?.trim() ? { email: input.email.trim().toLowerCase() } : {}),
+          ...(input.email?.trim()
+            ? { email: input.email.trim().toLowerCase() }
+            : {}),
           ...(input.phone?.trim() ? { phone: input.phone.trim() } : {}),
           role_ids: input.role_ids,
         },
@@ -2392,7 +2490,10 @@ export async function updateShopMemberAction(
       message: "Member access updated.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to update the member right now.")
+    return toMutationActionError(
+      error,
+      "Unable to update the member right now."
+    )
   }
 }
 
@@ -2424,7 +2525,10 @@ export async function resendShopMemberInvitationAction(
       message: "Invitation email sent.",
     }
   } catch (error) {
-    return toMutationActionError(error, "Unable to resend the invitation right now.")
+    return toMutationActionError(
+      error,
+      "Unable to resend the invitation right now."
+    )
   }
 }
 
@@ -2448,7 +2552,9 @@ export async function createShopRoleAction(
         method: "POST",
         json: {
           name: input.name.trim(),
-          ...(input.description?.trim() ? { description: input.description.trim() } : {}),
+          ...(input.description?.trim()
+            ? { description: input.description.trim() }
+            : {}),
           permission_codes: input.permission_codes,
         },
       },
@@ -2498,7 +2604,11 @@ export async function updateShopRoleAction(
         json: {
           ...(input.name !== undefined ? { name: input.name.trim() } : {}),
           ...(input.description !== undefined
-            ? { description: input.description?.trim() ? input.description.trim() : null }
+            ? {
+                description: input.description?.trim()
+                  ? input.description.trim()
+                  : null,
+              }
             : {}),
           ...(input.permission_codes !== undefined
             ? { permission_codes: input.permission_codes }

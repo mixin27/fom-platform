@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 
-import { AuthApiError } from "@/lib/auth/api"
 import type { ShopMessengerOauthCompleteResult } from "@/lib/shop/api"
 import {
   encodeShopMessengerOauthSelection,
+  formatMessengerOauthErrorMessage,
   SHOP_MESSENGER_OAUTH_SELECTION_COOKIE,
 } from "@/lib/messenger/oauth"
 import { buildAppUrl } from "@/lib/app/base-url"
@@ -110,10 +110,10 @@ export async function GET(request: Request) {
     return redirectResponse
   } catch (error) {
     return buildInboxRedirect(request.url, {
-      error:
-        error instanceof AuthApiError
-          ? error.message
-          : "Unable to finish Messenger connect right now.",
+      error: formatMessengerOauthErrorMessage(
+        error,
+        "Unable to finish Messenger connect right now."
+      ),
     })
   }
 }

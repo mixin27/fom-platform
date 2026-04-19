@@ -5,9 +5,9 @@ import { ArrowRight, Inbox, Link2 } from "lucide-react"
 
 import { completeShopMessengerOauthSelectionFromFormAction } from "@/app/(shop-admin)/dashboard/actions"
 import { PageIntro } from "@/components/page-intro"
-import { AuthApiError } from "@/lib/auth/api"
 import {
   decodeShopMessengerOauthSelection,
+  formatMessengerOauthErrorMessage,
   SHOP_MESSENGER_OAUTH_SELECTION_COOKIE,
 } from "@/lib/messenger/oauth"
 import { getActiveShop, requireShopAdmin } from "@/lib/auth/session"
@@ -52,12 +52,12 @@ export default async function ShopMessengerConnectSelectionPage() {
     )
     pages = pagesResponse.data.pages
   } catch (error) {
-    const message =
-      error instanceof AuthApiError
-        ? error.message
-        : "Unable to load Facebook Pages for this Messenger connection."
-
-    redirectToInboxWithError(message)
+    redirectToInboxWithError(
+      formatMessengerOauthErrorMessage(
+        error,
+        "Unable to load Facebook Pages for this Messenger connection."
+      )
+    )
   }
 
   if (pages.length === 0) {

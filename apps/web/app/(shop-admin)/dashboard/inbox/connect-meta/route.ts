@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 
-import { AuthApiError } from "@/lib/auth/api"
 import { requestAuthenticatedActionApiEnvelope } from "@/lib/auth/request"
 import { getActiveShop, getSession } from "@/lib/auth/session"
 import { buildAppUrl } from "@/lib/app/base-url"
+import { formatMessengerOauthErrorMessage } from "@/lib/messenger/oauth"
 
 function redirectWithError(requestUrl: string, message: string) {
   const url = new URL("/dashboard/inbox", requestUrl)
@@ -43,9 +43,10 @@ export async function GET(request: Request) {
   } catch (error) {
     return redirectWithError(
       request.url,
-      error instanceof AuthApiError
-        ? error.message
-        : "Unable to start Messenger connect right now."
+      formatMessengerOauthErrorMessage(
+        error,
+        "Unable to start Messenger connect right now."
+      )
     )
   }
 }
