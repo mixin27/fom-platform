@@ -6,6 +6,7 @@ import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fom_mobile/features/announcements/feature_announcements.dart';
 import 'package:fom_mobile/features/auth/feature_auth.dart';
 import 'package:fom_mobile/features/customers/feature_customers.dart';
 import 'package:fom_mobile/features/devtools/feature_devtools.dart';
@@ -350,6 +351,15 @@ class AppShell extends StatelessWidget {
                       isOnline: networkStatus.isOnline,
                       transportLabel: networkStatus.primaryTransportLabel,
                     ),
+                  ),
+                ),
+              if ((authBloc.state.activeShop?.shopId ?? '').trim().isNotEmpty)
+                SafeArea(
+                  top: networkStatus.isOnline,
+                  bottom: false,
+                  child: AnnouncementBannerHost.shop(
+                    key: ValueKey<String>(authBloc.state.activeShop!.shopId),
+                    shopId: authBloc.state.activeShop!.shopId,
                   ),
                 ),
               Expanded(child: navigationShell),

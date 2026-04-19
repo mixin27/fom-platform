@@ -4,8 +4,10 @@ import "package:flutter_bloc/flutter_bloc.dart";
 import "package:fom_mobile/app/di/injection_container.dart";
 import "package:fom_mobile/features/auth/feature_auth.dart";
 import "package:intl/intl.dart";
+import "package:url_launcher/url_launcher.dart";
 
 import "../../domain/entities/order_details.dart";
+import "../../domain/entities/order_list_item.dart";
 import "../../domain/entities/order_source.dart";
 import "../../domain/entities/order_status.dart";
 import "../bloc/order_details_bloc.dart";
@@ -199,7 +201,7 @@ class _OrderDetailsView extends StatelessWidget {
                               color: AppColors.softOrange,
                             ),
                           )
-                        : const Icon(Icons.ios_share_rounded),
+                        : const Icon(Icons.file_upload_outlined),
                     onPressed: exportState.isBusy
                         ? null
                         : () => _openExportSheet(context, details),
@@ -240,12 +242,11 @@ class _OrderDetailsView extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     OrderDetailsShippingBanner(
                       isLoading: state.isUpdatingStatus,
-                      onMarkDelivered: () =>
-                          context.read<OrderDetailsBloc>().add(
-                            const OrderDetailsStatusChangeRequested(
-                              nextStatus: OrderStatus.delivered,
-                            ),
-                          ),
+                      onMarkDelivered: () async => _onRequestStatusChange(
+                        context,
+                        currentStatus: currentStatus,
+                        requestedStatus: OrderStatus.delivered,
+                      ),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.md),
@@ -266,9 +267,9 @@ class _OrderDetailsView extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                   CustomerInfoCard(
                     order: order,
-                    onCallTap: () => _showComingSoon(context, "Call"),
-                    onMessageTap: () => _showComingSoon(context, "Message"),
-                    onMapTap: () => _showComingSoon(context, "Map"),
+                    onCallTap: () => _launchPhoneCall(context, order),
+                    onMessageTap: () => _launchCustomerMessage(context, order),
+                    onMapTap: () => _launchCustomerMap(context, order),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   ProductPaymentCard(order: order, details: details),
@@ -284,18 +285,20 @@ class _OrderDetailsView extends StatelessWidget {
             ),
             bottomNavigationBar: OrderDetailsBottomBar(
               secondaryLabel: "Update Status",
-              onSecondaryPressed: () =>
+              onSecondaryPressed: () async =>
                   _openStatusSheet(context, currentStatus: currentStatus),
               primaryLabel: primaryAction.label,
               primaryEnabled: primaryAction.nextStatus != null,
-              onPrimaryPressed: () {
+              onPrimaryPressed: () async {
                 final nextStatus = primaryAction.nextStatus;
                 if (nextStatus == null) {
                   return;
                 }
 
-                context.read<OrderDetailsBloc>().add(
-                  OrderDetailsStatusChangeRequested(nextStatus: nextStatus),
+                await _onRequestStatusChange(
+                  context,
+                  currentStatus: currentStatus,
+                  requestedStatus: nextStatus,
                 );
               },
               isPrimaryLoading: state.isUpdatingStatus,
@@ -378,6 +381,15 @@ class _OrderDetailsView extends StatelessWidget {
       return;
     }
 
+    if (selection.status == OrderStatus.cancelled &&
+        !await _confirmCancellation(context)) {
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+
     context.read<OrderDetailsBloc>().add(
       OrderDetailsStatusChangeRequested(
         nextStatus: selection.status,
@@ -386,17 +398,26 @@ class _OrderDetailsView extends StatelessWidget {
     );
   }
 
-  void _onRequestStatusChange(
+  Future<void> _onRequestStatusChange(
     BuildContext context, {
     required OrderStatus currentStatus,
     required OrderStatus requestedStatus,
-  }) {
+  }) async {
     if (requestedStatus == currentStatus) {
       return;
     }
 
     if (!_isTransitionAllowed(currentStatus, requestedStatus)) {
       _showInvalidTransition(context);
+      return;
+    }
+
+    if (requestedStatus == OrderStatus.cancelled &&
+        !await _confirmCancellation(context)) {
+      return;
+    }
+
+    if (!context.mounted) {
       return;
     }
 
@@ -414,12 +435,162 @@ class _OrderDetailsView extends StatelessWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context, String actionName) {
+  Future<bool> _confirmCancellation(BuildContext context) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Color(0xFFFEE2E2),
+                      child: Icon(
+                        Icons.cancel_outlined,
+                        size: 18,
+                        color: Color(0xFFB91C1C),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Cancel this order?",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "This order will move to Cancelled and cannot continue in the delivery flow.",
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMid,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                AppButton(
+                  text: "Keep Order",
+                  variant: AppButtonVariant.secondary,
+                  onPressed: () => Navigator.of(sheetContext).pop(false),
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  text: "Cancel Order",
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return confirmed == true;
+  }
+
+  Future<void> _launchPhoneCall(
+    BuildContext context,
+    OrderListItem order,
+  ) async {
+    final phone = order.customerPhone.trim();
+    if (phone.isEmpty) {
+      _showInfoMessage(context, "Customer phone number is not available.");
+      return;
+    }
+
+    await _launchExternalUri(
+      context,
+      Uri(scheme: "tel", path: phone),
+      failureMessage: "Could not open the phone app right now.",
+    );
+  }
+
+  Future<void> _launchCustomerMessage(
+    BuildContext context,
+    OrderListItem order,
+  ) async {
+    final phone = order.customerPhone.trim();
+    if (phone.isEmpty) {
+      _showInfoMessage(context, "Customer phone number is not available.");
+      return;
+    }
+
+    await _launchExternalUri(
+      context,
+      Uri(scheme: "sms", path: phone),
+      failureMessage: "Could not open messaging right now.",
+    );
+  }
+
+  Future<void> _launchCustomerMap(
+    BuildContext context,
+    OrderListItem order,
+  ) async {
+    final queryParts = <String>[
+      if ((order.customerAddress ?? "").trim().isNotEmpty)
+        order.customerAddress!.trim(),
+      if ((order.customerTownship ?? "").trim().isNotEmpty)
+        order.customerTownship!.trim(),
+    ];
+
+    if (queryParts.isEmpty) {
+      _showInfoMessage(context, "Customer address is not available.");
+      return;
+    }
+
+    final query = Uri.encodeComponent(queryParts.join(", "));
+    await _launchExternalUri(
+      context,
+      Uri.parse("https://www.google.com/maps/search/?api=1&query=$query"),
+      failureMessage: "Could not open maps right now.",
+    );
+  }
+
+  Future<void> _launchExternalUri(
+    BuildContext context,
+    Uri uri, {
+    required String failureMessage,
+  }) async {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (launched || !context.mounted) {
+        return;
+      }
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+    }
+
+    _showInfoMessage(context, failureMessage);
+  }
+
+  void _showInfoMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("$actionName integration will be added soon."),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 }

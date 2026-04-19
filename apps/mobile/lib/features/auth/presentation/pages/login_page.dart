@@ -3,6 +3,7 @@ import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fom_mobile/features/announcements/feature_announcements.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -104,6 +105,9 @@ class _LoginViewState extends State<_LoginView> {
                           isOnline: networkStatus.isOnline,
                           transportLabel: networkStatus.primaryTransportLabel,
                         ),
+                        const AnnouncementBannerHost.publicAuth(
+                          padding: EdgeInsets.only(top: 16),
+                        ),
                         const SizedBox(height: 20),
                         AppTextField(
                           controller: _emailController,
@@ -159,13 +163,6 @@ class _LoginViewState extends State<_LoginView> {
                           text: l10n.signIn,
                           isLoading: state.isSubmitting,
                           onPressed: canSubmit ? _onSignInPressed : null,
-                        ),
-                        const SizedBox(height: 16),
-                        AppButton(
-                          text: l10n.authContinueWithFacebook,
-                          variant: AppButtonVariant.facebook,
-                          icon: const Icon(Icons.facebook, color: Colors.white),
-                          onPressed: null,
                         ),
                         const SizedBox(height: 20),
                         GestureDetector(

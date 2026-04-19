@@ -3,6 +3,7 @@ import 'package:app_network/app_network.dart';
 import 'package:app_ui_kit/app_ui_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fom_mobile/features/announcements/feature_announcements.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -114,6 +115,9 @@ class _RegisterViewState extends State<_RegisterView> {
                         AppConnectionBanner(
                           isOnline: networkStatus.isOnline,
                           transportLabel: networkStatus.primaryTransportLabel,
+                        ),
+                        const AnnouncementBannerHost.publicAuth(
+                          padding: EdgeInsets.only(top: 16),
                         ),
                         const SizedBox(height: 20),
                         AppTextField(

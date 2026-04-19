@@ -1,3 +1,6 @@
+import "dart:convert";
+
+import "package:app_storage/app_storage.dart";
 import "package:app_ui_kit/app_ui_kit.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
@@ -36,13 +39,15 @@ class AddOrderPage extends StatelessWidget {
         ..add(
           OrderEntryStarted(shopId: initialShopId, shopName: initialShopName),
         ),
-      child: const _AddOrderView(),
+      child: _AddOrderView(initialShopId: initialShopId),
     );
   }
 }
 
 class _AddOrderView extends StatefulWidget {
-  const _AddOrderView();
+  const _AddOrderView({required this.initialShopId});
+
+  final String initialShopId;
 
   @override
   State<_AddOrderView> createState() => _AddOrderViewState();
@@ -74,6 +79,10 @@ class _AddOrderViewState extends State<_AddOrderView> {
     _qtyController.addListener(_onPreviewInputChanged);
     _unitPriceController.addListener(_onPreviewInputChanged);
     _deliveryFeeController.addListener(_onPreviewInputChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _restoreDraftIfAvailable();
+    });
   }
 
   @override
@@ -100,9 +109,15 @@ class _AddOrderViewState extends State<_AddOrderView> {
     return BlocConsumer<OrderEntryBloc, OrderEntryState>(
       listenWhen: (previous, current) {
         return previous.parsedOrderMessage != current.parsedOrderMessage ||
-            previous.errorMessage != current.errorMessage;
+            previous.errorMessage != current.errorMessage ||
+            previous.isSuccess != current.isSuccess;
       },
-      listener: (context, state) {
+      listener: (context, state) async {
+        if (state.isSuccess && state.createdOrder != null) {
+          await _deleteSavedDraft(showMessage: false);
+          return;
+        }
+
         final parsed = state.parsedOrderMessage;
         if (parsed != null) {
           _applyParsedResult(parsed);
@@ -481,7 +496,7 @@ class _AddOrderViewState extends State<_AddOrderView> {
                         text: "Draft",
                         onPressed: parsing || submitting
                             ? null
-                            : () => _showDraftComingSoon(context),
+                            : () => _saveDraftLocally(context),
                         variant: AppButtonVariant.secondary,
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -635,6 +650,7 @@ class _AddOrderViewState extends State<_AddOrderView> {
     });
 
     context.read<OrderEntryBloc>().add(const OrderEntryCleared());
+    _deleteSavedDraft(showMessage: false);
   }
 
   void _onAddAnother() {
@@ -752,13 +768,225 @@ class _AddOrderViewState extends State<_AddOrderView> {
     );
   }
 
-  void _showDraftComingSoon(BuildContext context) {
+  Future<void> _saveDraftLocally(BuildContext context) async {
+    if (!_hasDraftContent()) {
+      _showValidationError(context, "Add something before saving a draft.");
+      return;
+    }
+
+    final shopId = widget.initialShopId.trim();
+    if (shopId.isEmpty) {
+      _showValidationError(context, "Shop access is not available.");
+      return;
+    }
+
+    await getIt<SharedPreferencesService>().setString(
+      _draftStorageKey(shopId),
+      jsonEncode(_buildDraftSnapshot()),
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Draft saving will be added soon."),
+        content: Text("Draft saved on this device."),
         behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+
+  Future<void> _restoreDraftIfAvailable() async {
+    final shopId = widget.initialShopId.trim();
+    if (shopId.isEmpty) {
+      return;
+    }
+
+    final rawValue = getIt<SharedPreferencesService>().getString(
+      _draftStorageKey(shopId),
+    );
+    if ((rawValue ?? '').trim().isEmpty) {
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(rawValue!);
+      if (decoded is! Map) {
+        return;
+      }
+
+      final snapshot = Map<String, dynamic>.from(decoded);
+      if (!_hasAnySnapshotContent(snapshot)) {
+        return;
+      }
+
+      setState(() {
+        _customerNameController.text = _readSnapshotText(
+          snapshot,
+          "customer_name",
+        );
+        _phoneController.text = _readSnapshotText(snapshot, "phone");
+        _townshipController.text = _readSnapshotText(snapshot, "township");
+        _addressController.text = _readSnapshotText(snapshot, "address");
+        _productNameController.text = _readSnapshotText(
+          snapshot,
+          "product_name",
+        );
+        _qtyController.text = _readSnapshotText(snapshot, "qty").isEmpty
+            ? "1"
+            : _readSnapshotText(snapshot, "qty");
+        _unitPriceController.text = _readSnapshotText(snapshot, "unit_price");
+        _deliveryFeeController.text = _readSnapshotText(
+          snapshot,
+          "delivery_fee",
+        );
+        _noteController.text = _readSnapshotText(snapshot, "note");
+        _selectedStatus = OrderStatus.fromApiValue(
+          _readSnapshotText(snapshot, "selected_status"),
+        );
+        _isPasteApplied = _readSnapshotBool(snapshot, "is_paste_applied");
+        _customerMatch = null;
+        _parseWarnings = const <String>[];
+        _parseUnparsedLines = const <String>[];
+        _additionalParsedItems = _readSnapshotItems(snapshot["items"]);
+      });
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Saved draft restored."),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      await _deleteSavedDraft(showMessage: false);
+    }
+  }
+
+  Future<void> _deleteSavedDraft({required bool showMessage}) async {
+    final shopId = widget.initialShopId.trim();
+    if (shopId.isEmpty) {
+      return;
+    }
+
+    await getIt<SharedPreferencesService>().remove(_draftStorageKey(shopId));
+
+    if (!showMessage || !mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Saved draft removed."),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  bool _hasDraftContent() {
+    return _buildDraftSnapshot().values.any((value) {
+      if (value is String) {
+        return value.trim().isNotEmpty;
+      }
+      if (value is bool) {
+        return value;
+      }
+      if (value is List) {
+        return value.isNotEmpty;
+      }
+      return false;
+    });
+  }
+
+  Map<String, dynamic> _buildDraftSnapshot() {
+    return <String, dynamic>{
+      "customer_name": _customerNameController.text.trim(),
+      "phone": _phoneController.text.trim(),
+      "township": _townshipController.text.trim(),
+      "address": _addressController.text.trim(),
+      "product_name": _productNameController.text.trim(),
+      "qty": _qtyController.text.trim(),
+      "unit_price": _unitPriceController.text.trim(),
+      "delivery_fee": _deliveryFeeController.text.trim(),
+      "note": _noteController.text.trim(),
+      "selected_status": _selectedStatus.apiValue,
+      "is_paste_applied": _isPasteApplied,
+      "items": _additionalParsedItems
+          .map(
+            (item) => <String, dynamic>{
+              "product_id": item.productId,
+              "product_name": item.productName,
+              "qty": item.quantity,
+              "unit_price": item.unitPrice,
+            },
+          )
+          .toList(growable: false),
+    };
+  }
+
+  String _draftStorageKey(String shopId) {
+    return "orders.entry_draft.$shopId";
+  }
+
+  bool _hasAnySnapshotContent(Map<String, dynamic> snapshot) {
+    return snapshot.values.any((value) {
+      if (value is String) {
+        return value.trim().isNotEmpty;
+      }
+      if (value is bool) {
+        return value;
+      }
+      if (value is List) {
+        return value.isNotEmpty;
+      }
+      return false;
+    });
+  }
+
+  String _readSnapshotText(Map<String, dynamic> snapshot, String key) {
+    final value = snapshot[key];
+    if (value == null) {
+      return "";
+    }
+
+    return value.toString().trim();
+  }
+
+  bool _readSnapshotBool(Map<String, dynamic> snapshot, String key) {
+    final value = snapshot[key];
+    if (value is bool) {
+      return value;
+    }
+
+    return value?.toString().trim().toLowerCase() == "true";
+  }
+
+  List<OrderEntryItemDraft> _readSnapshotItems(dynamic value) {
+    if (value is! List) {
+      return const <OrderEntryItemDraft>[];
+    }
+
+    return value
+        .whereType<Map>()
+        .map(
+          (item) => OrderEntryItemDraft(
+            productId: item["product_id"]?.toString().trim(),
+            productName: item["product_name"]?.toString().trim() ?? "",
+            quantity: int.tryParse(item["qty"]?.toString() ?? "") ?? 1,
+            unitPrice: int.tryParse(item["unit_price"]?.toString() ?? "") ?? 0,
+          ),
+        )
+        .where(
+          (item) =>
+              item.productName.trim().isNotEmpty &&
+              item.quantity > 0 &&
+              item.unitPrice > 0,
+        )
+        .toList(growable: false);
   }
 
   String? _nullableText(String value) {

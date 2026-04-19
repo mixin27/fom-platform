@@ -2,6 +2,7 @@ import "package:app_logger/app_logger.dart";
 import "package:app_storage/app_storage.dart";
 import "package:get_it/get_it.dart";
 
+import "../../features/announcements/feature_announcements.dart";
 import "../../features/auth/feature_auth.dart";
 import "../../features/customers/feature_customers.dart";
 import "../../features/exports/feature_exports.dart";
@@ -37,6 +38,7 @@ Future<void> configureDependencies({
       appLogger: appLogger,
       sharedPreferencesService: sharedPreferencesService,
     ),
+    const AnnouncementsModule(),
     const AuthModule(),
     const OnboardingModule(),
     const OrdersModule(),
