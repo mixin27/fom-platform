@@ -1,9 +1,9 @@
 import Link from "next/link"
 import { Shield, Store, Users } from "lucide-react"
 
-import { DashboardStatCard } from "@/components/dashboard-stat-card"
-import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
+import { AdminDataTable } from "@/features/portal-shell/components/admin/admin-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getPlatformUsers,
@@ -15,10 +15,17 @@ import {
   getSingleSearchParam,
   type PlatformSearchParams,
 } from "@/lib/platform/query"
-import { formatCodeLabel, formatList } from "@/lib/shop/format"
+import { formatCodeLabel } from "@/lib/shop/format"
 import { formatRelativeDate } from "@/lib/platform/format"
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@workspace/ui/components/pagination"
 
 type PlatformUsersPageProps = {
   searchParams?: Promise<PlatformSearchParams>
@@ -44,198 +51,163 @@ export default async function PlatformUsersPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <PageIntro
-        eyebrow="Users"
-        title="Users management"
-        description="Inspect owner, staff, and internal accounts across the platform with their linked shops, auth methods, and recent activity."
+      <AdminHeader
+        title="Users"
         actions={
           <Button asChild variant="outline" size="sm">
-            <Link href="/platform/shops">Shop management</Link>
+            <Link href="/platform/shops">Manage Shops</Link>
           </Button>
         }
       />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <DashboardStatCard
-          title="Visible users"
+        <AdminStatCard
+          label="Total Users"
           value={String(pagination?.total ?? rows.length)}
-          detail="Filtered results in the current workspace view."
-          delta={`${rows.length} on this page`}
+          detail={`${rows.length} on this page`}
           icon={Users}
-          accent="sunset"
         />
-        <DashboardStatCard
-          title="Platform access"
+        <AdminStatCard
+          label="Platform Access"
           value={String(platformUsers.length)}
-          detail="Internal platform accounts on the current page."
-          delta={`${shopOwners.length} shop owners`}
+          detail="Internal accounts"
           icon={Shield}
-          accent="teal"
         />
-        <DashboardStatCard
-          title="Staff accounts"
-          value={String(staffUsers.length)}
-          detail="Non-owner shop operators in the current page."
-          delta={`${noShopUsers.length} no-shop accounts`}
+        <AdminStatCard
+          label="Shop Owners"
+          value={String(shopOwners.length)}
+          detail="Primary accounts"
           icon={Store}
-          accent="ink"
         />
-        <DashboardStatCard
-          title="Owned shops"
-          value={String(rows.reduce((sum, user) => sum + user.owned_shop_count, 0))}
-          detail="Total owner-linked shops across the visible rows."
-          delta={`${rows.reduce((sum, user) => sum + user.active_shop_count, 0)} active memberships`}
-          icon={Store}
-          accent="default"
+        <AdminStatCard
+          label="Staff & Members"
+          value={String(staffUsers.length + noShopUsers.length)}
+          detail="Operator accounts"
+          icon={Users}
         />
       </section>
 
-      <PlatformDataTable
-        title="Workspace users"
-        description="Access inventory across the current filtered result set"
-        rows={rows}
-        emptyMessage="No users matched the current filters."
-        footer={`Showing ${rows.length} user${rows.length === 1 ? "" : "s"}`}
-        pagination={
-          pagination
-            ? {
-                previousHref: previousCursor
-                  ? buildQueryHref("/platform/users", params, {
-                      cursor: previousCursor,
-                    })
-                  : currentCursor
-                    ? buildQueryHref("/platform/users", params, {
-                        cursor: null,
-                      })
-                    : null,
-                nextHref: pagination.next_cursor
-                  ? buildQueryHref("/platform/users", params, {
-                      cursor: pagination.next_cursor,
-                    })
-                  : null,
-              }
-            : undefined
-        }
+      <AdminDataTable
+        title="Account Inventory"
+        data={rows}
+        emptyMessage="No users found."
         toolbar={
-          <form className="flex flex-wrap gap-2.5" method="get">
+          <form className="flex flex-wrap items-center gap-2" method="get">
             <Input
               name="search"
               defaultValue={search}
-              placeholder="Search users or shops"
-              className="w-[240px]"
+              placeholder="Search by name or email"
+              className="w-[200px] h-8 text-[13px]"
             />
             <select
               name="access"
               defaultValue={access}
-              className="h-9 rounded-xl border border-[var(--fom-border-strong)] bg-[var(--fom-admin-surface)] px-3 text-sm"
+              className="h-8 rounded-lg border border-[var(--fom-border-subtle)] bg-[var(--fom-admin-surface)] px-2 text-[12px] font-medium"
             >
-              <option value="all">All access</option>
+              <option value="all">All Access</option>
               <option value="platform">Platform</option>
-              <option value="shop_owner">Shop owners</option>
+              <option value="shop_owner">Owners</option>
               <option value="staff">Staff</option>
-              <option value="no_shop">No shop</option>
             </select>
             <input type="hidden" name="limit" value={String(limit)} />
-            <Button type="submit" size="sm" variant="outline">
-              Apply filters
+            <Button type="submit" size="sm" className="h-8">
+              Filter
             </Button>
           </form>
         }
         columns={[
           {
             key: "user",
-            header: "User",
+            header: "Account",
             render: (user) => (
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold text-foreground">{user.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {user.email ?? user.phone ?? "No primary contact"}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-foreground">{user.name}</span>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {user.email ?? user.phone ?? "No contact info"}
                 </span>
               </div>
             ),
           },
           {
             key: "access",
-            header: "Access",
+            header: "Permissions",
             render: (user) => (
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
+                <PlatformStatusBadge
+                  status={user.access_type === "no_shop" ? "pending" : "active"}
+                  label={formatCodeLabel(user.access_type)}
+                />
+                {user.platform_roles.slice(0, 2).map((role) => (
                   <PlatformStatusBadge
-                    status={user.access_type === "no_shop" ? "pending" : "active"}
-                    label={formatCodeLabel(user.access_type)}
+                    key={role.id}
+                    status="active"
+                    label={role.name}
                   />
-                  {user.platform_roles.map((role) => (
-                    <PlatformStatusBadge
-                      key={role.id}
-                      status="active"
-                      label={role.name}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {user.platform_permissions_count} platform permissions
-                </p>
+                ))}
               </div>
             ),
           },
           {
             key: "shops",
-            header: "Linked shops",
+            header: "Linked Shops",
             render: (user) => (
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-foreground">
-                  {user.active_shop_count} active access
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatList(
-                    user.shops.slice(0, 3).map((shop) => `${shop.shop_name} (${formatCodeLabel(shop.role ?? "member")})`)
-                  ) || "No linked shops"}
-                </span>
-              </div>
-            ),
-          },
-          {
-            key: "auth",
-            header: "Auth",
-            render: (user) => (
-              <div className="flex flex-col gap-1">
-                <span className="text-sm text-foreground">
-                  {formatList(user.auth_methods) || "None"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {user.active_session_count} active sessions
-                </span>
-              </div>
+              <span className="font-medium text-foreground">
+                {user.active_shop_count} active access
+              </span>
             ),
           },
           {
             key: "activity",
-            header: "Last active",
-            render: (user) =>
-              user.last_active_at
-                ? formatRelativeDate(user.last_active_at)
-                : formatRelativeDate(user.created_at),
+            header: "Activity",
+            render: (user) => (
+              <span className="text-muted-foreground font-medium">
+                {user.last_active_at
+                  ? formatRelativeDate(user.last_active_at)
+                  : "Never"}
+              </span>
+            ),
           },
           {
             key: "actions",
-            header: "Actions",
+            header: "",
             render: (user) => (
               <div className="flex justify-end">
-                {user.email ? (
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/platform/shops?search=${encodeURIComponent(user.email)}`}>
-                      Related shops
-                    </Link>
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">No actions</span>
-                )}
+                <Button asChild size="xs" variant="ghost" className="h-8 px-2 font-bold text-[var(--fom-accent)]">
+                  <Link href={`/platform/users/${user.id}`}>
+                    View Details
+                  </Link>
+                </Button>
               </div>
             ),
-            className: "w-[140px] px-4 py-2.5 text-right",
-            cellClassName: "px-4 py-3 text-right",
           },
         ]}
+        footer={
+          pagination && (
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+                Showing {rows.length} accounts
+              </p>
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    {previousCursor ? (
+                      <PaginationPrevious href={buildQueryHref("/platform/users", params, { cursor: previousCursor })} />
+                    ) : (
+                      <PaginationPrevious className="pointer-events-none opacity-40" />
+                    )}
+                  </PaginationItem>
+                  <PaginationItem>
+                    {pagination.next_cursor ? (
+                      <PaginationNext href={buildQueryHref("/platform/users", params, { cursor: pagination.next_cursor })} />
+                    ) : (
+                      <PaginationNext className="pointer-events-none opacity-40" />
+                    )}
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )
+        }
       />
     </div>
   )

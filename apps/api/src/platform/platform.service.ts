@@ -87,8 +87,7 @@ type PaymentRow = {
   plan_name: string;
   amount: number;
   currency: string;
-  payment_method: string | null;
-  provider_ref: string | null;
+  latest_transaction_id: string | null;
   status: string;
   due_at: string | null;
   paid_at: string | null;
@@ -402,74 +401,7 @@ export class PlatformService {
     });
 
     const rows = users
-      .map((user) => {
-        const platformRoles = user.roleAssignments.map((assignment) => ({
-          id: assignment.role.id,
-          code: assignment.role.code,
-          name: assignment.role.name,
-        }));
-        const platformPermissionsCount = new Set(
-          user.roleAssignments.flatMap((assignment) =>
-            assignment.role.permissionAssignments.map(
-              (permissionAssignment) => permissionAssignment.permission.id,
-            ),
-          ),
-        ).size;
-        const shopRows = user.memberships
-          .map((membership) => ({
-            shop_id: membership.shop.id,
-            shop_name: membership.shop.name,
-            membership_status: membership.status,
-            role:
-              membership.roleAssignments
-                .map((assignment) => assignment.role.code)
-                .sort()[0] ?? null,
-          }))
-          .sort((left, right) => left.shop_name.localeCompare(right.shop_name));
-        const activeShopCount = user.memberships.filter(
-          (membership) => membership.status === 'active',
-        ).length;
-        const hasOwnerRole = shopRows.some((shop) => shop.role === 'owner');
-        const accessType: PlatformUserRow['access_type'] =
-          platformRoles.length > 0
-            ? 'platform'
-            : user.ownedShops.length > 0 || hasOwnerRole
-              ? 'shop_owner'
-              : activeShopCount > 0
-                ? 'staff'
-                : 'no_shop';
-        const lastActiveAt = user.sessions.reduce<Date | null>((latest, session) => {
-          const candidate = session.lastUsedAt ?? session.createdAt;
-
-          if (!latest || candidate.getTime() > latest.getTime()) {
-            return candidate;
-          }
-
-          return latest;
-        }, null);
-        const authMethods = [
-          ...(user.passwordCredential ? ['password'] : []),
-          ...new Set(user.authIdentities.map((identity) => identity.provider)),
-        ].sort((left, right) => left.localeCompare(right));
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          locale: user.locale,
-          created_at: user.createdAt.toISOString(),
-          last_active_at: lastActiveAt?.toISOString() ?? null,
-          active_session_count: user.sessions.length,
-          auth_methods: authMethods,
-          access_type: accessType,
-          platform_roles: platformRoles,
-          platform_permissions_count: platformPermissionsCount,
-          owned_shop_count: user.ownedShops.length,
-          active_shop_count: activeShopCount,
-          shops: shopRows,
-        } satisfies PlatformUserRow;
-      })
+      .map((user) => this.serializePlatformUserRow(user))
       .filter((user) => {
         if (normalizedAccess !== 'all' && user.access_type !== normalizedAccess) {
           return false;
@@ -501,6 +433,82 @@ export class PlatformService {
 
     const page = paginate(rows, query.limit, query.cursor);
     return paged(page.items, page.pagination);
+  }
+
+  async getUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        ownedShops: {
+          select: {
+            id: true,
+          },
+        },
+        memberships: {
+          include: {
+            shop: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            roleAssignments: {
+              include: {
+                role: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        roleAssignments: {
+          include: {
+            role: {
+              include: {
+                permissionAssignments: {
+                  include: {
+                    permission: {
+                      select: {
+                        id: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        passwordCredential: {
+          select: {
+            userId: true,
+          },
+        },
+        authIdentities: {
+          select: {
+            provider: true,
+          },
+        },
+        sessions: {
+          where: {
+            revokedAt: null,
+          },
+          select: {
+            createdAt: true,
+            lastUsedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw notFoundError('User not found');
+    }
+
+    return this.serializePlatformUserRow(user);
   }
 
   async searchOwnerAccounts(query: SearchPlatformOwnerAccountsQueryDto) {
@@ -816,7 +824,7 @@ export class PlatformService {
       return [
         payment.invoice_no,
         payment.shop_name,
-        payment.provider_ref ?? '',
+        payment.latest_transaction_id ?? '',
         payment.plan_name,
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
@@ -916,7 +924,7 @@ export class PlatformService {
       return [
         payment.invoice_no,
         payment.shop_name,
-        payment.provider_ref ?? '',
+        payment.latest_transaction_id ?? '',
         payment.plan_name,
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
@@ -1047,8 +1055,6 @@ export class PlatformService {
           amount: body.amount ?? subscription.plan.price,
           currency: body.currency?.trim() || subscription.plan.currency,
           status: invoiceStatus,
-          paymentMethod: body.payment_method?.trim() || null,
-          providerRef: body.provider_ref?.trim() || null,
           dueAt,
           paidAt,
         },
@@ -1090,8 +1096,6 @@ export class PlatformService {
       body.amount === undefined &&
       body.currency === undefined &&
       body.status === undefined &&
-      body.payment_method === undefined &&
-      body.provider_ref === undefined &&
       body.due_at === undefined &&
       body.paid_at === undefined
     ) {
@@ -1119,12 +1123,6 @@ export class PlatformService {
           ...(body.amount !== undefined ? { amount: body.amount } : {}),
           ...(body.currency !== undefined ? { currency: body.currency.trim() } : {}),
           ...(body.status !== undefined ? { status: body.status } : {}),
-          ...(body.payment_method !== undefined
-            ? { paymentMethod: body.payment_method?.trim() || null }
-            : {}),
-          ...(body.provider_ref !== undefined
-            ? { providerRef: body.provider_ref?.trim() || null }
-            : {}),
           ...(body.due_at !== undefined ? { dueAt: nextDueAt } : {}),
           ...(body.paid_at !== undefined || body.status !== undefined
             ? { paidAt: nextPaidAt }
@@ -1605,6 +1603,82 @@ export class PlatformService {
     });
 
     return Array.from(new Set(assignments.map((assignment) => assignment.userId)));
+  }
+
+  private serializePlatformUserRow(user: any): PlatformUserRow {
+    const platformRoles = user.roleAssignments.map((assignment: any) => ({
+      id: assignment.role.id,
+      code: assignment.role.code,
+      name: assignment.role.name,
+    }));
+    const platformPermissionsCount = new Set(
+      user.roleAssignments.flatMap((assignment: any) =>
+        assignment.role.permissionAssignments.map(
+          (permissionAssignment: any) => permissionAssignment.permission.id,
+        ),
+      ),
+    ).size;
+    const shopRows = user.memberships
+      .map((membership: any) => ({
+        shop_id: membership.shop.id,
+        shop_name: membership.shop.name,
+        membership_status: membership.status,
+        role:
+          membership.roleAssignments
+            .map((assignment: any) => assignment.role.code)
+            .sort()[0] ?? null,
+      }))
+      .sort((left: any, right: any) =>
+        left.shop_name.localeCompare(right.shop_name),
+      );
+    const activeShopCount = user.memberships.filter(
+      (membership: any) => membership.status === 'active',
+    ).length;
+    const hasOwnerRole = shopRows.some((shop: any) => shop.role === 'owner');
+    const accessType: PlatformUserRow['access_type'] =
+      platformRoles.length > 0
+        ? 'platform'
+        : user.ownedShops.length > 0 || hasOwnerRole
+          ? 'shop_owner'
+          : activeShopCount > 0
+            ? 'staff'
+            : 'no_shop';
+    const lastActiveAt = user.sessions.reduce(
+      (latest: Date | null, session: any) => {
+        const candidate = session.lastUsedAt ?? session.createdAt;
+
+        if (!latest || candidate.getTime() > latest.getTime()) {
+          return candidate;
+        }
+
+        return latest;
+      },
+      null,
+    );
+    const authMethods: string[] = [
+      ...(user.passwordCredential ? ['password'] : []),
+      ...new Set<string>(
+        user.authIdentities.map((identity: any) => String(identity.provider)),
+      ),
+    ].sort((left, right) => left.localeCompare(right));
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      locale: user.locale,
+      created_at: user.createdAt.toISOString(),
+      last_active_at: lastActiveAt?.toISOString() ?? null,
+      active_session_count: user.sessions.length,
+      auth_methods: authMethods,
+      access_type: accessType,
+      platform_roles: platformRoles,
+      platform_permissions_count: platformPermissionsCount,
+      owned_shop_count: user.ownedShops.length,
+      active_shop_count: activeShopCount,
+      shops: shopRows,
+    };
   }
 
   private async buildSettingsPayload(currentUser: AuthenticatedUser) {
@@ -2529,7 +2603,7 @@ export class PlatformService {
     now: Date,
     where?: Record<string, unknown>,
   ): Promise<TenantSnapshot[]> {
-    await this.subscriptionLifecycle.expireElapsedTrials(now);
+    await this.subscriptionLifecycle.processSubscriptionExpirations(now);
 
     const shops = (await (this.prisma as any).shop.findMany({
       ...(where ? { where } : {}),
@@ -2667,6 +2741,10 @@ export class PlatformService {
             plan: true,
           },
         },
+        transactions: {
+          orderBy: [{ createdAt: "desc" }],
+          take: 1,
+        },
       },
     })) as any[];
 
@@ -2680,8 +2758,7 @@ export class PlatformService {
       plan_name: payment.subscription.plan.name,
       amount: payment.amount,
       currency: payment.currency,
-      payment_method: payment.paymentMethod,
-      provider_ref: payment.providerRef,
+      latest_transaction_id: payment.transactions?.[0]?.providerOrderId ?? null,
       status: payment.status,
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
@@ -2698,6 +2775,10 @@ export class PlatformService {
             shop: true,
             plan: true,
           },
+        },
+        transactions: {
+          orderBy: [{ createdAt: "desc" }],
+          take: 1,
         },
       },
     });
@@ -2716,8 +2797,7 @@ export class PlatformService {
       plan_name: payment.subscription.plan.name,
       amount: payment.amount,
       currency: payment.currency,
-      payment_method: payment.paymentMethod,
-      provider_ref: payment.providerRef,
+      latest_transaction_id: payment.transactions?.[0]?.providerOrderId ?? null,
       status: payment.status,
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
@@ -2755,8 +2835,7 @@ export class PlatformService {
       amount: payment.amount,
       currency: payment.currency,
       status: payment.status,
-      payment_method: payment.paymentMethod,
-      provider_ref: payment.providerRef,
+      latest_transaction_id: payment.transactions?.[0]?.providerOrderId ?? null,
       due_at: payment.dueAt?.toISOString() ?? null,
       paid_at: payment.paidAt?.toISOString() ?? null,
       created_at: payment.createdAt.toISOString(),
@@ -2809,7 +2888,7 @@ export class PlatformService {
   }
 
   private async loadSubscriptionRows(): Promise<SubscriptionRow[]> {
-    await this.subscriptionLifecycle.expireElapsedTrials();
+    await this.subscriptionLifecycle.processSubscriptionExpirations();
 
     const subscriptions = (await (this.prisma as any).subscription.findMany({
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
@@ -2834,6 +2913,10 @@ export class PlatformService {
                 plan: true,
               },
             },
+            transactions: {
+              orderBy: [{ createdAt: 'desc' }],
+              take: 1,
+            },
           },
         },
       },
@@ -2852,8 +2935,7 @@ export class PlatformService {
               plan_name: subscription.plan.name,
               amount: subscription.payments[0].amount,
               currency: subscription.payments[0].currency,
-              payment_method: subscription.payments[0].paymentMethod,
-              provider_ref: subscription.payments[0].providerRef,
+              latest_transaction_id: subscription.payments[0].transactions?.[0]?.providerOrderId ?? null,
               status: subscription.payments[0].status,
               due_at: subscription.payments[0].dueAt?.toISOString() ?? null,
               paid_at: subscription.payments[0].paidAt?.toISOString() ?? null,
@@ -3361,6 +3443,10 @@ export class PlatformService {
             },
           },
         },
+        transactions: {
+          orderBy: [{ createdAt: 'desc' }],
+          take: 1,
+        },
       },
     });
 
@@ -3405,10 +3491,8 @@ export class PlatformService {
         ctaLabel: 'Open billing',
         ctaUrl: `${this.getWebAppBaseUrl()}/dashboard/settings`,
         footerText:
-          invoice.paymentMethod || invoice.providerRef
-            ? `Payment method: ${invoice.paymentMethod ?? 'n/a'}${
-                invoice.providerRef ? ` · Ref: ${invoice.providerRef}` : ''
-              }`
+          invoice.transactions?.[0]?.providerOrderId
+            ? `Payment Ref: ${invoice.transactions[0].providerOrderId}`
             : `Invoice status: ${statusLabel}`,
       },
     });

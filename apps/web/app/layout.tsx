@@ -8,9 +8,7 @@ import {
 
 import "@workspace/ui/globals.css"
 import "./app.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { TooltipProvider } from "@workspace/ui/components/tooltip"
-import { Toaster } from "@workspace/ui/components/sonner"
+import { AppProviders } from "@/features/core/providers/app-providers"
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -119,10 +117,7 @@ export default function RootLayout({
       className={`${dmSans.variable} ${dmSerifDisplay.variable} ${plusJakartaSans.variable} ${notoSansMyanmar.variable} antialiased`}
     >
       <body className="theme-fom-web">
-        <ThemeProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-          <Toaster />
-        </ThemeProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )

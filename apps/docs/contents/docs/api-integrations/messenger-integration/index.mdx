@@ -1,0 +1,296 @@
+---
+title: Messenger Integration
+description: Set up Meta Messenger OAuth, webhook delivery, and sender profile enrichment for the FOM inbox, order parsing, and auto reply flow.
+keywords:
+  - Messenger
+  - Meta
+  - Facebook
+  - webhook
+  - OAuth
+  - inbox
+---
+
+This guide matches the current FOM implementation used by the shop owner portal inbox.
+
+## What FOM does today
+
+- shop owner clicks `Connect Facebook Page` in the inbox page
+- FOM starts Meta OAuth automatically
+- if Meta returns one Page, FOM connects it immediately
+- if Meta returns multiple Pages, FOM shows one selection screen
+- inbound messages are stored in the inbox
+- message threads can be used for order drafting and auto reply rules
+- FOM tries to enrich sender names and locale through the Messenger user profile flow
+
+## URLs used by this repo
+
+These are the two URLs you must configure in Meta.
+
+- OAuth redirect URI:
+  `https://<your-web-app-domain>/dashboard/inbox/connect-meta/callback`
+- Messenger webhook callback URL:
+  `https://<your-api-domain>/api/v1/messenger/webhooks/meta`
+
+In local code, those come from:
+
+- web route: [apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/callback/route.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/callback/route.ts)
+- API webhook controller: [apps/api/src/messenger/meta-messenger-webhook.controller.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/meta-messenger-webhook.controller.ts)
+- API config builder: [apps/api/src/config/app-config.service.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/config/app-config.service.ts)
+
+## Required env vars
+
+Fill these before testing the integration.
+
+```text
+# apps/api/.env
+PUBLIC_API_BASE_URL="https://api.example.com"
+WEB_APP_BASE_URL="https://app.example.com"
+META_APP_ID=""
+META_APP_SECRET=""
+META_LOGIN_CONFIG_ID=""
+META_WEBHOOK_VERIFY_TOKEN=""
+META_GRAPH_API_BASE_URL="https://graph.facebook.com"
+META_GRAPH_API_VERSION="v25.0"
+MESSENGER_TOKEN_ENCRYPTION_SECRET=""
+```
+
+The web app should also point to the deployed API and public app domain:
+
+```text
+# apps/web/.env
+API_BASE_URL="https://api.example.com"
+NEXT_PUBLIC_API_BASE_URL="https://api.example.com"
+NEXT_PUBLIC_APP_BASE_URL="https://app.example.com"
+WEB_APP_BASE_URL="https://app.example.com"
+```
+
+## Meta app setup
+
+### 1. Create the correct app type
+
+Create a **Business** type Meta app. FOM uses **Facebook Login for Business**, not the legacy manual token flow.
+
+Official doc:
+
+- [Facebook Login for Business](https://developers.facebook.com/docs/facebook-login/facebook-login-for-business)
+
+### 2. Add the right products
+
+Add these products in the Meta App Dashboard:
+
+- `Facebook Login for Business`
+- `Messenger`
+- `Webhooks`
+
+### 3. Create a Facebook Login for Business configuration
+
+Inside `Facebook Login for Business`:
+
+1. open `Configurations`
+2. create a configuration
+3. choose **User access token**
+4. select the Page permissions needed by FOM
+5. copy the generated `Configuration ID`
+
+Put that configuration ID into `META_LOGIN_CONFIG_ID`.
+
+The current FOM flow is started here:
+
+- [apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/route.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/route.ts)
+
+The API exchanges the authorization code here:
+
+- [apps/api/src/messenger/messenger.service.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/messenger.service.ts)
+
+### 4. Add the permissions FOM needs
+
+For the current inbox, reply, and page discovery flow, use this as the practical minimum:
+
+- `pages_show_list`
+- `pages_manage_metadata`
+- `pages_read_engagement`
+- `pages_messaging`
+
+For sender name enrichment, request the Meta feature used for Messenger profile lookup:
+
+- `Business Asset User Profile Access`
+
+Why this matters in FOM:
+
+- page discovery uses `me/accounts`
+- replies use the Page access token through the Send API
+- webhook subscription depends on Page metadata access
+- sender profile enrichment is performed after connect and during inbound ingestion
+
+Relevant implementation:
+
+- page discovery and code exchange: [apps/api/src/messenger/messenger.service.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/messenger.service.ts)
+- profile enrichment and backfill: [apps/api/src/messenger/messenger.service.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/messenger.service.ts)
+
+Official docs:
+
+- [Facebook Login for Business](https://developers.facebook.com/docs/facebook-login/facebook-login-for-business)
+- [Messenger User Profile API](https://developers.facebook.com/docs/messenger-platform/identity/user-profile)
+
+<Note type="warning" title="Advanced Access">
+  For production use with other businesses, expect Meta App Review and Advanced Access requirements
+  for the Messenger/Page permissions and profile access features you request.
+</Note>
+
+### 5. Register the OAuth redirect URI
+
+Add this exact redirect URI in the Meta app login settings:
+
+```text
+https://<your-web-app-domain>/dashboard/inbox/connect-meta/callback
+```
+
+If this does not match the running web domain, the user will fail on the Meta return step.
+
+### 6. Configure the webhook
+
+Use the API webhook endpoint:
+
+```text
+https://<your-api-domain>/api/v1/messenger/webhooks/meta
+```
+
+Set the verify token to the same value as `META_WEBHOOK_VERIFY_TOKEN`.
+
+FOM verifies the challenge and validates signatures here:
+
+- challenge verification: [apps/api/src/messenger/messenger.service.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/messenger.service.ts)
+- webhook controller: [apps/api/src/messenger/meta-messenger-webhook.controller.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/meta-messenger-webhook.controller.ts)
+
+For the current implementation, subscribe the Page to the message events FOM actually handles:
+
+- `messages`
+- `messaging_postbacks`
+
+Official docs:
+
+- [Messenger webhook setup](https://developers.facebook.com/docs/messenger-platform/getting-started/webhook-setup)
+- [Messenger webhooks](https://developers.facebook.com/docs/messenger-platform/webhooks)
+
+### 7. Put the app in the right mode
+
+Use development mode only for testers, app roles, and owned assets.
+
+Before real customer onboarding:
+
+- complete App Review where required
+- move the app to live mode
+- confirm the production domains are whitelisted
+- test with a Page not owned only by the developer account
+
+## Local development
+
+### Why localhost does not work for webhook subscription
+
+Meta validates the webhook by making a server-to-server request to your callback URL. `localhost`,
+`127.0.0.1`, and private LAN addresses are not reachable from Meta's servers.
+
+That means the webhook URL must be:
+
+- publicly reachable
+- HTTPS
+- mapped to your local app through a tunnel or a deployed dev environment
+
+This is an implementation inference from the webhook verification flow: Meta has to reach your
+callback URL directly in order to verify the challenge and later deliver POST events.
+
+### Recommended local setup
+
+Use one public tunnel for the web app and one for the API, or deploy a shared dev environment.
+
+Example:
+
+- web tunnel:
+  `https://fom-web-dev.ngrok-free.app`
+- API tunnel:
+  `https://fom-api-dev.ngrok-free.app`
+
+Then update:
+
+- `WEB_APP_BASE_URL`
+- `NEXT_PUBLIC_APP_BASE_URL`
+- `PUBLIC_API_BASE_URL`
+- `NEXT_PUBLIC_API_BASE_URL`
+
+And register these tunnel URLs in Meta:
+
+- OAuth redirect URI:
+  `https://fom-web-dev.ngrok-free.app/dashboard/inbox/connect-meta/callback`
+- webhook callback URL:
+  `https://fom-api-dev.ngrok-free.app/api/v1/messenger/webhooks/meta`
+
+<Note type="warning" title="Tunnel changes">
+  If your tunnel domain changes, Meta configuration and local env must be updated together.
+</Note>
+
+## End-to-end test checklist
+
+1. Set the env vars in API and web.
+2. Start API and web on the domains you configured.
+3. Open `/dashboard/inbox`.
+4. Click `Connect Facebook Page`.
+5. Complete the Meta permission screen.
+6. If multiple Pages are returned, choose one.
+7. Confirm the inbox overview shows the connected Page.
+8. Send a real Messenger message to that Page.
+9. Confirm a thread appears in FOM.
+10. Test reply sending from the thread detail page.
+11. Confirm sender name enrichment is visible if profile access is approved.
+
+## Troubleshooting
+
+### OAuth starts but Meta rejects the login
+
+Check:
+
+- app type is `Business`
+- `META_LOGIN_CONFIG_ID` is valid
+- the exact callback URL is whitelisted
+- requested permissions are included in the selected configuration
+
+### Connect succeeds but no messages arrive
+
+Check:
+
+- webhook URL is public and HTTPS
+- `META_WEBHOOK_VERIFY_TOKEN` matches the Meta dashboard value
+- the Page is subscribed to the correct webhook fields
+- the API domain in `PUBLIC_API_BASE_URL` is the same one configured in Meta
+
+### Messages arrive but sender name stays as PSID
+
+Check:
+
+- `Business Asset User Profile Access` is approved
+- the Page access token is valid
+- profile enrichment is not blocked by missing permissions or a restricted test asset
+
+### Reply sending fails
+
+Check:
+
+- the Page selected during connect is the correct one
+- the stored Page token still has the required scopes
+- the app is live and approved for the assets you are trying to use
+
+## FOM flow reference
+
+- inbox overview: [apps/web/app/(shop-admin)/dashboard/inbox/page.tsx](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/web/app/(shop-admin)/dashboard/inbox/page.tsx)
+- connect start: [apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/route.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/route.ts)
+- connect callback: [apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/callback/route.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/callback/route.ts)
+- page selection: [apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/select/page.tsx](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/web/app/(shop-admin)/dashboard/inbox/connect-meta/select/page.tsx)
+- backend integration service: [apps/api/src/messenger/messenger.service.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/messenger.service.ts)
+- webhook controller: [apps/api/src/messenger/meta-messenger-webhook.controller.ts](/Users/mixin/Projects/FacebookOrderManager/fom-platform/apps/api/src/messenger/meta-messenger-webhook.controller.ts)
+
+## Official references
+
+- [Facebook Login for Business](https://developers.facebook.com/docs/facebook-login/facebook-login-for-business)
+- [Messenger app setup](https://developers.facebook.com/docs/messenger-platform/getting-started/app-setup)
+- [Messenger webhook setup](https://developers.facebook.com/docs/messenger-platform/getting-started/webhook-setup)
+- [Messenger webhooks](https://developers.facebook.com/docs/messenger-platform/webhooks)
+- [Messenger User Profile API](https://developers.facebook.com/docs/messenger-platform/identity/user-profile)

@@ -94,6 +94,9 @@ model Shop {
   roles            Role[]            @relation("ShopCustomRoles")
   auditLogs        ShopAuditLog[]
   paymentProofSubmissions PaymentProofSubmission[]
+  messengerConnection MessengerConnection?
+  messengerThreads    MessengerThread[]
+  messengerAutoReplyRules MessengerAutoReplyRule[]
 
   @@index([ownerUserId])
 }
@@ -213,7 +216,8 @@ model Payment {
   providerRef    String?
   dueAt          DateTime?
   paidAt         DateTime?
-  createdAt      DateTime     @default(now())
+  metadata      Json?
+  createdAt     DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   paymentProofSubmissions PaymentProofSubmission[]
@@ -388,6 +392,85 @@ model MessageTemplate {
   @@unique([shopId, shortcut])
   @@index([shopId, isActive, updatedAt])
   @@map("message_templates")
+}
+
+model MessengerConnection {
+  id                       String            @id @default(cuid())
+  shopId                   String            @unique
+  pageId                   String            @unique
+  pageName                 String?
+  pageAccessTokenEncrypted String?
+  status                   String            @default("active")
+  lastWebhookAt            DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  shop                     Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  threads                  MessengerThread[]
+
+  @@index([status, updatedAt])
+  @@map("messenger_connections")
+}
+
+model MessengerThread {
+  id               String             @id @default(cuid())
+  shopId           String
+  connectionId     String
+  customerPsid     String
+  customerName     String?
+  customerLocale   String?
+  lastMessageText  String?
+  lastMessageAt    DateTime?
+  unreadCount      Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  shop             Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  connection       MessengerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  messages         MessengerMessage[]
+
+  @@unique([connectionId, customerPsid])
+  @@index([shopId, lastMessageAt])
+  @@index([connectionId, lastMessageAt])
+  @@map("messenger_threads")
+}
+
+model MessengerMessage {
+  id                String          @id @default(cuid())
+  threadId          String
+  providerMessageId String?
+  direction         String
+  messageType       String          @default("text")
+  senderPsid        String?
+  recipientId       String?
+  textBody          String?
+  isEcho            Boolean         @default(false)
+  sentAt            DateTime
+  rawPayload        Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  thread            MessengerThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, providerMessageId])
+  @@index([threadId, sentAt])
+  @@index([direction, sentAt])
+  @@map("messenger_messages")
+}
+
+model MessengerAutoReplyRule {
+  id              String   @id @default(cuid())
+  shopId          String
+  name            String
+  matchType       String   @default("contains")
+  pattern         String
+  replyText       String
+  isActive        Boolean  @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, isActive, updatedAt])
+  @@index([shopId, matchType])
+  @@map("messenger_auto_reply_rules")
 }
 
 model Order {

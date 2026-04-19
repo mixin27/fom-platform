@@ -275,7 +275,7 @@ export type ShopBilling = {
     created_at: string
     updated_at: string
   } | null
-  plan: {
+  plans: Array<{
     id: string
     code: string
     name: string
@@ -285,14 +285,13 @@ export type ShopBilling = {
     billing_period: string
     is_active: boolean
     items: Array<{
-      id: string
       code: string
       label: string
       description: string | null
-      availability_status: "available" | "unavailable" | string
+      availability_status: string
       sort_order: number
     }>
-  } | null
+  }>
   invoices: Array<{
     id: string
     invoice_no: string
@@ -401,6 +400,115 @@ export type ShopBillingInvoiceDetail = {
     created_at: string
     updated_at: string | null
   }>
+}
+
+export type ShopMessengerOverview = {
+  connection: {
+    id: string
+    shop_id: string
+    page_id: string
+    page_name: string
+    status: string
+    last_webhook_at: string | null
+    created_at: string
+    updated_at: string
+  } | null
+  setup: {
+    webhook_url: string
+    verify_token_configured: boolean
+    signature_validation_enabled: boolean
+    graph_api_version: string
+    oauth_connect_enabled: boolean
+  }
+  stats: {
+    thread_count: number
+    unread_count: number
+    auto_reply_rule_count: number
+  }
+}
+
+export type ShopMessengerOauthPageChoice = {
+  page_id: string
+  page_name: string
+}
+
+export type ShopMessengerOauthCompleteResult =
+  | {
+      status: "connected"
+      connection: NonNullable<ShopMessengerOverview["connection"]>
+    }
+  | {
+      status: "selection_required"
+      redirect_uri: string
+      selection_token: string
+      pages: ShopMessengerOauthPageChoice[]
+    }
+
+export type ShopMessengerThread = {
+  id: string
+  shop_id: string
+  connection_id: string
+  customer_psid: string
+  customer_name: string | null
+  customer_locale: string | null
+  customer_label: string
+  last_message_text: string | null
+  last_message_at: string | null
+  unread_count: number
+  message_count?: number
+  created_at: string
+  updated_at: string
+  page: {
+    id: string
+    name: string
+    status: string
+  } | null
+}
+
+export type ShopMessengerMessage = {
+  id: string
+  thread_id: string
+  provider_message_id: string | null
+  direction: "inbound" | "outbound" | string
+  message_type: string
+  sender_psid: string | null
+  recipient_id: string | null
+  text_body: string | null
+  is_echo: boolean
+  sent_at: string
+  created_at: string
+  updated_at: string
+}
+
+export type ShopMessengerThreadDetail = ShopMessengerThread & {
+  connection: NonNullable<ShopMessengerThread["page"]> & {
+    shop_id: string
+    page_id: string
+    page_name: string
+    last_webhook_at: string | null
+    created_at: string
+    updated_at: string
+  }
+  messages: ShopMessengerMessage[]
+}
+
+export type ShopMessengerAutoReplyRule = {
+  id: string
+  shop_id: string
+  name: string
+  match_type: "contains" | "exact" | string
+  pattern: string
+  reply_text: string
+  is_active: boolean
+  last_triggered_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ShopMessengerOrderSource = {
+  thread_id: string
+  message: string
+  line_count: number
 }
 
 export type ShopDailySummary = {
@@ -594,6 +702,14 @@ export async function getShopMembers(
   return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath, true)
 }
 
+export async function getShopMember(memberId: string, retryPath = "/dashboard/staffs") {
+  return shopRequest<ShopMember>(`/members/${memberId}`, undefined, retryPath, true)
+}
+
+export async function getShopMemberByUserId(userId: string, retryPath = "/dashboard/staffs") {
+  return shopRequest<ShopMember>(`/members/user/${userId}`, undefined, retryPath, true)
+}
+
 export async function getShopRoles(retryPath = "/dashboard/staffs") {
   return shopRequest<ShopRoleCatalog>("/roles", undefined, retryPath)
 }
@@ -611,11 +727,121 @@ export async function getShopBilling(retryPath = "/dashboard/billing") {
   return shopRequest<ShopBilling>("/billing", undefined, retryPath, true)
 }
 
+export async function getAvailablePlans(retryPath = "/dashboard/billing") {
+  return shopRequest<ShopBilling["plans"]>("/billing/plans", undefined, retryPath)
+}
+
+export async function createSubscriptionInvoice(
+  planCode: string,
+  retryPath = "/dashboard/billing"
+) {
+  const { activeShop } = await getShopPortalContext()
+
+  return requestAuthenticatedApiEnvelope<ShopBilling["invoices"][number]>({
+    path: `/api/v1/shops/${activeShop.id}/billing/subscriptions`,
+    init: {
+      method: "POST",
+      json: { plan_code: planCode },
+    },
+    retryPath,
+    requiredAccess: "shop",
+  })
+}
+
+export async function createInvoiceMmqrSession(
+  invoiceId: string,
+  retryPath?: string
+) {
+  const { activeShop } = await getShopPortalContext()
+
+  return requestAuthenticatedApiEnvelope({
+    path: `/api/v1/shops/${activeShop.id}/billing/invoices/${invoiceId}/mmqr-session`,
+    init: {
+      method: "POST",
+    },
+    retryPath,
+    requiredAccess: "shop",
+  })
+}
+
 export async function getShopAnnouncements(retryPath = "/dashboard") {
   return shopRequest<{ announcements: PortalAnnouncement[] }>(
     "/announcements",
     undefined,
     retryPath
+  )
+}
+
+export async function getShopMessengerOverview(
+  retryPath = "/dashboard/inbox",
+  allowForbidden = false
+) {
+  return shopRequest<ShopMessengerOverview | null>(
+    "/messenger",
+    undefined,
+    retryPath,
+    allowForbidden
+  )
+}
+
+export async function getShopMessengerThreads(
+  searchParams?: SearchParamsRecord,
+  retryPath?: string
+) {
+  const resolvedRetryPath =
+    retryPath ?? `/dashboard/inbox${buildQueryString(searchParams)}`
+  return shopRequest<ShopMessengerThread[]>(
+    "/messenger/threads",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
+}
+
+export async function getShopMessengerThread(
+  threadId: string,
+  retryPath = "/dashboard/inbox"
+) {
+  return shopRequest<ShopMessengerThreadDetail>(
+    `/messenger/threads/${threadId}`,
+    undefined,
+    retryPath,
+    true
+  )
+}
+
+export async function getShopMessengerOrderSource(
+  threadId: string,
+  retryPath = "/dashboard/orders/paste-from-messenger"
+) {
+  return shopRequest<ShopMessengerOrderSource>(
+    `/messenger/threads/${threadId}/order-source`,
+    undefined,
+    retryPath,
+    true
+  )
+}
+
+export async function getShopMessengerAutoReplyRules(
+  retryPath = "/dashboard/inbox"
+) {
+  return shopRequest<{ rules: ShopMessengerAutoReplyRule[] }>(
+    "/messenger/auto-reply-rules",
+    undefined,
+    retryPath,
+    true
+  )
+}
+
+export async function getShopMessengerAutoReplyRule(
+  ruleId: string,
+  retryPath = "/dashboard/inbox"
+) {
+  return shopRequest<ShopMessengerAutoReplyRule>(
+    `/messenger/auto-reply-rules/${ruleId}`,
+    undefined,
+    retryPath,
+    true
   )
 }
 

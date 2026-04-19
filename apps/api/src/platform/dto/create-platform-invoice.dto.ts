@@ -47,27 +47,6 @@ export class CreatePlatformInvoiceDto {
   @IsIn(platformInvoiceStatuses)
   status?: (typeof platformInvoiceStatuses)[number];
 
-  @ApiPropertyOptional({
-    description: 'Optional payment channel such as KBZPay or cash',
-    example: 'KBZPay',
-  })
-  @Transform(trimString)
-  @ValidateIf((_, value) => value !== undefined)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(60)
-  payment_method?: string;
-
-  @ApiPropertyOptional({
-    description: 'Optional provider or transaction reference',
-    example: 'KBZ-20260407-001',
-  })
-  @Transform(trimString)
-  @ValidateIf((_, value) => value !== undefined)
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  provider_ref?: string;
 
   @ApiPropertyOptional({
     description: 'Invoice due date',

@@ -28,6 +28,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'trial',
     isActive: true,
+    marketingVisible: false,
     sortOrder: 0,
     items: [
       {
@@ -125,14 +126,16 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.facebookInboxIntegration,
         label: 'Facebook inbox integration',
-        description: 'Direct inbox sync is planned for a future release.',
+        description:
+          'Direct inbox sync unlocks the live Messenger inbox inside the shop workspace.',
         availabilityStatus: 'unavailable',
         sortOrder: 31,
       },
       {
         code: subscriptionFeatures.automationAutoReply,
         label: 'Auto reply automation',
-        description: 'Automation flows are reserved for future higher plans.',
+        description:
+          'Keyword-based Messenger auto replies unlock after the shop upgrades to a paid plan.',
         availabilityStatus: 'unavailable',
         sortOrder: 32,
       },
@@ -179,6 +182,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'monthly',
     isActive: true,
+    marketingVisible: true,
     sortOrder: 1,
     items: [
       {
@@ -273,15 +277,17 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.facebookInboxIntegration,
         label: 'Facebook inbox integration',
-        description: 'Direct inbox sync is planned beyond phase one.',
-        availabilityStatus: 'unavailable',
+        description:
+          'Run the live Messenger inbox directly from the shop workspace.',
+        availabilityStatus: 'available',
         sortOrder: 31,
       },
       {
         code: subscriptionFeatures.automationAutoReply,
         label: 'Auto reply automation',
-        description: 'Automation flows are part of future higher tiers.',
-        availabilityStatus: 'unavailable',
+        description:
+          'Create keyword-based Messenger auto replies for common questions.',
+        availabilityStatus: 'available',
         sortOrder: 32,
       },
       {
@@ -342,6 +348,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'yearly',
     isActive: true,
+    marketingVisible: true,
     sortOrder: 2,
     items: [
       {
@@ -438,15 +445,17 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.facebookInboxIntegration,
         label: 'Facebook inbox integration',
-        description: 'Direct inbox sync is planned beyond phase one.',
-        availabilityStatus: 'unavailable',
+        description:
+          'Run the live Messenger inbox directly from the shop workspace.',
+        availabilityStatus: 'available',
         sortOrder: 31,
       },
       {
         code: subscriptionFeatures.automationAutoReply,
         label: 'Auto reply automation',
-        description: 'Automation flows are part of future higher tiers.',
-        availabilityStatus: 'unavailable',
+        description:
+          'Create keyword-based Messenger auto replies for common questions.',
+        availabilityStatus: 'available',
         sortOrder: 32,
       },
       {
@@ -507,6 +516,7 @@ export const defaultPlanCatalog = [
     currency: 'MMK',
     billingPeriod: 'enterprise',
     isActive: true,
+    marketingVisible: false,
     sortOrder: 3,
     items: [
       {
@@ -617,15 +627,17 @@ export const defaultPlanCatalog = [
       {
         code: subscriptionFeatures.facebookInboxIntegration,
         label: 'Facebook inbox integration',
-        description: 'Direct inbox sync remains reserved for a later release.',
-        availabilityStatus: 'unavailable',
+        description:
+          'Run the live Messenger inbox across enterprise-managed shops.',
+        availabilityStatus: 'available',
         sortOrder: 31,
       },
       {
         code: subscriptionFeatures.automationAutoReply,
         label: 'Auto reply automation',
-        description: 'Automation flows remain reserved for a later release.',
-        availabilityStatus: 'unavailable',
+        description:
+          'Create keyword-based Messenger auto replies across enterprise-managed shops.',
+        availabilityStatus: 'available',
         sortOrder: 32,
       },
       {

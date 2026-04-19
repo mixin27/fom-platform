@@ -33,8 +33,9 @@ export type PlatformInvoice = {
   plan_name: string
   amount: number
   currency: string
-  payment_method: string | null
-  provider_ref: string | null
+  payment_method?: string | null
+  provider_ref?: string | null
+  latest_transaction_id?: string | null
   status: string
   due_at: string | null
   paid_at: string | null
@@ -198,8 +199,9 @@ export type PlatformPaymentDetail = {
   amount: number
   currency: string
   status: string
-  payment_method: string | null
-  provider_ref: string | null
+  payment_method?: string | null
+  provider_ref?: string | null
+  latest_transaction_id?: string | null
   due_at: string | null
   paid_at: string | null
   created_at: string
@@ -379,12 +381,28 @@ export async function getPlatformShops(searchParams?: SearchParamsRecord) {
   )
 }
 
+export async function getPlatformShop(shopId: string, retryPath = "/platform/shops") {
+  return platformRequest<PlatformShop>(
+    `/api/v1/platform/shops/${shopId}`,
+    undefined,
+    retryPath
+  )
+}
+
 export async function getPlatformUsers(searchParams?: SearchParamsRecord) {
   const retryPath = `/platform/users${buildQueryString(searchParams)}`
 
   return platformRequest<Array<PlatformUser>>(
     "/api/v1/platform/users",
     searchParams,
+    retryPath
+  )
+}
+
+export async function getPlatformUser(userId: string, retryPath = "/platform/users") {
+  return platformRequest<PlatformUser>(
+    `/api/v1/platform/users/${userId}`,
+    undefined,
     retryPath
   )
 }

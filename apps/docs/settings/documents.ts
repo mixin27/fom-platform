@@ -33,6 +33,10 @@ export const Documents: Paths[] = [
     href: '/api-integrations',
     items: [
       {
+        title: 'Messenger Integration',
+        href: '/messenger-integration',
+      },
+      {
         title: 'Backend API Endpoints',
         href: '/backend-endpoints',
       },

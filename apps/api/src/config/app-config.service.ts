@@ -230,4 +230,37 @@ export class AppConfigService {
       isConfigured: Boolean(appId && apiBaseUrl && publishableKey && secretKey),
     };
   }
+
+  getMetaMessengerConfig() {
+    const graphApiBaseUrl =
+      readOptionalEnv('META_GRAPH_API_BASE_URL') || 'https://graph.facebook.com';
+    const graphApiVersion = readOptionalEnv('META_GRAPH_API_VERSION') || 'v25.0';
+    const appId = readOptionalEnv('META_APP_ID');
+    const appSecret = readOptionalEnv('META_APP_SECRET');
+    const loginConfigId = readOptionalEnv('META_LOGIN_CONFIG_ID');
+    const webhookVerifyToken = readOptionalEnv('META_WEBHOOK_VERIFY_TOKEN');
+    const tokenEncryptionSecret =
+      readOptionalEnv(
+        'MESSENGER_TOKEN_ENCRYPTION_SECRET',
+        'JWT_ACCESS_SECRET',
+      ) || 'dev_messenger_token_encryption_secret_change_me';
+
+    return {
+      graphApiBaseUrl: graphApiBaseUrl.replace(/\/+$/, ''),
+      graphApiVersion: graphApiVersion.replace(/^\/+/, ''),
+      appId,
+      appSecret,
+      loginConfigId,
+      oauthDialogUrl: `https://www.facebook.com/${graphApiVersion.replace(
+        /^\/+/,
+        '',
+      )}/dialog/oauth`,
+      webhookVerifyToken,
+      webhookUrl: `${this.getPublicApiBaseUrl()}/api/v1/messenger/webhooks/meta`,
+      tokenEncryptionSecret,
+      isOauthConfigured: Boolean(appId && appSecret && loginConfigId),
+      isWebhookVerificationConfigured: Boolean(webhookVerifyToken),
+      isSignatureValidationConfigured: Boolean(appSecret),
+    };
+  }
 }

@@ -50,7 +50,7 @@ export default async function PlatformAnnouncementsPage({
     <div className="flex flex-col gap-5">
       <PageIntro
         eyebrow="Announcements"
-        title="Announcement center"
+        title="Announcements"
         description="Publish operational notices, planned maintenance, and customer-facing updates across marketing, auth, shop, and platform surfaces."
         actions={
           canManageAnnouncements ? (

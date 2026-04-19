@@ -1,6 +1,8 @@
 import Link from "next/link"
 
-import { PageIntro } from "@/components/page-intro"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
+import { PlusIcon } from "lucide-react"
 import {
   getPlatformShops,
   type PlatformCursorPagination,
@@ -35,16 +37,46 @@ export default async function PlatformShopsPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <PageIntro
-        eyebrow="Shops"
-        title="Shop management"
-        description="Review tenant health, subscription posture, and operational usage from one workspace."
+      <AdminHeader
+        title="Shops"
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/platform/subscriptions">View subscriptions</Link>
-          </Button>
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/platform/subscriptions">View subscriptions</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/platform/shops/new">
+                <PlusIcon data-icon="inline-start" />
+                New Shop
+              </Link>
+            </Button>
+          </>
         }
       />
+
+      <div className="grid gap-3 lg:grid-cols-4">
+        <AdminStatCard
+          label="Total Results"
+          value={pagination ? pagination.total.toLocaleString() : rows.length.toLocaleString()}
+          detail="Matching active filters"
+        />
+        <AdminStatCard
+          label="Active Shops"
+          value={rows.filter((s) => s.status === "active").length.toLocaleString()}
+          detail="Ready and operational"
+        />
+        <AdminStatCard
+          label="Risk Alert"
+          value={rows.filter((s) => ["overdue", "inactive"].includes(s.status)).length.toLocaleString()}
+          detail="Needs attention"
+          trend={{ value: "Priority", neutral: true }}
+        />
+        <AdminStatCard
+          label="View Density"
+          value={`${rows.length} / ${limit}`}
+          detail="Rows per page"
+        />
+      </div>
 
       <PlatformShopsTable
         rows={rows}

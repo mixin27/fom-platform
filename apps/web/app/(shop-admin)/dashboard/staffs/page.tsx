@@ -1,9 +1,9 @@
 import Link from "next/link"
-import { Clock3, Shield, Store, UserRound } from "lucide-react"
+import { ClockIcon, ShieldIcon, StoreIcon, UserIcon, PlusIcon, ShieldPlusIcon } from "lucide-react"
 
-import { DashboardStatCard } from "@/components/dashboard-stat-card"
-import { PageIntro } from "@/components/page-intro"
-import { PlatformDataTable } from "@/components/platform/platform-data-table"
+import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
+import { AdminStatCard } from "@/features/portal-shell/components/admin/admin-stat-card"
+import { AdminDataTable } from "@/features/portal-shell/components/admin/admin-data-table"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
 import {
   getCurrentUserProfile,
@@ -22,8 +22,6 @@ import {
 import { formatCodeLabel, formatList } from "@/lib/shop/format"
 import { formatRelativeDate } from "@/lib/platform/format"
 import { Button } from "@workspace/ui/components/button"
-import { ShopMemberSheet } from "./_components/shop-member-sheet"
-import { ShopRoleSheet } from "./_components/shop-role-sheet"
 import {
   Card,
   CardContent,
@@ -31,6 +29,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@workspace/ui/components/pagination"
 
 type ShopStaffsPageProps = {
   searchParams?: Promise<ShopSearchParams>
@@ -80,6 +85,34 @@ export default async function ShopStaffsPage({
   const profile = profileResponse.data
   const roleCatalog = rolesResponse.data
   const auditLogs = auditLogsResponse.data
+  const isMembersForbidden = membersResponse.meta?.forbidden === true
+
+  if (!members || isMembersForbidden) {
+    return (
+      <div className="flex flex-col gap-5">
+        <AdminHeader
+          title="Staffs"
+          actions={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/settings">Settings</Link>
+            </Button>
+          }
+        />
+
+        <Card className="border border-[var(--fom-border-subtle)] bg-[var(--fom-portal-surface)] shadow-none">
+          <CardHeader>
+            <CardDescription>Feature unavailable</CardDescription>
+            <CardTitle>Team management is not enabled</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm leading-6 text-muted-foreground">
+            {String(membersResponse.meta?.message ?? "").trim() ||
+              "This subscription plan does not include team member management."}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const pagination = membersResponse.meta?.pagination as ShopCursorPagination | undefined
   const currentCursor = getSingleSearchParam(params.cursor)
   const limit = Number(getSingleSearchParam(params.limit) ?? pagination?.limit ?? 20)
@@ -96,29 +129,29 @@ export default async function ShopStaffsPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <PageIntro
-        eyebrow="Governance"
-        title="Team access and audit"
-        description="Manage member access, define custom roles, and review recent governance changes for this shop."
+      <AdminHeader
+        title="Staffs"
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/settings">Shop settings</Link>
+              <Link href="/dashboard/settings">Shop Settings</Link>
             </Button>
-            {canManageMembers ? (
+            {canManageMembers && (
               <>
-                <ShopMemberSheet
-                  shopId={activeShop.id}
-                  roles={roleCatalog.roles}
-                  triggerLabel="Add member"
-                />
-                <ShopRoleSheet
-                  shopId={activeShop.id}
-                  availablePermissions={roleCatalog.available_permissions}
-                  triggerLabel="Create role"
-                />
+                <Button asChild size="sm">
+                  <Link href="/dashboard/staffs/members/new">
+                    <PlusIcon data-icon="inline-start" />
+                    New Staff
+                  </Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm">
+                  <Link href="/dashboard/staffs/roles/new">
+                    <ShieldPlusIcon data-icon="inline-start" />
+                    Custom Role
+                  </Link>
+                </Button>
               </>
-            ) : null}
+            )}
           </div>
         }
       />
@@ -135,75 +168,49 @@ export default async function ShopStaffsPage({
       ) : null}
 
       <section className="grid gap-3 lg:grid-cols-4">
-        <DashboardStatCard
-          title="Active staffs"
+        <AdminStatCard
+          label="Active Staffs"
           value={String(activeMembers.length)}
-          detail="Members with active access to the current shop."
-          delta={`${members.length} total members`}
-          icon={Store}
+          detail={`${members.length} total members`}
+          icon={StoreIcon}
           accent="sunset"
         />
-        <DashboardStatCard
-          title="Role catalog"
+        <AdminStatCard
+          label="Role Catalog"
           value={String(roleCatalog.roles.length)}
-          detail="System and custom roles available for assignment."
-          delta={`${customRoles.length} custom`}
-          icon={Shield}
+          detail={`${customRoles.length} custom definitions`}
+          icon={ShieldIcon}
           accent="teal"
         />
-        <DashboardStatCard
-          title="Recent audit events"
+        <AdminStatCard
+          label="Recent Audits"
           value={String(auditLogs.length)}
-          detail="Latest member and role changes recorded for this shop."
-          delta={auditLogs[0] ? formatRelativeDate(auditLogs[0].created_at) : "No audit activity yet"}
-          icon={Clock3}
+          detail={auditLogs[0] ? formatRelativeDate(auditLogs[0].created_at) : "No activity"}
+          icon={ClockIcon}
           accent="ink"
         />
-        <DashboardStatCard
-          title="Your access"
+        <AdminStatCard
+          label="Your Access"
           value={profile.name}
-          detail={profile.email ?? profile.phone ?? "No primary contact set."}
-          delta={formatList(currentMembership?.roles.map((role) => role.name) ?? [])}
-          icon={UserRound}
+          detail={formatList(currentMembership?.roles.map((role) => role.name) ?? []) || "No roles"}
+          icon={UserIcon}
           accent="ink"
         />
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
-        <PlatformDataTable
-          title="Team members"
-          description="Current shop access"
-          rows={members}
+        <AdminDataTable
+          title="Team Members"
+          data={members}
           emptyMessage="No members found for this shop."
-          footer={`Showing ${members.length} member${members.length === 1 ? "" : "s"}`}
-          pagination={
-            pagination
-              ? {
-                  previousHref: previousCursor
-                    ? buildQueryHref("/dashboard/staffs", params, {
-                        cursor: previousCursor,
-                      })
-                    : currentCursor
-                      ? buildQueryHref("/dashboard/staffs", params, {
-                          cursor: null,
-                        })
-                      : null,
-                  nextHref: pagination.next_cursor
-                    ? buildQueryHref("/dashboard/staffs", params, {
-                        cursor: pagination.next_cursor,
-                      })
-                    : null,
-                }
-              : undefined
-          }
           columns={[
             {
               key: "user",
-              header: "Member",
+              header: "Member Profile",
               render: (member) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{member.user.name}</span>
-                  <span className="text-xs text-muted-foreground">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-foreground">{member.user.name}</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">
                     {member.user.email ?? member.user.phone ?? "No contact"}
                   </span>
                 </div>
@@ -211,16 +218,22 @@ export default async function ShopStaffsPage({
             },
             {
               key: "roles",
-              header: "Roles",
+              header: "Capabilities",
               render: (member) => (
-                <div className="flex flex-wrap gap-2">
-                  {member.roles.map((role) => (
-                    <PlatformStatusBadge
-                      key={role.id}
-                      status={role.is_system ? "active" : "pending"}
-                      label={role.name}
-                    />
-                  ))}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap gap-1">
+                    {member.roles.map((role) => (
+                      <PlatformStatusBadge
+                        key={role.id}
+                        status={role.is_system ? "active" : "pending"}
+                        label={role.name}
+                        className="h-4 px-1.5 text-[9px]"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {member.permissions.length} active flags
+                  </span>
                 </div>
               ),
             },
@@ -235,141 +248,141 @@ export default async function ShopStaffsPage({
               ),
             },
             {
-              key: "permissions",
-              header: "Permissions",
-              render: (member) => `${member.permissions.length} granted`,
-            },
-            {
-              key: "joined",
-              header: "Joined",
-              render: (member) => formatRelativeDate(member.created_at),
-            },
-            {
               key: "actions",
-              header: "Actions",
+              header: "",
               render: (member) => {
                 const isCurrentUser = member.user_id === profile.id
                 const isOwner = member.roles.some((role) => role.code === "owner")
 
                 if (!canManageMembers || isCurrentUser || isOwner) {
-                  return <span className="text-xs text-muted-foreground">No actions</span>
+                  return null
                 }
 
                 return (
-                  <ShopMemberSheet
-                    shopId={activeShop.id}
-                    roles={roleCatalog.roles}
-                    member={member}
-                    triggerLabel="Manage"
-                  />
+                  <div className="flex justify-end">
+                    <Button asChild size="xs" variant="ghost" className="h-7 px-2 font-bold text-muted-foreground hover:text-foreground">
+                      <Link href={`/dashboard/staffs/members/${member.id}/edit`}>
+                        Manage
+                      </Link>
+                    </Button>
+                  </div>
                 )
               },
-              className: "w-[120px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
             },
           ]}
+          footer={
+            pagination && (
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+                  Showing {members.length} members
+                </p>
+                <Pagination className="mx-0 w-auto">
+                  <PaginationContent>
+                    <PaginationItem>
+                      {previousCursor ? (
+                        <PaginationPrevious href={buildQueryHref("/dashboard/staffs", params, { cursor: previousCursor })} />
+                      ) : (
+                        <PaginationPrevious className="pointer-events-none opacity-40" />
+                      )}
+                    </PaginationItem>
+                    <PaginationItem>
+                      {pagination.next_cursor ? (
+                        <PaginationNext href={buildQueryHref("/dashboard/staffs", params, { cursor: pagination.next_cursor })} />
+                      ) : (
+                        <PaginationNext className="pointer-events-none opacity-40" />
+                      )}
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )
+          }
         />
 
-        <PlatformDataTable
-          title="Role catalog"
-          description="Shop role definitions"
-          rows={roleCatalog.roles}
+        <AdminDataTable
+          title="Role Matrix"
+          data={roleCatalog.roles}
           emptyMessage="No roles found for this shop."
-          footer={`${ownerCount} owner account${ownerCount === 1 ? "" : "s"} currently attached`}
           columns={[
             {
               key: "name",
-              header: "Role",
+              header: "Role Definition",
               render: (role) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{role.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {role.description ?? (role.is_system ? "System role" : "Custom role")}
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-foreground">{role.name}</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    {role.is_system ? "System locked" : "Custom ruleset"}
                   </span>
                 </div>
               ),
             },
             {
-              key: "type",
-              header: "Type",
+              key: "stats",
+              header: "Usage",
               render: (role) => (
-                <PlatformStatusBadge
-                  status={role.is_system ? "active" : "pending"}
-                  label={role.is_system ? "System" : "Custom"}
-                />
+                <div className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">
+                  <span>{role.member_count} members</span>
+                  <span>{role.permissions.length} assignments</span>
+                </div>
               ),
             },
             {
-              key: "members",
-              header: "Members",
-              render: (role) => String(role.member_count),
-            },
-            {
-              key: "permissions",
-              header: "Permissions",
-              render: (role) => `${role.permissions.length} assigned`,
-            },
-            {
               key: "actions",
-              header: "Actions",
+              header: "",
               render: (role) => {
                 if (!canManageMembers || !role.editable) {
-                  return (
-                    <span className="text-xs text-muted-foreground">
-                      {role.is_system ? "System role" : "No actions"}
-                    </span>
-                  )
+                  return null
                 }
 
                 return (
-                  <ShopRoleSheet
-                    shopId={activeShop.id}
-                    role={role}
-                    availablePermissions={roleCatalog.available_permissions}
-                    triggerLabel="Edit"
-                  />
+                  <div className="flex justify-end">
+                    <Button asChild size="xs" variant="ghost" className="h-7 px-2 font-bold text-muted-foreground hover:text-foreground">
+                      <Link href={`/dashboard/staffs/roles/${role.id}/edit`}>
+                        Modify
+                      </Link>
+                    </Button>
+                  </div>
                 )
               },
-              className: "w-[110px] px-4 py-2.5 text-right",
-              cellClassName: "px-4 py-3 text-right",
             },
           ]}
         />
       </div>
 
-      <PlatformDataTable
-        title="Recent audit log"
-        description="Latest governance activity"
-        rows={auditLogs}
-        emptyMessage="No audit events recorded for this shop yet."
-        footer="Member invites, access changes, and custom-role edits are recorded here."
+      <AdminDataTable
+        title="Audit Matrix"
+        data={auditLogs}
+        emptyMessage="No governance activity recorded."
         columns={[
           {
             key: "event",
-            header: "Event",
+            header: "Activity",
             render: (log) => (
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold text-foreground">{log.summary}</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatCodeLabel(log.action)}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-foreground">{log.summary}</span>
+                <span className="text-[11px] text-muted-foreground uppercase font-medium">
+                  {formatCodeLabel(log.action)} · {formatCodeLabel(log.entity_type)}
                 </span>
               </div>
             ),
           },
           {
             key: "actor",
-            header: "Actor",
-            render: (log) => log.actor?.name ?? "System",
-          },
-          {
-            key: "entity",
-            header: "Entity",
-            render: (log) => formatCodeLabel(log.entity_type),
+            header: "Initiator",
+            render: (log) => (
+              <span className="text-[13px] font-medium">
+                {log.actor?.name ?? "System Automation"}
+              </span>
+            ),
           },
           {
             key: "time",
-            header: "When",
-            render: (log) => formatRelativeDate(log.created_at),
+            header: "Timestamp",
+            render: (log) => (
+              <span className="text-[12px] font-medium text-muted-foreground">
+                {formatRelativeDate(log.created_at)}
+              </span>
+            ),
           },
         ]}
       />

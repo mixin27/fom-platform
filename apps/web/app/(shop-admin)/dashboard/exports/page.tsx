@@ -55,9 +55,12 @@ export default async function ShopExportsPage({
   const billing = billingResponse.data
   const isBillingForbidden = billingResponse.meta?.forbidden === true
   const permissions = new Set(activeShop.membership.permissions)
+  const currentPlan =
+    billing?.plans.find((plan) => plan.code === billing.overview.plan_code) ??
+    null
 
   const availableFeatures = new Set(
-    billing?.plan?.items
+    currentPlan?.items
       .filter((item) => item.availability_status === "available")
       .map((item) => item.code) ?? []
   )

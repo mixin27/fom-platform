@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
-import { platformSubscriptionStatuses } from '../platform/platform-billing.constants';
+import { 
+  defaultPlanCatalog,
+  platformSubscriptionStatuses 
+} from '../platform/platform-billing.constants';
 import { MyanmyanpayService } from './myanmyanpay.service';
 
 @Injectable()
@@ -225,8 +228,13 @@ export class PaymentsService {
       include: {
         plan: true,
         payments: {
-          select: {
-            status: true,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            transactions: {
+              where: { status: 'paid' },
+              orderBy: { paidAt: 'desc' },
+              take: 1,
+            },
           },
         },
       },
@@ -236,22 +244,101 @@ export class PaymentsService {
       return;
     }
 
-    if (['cancelled', 'expired', 'inactive'].includes(subscription.status)) {
+    if (['cancelled', 'inactive'].includes(subscription.status)) {
       return;
     }
 
-    const hasOverdueInvoice = subscription.payments.some(
+    // Identify if there was a recent payment that should trigger a plan change or extension
+    const latestPaidInvoice = subscription.payments.find(
+      (p: any) => p.status === 'paid' && p.metadata,
+    );
+
+    if (latestPaidInvoice) {
+      const metadata = latestPaidInvoice.metadata as any;
+      const targetPlanCode = metadata?.planCode;
+      const billingPeriod = metadata?.billingPeriod;
+
+      if (targetPlanCode) {
+        const targetPlan = defaultPlanCatalog.find((p) => p.code === targetPlanCode);
+        
+        if (targetPlan) {
+          // Carry-over logic: Add new duration to the end of the current period if it hasn't expired yet
+          const now = new Date();
+          const currentEndAt = subscription.endAt ? new Date(subscription.endAt) : now;
+          const baseDate = currentEndAt > now ? currentEndAt : now;
+          
+          let durationDays = 30; // default monthly
+          if (billingPeriod === 'yearly' || targetPlan.billingPeriod === 'yearly') {
+            durationDays = 365;
+          } else if (billingPeriod === 'trial' || targetPlan.billingPeriod === 'trial') {
+            durationDays = 7;
+          }
+
+          const newEndAt = new Date(baseDate);
+          newEndAt.setDate(newEndAt.getDate() + durationDays);
+
+          const planRecord = await (tx as any).plan.findUnique({
+            where: { code: targetPlan.code },
+          });
+
+          if (planRecord) {
+            // Update the subscription itself
+            await (tx as any).subscription.update({
+              where: { id: subscriptionId },
+              data: {
+                planId: planRecord.id,
+                endAt: newEndAt,
+                status: 'active', // Refresh status to active upon successful payment
+                updatedAt: now,
+              },
+            });
+          }
+
+          // Void other pending subscription invoices to prevent duplicate risk
+          await (tx as any).payment.updateMany({
+            where: {
+              subscriptionId,
+              status: 'pending',
+              id: { not: latestPaidInvoice.id },
+            },
+            data: {
+              status: 'failed',
+            },
+          });
+        }
+      }
+    }
+
+    // Refresh final status based on all current payments (handle overdue states, etc)
+    const refreshedSubscription = await (tx as any).subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        plan: true,
+        payments: {
+          select: { status: true },
+        },
+      },
+    });
+
+    const hasOverdueInvoice = refreshedSubscription.payments.some(
       (payment: { status: string }) => payment.status === 'overdue',
     );
+    
     const isExpiredTrial =
-      subscription.plan.billingPeriod === 'trial' &&
-      subscription.endAt &&
-      subscription.endAt.getTime() <= Date.now();
+      refreshedSubscription.plan.billingPeriod === 'trial' &&
+      refreshedSubscription.endAt &&
+      new Date(refreshedSubscription.endAt).getTime() <= Date.now();
+      
+    const isExpiredPaid =
+      refreshedSubscription.plan.billingPeriod !== 'trial' &&
+      refreshedSubscription.endAt &&
+      new Date(refreshedSubscription.endAt).getTime() < (Date.now() - (3 * 24 * 60 * 60 * 1000)); // Hard expiry after 3 days grace
+
     const nextStatus = hasOverdueInvoice
       ? 'overdue'
-      : isExpiredTrial
+      : (isExpiredTrial || isExpiredPaid)
         ? 'expired'
-        : subscription.plan.billingPeriod === 'trial'
+        : refreshedSubscription.plan.billingPeriod === 'trial'
           ? 'trialing'
           : 'active';
 
@@ -259,7 +346,7 @@ export class PaymentsService {
       platformSubscriptionStatuses.includes(
         nextStatus as (typeof platformSubscriptionStatuses)[number],
       ) &&
-      subscription.status !== nextStatus
+      refreshedSubscription.status !== nextStatus
     ) {
       await (tx as any).subscription.update({
         where: { id: subscriptionId },
