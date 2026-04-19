@@ -1,18 +1,49 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { toLocalDate, toLocalHour } from '../common/utils/dates';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ShopsService } from '../shops/shops.service';
 import { GetDailySummaryQueryDto } from './dto/get-daily-summary-query.dto';
 import { GetMonthlyReportQueryDto } from './dto/get-monthly-report-query.dto';
 import { GetWeeklyReportQueryDto } from './dto/get-weekly-report-query.dto';
 
 @Injectable()
-export class SummariesService {
+export class SummariesService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  private readonly logger = new Logger(SummariesService.name);
+  private reportAvailabilityTimer: NodeJS.Timeout | null = null;
+  private isPublishingReportAvailability = false;
+
+  onModuleInit() {
+    void this.publishAvailableReports();
+    this.reportAvailabilityTimer = setInterval(
+      () => {
+        void this.publishAvailableReports();
+      },
+      30 * 60 * 1000,
+    );
+    this.reportAvailabilityTimer.unref?.();
+  }
+
+  onModuleDestroy() {
+    if (!this.reportAvailabilityTimer) {
+      return;
+    }
+
+    clearInterval(this.reportAvailabilityTimer);
+    this.reportAvailabilityTimer = null;
+  }
 
   async getDailySummary(
     currentUser: AuthenticatedUser,
@@ -40,13 +71,15 @@ export class SummariesService {
 
     const dayOrders = allOrders.filter(
       (order) =>
-        toLocalDate(order.createdAt.toISOString(), shop.timezone) === targetDate,
+        toLocalDate(order.createdAt.toISOString(), shop.timezone) ===
+        targetDate,
     );
     const previousDate = this.resolvePreviousDate(targetDate);
     const previousRevenue = allOrders
       .filter(
         (order) =>
-          toLocalDate(order.createdAt.toISOString(), shop.timezone) === previousDate,
+          toLocalDate(order.createdAt.toISOString(), shop.timezone) ===
+          previousDate,
       )
       .reduce((sum, order) => sum + order.totalPrice, 0);
 
@@ -227,6 +260,136 @@ export class SummariesService {
     });
   }
 
+  private async publishAvailableReports() {
+    if (this.isPublishingReportAvailability) {
+      return;
+    }
+
+    this.isPublishingReportAvailability = true;
+
+    try {
+      const shops = await this.prisma.shop.findMany({
+        select: {
+          id: true,
+          name: true,
+          timezone: true,
+        },
+      });
+      const now = new Date();
+
+      for (const shop of shops) {
+        try {
+          await this.publishShopReportAvailability(shop, now);
+        } catch (error) {
+          this.logger.warn(
+            `Failed to publish report availability for shop ${shop.id}: ${
+              error instanceof Error ? error.message : 'unknown error'
+            }`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to evaluate report availability notifications: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    } finally {
+      this.isPublishingReportAvailability = false;
+    }
+  }
+
+  private async publishShopReportAvailability(
+    shop: {
+      id: string;
+      name: string;
+      timezone: string;
+    },
+    now: Date,
+  ) {
+    const timeZone = shop.timezone || 'UTC';
+    const localDate = toLocalDate(now.toISOString(), timeZone);
+    const localHour = toLocalHour(now.toISOString(), timeZone);
+    if (localHour < 8) {
+      return;
+    }
+
+    const recentOrders = await this.prisma.order.findMany({
+      where: {
+        shopId: shop.id,
+        status: { not: 'cancelled' },
+        createdAt: {
+          gte: new Date(now.getTime() - 70 * 24 * 60 * 60 * 1000),
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (recentOrders.length === 0) {
+      return;
+    }
+
+    const localOrderDates = recentOrders.map((order) =>
+      toLocalDate(order.createdAt.toISOString(), timeZone),
+    );
+    const localOrderDateSet = new Set(localOrderDates);
+    const shopName = shop.name.trim() || 'My Shop';
+
+    const previousDate = this.shiftDate(localDate, -1);
+    if (localOrderDateSet.has(previousDate)) {
+      await this.notificationsService.notifyReportAvailable({
+        shopId: shop.id,
+        shopName,
+        reportType: 'daily',
+        periodKey: previousDate,
+        periodLabel: this.formatFullDateLabel(previousDate),
+      });
+    }
+
+    const previousWeekRange = this.resolveWeekRange(
+      this.shiftDate(localDate, -7),
+    );
+    if (
+      localOrderDates.some(
+        (date) =>
+          date >= previousWeekRange.startDate &&
+          date <= previousWeekRange.endDate,
+      )
+    ) {
+      await this.notificationsService.notifyReportAvailable({
+        shopId: shop.id,
+        shopName,
+        reportType: 'weekly',
+        periodKey: previousWeekRange.startDate,
+        periodLabel: this.formatDateRangeLabel(
+          previousWeekRange.startDate,
+          previousWeekRange.endDate,
+        ),
+      });
+    }
+
+    const previousMonthKey = this.shiftMonth(this.toMonthKey(localDate), -1);
+    const previousMonthRange = this.resolveMonthRange(previousMonthKey);
+    if (
+      localOrderDates.some(
+        (date) =>
+          date >= previousMonthRange.startDate &&
+          date <= previousMonthRange.endDate,
+      )
+    ) {
+      await this.notificationsService.notifyReportAvailable({
+        shopId: shop.id,
+        shopName,
+        reportType: 'monthly',
+        periodKey: previousMonthKey,
+        periodLabel: this.formatMonthLabel(previousMonthKey),
+      });
+    }
+  }
+
   private async resolveReferenceDate(
     shopId: string,
     timeZone: string,
@@ -288,7 +451,10 @@ export class SummariesService {
     timeZone: string;
   }) {
     const periodOrders = options.allOrders.filter((order) => {
-      const orderDate = toLocalDate(order.createdAt.toISOString(), options.timeZone);
+      const orderDate = toLocalDate(
+        order.createdAt.toISOString(),
+        options.timeZone,
+      );
       return orderDate >= options.startDate && orderDate <= options.endDate;
     });
     const comparisonRevenue = options.allOrders
@@ -336,7 +502,10 @@ export class SummariesService {
     >();
 
     for (const order of periodOrders) {
-      const orderDate = toLocalDate(order.createdAt.toISOString(), options.timeZone);
+      const orderDate = toLocalDate(
+        order.createdAt.toISOString(),
+        options.timeZone,
+      );
       const dayEntry = dailyMap.get(orderDate) ?? {
         order_count: 0,
         revenue: 0,
@@ -392,23 +561,24 @@ export class SummariesService {
           ? 0
           : Math.round((statusBreakdown.delivered / totalOrders) * 100),
       status_breakdown: statusBreakdown,
-      daily_breakdown: this.enumerateDates(options.startDate, options.endDate).map(
-        (date) => {
-          const value = dailyMap.get(date) ?? {
-            order_count: 0,
-            revenue: 0,
-            delivered_count: 0,
-          };
-          return {
-            date,
-            label: this.formatShortDateLabel(date),
-            order_count: value.order_count,
-            revenue: value.revenue,
-            delivered_count: value.delivered_count,
-            pending_count: value.order_count - value.delivered_count,
-          };
-        },
-      ),
+      daily_breakdown: this.enumerateDates(
+        options.startDate,
+        options.endDate,
+      ).map((date) => {
+        const value = dailyMap.get(date) ?? {
+          order_count: 0,
+          revenue: 0,
+          delivered_count: 0,
+        };
+        return {
+          date,
+          label: this.formatShortDateLabel(date),
+          order_count: value.order_count,
+          revenue: value.revenue,
+          delivered_count: value.delivered_count,
+          pending_count: value.order_count - value.delivered_count,
+        };
+      }),
       top_products: [...productMap.entries()]
         .sort((left, right) => right[1].revenue - left[1].revenue)
         .slice(0, 5)
@@ -450,8 +620,12 @@ export class SummariesService {
 
   private resolveMonthRange(monthKey: string) {
     const startDate = `${monthKey}-01`;
-    const [year, month] = monthKey.split('-').map((value) => Number.parseInt(value, 10));
-    const endDate = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+    const [year, month] = monthKey
+      .split('-')
+      .map((value) => Number.parseInt(value, 10));
+    const endDate = new Date(Date.UTC(year, month, 0))
+      .toISOString()
+      .slice(0, 10);
     return { startDate, endDate };
   }
 
@@ -462,7 +636,9 @@ export class SummariesService {
   }
 
   private shiftMonth(monthKey: string, delta: number): string {
-    const [year, month] = monthKey.split('-').map((value) => Number.parseInt(value, 10));
+    const [year, month] = monthKey
+      .split('-')
+      .map((value) => Number.parseInt(value, 10));
     const date = new Date(Date.UTC(year, month - 1 + delta, 1));
     return date.toISOString().slice(0, 7);
   }
@@ -487,6 +663,15 @@ export class SummariesService {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
+    }).format(new Date(`${dateString}T00:00:00.000Z`));
+  }
+
+  private formatFullDateLabel(dateString: string): string {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'UTC',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     }).format(new Date(`${dateString}T00:00:00.000Z`));
   }
 

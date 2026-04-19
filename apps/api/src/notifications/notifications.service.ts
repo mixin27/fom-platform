@@ -47,6 +47,16 @@ type OrderActivityNotificationInput = {
   emailBody?: string;
 };
 
+type ReportAvailabilityNotificationInput = {
+  shopId: string;
+  shopName: string;
+  reportType: 'daily' | 'weekly' | 'monthly';
+  periodKey: string;
+  periodLabel: string;
+  title: string;
+  body: string;
+};
+
 @Injectable()
 export class NotificationsService {
   constructor(
@@ -171,8 +181,14 @@ export class NotificationsService {
 
     return {
       preferences: notificationCategoryCatalog.map((category) => {
-        const record = preferences.find((item) => item.category === category.code);
-        return this.serializePreferenceRecord(currentUser.id, category.code, record);
+        const record = preferences.find(
+          (item) => item.category === category.code,
+        );
+        return this.serializePreferenceRecord(
+          currentUser.id,
+          category.code,
+          record,
+        );
       }),
     };
   }
@@ -199,7 +215,9 @@ export class NotificationsService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const preference of body.preferences) {
-        const definition = getNotificationCategoryDefinition(preference.category);
+        const definition = getNotificationCategoryDefinition(
+          preference.category,
+        );
         if (!definition) {
           throw conflictError('Unknown notification category');
         }
@@ -234,7 +252,12 @@ export class NotificationsService {
     return this.getPreferences(currentUser);
   }
 
-  async notifyOrderCreated(input: Omit<OrderActivityNotificationInput, 'title' | 'body' | 'emailSubject' | 'emailBody'>) {
+  async notifyOrderCreated(
+    input: Omit<
+      OrderActivityNotificationInput,
+      'title' | 'body' | 'emailSubject' | 'emailBody'
+    >,
+  ) {
     await this.dispatchOrderActivity({
       ...input,
       title: `New order — ${input.customerName}`,
@@ -245,7 +268,10 @@ export class NotificationsService {
   }
 
   async notifyOrderStatusChanged(
-    input: Omit<OrderActivityNotificationInput, 'title' | 'body' | 'emailSubject' | 'emailBody'> & {
+    input: Omit<
+      OrderActivityNotificationInput,
+      'title' | 'body' | 'emailSubject' | 'emailBody'
+    > & {
       statusLabel: string;
     },
   ) {
@@ -255,6 +281,23 @@ export class NotificationsService {
       body: `${input.orderNo} moved to ${input.statusLabel.toLowerCase()}${input.actorName ? ` by ${input.actorName}` : ''}`,
       emailSubject: `[${input.shopName}] ${input.orderNo} is now ${input.statusLabel}`,
       emailBody: `${input.orderNo} for ${input.customerName} moved to ${input.statusLabel.toLowerCase()}${input.actorName ? ` by ${input.actorName}` : ''}.`,
+    });
+  }
+
+  async notifyReportAvailable(
+    input: Omit<ReportAvailabilityNotificationInput, 'title' | 'body'>,
+  ) {
+    const reportLabel =
+      input.reportType === 'daily'
+        ? 'Daily summary'
+        : input.reportType === 'weekly'
+          ? 'Weekly report'
+          : 'Monthly report';
+
+    await this.dispatchReportAvailability({
+      ...input,
+      title: `${reportLabel} ready`,
+      body: `${input.periodLabel} is ready for ${input.shopName}.`,
     });
   }
 
@@ -366,7 +409,111 @@ export class NotificationsService {
     }
   }
 
-  private async resolveShopRecipients(shopId: string): Promise<ShopRecipient[]> {
+  private async dispatchReportAvailability(
+    input: ReportAvailabilityNotificationInput,
+  ) {
+    const recipients = await this.resolveShopRecipients(input.shopId);
+    if (recipients.length === 0) {
+      return;
+    }
+
+    const preferences = await this.resolvePreferenceMap(
+      recipients.map((recipient) => recipient.userId),
+      'daily_summary',
+    );
+    const pushPromises: Promise<unknown>[] = [];
+
+    for (const recipient of recipients) {
+      const resolvedPreference =
+        preferences.get(recipient.userId) ??
+        this.resolveDefaultPreference('daily_summary');
+      if (!resolvedPreference.in_app_enabled) {
+        continue;
+      }
+
+      const existingNotification = await this.prisma.notification.findFirst({
+        where: {
+          userId: recipient.userId,
+          shopId: input.shopId,
+          category: 'daily_summary',
+          title: input.title,
+          body: input.body,
+          actionTarget: '/reports',
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingNotification) {
+        continue;
+      }
+
+      let notificationId: string | null = null;
+      let serializedNotification: ReturnType<
+        NotificationsService['serializeNotificationRecord']
+      > | null = null;
+
+      const created = await this.prisma.notification.create({
+        data: {
+          userId: recipient.userId,
+          shopId: input.shopId,
+          shopNameSnapshot: input.shopName,
+          category: 'daily_summary',
+          title: input.title,
+          body: input.body,
+          actionType: 'report',
+          actionTarget: '/reports',
+        },
+        select: {
+          id: true,
+          userId: true,
+          shopId: true,
+          shopNameSnapshot: true,
+          category: true,
+          title: true,
+          body: true,
+          actionType: true,
+          actionTarget: true,
+          readAt: true,
+          createdAt: true,
+        },
+      });
+      notificationId = created.id;
+      serializedNotification = this.serializeNotificationRecord(created);
+      pushPromises.push(
+        this.realtimeService.emitNotificationCreated({
+          userId: recipient.userId,
+          shopId: input.shopId,
+          notification: serializedNotification,
+        }),
+      );
+      pushPromises.push(
+        this.pushService.sendNotificationToUser({
+          userId: recipient.userId,
+          title: input.title,
+          body: input.body,
+          data: {
+            category: 'daily_summary',
+            report_type: input.reportType,
+            report_period_key: input.periodKey,
+            report_period_label: input.periodLabel,
+            ...(notificationId ? { notification_id: notificationId } : {}),
+            shop_id: input.shopId,
+            action_target: '/reports',
+          },
+        }),
+      );
+    }
+
+    if (pushPromises.length > 0) {
+      await Promise.allSettled(pushPromises);
+    }
+  }
+
+  private async resolveShopRecipients(
+    shopId: string,
+  ): Promise<ShopRecipient[]> {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
       include: {
@@ -480,8 +627,10 @@ export class NotificationsService {
       category: categoryCode,
       label: definition?.label ?? categoryCode,
       description: definition?.description ?? null,
-      in_app_enabled: record?.inAppEnabled ?? definition?.defaultInAppEnabled ?? true,
-      email_enabled: record?.emailEnabled ?? definition?.defaultEmailEnabled ?? true,
+      in_app_enabled:
+        record?.inAppEnabled ?? definition?.defaultInAppEnabled ?? true,
+      email_enabled:
+        record?.emailEnabled ?? definition?.defaultEmailEnabled ?? true,
       updated_at: record?.updatedAt?.toISOString() ?? null,
     };
   }

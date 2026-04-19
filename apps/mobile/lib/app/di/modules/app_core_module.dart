@@ -111,6 +111,9 @@ class AppCoreModule implements DependencyModule {
           logger: getIt<AppLogger>(),
         ),
       )
+      ..putLazySingletonIfAbsent<PushNotificationRuntimeService>(
+        () => PushNotificationRuntimeService(logger: getIt<AppLogger>()),
+      )
       ..putLazySingletonIfAbsent<AppDatabase>(() => AppDatabase());
   }
 

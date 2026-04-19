@@ -1,7 +1,7 @@
 import 'package:app_logger/app_logger.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+
+import 'push_support.dart';
 
 class PushTokenResolution {
   const PushTokenResolution({
@@ -40,7 +40,7 @@ class FirebaseMessagingPushTokenProvider extends PushTokenProvider
 
   @override
   Future<PushTokenResolution> resolveToken() async {
-    final platform = _resolvePlatform();
+    final platform = resolveSupportedPushPlatform();
     if (platform == null) {
       return const PushTokenResolution(
         supported: false,
@@ -57,7 +57,7 @@ class FirebaseMessagingPushTokenProvider extends PushTokenProvider
       await messaging.setAutoInitEnabled(true);
       await messaging.requestPermission(alert: true, badge: true, sound: true);
       await messaging.setForegroundNotificationPresentationOptions(
-        alert: true,
+        alert: false,
         badge: true,
         sound: true,
       );
@@ -91,25 +91,6 @@ class FirebaseMessagingPushTokenProvider extends PushTokenProvider
   }
 
   Future<void> _initializeFirebase() async {
-    if (Firebase.apps.isNotEmpty) {
-      return;
-    }
-
-    await Firebase.initializeApp();
-  }
-
-  String? _resolvePlatform() {
-    if (kIsWeb) {
-      return null;
-    }
-
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'android';
-      case TargetPlatform.iOS:
-        return 'ios';
-      default:
-        return null;
-    }
+    await ensureFirebaseMessagingInitialized();
   }
 }

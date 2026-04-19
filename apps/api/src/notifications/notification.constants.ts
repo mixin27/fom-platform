@@ -10,7 +10,8 @@ export const notificationCategoryCatalog = [
   {
     code: 'daily_summary',
     label: 'Daily summary',
-    description: 'Daily sales and delivery recap for the active shop.',
+    description:
+      'Daily, weekly, and monthly reporting recap for the active shop.',
     defaultInAppEnabled: true,
     defaultEmailEnabled: true,
   },
