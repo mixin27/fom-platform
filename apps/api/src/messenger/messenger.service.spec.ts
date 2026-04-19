@@ -94,6 +94,40 @@ describe('MessengerService', () => {
     expect(authorizationUrl.searchParams.get('state')).toBeTruthy();
   });
 
+  it('subscribes pages with Meta-supported webhook field names', async () => {
+    const { service } = createService();
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    );
+
+    await expect(
+      (service as any).subscribePageToAppWebhooks(
+        'page-1',
+        'EAABsbCS1iHgBAKPageToken',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/page-1/subscribed_apps?'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: expect.stringContaining(
+          'subscribed_fields=messages%2Cmessaging_postbacks%2Cmessaging_optins%2Cmessage_deliveries%2Cmessage_reads',
+        ),
+      }),
+    );
+
+    fetchSpy.mockRestore();
+  });
+
   it('hides disconnected connections in overview while preserving shop stats', async () => {
     const { prisma, service } = createService();
 

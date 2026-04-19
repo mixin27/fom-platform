@@ -91,6 +91,13 @@ const MESSENGER_PROFILE_FIELDS = [
   'profile_pic',
   'locale',
 ].join(',');
+const MESSENGER_WEBHOOK_SUBSCRIBED_FIELDS = [
+  'messages',
+  'messaging_postbacks',
+  'messaging_optins',
+  'message_deliveries',
+  'message_reads',
+];
 
 @Injectable()
 export class MessengerService {
@@ -841,13 +848,7 @@ export class MessengerService {
     const body = new URLSearchParams();
     body.set(
       'subscribed_fields',
-      [
-        'messages',
-        'messaging_postbacks',
-        'messaging_optins',
-        'messaging_deliveries',
-        'messaging_reads',
-      ].join(','),
+      MESSENGER_WEBHOOK_SUBSCRIBED_FIELDS.join(','),
     );
 
     let response: Response;
