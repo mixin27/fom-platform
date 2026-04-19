@@ -10,6 +10,7 @@ import {
 
 import { AdminHeader } from "@/features/portal-shell/components/admin/admin-header"
 import { PlatformStatusBadge } from "@/components/platform/platform-status-badge"
+import { PlatformDataTable } from "@/components/platform/platform-data-table"
 import { getShopOrder, getShopPortalContext } from "@/lib/shop/api"
 import {
   formatCurrency,
@@ -190,6 +191,53 @@ export default async function ShopOrderDetailPage({
                 ))}
               </CardContent>
             </Card>
+          )}
+
+          {order.audit_history && order.audit_history.length > 0 && (
+            <PlatformDataTable
+              title="Audit Trail"
+              description="Order operation history"
+              rows={order.audit_history}
+              emptyMessage="No audit events recorded for this order yet."
+              footer={`Showing ${order.audit_history.length} audit event${
+                order.audit_history.length === 1 ? "" : "s"
+              }`}
+              columns={[
+                {
+                  key: "when",
+                  header: "When",
+                  render: (log) => (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-foreground">
+                        {formatRelativeDate(log.created_at)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(log.created_at)}
+                      </span>
+                    </div>
+                  ),
+                },
+                {
+                  key: "action",
+                  header: "Action",
+                  render: (log) => (
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-foreground">
+                        {log.summary}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {log.action}
+                      </span>
+                    </div>
+                  ),
+                },
+                {
+                  key: "actor",
+                  header: "Actor",
+                  render: (log) => log.actor?.name ?? "System",
+                },
+              ]}
+            />
           )}
         </div>
 

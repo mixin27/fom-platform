@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BarChart3,
+  BellRing,
   Building2,
   CreditCard,
   Download,
@@ -44,6 +45,7 @@ const iconMap: Record<NavIconName, typeof LayoutDashboard> = {
   payments: CreditCard,
   contact: Inbox,
   announcements: Megaphone,
+  push: BellRing,
 }
 
 type AppSideNavProps = {
@@ -58,7 +60,7 @@ export function AppSideNav({ sections, tone }: AppSideNavProps) {
     <nav className="flex flex-col gap-5">
       {sections.map((section) => (
         <div key={section.label} className="flex flex-col gap-1.5">
-          <p className="px-2 text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/80">
+          <p className="px-2 text-[10px] font-semibold tracking-[0.12em] text-muted-foreground/80 uppercase">
             {section.label}
           </p>
           <div className="flex flex-col gap-1">
@@ -81,7 +83,12 @@ export function AppSideNav({ sections, tone }: AppSideNavProps) {
                       : "text-muted-foreground hover:bg-[var(--fom-surface-variant)] hover:text-foreground"
                   )}
                 >
-                  <Icon className={cn("size-4 shrink-0", isActive ? "opacity-100" : "opacity-65")} />
+                  <Icon
+                    className={cn(
+                      "size-4 shrink-0",
+                      isActive ? "opacity-100" : "opacity-65"
+                    )}
+                  />
                   <span className="truncate">{item.label}</span>
                 </Link>
               )

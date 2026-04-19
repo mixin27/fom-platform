@@ -115,12 +115,10 @@ export type ShopAuditLog = {
   summary: string
   metadata: Record<string, unknown> | null
   created_at: string
-  actor:
-    | {
-        id: string | null
-        name: string
-      }
-    | null
+  actor: {
+    id: string | null
+    name: string
+  } | null
 }
 
 export type ShopOrderItem = {
@@ -165,6 +163,7 @@ export type ShopOrder = {
       name: string
     } | null
   }>
+  audit_history?: ShopAuditLog[]
 }
 
 export type ShopCustomer = {
@@ -699,15 +698,36 @@ export async function getShopMembers(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/settings${buildQueryString(searchParams)}`
-  return shopRequest<ShopMember[]>("/members", searchParams, resolvedRetryPath, true)
+  return shopRequest<ShopMember[]>(
+    "/members",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
-export async function getShopMember(memberId: string, retryPath = "/dashboard/staffs") {
-  return shopRequest<ShopMember>(`/members/${memberId}`, undefined, retryPath, true)
+export async function getShopMember(
+  memberId: string,
+  retryPath = "/dashboard/staffs"
+) {
+  return shopRequest<ShopMember>(
+    `/members/${memberId}`,
+    undefined,
+    retryPath,
+    true
+  )
 }
 
-export async function getShopMemberByUserId(userId: string, retryPath = "/dashboard/staffs") {
-  return shopRequest<ShopMember>(`/members/user/${userId}`, undefined, retryPath, true)
+export async function getShopMemberByUserId(
+  userId: string,
+  retryPath = "/dashboard/staffs"
+) {
+  return shopRequest<ShopMember>(
+    `/members/user/${userId}`,
+    undefined,
+    retryPath,
+    true
+  )
 }
 
 export async function getShopRoles(retryPath = "/dashboard/staffs") {
@@ -720,7 +740,11 @@ export async function getShopAuditLogs(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/staffs${buildQueryString(searchParams)}`
-  return shopRequest<ShopAuditLog[]>("/audit-logs", searchParams, resolvedRetryPath)
+  return shopRequest<ShopAuditLog[]>(
+    "/audit-logs",
+    searchParams,
+    resolvedRetryPath
+  )
 }
 
 export async function getShopBilling(retryPath = "/dashboard/billing") {
@@ -728,7 +752,11 @@ export async function getShopBilling(retryPath = "/dashboard/billing") {
 }
 
 export async function getAvailablePlans(retryPath = "/dashboard/billing") {
-  return shopRequest<ShopBilling["plans"]>("/billing/plans", undefined, retryPath)
+  return shopRequest<ShopBilling["plans"]>(
+    "/billing/plans",
+    undefined,
+    retryPath
+  )
 }
 
 export async function createSubscriptionInvoice(
@@ -863,11 +891,24 @@ export async function getShopOrders(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/orders${buildQueryString(searchParams)}`
-  return shopRequest<ShopOrder[]>("/orders", searchParams, resolvedRetryPath, true)
+  return shopRequest<ShopOrder[]>(
+    "/orders",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
-export async function getShopOrder(orderId: string, retryPath = "/dashboard/orders") {
-  return shopRequest<ShopOrder>(`/orders/${orderId}`, undefined, retryPath, true)
+export async function getShopOrder(
+  orderId: string,
+  retryPath = "/dashboard/orders"
+) {
+  return shopRequest<ShopOrder>(
+    `/orders/${orderId}`,
+    undefined,
+    retryPath,
+    true
+  )
 }
 
 export async function getShopCustomers(
@@ -876,14 +917,24 @@ export async function getShopCustomers(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/customers${buildQueryString(searchParams)}`
-  return shopRequest<ShopCustomer[]>("/customers", searchParams, resolvedRetryPath, true)
+  return shopRequest<ShopCustomer[]>(
+    "/customers",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
 export async function getShopCustomer(
   customerId: string,
   retryPath = "/dashboard/customers"
 ) {
-  return shopRequest<ShopCustomer>(`/customers/${customerId}`, undefined, retryPath, true)
+  return shopRequest<ShopCustomer>(
+    `/customers/${customerId}`,
+    undefined,
+    retryPath,
+    true
+  )
 }
 
 export async function getShopDeliveries(
@@ -892,7 +943,12 @@ export async function getShopDeliveries(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/deliveries${buildQueryString(searchParams)}`
-  return shopRequest<ShopDelivery[]>("/deliveries", searchParams, resolvedRetryPath, true)
+  return shopRequest<ShopDelivery[]>(
+    "/deliveries",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
 export async function getShopTemplates(
@@ -901,7 +957,12 @@ export async function getShopTemplates(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/templates${buildQueryString(searchParams)}`
-  return shopRequest<ShopTemplate[]>("/templates", searchParams, resolvedRetryPath, true)
+  return shopRequest<ShopTemplate[]>(
+    "/templates",
+    searchParams,
+    resolvedRetryPath,
+    true
+  )
 }
 
 export async function getShopDailySummary(
@@ -924,7 +985,11 @@ export async function getShopWeeklyReport(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/reports${buildQueryString(searchParams)}`
-  return shopRequest<ShopPeriodReport>("/reports/weekly", searchParams, resolvedRetryPath)
+  return shopRequest<ShopPeriodReport>(
+    "/reports/weekly",
+    searchParams,
+    resolvedRetryPath
+  )
 }
 
 export async function getShopMonthlyReport(
@@ -933,7 +998,11 @@ export async function getShopMonthlyReport(
 ) {
   const resolvedRetryPath =
     retryPath ?? `/dashboard/reports${buildQueryString(searchParams)}`
-  return shopRequest<ShopPeriodReport>("/reports/monthly", searchParams, resolvedRetryPath)
+  return shopRequest<ShopPeriodReport>(
+    "/reports/monthly",
+    searchParams,
+    resolvedRetryPath
+  )
 }
 
 export async function getCurrentUserProfile(retryPath = "/dashboard/settings") {

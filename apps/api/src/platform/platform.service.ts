@@ -17,6 +17,8 @@ import type { CreatePlatformPlanDto } from './dto/create-platform-plan.dto';
 import type { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import type { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import type { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
+import type { ListPlatformPushDevicesQueryDto } from './dto/list-platform-push-devices-query.dto';
+import type { ListPlatformPushUsersQueryDto } from './dto/list-platform-push-users-query.dto';
 import type { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import type { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
 import type { ListPlatformUsersQueryDto } from './dto/list-platform-users-query.dto';
@@ -203,6 +205,53 @@ type PlatformUserRow = {
   }>;
 };
 
+type PlatformPushShopSummary = {
+  shop_id: string;
+  shop_name: string;
+};
+
+type PlatformPushDeviceRow = {
+  id: string;
+  device_id: string;
+  provider: string;
+  platform: string;
+  device_name: string | null;
+  app_version: string | null;
+  locale: string | null;
+  is_active: boolean;
+  session_id: string | null;
+  session_active: boolean;
+  last_seen_at: string;
+  created_at: string;
+  updated_at: string;
+  token_suffix: string;
+  user: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    active_session_count: number;
+    active_shop_count: number;
+    shops: PlatformPushShopSummary[];
+  };
+};
+
+type PlatformPushUserRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  active_shop_count: number;
+  active_session_count: number;
+  total_devices: number;
+  active_devices: number;
+  inactive_devices: number;
+  providers: string[];
+  platforms: string[];
+  last_seen_at: string | null;
+  shops: PlatformPushShopSummary[];
+};
+
 type DetectedSupportIssue = {
   issue_key: string;
   source: 'system';
@@ -243,7 +292,10 @@ export class PlatformService {
     const planSummaries = this.buildPlanSummaries(tenants, payments);
 
     const recentShops = tenants.slice(0, 6);
-    const totalOrders = tenants.reduce((sum, tenant) => sum + tenant.total_orders, 0);
+    const totalOrders = tenants.reduce(
+      (sum, tenant) => sum + tenant.total_orders,
+      0,
+    );
     const totalRevenue = tenants.reduce(
       (sum, tenant) => sum + tenant.total_revenue,
       0,
@@ -268,8 +320,9 @@ export class PlatformService {
         monthly_recurring_revenue: monthlyRecurringRevenue,
         projected_arr: monthlyRecurringRevenue * 12,
         yearly_plan_revenue: yearlyPlanRevenue,
-        overdue_invoices: payments.filter((payment) => payment.status === 'overdue')
-          .length,
+        overdue_invoices: payments.filter(
+          (payment) => payment.status === 'overdue',
+        ).length,
       },
       revenue_series: this.buildRevenueSeries(now, tenants),
       subscription_mix: planSummaries.map((plan) => ({
@@ -287,10 +340,13 @@ export class PlatformService {
         trials_expiring_this_week: tenants.filter(
           (tenant) => tenant.status === 'expiring',
         ).length,
-        overdue_payments: payments.filter((payment) => payment.status === 'overdue')
-          .length,
+        overdue_payments: payments.filter(
+          (payment) => payment.status === 'overdue',
+        ).length,
         average_orders_per_shop:
-          tenants.length > 0 ? Number((totalOrders / tenants.length).toFixed(1)) : 0,
+          tenants.length > 0
+            ? Number((totalOrders / tenants.length).toFixed(1))
+            : 0,
       },
       recent_shops: recentShops,
       attention_items: supportIssues.slice(0, 4),
@@ -308,7 +364,10 @@ export class PlatformService {
         return false;
       }
 
-      if (normalizedPlan && tenant.plan_code?.toLowerCase() !== normalizedPlan) {
+      if (
+        normalizedPlan &&
+        tenant.plan_code?.toLowerCase() !== normalizedPlan
+      ) {
         return false;
       }
 
@@ -403,7 +462,10 @@ export class PlatformService {
     const rows = users
       .map((user) => this.serializePlatformUserRow(user))
       .filter((user) => {
-        if (normalizedAccess !== 'all' && user.access_type !== normalizedAccess) {
+        if (
+          normalizedAccess !== 'all' &&
+          user.access_type !== normalizedAccess
+        ) {
           return false;
         }
 
@@ -421,8 +483,12 @@ export class PlatformService {
         ].some((value) => value.toLowerCase().includes(normalizedSearch));
       })
       .sort((left, right) => {
-        const leftLastActive = Date.parse(left.last_active_at ?? left.created_at);
-        const rightLastActive = Date.parse(right.last_active_at ?? right.created_at);
+        const leftLastActive = Date.parse(
+          left.last_active_at ?? left.created_at,
+        );
+        const rightLastActive = Date.parse(
+          right.last_active_at ?? right.created_at,
+        );
 
         if (leftLastActive !== rightLastActive) {
           return rightLastActive - leftLastActive;
@@ -511,6 +577,119 @@ export class PlatformService {
     return this.serializePlatformUserRow(user);
   }
 
+  async getPushNotifications(query: ListPlatformPushDevicesQueryDto) {
+    const normalizedSearch = query.search?.trim().toLowerCase() ?? '';
+    const normalizedStatus = query.status ?? 'all';
+    const normalizedPlatform = query.platform ?? 'all';
+    const normalizedProvider = query.provider?.trim().toLowerCase() ?? '';
+    const rows = await this.loadPlatformPushDeviceRows();
+    const staleThreshold = Date.now() - THIRTY_DAYS_MS;
+
+    const filtered = rows.filter((row) => {
+      if (normalizedStatus !== 'all') {
+        const expectedActive = normalizedStatus === 'active';
+        if (row.is_active !== expectedActive) {
+          return false;
+        }
+      }
+
+      if (normalizedPlatform !== 'all' && row.platform !== normalizedPlatform) {
+        return false;
+      }
+
+      if (
+        normalizedProvider &&
+        row.provider.toLowerCase() !== normalizedProvider
+      ) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        row.device_id,
+        row.device_name ?? '',
+        row.app_version ?? '',
+        row.user.name,
+        row.user.email ?? '',
+        row.user.phone ?? '',
+        row.provider,
+        row.platform,
+        ...row.user.shops.map((shop) => shop.shop_name),
+      ].some((value) => value.toLowerCase().includes(normalizedSearch));
+    });
+
+    const page = paginate(filtered, query.limit, query.cursor);
+
+    return {
+      overview: {
+        total_devices: rows.length,
+        active_devices: rows.filter((row) => row.is_active).length,
+        inactive_devices: rows.filter((row) => !row.is_active).length,
+        total_users: new Set(rows.map((row) => row.user.id)).size,
+        active_users: new Set(
+          rows.filter((row) => row.is_active).map((row) => row.user.id),
+        ).size,
+        stale_devices: rows.filter(
+          (row) => Date.parse(row.last_seen_at) < staleThreshold,
+        ).length,
+        android_devices: rows.filter((row) => row.platform === 'android')
+          .length,
+        ios_devices: rows.filter((row) => row.platform === 'ios').length,
+      },
+      devices: page.items,
+      devices_pagination: page.pagination,
+    };
+  }
+
+  async getPushNotificationUsers(query: ListPlatformPushUsersQueryDto) {
+    const normalizedSearch = query.search?.trim().toLowerCase() ?? '';
+    const normalizedStatus = query.status ?? 'all';
+    const devices = await this.loadPlatformPushDeviceRows();
+    const rows = this.buildPlatformPushUserRows(devices);
+
+    const filtered = rows.filter((row) => {
+      if (normalizedStatus !== 'all') {
+        const hasActiveDevice = row.active_devices > 0;
+        if (normalizedStatus === 'active' && !hasActiveDevice) {
+          return false;
+        }
+        if (normalizedStatus === 'inactive' && hasActiveDevice) {
+          return false;
+        }
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        row.name,
+        row.email ?? '',
+        row.phone ?? '',
+        ...row.platforms,
+        ...row.providers,
+        ...row.shops.map((shop) => shop.shop_name),
+      ].some((value) => value.toLowerCase().includes(normalizedSearch));
+    });
+
+    const page = paginate(filtered, query.limit, query.cursor);
+
+    return {
+      overview: {
+        total_users: rows.length,
+        active_users: rows.filter((row) => row.active_devices > 0).length,
+        inactive_users: rows.filter((row) => row.active_devices === 0).length,
+        multi_device_users: rows.filter((row) => row.total_devices > 1).length,
+        total_devices: devices.length,
+      },
+      users: page.items,
+      users_pagination: page.pagination,
+    };
+  }
+
   async searchOwnerAccounts(query: SearchPlatformOwnerAccountsQueryDto) {
     const normalizedQuery = query.query?.trim() ?? '';
     const limit = query.limit ?? 8;
@@ -566,7 +745,8 @@ export class PlatformService {
     });
 
     const exactEmailQuery = normalizedQuery.toLowerCase();
-    const normalizedPhoneQuery = this.normalizePhone(normalizedQuery) ?? normalizedQuery;
+    const normalizedPhoneQuery =
+      this.normalizePhone(normalizedQuery) ?? normalizedQuery;
 
     return users
       .map((user) => ({
@@ -813,7 +993,10 @@ export class PlatformService {
         return false;
       }
 
-      if (normalizedPlan && payment.plan_code.toLowerCase() !== normalizedPlan) {
+      if (
+        normalizedPlan &&
+        payment.plan_code.toLowerCase() !== normalizedPlan
+      ) {
         return false;
       }
 
@@ -837,7 +1020,10 @@ export class PlatformService {
         return false;
       }
 
-      if (normalizedPlan && subscription.plan_code.toLowerCase() !== normalizedPlan) {
+      if (
+        normalizedPlan &&
+        subscription.plan_code.toLowerCase() !== normalizedPlan
+      ) {
         return false;
       }
 
@@ -864,14 +1050,17 @@ export class PlatformService {
         monthly_recurring_revenue: planSummaries
           .filter((plan) => plan.billing_period === 'monthly')
           .reduce((sum, plan) => sum + plan.monthly_recurring_revenue, 0),
-        projected_arr: planSummaries
-          .filter((plan) => plan.billing_period === 'monthly')
-          .reduce((sum, plan) => sum + plan.monthly_recurring_revenue, 0) * 12,
+        projected_arr:
+          planSummaries
+            .filter((plan) => plan.billing_period === 'monthly')
+            .reduce((sum, plan) => sum + plan.monthly_recurring_revenue, 0) *
+          12,
         yearly_plan_revenue: planSummaries
           .filter((plan) => plan.billing_period === 'yearly')
           .reduce((sum, plan) => sum + plan.collected_revenue, 0),
-        overdue_invoices: payments.filter((payment) => payment.status === 'overdue')
-          .length,
+        overdue_invoices: payments.filter(
+          (payment) => payment.status === 'overdue',
+        ).length,
         paid_invoices: payments.filter((payment) => payment.status === 'paid')
           .length,
       },
@@ -885,7 +1074,9 @@ export class PlatformService {
           return endAt >= Date.now() && endAt <= Date.now() + THIRTY_DAYS_MS;
         })
         .sort((left, right) =>
-          String(left.current_period_end).localeCompare(String(right.current_period_end)),
+          String(left.current_period_end).localeCompare(
+            String(right.current_period_end),
+          ),
         )
         .map((tenant) => ({
           shop_id: tenant.id,
@@ -913,7 +1104,10 @@ export class PlatformService {
         return false;
       }
 
-      if (normalizedPlan && payment.plan_code.toLowerCase() !== normalizedPlan) {
+      if (
+        normalizedPlan &&
+        payment.plan_code.toLowerCase() !== normalizedPlan
+      ) {
         return false;
       }
 
@@ -933,13 +1127,17 @@ export class PlatformService {
     return {
       overview: {
         total_invoices: payments.length,
-        paid_invoices: payments.filter((payment) => payment.status === 'paid').length,
-        pending_invoices: payments.filter((payment) => payment.status === 'pending')
+        paid_invoices: payments.filter((payment) => payment.status === 'paid')
           .length,
-        overdue_invoices: payments.filter((payment) => payment.status === 'overdue')
-          .length,
-        failed_invoices: payments.filter((payment) => payment.status === 'failed')
-          .length,
+        pending_invoices: payments.filter(
+          (payment) => payment.status === 'pending',
+        ).length,
+        overdue_invoices: payments.filter(
+          (payment) => payment.status === 'overdue',
+        ).length,
+        failed_invoices: payments.filter(
+          (payment) => payment.status === 'failed',
+        ).length,
       },
       invoices: page.items,
       invoices_pagination: page.pagination,
@@ -987,7 +1185,9 @@ export class PlatformService {
       currentPlanId: subscription.planId,
     });
     const nextStartAt =
-      body.start_at !== undefined ? new Date(body.start_at) : subscription.startAt;
+      body.start_at !== undefined
+        ? new Date(body.start_at)
+        : subscription.startAt;
     const nextEndAt =
       body.end_at !== undefined
         ? body.end_at
@@ -1011,7 +1211,9 @@ export class PlatformService {
         ...(body.status !== undefined ? { status: body.status } : {}),
         ...(body.start_at !== undefined ? { startAt: nextStartAt } : {}),
         ...(body.end_at !== undefined ? { endAt: nextEndAt } : {}),
-        ...(body.auto_renews !== undefined ? { autoRenews: body.auto_renews } : {}),
+        ...(body.auto_renews !== undefined
+          ? { autoRenews: body.auto_renews }
+          : {}),
       },
     });
 
@@ -1023,10 +1225,7 @@ export class PlatformService {
     return this.loadSubscriptionRowById(subscriptionId);
   }
 
-  async createInvoice(
-    subscriptionId: string,
-    body: CreatePlatformInvoiceDto,
-  ) {
+  async createInvoice(subscriptionId: string, body: CreatePlatformInvoiceDto) {
     const subscription = await (this.prisma as any).subscription.findUnique({
       where: { id: subscriptionId },
       include: {
@@ -1045,7 +1244,7 @@ export class PlatformService {
         ? body.due_at
           ? new Date(body.due_at)
           : null
-        : subscription.endAt ?? null;
+        : (subscription.endAt ?? null);
 
     const createdInvoiceId = await this.prisma.$transaction(async (tx) => {
       const invoice = await (tx as any).payment.create({
@@ -1068,7 +1267,10 @@ export class PlatformService {
     });
 
     const createdInvoice = await this.loadPaymentRowById(createdInvoiceId);
-    void this.sendInvoiceNoticeEmail(createdInvoiceId, 'platform.invoice_notice');
+    void this.sendInvoiceNoticeEmail(
+      createdInvoiceId,
+      'platform.invoice_notice',
+    );
     void this.emitPlatformInvalidation({
       resource: 'subscriptions',
       action: 'invoice_created',
@@ -1108,7 +1310,11 @@ export class PlatformService {
     }
 
     const nextStatus = body.status ?? invoice.status;
-    const nextPaidAt = this.resolvePaidAtForUpdate(invoice, nextStatus, body.paid_at);
+    const nextPaidAt = this.resolvePaidAtForUpdate(
+      invoice,
+      nextStatus,
+      body.paid_at,
+    );
     const nextDueAt =
       body.due_at !== undefined
         ? body.due_at
@@ -1121,7 +1327,9 @@ export class PlatformService {
         where: { id: invoiceId },
         data: {
           ...(body.amount !== undefined ? { amount: body.amount } : {}),
-          ...(body.currency !== undefined ? { currency: body.currency.trim() } : {}),
+          ...(body.currency !== undefined
+            ? { currency: body.currency.trim() }
+            : {}),
           ...(body.status !== undefined ? { status: body.status } : {}),
           ...(body.due_at !== undefined ? { dueAt: nextDueAt } : {}),
           ...(body.paid_at !== undefined || body.status !== undefined
@@ -1152,7 +1360,8 @@ export class PlatformService {
     const tenants = await this.loadTenantSnapshots(now);
     const payments = await this.loadPaymentRows();
     const issues = await this.syncAndLoadSupportIssues(tenants, payments, now);
-    const publicContact = await this.publicContactService.listInboxForPlatform();
+    const publicContact =
+      await this.publicContactService.listInboxForPlatform();
 
     return {
       overview: {
@@ -1161,7 +1370,8 @@ export class PlatformService {
           .length,
         onboarding_items: issues.filter((issue) => issue.kind === 'onboarding')
           .length,
-        billing_items: issues.filter((issue) => issue.kind === 'billing').length,
+        billing_items: issues.filter((issue) => issue.kind === 'billing')
+          .length,
         public_contact_inbox: publicContact.open_count,
         payment_proof_queue: 0,
       },
@@ -1174,8 +1384,9 @@ export class PlatformService {
           .length,
         inactive_shops: tenants.filter((tenant) => tenant.status === 'inactive')
           .length,
-        overdue_invoices: payments.filter((payment) => payment.status === 'overdue')
-          .length,
+        overdue_invoices: payments.filter(
+          (payment) => payment.status === 'overdue',
+        ).length,
       },
       recent_activity: tenants.slice(0, 8).map((tenant) => ({
         shop_id: tenant.id,
@@ -1208,7 +1419,9 @@ export class PlatformService {
   ) {
     const shopId = body.shop_id ?? null;
     const shop = await this.resolveSupportShop(shopId);
-    const assignee = await this.resolveSupportAssignee(body.assigned_to_user_id);
+    const assignee = await this.resolveSupportAssignee(
+      body.assigned_to_user_id,
+    );
     const status = body.status ?? 'open';
     const isClosed = this.isSupportIssueClosed(status);
     const now = new Date();
@@ -1240,7 +1453,10 @@ export class PlatformService {
     return this.loadSupportIssueById(issue.id);
   }
 
-  async updateSupportIssue(issueId: string, body: UpdatePlatformSupportIssueDto) {
+  async updateSupportIssue(
+    issueId: string,
+    body: UpdatePlatformSupportIssueDto,
+  ) {
     const issue = await (this.prisma as any).platformSupportIssue.findUnique({
       where: { id: issueId },
     });
@@ -1269,11 +1485,15 @@ export class PlatformService {
     }
 
     const shop = await this.resolveSupportShop(body.shop_id);
-    const assignee = await this.resolveSupportAssignee(body.assigned_to_user_id);
+    const assignee = await this.resolveSupportAssignee(
+      body.assigned_to_user_id,
+    );
     const nextStatus = body.status ?? issue.status;
     const nextIsClosed = this.isSupportIssueClosed(nextStatus);
     const clearsResolutionState =
-      body.status !== undefined && !nextIsClosed && this.isSupportIssueClosed(issue.status);
+      body.status !== undefined &&
+      !nextIsClosed &&
+      this.isSupportIssueClosed(issue.status);
 
     await (this.prisma as any).platformSupportIssue.update({
       where: { id: issueId },
@@ -1297,13 +1517,17 @@ export class PlatformService {
           : {}),
         ...(body.occurred_at !== undefined
           ? {
-              occurredAt: body.occurred_at ? new Date(body.occurred_at) : issue.occurredAt,
+              occurredAt: body.occurred_at
+                ? new Date(body.occurred_at)
+                : issue.occurredAt,
             }
           : {}),
         ...(body.status !== undefined
           ? {
               isActive: !nextIsClosed,
-              resolvedAt: nextIsClosed ? issue.resolvedAt ?? new Date() : null,
+              resolvedAt: nextIsClosed
+                ? (issue.resolvedAt ?? new Date())
+                : null,
               ...(clearsResolutionState && body.resolution_note === undefined
                 ? { resolutionNote: null }
                 : {}),
@@ -1457,7 +1681,9 @@ export class PlatformService {
         data: {
           ...(body.code !== undefined ? { code: body.code } : {}),
           ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(body.description !== undefined
+            ? { description: body.description }
+            : {}),
           ...(body.price !== undefined ? { price: body.price } : {}),
           ...(body.currency !== undefined
             ? { currency: body.currency.trim().toUpperCase() }
@@ -1469,7 +1695,9 @@ export class PlatformService {
           ...(body.marketing_visible !== undefined
             ? { marketingVisible: body.marketing_visible }
             : {}),
-          ...(body.sort_order !== undefined ? { sortOrder: body.sort_order } : {}),
+          ...(body.sort_order !== undefined
+            ? { sortOrder: body.sort_order }
+            : {}),
         },
       });
 
@@ -1602,7 +1830,9 @@ export class PlatformService {
       },
     });
 
-    return Array.from(new Set(assignments.map((assignment) => assignment.userId)));
+    return Array.from(
+      new Set(assignments.map((assignment) => assignment.userId)),
+    );
   }
 
   private serializePlatformUserRow(user: any): PlatformUserRow {
@@ -1681,6 +1911,168 @@ export class PlatformService {
     };
   }
 
+  private async loadPlatformPushDeviceRows(): Promise<PlatformPushDeviceRow[]> {
+    const devices = await this.prisma.pushDevice.findMany({
+      include: {
+        session: {
+          select: {
+            id: true,
+            revokedAt: true,
+          },
+        },
+        user: {
+          include: {
+            ownedShops: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            memberships: {
+              where: {
+                status: 'active',
+              },
+              include: {
+                shop: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            sessions: {
+              where: {
+                revokedAt: null,
+              },
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    return devices.map((device) => {
+      const shops = this.extractPushUserShops(device.user);
+      const pushToken = device.pushToken.trim();
+      return {
+        id: device.id,
+        device_id: device.deviceId,
+        provider: device.provider,
+        platform: device.platform,
+        device_name: device.deviceName,
+        app_version: device.appVersion,
+        locale: device.locale,
+        is_active: device.isActive,
+        session_id: device.sessionId,
+        session_active: Boolean(device.session && !device.session.revokedAt),
+        last_seen_at: device.lastSeenAt.toISOString(),
+        created_at: device.createdAt.toISOString(),
+        updated_at: device.updatedAt.toISOString(),
+        token_suffix:
+          pushToken.length > 10 ? pushToken.slice(-10) : pushToken || 'unknown',
+        user: {
+          id: device.user.id,
+          name: device.user.name,
+          email: device.user.email,
+          phone: device.user.phone,
+          active_session_count: device.user.sessions.length,
+          active_shop_count: shops.length,
+          shops,
+        },
+      };
+    });
+  }
+
+  private buildPlatformPushUserRows(
+    devices: PlatformPushDeviceRow[],
+  ): PlatformPushUserRow[] {
+    const users = new Map<string, PlatformPushUserRow>();
+
+    for (const device of devices) {
+      const existing = users.get(device.user.id);
+
+      if (!existing) {
+        users.set(device.user.id, {
+          id: device.user.id,
+          name: device.user.name,
+          email: device.user.email,
+          phone: device.user.phone,
+          active_shop_count: device.user.active_shop_count,
+          active_session_count: device.user.active_session_count,
+          total_devices: 1,
+          active_devices: device.is_active ? 1 : 0,
+          inactive_devices: device.is_active ? 0 : 1,
+          providers: [device.provider],
+          platforms: [device.platform],
+          last_seen_at: device.last_seen_at,
+          shops: device.user.shops,
+        });
+        continue;
+      }
+
+      existing.total_devices += 1;
+      existing.active_devices += device.is_active ? 1 : 0;
+      existing.inactive_devices += device.is_active ? 0 : 1;
+      existing.providers = [
+        ...new Set([...existing.providers, device.provider]),
+      ];
+      existing.platforms = [
+        ...new Set([...existing.platforms, device.platform]),
+      ];
+
+      if (
+        !existing.last_seen_at ||
+        Date.parse(device.last_seen_at) > Date.parse(existing.last_seen_at)
+      ) {
+        existing.last_seen_at = device.last_seen_at;
+      }
+    }
+
+    return [...users.values()].sort((left, right) => {
+      const rightSeenAt = Date.parse(
+        right.last_seen_at ?? '1970-01-01T00:00:00Z',
+      );
+      const leftSeenAt = Date.parse(
+        left.last_seen_at ?? '1970-01-01T00:00:00Z',
+      );
+
+      if (rightSeenAt !== leftSeenAt) {
+        return rightSeenAt - leftSeenAt;
+      }
+
+      return left.name.localeCompare(right.name);
+    });
+  }
+
+  private extractPushUserShops(user: {
+    ownedShops?: Array<{ id: string; name: string }>;
+    memberships?: Array<{ shop: { id: string; name: string } }>;
+  }) {
+    const shops = new Map<string, PlatformPushShopSummary>();
+
+    for (const shop of user.ownedShops ?? []) {
+      shops.set(shop.id, {
+        shop_id: shop.id,
+        shop_name: shop.name,
+      });
+    }
+
+    for (const membership of user.memberships ?? []) {
+      shops.set(membership.shop.id, {
+        shop_id: membership.shop.id,
+        shop_name: membership.shop.name,
+      });
+    }
+
+    return [...shops.values()].sort((left, right) =>
+      left.shop_name.localeCompare(right.shop_name),
+    );
+  }
+
   private async buildSettingsPayload(currentUser: AuthenticatedUser) {
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.id },
@@ -1720,8 +2112,9 @@ export class PlatformService {
         phone: user?.phone ?? currentUser.phone,
         locale: user?.locale ?? currentUser.locale,
         active_sessions:
-          user?.sessions.filter((session) => session.accessExpiresAt > new Date())
-            .length ?? 0,
+          user?.sessions.filter(
+            (session) => session.accessExpiresAt > new Date(),
+          ).length ?? 0,
         last_seen_at:
           user?.sessions
             .map((session) => session.lastUsedAt ?? session.createdAt)
@@ -1831,7 +2224,9 @@ export class PlatformService {
       sort_order: plan.sortOrder,
       shop_count: plan.subscriptions.length,
       collected_revenue: paidRevenue,
-      items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
+      items: (plan.items ?? []).map((item: any) =>
+        this.serializePlanItem(item),
+      ),
       limits: (plan.limits ?? []).map((limit: any) =>
         this.serializePlanLimit(limit),
       ),
@@ -2030,18 +2425,18 @@ export class PlatformService {
     detectedIssues: DetectedSupportIssue[],
     now: Date,
   ) {
-    const existingSystemIssues = (await (this.prisma as any).platformSupportIssue.findMany(
-      {
-        where: {
-          source: 'system',
-        },
-        select: {
-          id: true,
-          issueKey: true,
-          status: true,
-        },
+    const existingSystemIssues = (await (
+      this.prisma as any
+    ).platformSupportIssue.findMany({
+      where: {
+        source: 'system',
       },
-    )) as Array<{ id: string; issueKey: string | null; status: string }>;
+      select: {
+        id: true,
+        issueKey: true,
+        status: true,
+      },
+    })) as Array<{ id: string; issueKey: string | null; status: string }>;
 
     const existingByKey = new Map<
       string,
@@ -2170,13 +2565,15 @@ export class PlatformService {
       low: 1,
     };
 
-    const statusWeight: Record<(typeof platformSupportIssueStatuses)[number], number> =
-      {
-        open: 2,
-        in_progress: 1,
-        resolved: 0,
-        dismissed: 0,
-      };
+    const statusWeight: Record<
+      (typeof platformSupportIssueStatuses)[number],
+      number
+    > = {
+      open: 2,
+      in_progress: 1,
+      resolved: 0,
+      dismissed: 0,
+    };
 
     return issues
       .map((issue: any) => this.serializeSupportIssue(issue))
@@ -2226,7 +2623,8 @@ export class PlatformService {
       title: issue.title,
       detail: issue.detail,
       occurred_at: issue.occurredAt.toISOString(),
-      assigned_to_user_id: issue.assignedToUserId ?? issue.assignedToUser?.id ?? null,
+      assigned_to_user_id:
+        issue.assignedToUserId ?? issue.assignedToUser?.id ?? null,
       assigned_to_user_name: issue.assignedToUser?.name ?? null,
       resolution_note: issue.resolutionNote ?? null,
       resolved_at: issue.resolvedAt?.toISOString() ?? null,
@@ -2675,18 +3073,22 @@ export class PlatformService {
       const lastActivity = this.pickLatestDate([
         shop.createdAt,
         ...shop.orders.flatMap((order) => [order.updatedAt, order.createdAt]),
-        ...sessions.flatMap((session) => [session.lastUsedAt, session.createdAt]),
+        ...sessions.flatMap((session) => [
+          session.lastUsedAt,
+          session.createdAt,
+        ]),
         ...((shop.subscription?.payments ?? []).flatMap((payment) => [
           payment.paidAt,
           payment.updatedAt,
           payment.createdAt,
         ]) as Array<Date | null | undefined>),
       ]);
-      const latestInvoice = [...(shop.subscription?.payments ?? [])].sort((left, right) =>
-        this.sortByDateDesc(
-          left.paidAt ?? left.dueAt ?? left.createdAt,
-          right.paidAt ?? right.dueAt ?? right.createdAt,
-        ),
+      const latestInvoice = [...(shop.subscription?.payments ?? [])].sort(
+        (left, right) =>
+          this.sortByDateDesc(
+            left.paidAt ?? left.dueAt ?? left.createdAt,
+            right.paidAt ?? right.dueAt ?? right.createdAt,
+          ),
       )[0];
 
       return {
@@ -2706,13 +3108,15 @@ export class PlatformService {
         member_count: shop.members.length,
         customer_count: shop.customers.length,
         total_orders: shop.orders.length,
-        delivered_orders: shop.orders.filter((order) => order.status === 'delivered')
-          .length,
+        delivered_orders: shop.orders.filter(
+          (order) => order.status === 'delivered',
+        ).length,
         total_revenue: shop.orders
           .filter((order) => order.status === 'delivered')
           .reduce((sum, order) => sum + order.totalPrice, 0),
         township:
-          shop.customers.find((customer) => customer.township)?.township ?? null,
+          shop.customers.find((customer) => customer.township)?.township ??
+          null,
         joined_at: shop.createdAt.toISOString(),
         last_active_at: lastActivity?.toISOString() ?? null,
         active_session_count: activeSessionCount,
@@ -2742,7 +3146,7 @@ export class PlatformService {
           },
         },
         transactions: {
-          orderBy: [{ createdAt: "desc" }],
+          orderBy: [{ createdAt: 'desc' }],
           take: 1,
         },
       },
@@ -2777,7 +3181,7 @@ export class PlatformService {
           },
         },
         transactions: {
-          orderBy: [{ createdAt: "desc" }],
+          orderBy: [{ createdAt: 'desc' }],
           take: 1,
         },
       },
@@ -2935,7 +3339,9 @@ export class PlatformService {
               plan_name: subscription.plan.name,
               amount: subscription.payments[0].amount,
               currency: subscription.payments[0].currency,
-              latest_transaction_id: subscription.payments[0].transactions?.[0]?.providerOrderId ?? null,
+              latest_transaction_id:
+                subscription.payments[0].transactions?.[0]?.providerOrderId ??
+                null,
               status: subscription.payments[0].status,
               due_at: subscription.payments[0].dueAt?.toISOString() ?? null,
               paid_at: subscription.payments[0].paidAt?.toISOString() ?? null,
@@ -3004,7 +3410,9 @@ export class PlatformService {
       is_active: plan.isActive,
       marketing_visible: plan.marketingVisible,
       sort_order: plan.sortOrder,
-      items: (plan.items ?? []).map((item: any) => this.serializePlanItem(item)),
+      items: (plan.items ?? []).map((item: any) =>
+        this.serializePlanItem(item),
+      ),
       limits: (plan.limits ?? []).map((limit: any) =>
         this.serializePlanLimit(limit),
       ),
@@ -3123,7 +3531,10 @@ export class PlatformService {
     return `INV-${Date.now()}`;
   }
 
-  private async syncSubscriptionStatusFromInvoices(tx: any, subscriptionId: string) {
+  private async syncSubscriptionStatusFromInvoices(
+    tx: any,
+    subscriptionId: string,
+  ) {
     const subscription = await (tx as any).subscription.findUnique({
       where: { id: subscriptionId },
       include: {
@@ -3156,8 +3567,8 @@ export class PlatformService {
       : isExpiredTrial
         ? 'expired'
         : subscription.plan.billingPeriod === 'trial'
-        ? 'trialing'
-        : 'active';
+          ? 'trialing'
+          : 'active';
 
     if (
       platformSubscriptionStatuses.includes(
@@ -3209,7 +3620,10 @@ export class PlatformService {
     });
   }
 
-  private buildPlanSummaries(tenants: TenantSnapshot[], payments: PaymentRow[]) {
+  private buildPlanSummaries(
+    tenants: TenantSnapshot[],
+    payments: PaymentRow[],
+  ) {
     const grouped = new Map<
       string,
       {
@@ -3250,13 +3664,16 @@ export class PlatformService {
       existing.collected_revenue += payment.amount;
     }
 
-    const totalShopsWithPlan = tenants.filter(t => t.plan_code).length;
+    const totalShopsWithPlan = tenants.filter((t) => t.plan_code).length;
 
     return [...grouped.values()]
       .sort((left, right) => right.shop_count - left.shop_count)
       .map((plan) => ({
         ...plan,
-        share: totalShopsWithPlan > 0 ? Number((plan.shop_count / totalShopsWithPlan).toFixed(4)) : 0,
+        share:
+          totalShopsWithPlan > 0
+            ? Number((plan.shop_count / totalShopsWithPlan).toFixed(4))
+            : 0,
       }));
   }
 
@@ -3318,7 +3735,8 @@ export class PlatformService {
           shop_id: tenant.id,
           shop_name: tenant.name,
           title: 'New shop has no orders yet',
-          detail: 'This tenant may still need onboarding help or activation support.',
+          detail:
+            'This tenant may still need onboarding help or activation support.',
           occurred_at: tenant.joined_at,
         });
       }
@@ -3337,7 +3755,8 @@ export class PlatformService {
           shop_id: tenant.id,
           shop_name: tenant.name,
           title: 'Active subscription with low recent activity',
-          detail: 'Follow up on adoption before this tenant becomes a churn risk.',
+          detail:
+            'Follow up on adoption before this tenant becomes a churn risk.',
           occurred_at: tenant.last_active_at,
         });
       }
@@ -3396,15 +3815,17 @@ export class PlatformService {
     return 'active';
   }
 
-  private pickLatestDate(
-    dates: Array<Date | null | undefined>,
-  ): Date | null {
-    const normalized = dates.filter((value): value is Date => value instanceof Date);
+  private pickLatestDate(dates: Array<Date | null | undefined>): Date | null {
+    const normalized = dates.filter(
+      (value): value is Date => value instanceof Date,
+    );
     if (normalized.length === 0) {
       return null;
     }
 
-    return normalized.sort((left, right) => right.getTime() - left.getTime())[0];
+    return normalized.sort(
+      (left, right) => right.getTime() - left.getTime(),
+    )[0];
   }
 
   private sortByDateDesc(
@@ -3490,10 +3911,9 @@ export class PlatformService {
         planLine,
         ctaLabel: 'Open billing',
         ctaUrl: `${this.getWebAppBaseUrl()}/dashboard/settings`,
-        footerText:
-          invoice.transactions?.[0]?.providerOrderId
-            ? `Payment Ref: ${invoice.transactions[0].providerOrderId}`
-            : `Invoice status: ${statusLabel}`,
+        footerText: invoice.transactions?.[0]?.providerOrderId
+          ? `Payment Ref: ${invoice.transactions[0].providerOrderId}`
+          : `Invoice status: ${statusLabel}`,
       },
     });
   }

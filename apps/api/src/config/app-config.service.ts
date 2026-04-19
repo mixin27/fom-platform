@@ -11,6 +11,7 @@ import {
   readIntegerEnv,
   readOptionalEnv,
 } from './app-env';
+import type { ServiceAccount } from 'firebase-admin/app';
 
 export type PublicLaunchConfig = {
   legal: {
@@ -30,6 +31,12 @@ export type PublicLaunchConfig = {
     contact_label: string;
     contact_url: string;
   };
+};
+
+export type FirebaseAdminConfig = {
+  isConfigured: boolean;
+  serviceAccount: ServiceAccount | null;
+  errorMessage: string | null;
 };
 
 @Injectable()
@@ -94,13 +101,24 @@ export class AppConfigService {
         'Production startup blocked: set CORS_ALLOWED_ORIGINS to explicit allowed origins.',
       );
     }
+
+    if (
+      this.getPushProvider() === 'fcm' &&
+      !this.getFirebaseAdminConfig().isConfigured
+    ) {
+      throw new Error(
+        'Production startup blocked: configure Firebase Admin credentials before enabling PUSH_PROVIDER=fcm.',
+      );
+    }
   }
 
   getPlatformOwner() {
     return {
       email:
-        readOptionalEnv('PLATFORM_OWNER_EMAIL', 'PLATFORM_ADMIN_EMAIL')?.toLowerCase() ||
-        'owner@fom-platform.local',
+        readOptionalEnv(
+          'PLATFORM_OWNER_EMAIL',
+          'PLATFORM_ADMIN_EMAIL',
+        )?.toLowerCase() || 'owner@fom-platform.local',
       password: process.env.PLATFORM_OWNER_PASSWORD ?? 'Password123!',
       name: readOptionalEnv('PLATFORM_OWNER_NAME') || 'Platform Admin',
     };
@@ -110,10 +128,8 @@ export class AppConfigService {
     const webBaseUrl = this.getWebAppBaseUrl();
 
     return {
-      consent_version:
-        readOptionalEnv('LEGAL_CONSENT_VERSION') || '2026-04-16',
-      terms_url:
-        readOptionalEnv('PUBLIC_TERMS_URL') || `${webBaseUrl}/terms`,
+      consent_version: readOptionalEnv('LEGAL_CONSENT_VERSION') || '2026-04-16',
+      terms_url: readOptionalEnv('PUBLIC_TERMS_URL') || `${webBaseUrl}/terms`,
       privacy_url:
         readOptionalEnv('PUBLIC_PRIVACY_URL') || `${webBaseUrl}/privacy`,
       account_deletion_url:
@@ -127,8 +143,7 @@ export class AppConfigService {
 
     return {
       label: readOptionalEnv('PLATFORM_SUPPORT_LABEL') || 'Contact support',
-      url:
-        readOptionalEnv('PLATFORM_SUPPORT_URL') || `${webBaseUrl}/contact`,
+      url: readOptionalEnv('PLATFORM_SUPPORT_URL') || `${webBaseUrl}/contact`,
     };
   }
 
@@ -199,9 +214,49 @@ export class AppConfigService {
 
   getPushProvider() {
     return (
-      readOptionalEnv('PUSH_PROVIDER', 'NOTIFICATION_PUSH_PROVIDER')?.toLowerCase() ||
-      'disabled'
+      readOptionalEnv(
+        'PUSH_PROVIDER',
+        'NOTIFICATION_PUSH_PROVIDER',
+      )?.toLowerCase() || 'disabled'
     );
+  }
+
+  getFirebaseAdminConfig(): FirebaseAdminConfig {
+    const inlineJson =
+      readOptionalEnv(
+        'FIREBASE_SERVICE_ACCOUNT_JSON',
+        'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
+      ) ??
+      this.decodeBase64Json(
+        readOptionalEnv(
+          'FIREBASE_SERVICE_ACCOUNT_BASE64',
+          'FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64',
+        ),
+      );
+
+    if (inlineJson) {
+      try {
+        const parsed = JSON.parse(inlineJson) as Record<string, unknown>;
+        return this.buildFirebaseAdminConfig({
+          projectId: parsed.project_id,
+          clientEmail: parsed.client_email,
+          privateKey: parsed.private_key,
+        });
+      } catch {
+        return {
+          isConfigured: false,
+          serviceAccount: null,
+          errorMessage:
+            'Firebase Admin credentials are present but FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.',
+        };
+      }
+    }
+
+    return this.buildFirebaseAdminConfig({
+      projectId: readOptionalEnv('FIREBASE_PROJECT_ID', 'FCM_PROJECT_ID'),
+      clientEmail: readOptionalEnv('FIREBASE_CLIENT_EMAIL', 'FCM_CLIENT_EMAIL'),
+      privateKey: readOptionalEnv('FIREBASE_PRIVATE_KEY', 'FCM_PRIVATE_KEY'),
+    });
   }
 
   getEmailProvider() {
@@ -231,10 +286,62 @@ export class AppConfigService {
     };
   }
 
+  private decodeBase64Json(value: string | null) {
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return Buffer.from(value, 'base64').toString('utf8');
+    } catch {
+      return null;
+    }
+  }
+
+  private buildFirebaseAdminConfig(input: {
+    projectId: unknown;
+    clientEmail: unknown;
+    privateKey: unknown;
+  }): FirebaseAdminConfig {
+    const projectId = this.normalizeEnvString(input.projectId);
+    const clientEmail = this.normalizeEnvString(input.clientEmail);
+    const privateKey = this.normalizeEnvString(input.privateKey)?.replace(
+      /\\n/g,
+      '\n',
+    );
+
+    if (!projectId || !clientEmail || !privateKey) {
+      return {
+        isConfigured: false,
+        serviceAccount: null,
+        errorMessage:
+          'Firebase Admin credentials are incomplete. Set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY.',
+      };
+    }
+
+    return {
+      isConfigured: true,
+      serviceAccount: {
+        projectId,
+        clientEmail,
+        privateKey,
+      },
+      errorMessage: null,
+    };
+  }
+
+  private normalizeEnvString(value: unknown) {
+    return typeof value === 'string' && value.trim().length > 0
+      ? value.trim()
+      : null;
+  }
+
   getMetaMessengerConfig() {
     const graphApiBaseUrl =
-      readOptionalEnv('META_GRAPH_API_BASE_URL') || 'https://graph.facebook.com';
-    const graphApiVersion = readOptionalEnv('META_GRAPH_API_VERSION') || 'v25.0';
+      readOptionalEnv('META_GRAPH_API_BASE_URL') ||
+      'https://graph.facebook.com';
+    const graphApiVersion =
+      readOptionalEnv('META_GRAPH_API_VERSION') || 'v25.0';
     const appId = readOptionalEnv('META_APP_ID');
     const appSecret = readOptionalEnv('META_APP_SECRET');
     const loginConfigId = readOptionalEnv('META_LOGIN_CONFIG_ID');

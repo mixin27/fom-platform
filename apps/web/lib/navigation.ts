@@ -19,6 +19,7 @@ export type NavIconName =
   | "payments"
   | "contact"
   | "announcements"
+  | "push"
 
 export type NavItem = {
   href: string
@@ -36,7 +37,12 @@ export const shopPortalNav: NavSection[] = [
   {
     label: "Overview",
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
+      {
+        href: "/dashboard",
+        label: "Dashboard",
+        icon: "dashboard",
+        exact: true,
+      },
     ],
   },
   {
@@ -80,7 +86,9 @@ export const shopPortalNav: NavSection[] = [
 export const platformPortalNav: NavSection[] = [
   {
     label: "Overview",
-    items: [{ href: "/platform", label: "Dashboard", icon: "dashboard", exact: true }],
+    items: [
+      { href: "/platform", label: "Dashboard", icon: "dashboard", exact: true },
+    ],
   },
   {
     label: "Operations",
@@ -110,6 +118,11 @@ export const platformPortalNav: NavSection[] = [
   {
     label: "System",
     items: [
+      {
+        href: "/platform/push-notifications",
+        label: "Push",
+        icon: "push",
+      },
       {
         href: "/platform/announcements",
         label: "Announcements",

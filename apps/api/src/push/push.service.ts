@@ -4,6 +4,7 @@ import type { AuthenticatedUser } from '../common/http/request-context';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { PushTransportService } from './push-transport.service';
 import type { RegisterPushDeviceDto } from './dto/register-push-device.dto';
+import type { PushDispatchResult } from './push.types';
 
 @Injectable()
 export class PushService {
@@ -113,7 +114,7 @@ export class PushService {
       return [];
     }
 
-    return this.pushTransportService.dispatch(
+    const results = await this.pushTransportService.dispatch(
       devices.map((device) => ({
         device_id: device.deviceId,
         provider: device.provider,
@@ -124,6 +125,27 @@ export class PushService {
         data: input.data,
       })),
     );
+
+    const staleDeviceIds = results
+      .filter((result) => this.shouldDeactivateDevice(result))
+      .map((result) => result.device_id);
+
+    if (staleDeviceIds.length > 0) {
+      await this.prisma.pushDevice.updateMany({
+        where: {
+          userId: input.userId,
+          deviceId: {
+            in: staleDeviceIds,
+          },
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+    }
+
+    return results;
   }
 
   private serializePushDevice(device: {
@@ -156,5 +178,13 @@ export class PushService {
       created_at: device.createdAt.toISOString(),
       updated_at: device.updatedAt.toISOString(),
     };
+  }
+
+  private shouldDeactivateDevice(result: PushDispatchResult) {
+    const normalizedError = result.error?.trim().toLowerCase() ?? '';
+    return (
+      normalizedError === 'messaging/invalid-registration-token' ||
+      normalizedError === 'messaging/registration-token-not-registered'
+    );
   }
 }

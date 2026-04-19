@@ -270,6 +270,54 @@ export type PlatformAnnouncement = PortalAnnouncement & {
   } | null
 }
 
+export type PlatformPushDevice = {
+  id: string
+  device_id: string
+  provider: string
+  platform: string
+  device_name: string | null
+  app_version: string | null
+  locale: string | null
+  is_active: boolean
+  session_id: string | null
+  session_active: boolean
+  last_seen_at: string
+  created_at: string
+  updated_at: string
+  token_suffix: string
+  user: {
+    id: string
+    name: string
+    email: string | null
+    phone: string | null
+    active_session_count: number
+    active_shop_count: number
+    shops: Array<{
+      shop_id: string
+      shop_name: string
+    }>
+  }
+}
+
+export type PlatformPushUser = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  active_shop_count: number
+  active_session_count: number
+  total_devices: number
+  active_devices: number
+  inactive_devices: number
+  providers: string[]
+  platforms: string[]
+  last_seen_at: string | null
+  shops: Array<{
+    shop_id: string
+    shop_name: string
+  }>
+}
+
 function buildQueryString(searchParams?: SearchParamsRecord) {
   const query = new URLSearchParams()
 
@@ -381,7 +429,10 @@ export async function getPlatformShops(searchParams?: SearchParamsRecord) {
   )
 }
 
-export async function getPlatformShop(shopId: string, retryPath = "/platform/shops") {
+export async function getPlatformShop(
+  shopId: string,
+  retryPath = "/platform/shops"
+) {
   return platformRequest<PlatformShop>(
     `/api/v1/platform/shops/${shopId}`,
     undefined,
@@ -399,12 +450,54 @@ export async function getPlatformUsers(searchParams?: SearchParamsRecord) {
   )
 }
 
-export async function getPlatformUser(userId: string, retryPath = "/platform/users") {
+export async function getPlatformUser(
+  userId: string,
+  retryPath = "/platform/users"
+) {
   return platformRequest<PlatformUser>(
     `/api/v1/platform/users/${userId}`,
     undefined,
     retryPath
   )
+}
+
+export async function getPlatformPushNotifications(
+  searchParams?: SearchParamsRecord
+) {
+  const retryPath = `/platform/push-notifications${buildQueryString(searchParams)}`
+
+  return platformRequest<{
+    overview: {
+      total_devices: number
+      active_devices: number
+      inactive_devices: number
+      total_users: number
+      active_users: number
+      stale_devices: number
+      android_devices: number
+      ios_devices: number
+    }
+    devices: PlatformPushDevice[]
+    devices_pagination: PlatformCursorPagination
+  }>("/api/v1/platform/push-notifications", searchParams, retryPath)
+}
+
+export async function getPlatformPushNotificationUsers(
+  searchParams?: SearchParamsRecord
+) {
+  const retryPath = `/platform/push-notifications/users${buildQueryString(searchParams)}`
+
+  return platformRequest<{
+    overview: {
+      total_users: number
+      active_users: number
+      inactive_users: number
+      multi_device_users: number
+      total_devices: number
+    }
+    users: PlatformPushUser[]
+    users_pagination: PlatformCursorPagination
+  }>("/api/v1/platform/push-notifications/users", searchParams, retryPath)
 }
 
 export async function searchPlatformOwnerAccounts(query: string, limit = 8) {
@@ -418,7 +511,9 @@ export async function searchPlatformOwnerAccounts(query: string, limit = 8) {
   )
 }
 
-export async function getPlatformSubscriptions(searchParams?: SearchParamsRecord) {
+export async function getPlatformSubscriptions(
+  searchParams?: SearchParamsRecord
+) {
   const retryPath = `/platform/subscriptions${buildQueryString(searchParams)}`
 
   return platformRequest<{
@@ -617,7 +712,11 @@ export async function getPlatformPublicContactSubmissions() {
   return platformRequest<{
     open_count: number
     submissions: PlatformPublicContactSubmission[]
-  }>("/api/v1/platform/public-contact-submissions", undefined, "/platform/contact-form")
+  }>(
+    "/api/v1/platform/public-contact-submissions",
+    undefined,
+    "/platform/contact-form"
+  )
 }
 
 export async function getPlatformPublicContactSubmission(

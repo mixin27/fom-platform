@@ -14,6 +14,7 @@ import { paginate } from '../common/utils/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { subscriptionFeatures } from '../platform/subscription-feature.constants';
 import { RealtimeService } from '../realtime/realtime.service';
+import { ShopAuditLogService } from '../shops/shop-audit-log.service';
 import { ShopsService } from '../shops/shops.service';
 import { Prisma } from '../generated/prisma/client';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
@@ -21,17 +22,14 @@ import { ChangeOrderStatusDto } from './dto/change-order-status.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ImportOrdersSpreadsheetDto } from './dto/import-orders-spreadsheet.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
-import {
-  orderStatuses,
-  type OrderStatusValue,
-} from './dto/order.constants';
+import { orderStatuses, type OrderStatusValue } from './dto/order.constants';
 import { ParseOrderMessageDto } from './dto/parse-order-message.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { OrderMessageParserService } from './order-message-parser.service';
 import { OrderSpreadsheetService } from './order-spreadsheet.service';
 
-type DbClient = PrismaService | any;
+type DbClient = PrismaService | Prisma.TransactionClient;
 
 type NewOrderItem = {
   productId?: string | null;
@@ -48,6 +46,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shopsService: ShopsService,
+    private readonly shopAuditLogService: ShopAuditLogService,
     private readonly orderMessageParser: OrderMessageParserService,
     private readonly orderSpreadsheetService: OrderSpreadsheetService,
     private readonly notificationsService: NotificationsService,
@@ -84,7 +83,9 @@ export class OrdersService {
     }
 
     if (requestedCustomerId) {
-      orders = orders.filter((order) => order.customerId === requestedCustomerId);
+      orders = orders.filter(
+        (order) => order.customerId === requestedCustomerId,
+      );
     }
 
     if (requestedDate) {
@@ -183,7 +184,31 @@ export class OrdersService {
         },
       });
 
-      return this.serializeOrderRecord(order, { includeHistory: true });
+      await this.shopAuditLogService.record(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'order.created',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Created order ${order.orderNo} for ${order.customer.name}.`,
+        metadata: {
+          order_id: order.id,
+          order_no: order.orderNo,
+          customer_id: order.customerId,
+          customer_name: order.customer.name,
+          status: order.status,
+          total_price: order.totalPrice,
+          currency: order.currency,
+          source: order.source,
+          item_count: order.items.length,
+        },
+      });
+
+      return this.serializeOrder(
+        order.id,
+        { includeHistory: true, includeAuditHistory: true },
+        tx,
+      );
     });
 
     void this.notificationsService
@@ -224,10 +249,7 @@ export class OrdersService {
     return createdOrder;
   }
 
-  async downloadImportTemplate(
-    currentUser: AuthenticatedUser,
-    shopId: string,
-  ) {
+  async downloadImportTemplate(currentUser: AuthenticatedUser, shopId: string) {
     await this.shopsService.assertPermission(
       currentUser.id,
       shopId,
@@ -324,18 +346,14 @@ export class OrdersService {
         const createdOrderIds: string[] = [];
 
         for (const order of parsedFile.orders) {
-          const customer = await this.resolveCustomer(
-            tx,
-            shopId,
-            {
-              customer: {
-                name: order.customerName,
-                phone: order.customerPhone,
-                township: order.customerTownship,
-                address: order.customerAddress,
-              },
-            } as CreateOrderDto,
-          );
+          const customer = await this.resolveCustomer(tx, shopId, {
+            customer: {
+              name: order.customerName,
+              phone: order.customerPhone,
+              township: order.customerTownship,
+              address: order.customerAddress,
+            },
+          } as CreateOrderDto);
           const subtotal = order.items.reduce(
             (sum, item) => sum + item.qty * item.unitPrice,
             0,
@@ -377,7 +395,30 @@ export class OrdersService {
                 },
               },
             },
-            select: { id: true },
+            select: {
+              id: true,
+              orderNo: true,
+            },
+          });
+
+          await this.shopAuditLogService.record(tx, {
+            shopId,
+            actorUser: currentUser,
+            action: 'order.imported',
+            entityType: 'order',
+            entityId: createdOrder.id,
+            summary: `Imported order ${createdOrder.orderNo} from spreadsheet.`,
+            metadata: {
+              order_id: createdOrder.id,
+              order_no: createdOrder.orderNo,
+              customer_id: customer.id,
+              customer_name: customer.name,
+              total_price: subtotal + order.deliveryFee,
+              currency: order.currency,
+              source: order.source,
+              item_count: order.items.length,
+              filename: parsedFile.filename,
+            },
           });
 
           createdOrderIds.push(createdOrder.id);
@@ -498,7 +539,10 @@ export class OrdersService {
   ) {
     await this.shopsService.assertShopAccess(currentUser.id, shopId);
     const order = await this.requireOrderForShop(this.prisma, shopId, orderId);
-    return this.serializeOrder(order.id, { includeHistory: true });
+    return this.serializeOrder(order.id, {
+      includeHistory: true,
+      includeAuditHistory: true,
+    });
   }
 
   async updateOrder(
@@ -535,6 +579,7 @@ export class OrdersService {
       }
 
       const subtotal = await this.sumOrderItems(tx, order.id);
+      const changeSet = this.buildOrderChangeSet(order, body);
       await tx.order.update({
         where: { id: order.id },
         data: {
@@ -551,7 +596,25 @@ export class OrdersService {
         },
       });
 
-      return this.serializeOrder(order.id, { includeHistory: true }, tx);
+      await this.shopAuditLogService.record(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'order.updated',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Updated order ${order.orderNo}.`,
+        metadata: {
+          order_id: order.id,
+          order_no: order.orderNo,
+          changes: Object.keys(changeSet).length > 0 ? changeSet : null,
+        },
+      });
+
+      return this.serializeOrder(
+        order.id,
+        { includeHistory: true, includeAuditHistory: true },
+        tx,
+      );
     });
 
     void this.realtimeService
@@ -607,7 +670,27 @@ export class OrdersService {
         },
       });
 
-      return this.serializeOrder(order.id, { includeHistory: true }, tx);
+      await this.shopAuditLogService.record(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'order.status_changed',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Changed ${order.orderNo} from ${order.status} to ${status}.`,
+        metadata: {
+          order_id: order.id,
+          order_no: order.orderNo,
+          from_status: order.status,
+          to_status: status,
+          note,
+        },
+      });
+
+      return this.serializeOrder(
+        order.id,
+        { includeHistory: true, includeAuditHistory: true },
+        tx,
+      );
     });
 
     void this.notificationsService
@@ -680,6 +763,20 @@ export class OrdersService {
         },
       });
 
+      await this.shopAuditLogService.record(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'order.item_added',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Added ${created.productName} to order ${order.orderNo}.`,
+        metadata: {
+          order_id: order.id,
+          order_no: order.orderNo,
+          item: this.serializeItemRecord(created),
+        },
+      });
+
       return this.serializeItemRecord(created);
     });
 
@@ -748,7 +845,8 @@ export class OrdersService {
           ...(body.unit_price !== undefined
             ? { unitPrice: body.unit_price }
             : {}),
-          lineTotal: (body.qty ?? item.qty) * (body.unit_price ?? item.unitPrice),
+          lineTotal:
+            (body.qty ?? item.qty) * (body.unit_price ?? item.unitPrice),
         },
       });
 
@@ -757,6 +855,21 @@ export class OrdersService {
         where: { id: order.id },
         data: {
           totalPrice: subtotal + order.deliveryFee,
+        },
+      });
+
+      await this.shopAuditLogService.record(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'order.item_updated',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Updated ${updated.productName} on order ${order.orderNo}.`,
+        metadata: {
+          order_id: order.id,
+          order_no: order.orderNo,
+          previous_item: this.serializeItemRecord(item),
+          next_item: this.serializeItemRecord(updated),
         },
       });
 
@@ -812,6 +925,20 @@ export class OrdersService {
           totalPrice: subtotal + order.deliveryFee,
         },
       });
+
+      await this.shopAuditLogService.record(tx, {
+        shopId,
+        actorUser: currentUser,
+        action: 'order.item_removed',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Removed ${item.productName} from order ${order.orderNo}.`,
+        metadata: {
+          order_id: order.id,
+          order_no: order.orderNo,
+          item: this.serializeItemRecord(item),
+        },
+      });
     });
 
     void this.realtimeService
@@ -831,7 +958,7 @@ export class OrdersService {
 
   async serializeOrder(
     orderId: string,
-    options?: { includeHistory?: boolean },
+    options?: { includeHistory?: boolean; includeAuditHistory?: boolean },
     db: DbClient = this.prisma,
   ) {
     const order = await db.order.findUnique({
@@ -849,7 +976,22 @@ export class OrdersService {
       throw notFoundError('Order not found');
     }
 
-    return this.serializeOrderRecord(order, options);
+    const response = this.serializeOrderRecord(order, options);
+    if (!options?.includeAuditHistory) {
+      return response;
+    }
+
+    const auditRecords = await this.shopAuditLogService.listOrderRecords(
+      db,
+      order.shopId,
+      order.id,
+    );
+    return {
+      ...response,
+      audit_history: auditRecords.map((record) =>
+        this.shopAuditLogService.serializeRecord(record),
+      ),
+    };
   }
 
   async serializeItem(itemId: string, db: DbClient = this.prisma) {
@@ -948,7 +1090,8 @@ export class OrdersService {
       }
 
       const hasInlineCustomer =
-        Boolean(inlineCustomer.name?.trim()) || Boolean(inlineCustomer.phone?.trim());
+        Boolean(inlineCustomer.name?.trim()) ||
+        Boolean(inlineCustomer.phone?.trim());
 
       if (!hasInlineCustomer) {
         return customer;
@@ -1136,12 +1279,78 @@ export class OrdersService {
     )) as Array<{ max_seq: unknown }>;
     const raw = rows[0]?.max_seq;
     const n =
-      typeof raw === 'bigint' ? Number(raw) : typeof raw === 'number' ? raw : NaN;
+      typeof raw === 'bigint'
+        ? Number(raw)
+        : typeof raw === 'number'
+          ? raw
+          : NaN;
     return Number.isFinite(n) ? n : 240;
   }
 
   private formatOrderNumber(sequence: number): string {
     return `ORD-${String(sequence).padStart(4, '0')}`;
+  }
+
+  private buildOrderChangeSet(
+    order: {
+      customerId: string;
+      deliveryFee: number;
+      currency: string;
+      source: string;
+      note: string | null;
+    },
+    body: UpdateOrderDto,
+  ) {
+    const changes: Record<
+      string,
+      {
+        from: string | number | null;
+        to: string | number | null;
+      }
+    > = {};
+
+    if (
+      body.customer_id !== undefined &&
+      body.customer_id !== order.customerId
+    ) {
+      changes.customer_id = {
+        from: order.customerId,
+        to: body.customer_id,
+      };
+    }
+
+    if (
+      body.delivery_fee !== undefined &&
+      body.delivery_fee !== order.deliveryFee
+    ) {
+      changes.delivery_fee = {
+        from: order.deliveryFee,
+        to: body.delivery_fee,
+      };
+    }
+
+    if (body.currency !== undefined && body.currency !== order.currency) {
+      changes.currency = {
+        from: order.currency,
+        to: body.currency,
+      };
+    }
+
+    if (body.source !== undefined && body.source !== order.source) {
+      changes.source = {
+        from: order.source,
+        to: body.source,
+      };
+    }
+
+    if (body.note !== undefined && body.note !== order.note) {
+      changes.note = {
+        from: order.note,
+        to: body.note,
+      };
+    }
+
+    return changes;
   }
 
   private isDuplicateImportBatchError(error: unknown): boolean {
@@ -1160,8 +1369,7 @@ export class OrdersService {
         ? [rawTarget]
         : [];
 
-    const exactMatch =
-      target.includes('shopId') && target.includes('fileHash');
+    const exactMatch = target.includes('shopId') && target.includes('fileHash');
     const partialMatch =
       target.some((value) => value.includes('shopId')) &&
       target.some((value) => value.includes('fileHash'));

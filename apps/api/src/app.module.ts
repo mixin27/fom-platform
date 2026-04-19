@@ -55,6 +55,7 @@ import { SubscriptionLifecycleService } from './platform/subscription-lifecycle.
 import { PushController } from './push/push.controller';
 import { PushService } from './push/push.service';
 import { DisabledPushProvider } from './push/providers/disabled-push.provider';
+import { FcmPushProvider } from './push/providers/fcm-push.provider';
 import { LogPushProvider } from './push/providers/log-push.provider';
 import { PushTransportService } from './push/push-transport.service';
 import { PrismaService } from './common/prisma/prisma.service';
@@ -63,6 +64,7 @@ import { RealtimeService } from './realtime/realtime.service';
 import { ShopsController } from './shops/shops.controller';
 import { ReportsController } from './summaries/reports.controller';
 import { ShopsService } from './shops/shops.service';
+import { ShopAuditLogService } from './shops/shop-audit-log.service';
 import { SummariesController } from './summaries/summaries.controller';
 import { SummariesService } from './summaries/summaries.service';
 import { TemplatesController } from './templates/templates.controller';
@@ -119,6 +121,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     OrderMessageParserService,
     OrderSpreadsheetService,
     OrdersService,
+    ShopAuditLogService,
     DisabledEmailProvider,
     LogEmailProvider,
     SendgridEmailProvider,
@@ -127,6 +130,7 @@ import { createAppValidationPipe } from './common/http/validation-pipe';
     EmailTemplateService,
     EmailOutboxService,
     DisabledPushProvider,
+    FcmPushProvider,
     LogPushProvider,
     PushTransportService,
     PushService,

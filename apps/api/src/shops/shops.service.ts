@@ -38,6 +38,7 @@ import { CreateShopRoleDto } from './dto/create-shop-role.dto';
 import { UpdateShopMemberDto } from './dto/update-shop-member.dto';
 import { UpdateShopRoleDto } from './dto/update-shop-role.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { ShopAuditLogService } from './shop-audit-log.service';
 
 type ShopWithCount = any & {
   _count: {
@@ -47,7 +48,6 @@ type ShopWithCount = any & {
 
 type MemberWithAccess = any;
 type RoleWithAccess = any;
-type AuditLogRecord = any;
 type ShopTransaction = Prisma.TransactionClient;
 const allowedOperationalSubscriptionStatuses = new Set([
   'trialing',
@@ -65,6 +65,7 @@ export class ShopsService {
     private readonly subscriptionLifecycle: SubscriptionLifecycleService,
     private readonly myanmyanpay: MyanmyanpayService,
     private readonly config: AppConfigService,
+    private readonly shopAuditLogService: ShopAuditLogService,
   ) {}
 
   async listUserShops(userId: string) {
@@ -801,7 +802,7 @@ export class ShopsService {
         })),
       });
 
-      await this.recordAuditLog(tx, {
+      await this.shopAuditLogService.record(tx, {
         shopId,
         actorUser: currentUser,
         action: 'shop.role.created',
@@ -906,7 +907,7 @@ export class ShopsService {
         });
       }
 
-      await this.recordAuditLog(tx, {
+      await this.shopAuditLogService.record(tx, {
         shopId,
         actorUser: currentUser,
         action: 'shop.role.updated',
@@ -971,7 +972,7 @@ export class ShopsService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await this.recordAuditLog(tx, {
+      await this.shopAuditLogService.record(tx, {
         shopId,
         actorUser: currentUser,
         action: 'shop.role.deleted',
@@ -1008,17 +1009,13 @@ export class ShopsService {
       permissions.membersManage,
     );
 
-    const records = await this.prisma.shopAuditLog.findMany({
-      where: {
-        shopId,
-      },
-      include: {
-        actorUser: true,
-      },
-      orderBy: [{ createdAt: 'desc' }],
-    });
-
-    const rows = records.map((record) => this.serializeAuditLogRecord(record));
+    const records = await this.shopAuditLogService.listGovernanceRecords(
+      this.prisma,
+      shopId,
+    );
+    const rows = records.map((record) =>
+      this.shopAuditLogService.serializeRecord(record),
+    );
     const page = paginate(rows, query.limit, query.cursor);
     return paged(page.items, page.pagination);
   }
@@ -1063,12 +1060,15 @@ export class ShopsService {
 
     if (!shop.subscription) {
       // should not happen for shops going through standard registration, but creates a record if missing
-      throw conflictError('Shop does not have a valid subscription record. Please contact support.');
+      throw conflictError(
+        'Shop does not have a valid subscription record. Please contact support.',
+      );
     }
 
     // prevent duplicate pending invoices for the EXACT same plan
     const existingPending = shop.subscription.payments.find(
-      (p) => p.status === 'pending' && (p.metadata as any)?.planCode === plan.code,
+      (p) =>
+        p.status === 'pending' && (p.metadata as any)?.planCode === plan.code,
     );
 
     if (existingPending) {
@@ -1239,7 +1239,7 @@ export class ShopsService {
         })),
       });
 
-      await this.recordAuditLog(tx, {
+      await this.shopAuditLogService.record(tx, {
         shopId,
         actorUser: currentUser,
         action: 'shop.member.created',
@@ -1363,7 +1363,7 @@ export class ShopsService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await this.recordAuditLog(tx, {
+      await this.shopAuditLogService.record(tx, {
         shopId,
         actorUser: currentUser,
         action: 'shop.member.invitation_resent',
@@ -1494,7 +1494,7 @@ export class ShopsService {
         });
       }
 
-      await this.recordAuditLog(tx, {
+      await this.shopAuditLogService.record(tx, {
         shopId,
         actorUser: currentUser,
         action: 'shop.member.updated',
@@ -2173,62 +2173,6 @@ export class ShopsService {
       created_at: role.createdAt.toISOString(),
       updated_at: role.updatedAt.toISOString(),
     };
-  }
-
-  private serializeAuditLogRecord(record: AuditLogRecord | null) {
-    if (!record) {
-      throw notFoundError('Shop audit log not found');
-    }
-
-    return {
-      id: record.id,
-      shop_id: record.shopId,
-      action: record.action,
-      entity_type: record.entityType,
-      entity_id: record.entityId,
-      summary: record.summary,
-      metadata: record.metadata ?? null,
-      created_at: record.createdAt.toISOString(),
-      actor: record.actorUser
-        ? {
-            id: record.actorUser.id,
-            name: record.actorUser.name,
-          }
-        : record.actorNameSnapshot
-          ? {
-              id: null,
-              name: record.actorNameSnapshot,
-            }
-          : null,
-    };
-  }
-
-  private async recordAuditLog(
-    tx: ShopTransaction,
-    input: {
-      shopId: string;
-      actorUser: AuthenticatedUser;
-      action: string;
-      entityType: string;
-      entityId?: string | null;
-      summary: string;
-      metadata?: Prisma.InputJsonValue | null;
-    },
-  ) {
-    await tx.shopAuditLog.create({
-      data: {
-        shopId: input.shopId,
-        actorUserId: input.actorUser.id,
-        actorNameSnapshot: input.actorUser.name,
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId ?? null,
-        summary: input.summary,
-        ...(input.metadata !== undefined
-          ? { metadata: input.metadata ?? Prisma.JsonNull }
-          : {}),
-      },
-    });
   }
 
   private async queueStaffInvitationEmail(

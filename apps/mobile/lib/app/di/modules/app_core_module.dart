@@ -100,7 +100,9 @@ class AppCoreModule implements DependencyModule {
           secureStorageService: getIt<SecureStorageService>(),
         ),
       )
-      ..putLazySingletonIfAbsent<PushTokenProvider>(NoopPushTokenProvider.new)
+      ..putLazySingletonIfAbsent<PushTokenProvider>(
+        () => FirebaseMessagingPushTokenProvider(logger: getIt<AppLogger>()),
+      )
       ..putLazySingletonIfAbsent<PushRegistrationService>(
         () => PushRegistrationService(
           getIt<ApiClient>(),

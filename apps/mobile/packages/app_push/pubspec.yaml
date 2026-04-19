@@ -19,6 +19,8 @@ dependencies:
     path: ../app_logger
   app_network:
     path: ../app_network
+  firebase_core: ^4.7.0
+  firebase_messaging: ^16.2.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0

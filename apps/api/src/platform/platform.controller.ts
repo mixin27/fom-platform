@@ -26,6 +26,8 @@ import { CreatePlatformPlanDto } from './dto/create-platform-plan.dto';
 import { CreatePlatformShopDto } from './dto/create-platform-shop.dto';
 import { CreatePlatformInvoiceDto } from './dto/create-platform-invoice.dto';
 import { CreatePlatformSupportIssueDto } from './dto/create-platform-support-issue.dto';
+import { ListPlatformPushDevicesQueryDto } from './dto/list-platform-push-devices-query.dto';
+import { ListPlatformPushUsersQueryDto } from './dto/list-platform-push-users-query.dto';
 import { ListPlatformShopsQueryDto } from './dto/list-platform-shops-query.dto';
 import { ListPlatformSubscriptionsQueryDto } from './dto/list-platform-subscriptions-query.dto';
 import { ListPlatformUsersQueryDto } from './dto/list-platform-users-query.dto';
@@ -36,9 +38,7 @@ import { UpdatePlatformSettingsProfileDto } from './dto/update-platform-settings
 import { UpdatePlatformShopDto } from './dto/update-platform-shop.dto';
 import { UpdatePlatformSubscriptionDto } from './dto/update-platform-subscription.dto';
 import { UpdatePlatformSupportIssueDto } from './dto/update-platform-support-issue.dto';
-import {
-  UpdatePlatformPaymentProofDto,
-} from './dto/update-platform-payment-proof.dto';
+import { UpdatePlatformPaymentProofDto } from './dto/update-platform-payment-proof.dto';
 import { PlatformService } from './platform.service';
 import { UpdatePublicContactSubmissionDto } from '../public-contact/dto/update-public-contact-submission.dto';
 import { PublicContactService } from '../public-contact/public-contact.service';
@@ -76,6 +76,26 @@ export class PlatformController {
   @ApiOperation({ summary: 'List users across the platform workspace' })
   listUsers(@Query() query: ListPlatformUsersQueryDto) {
     return this.platformService.listUsers(query);
+  }
+
+  @Get('push-notifications')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformShopsRead)
+  @ApiOperation({
+    summary: 'List push-capable devices across the platform workspace',
+  })
+  getPushNotifications(@Query() query: ListPlatformPushDevicesQueryDto) {
+    return ok(this.platformService.getPushNotifications(query));
+  }
+
+  @Get('push-notifications/users')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(permissions.platformShopsRead)
+  @ApiOperation({
+    summary: 'List user push coverage across the platform workspace',
+  })
+  getPushNotificationUsers(@Query() query: ListPlatformPushUsersQueryDto) {
+    return ok(this.platformService.getPushNotificationUsers(query));
   }
 
   @Get('users/:userId')
@@ -159,7 +179,9 @@ export class PlatformController {
   @Get('announcements/live')
   @UseGuards(RbacGuard)
   @RequirePermissions(permissions.platformDashboardRead)
-  @ApiOperation({ summary: 'Get active platform announcements for the admin portal' })
+  @ApiOperation({
+    summary: 'Get active platform announcements for the admin portal',
+  })
   getLiveAnnouncements() {
     return ok(this.announcementsService.listPlatformSurfaceAnnouncements());
   }
@@ -276,9 +298,7 @@ export class PlatformController {
   @RequirePermissions(permissions.platformSupportRead)
   @ApiOperation({ summary: 'Get a single public contact submission' })
   getPublicContactSubmission(@Param('submissionId') submissionId: string) {
-    return ok(
-      this.publicContactService.getSubmissionForPlatform(submissionId),
-    );
+    return ok(this.publicContactService.getSubmissionForPlatform(submissionId));
   }
 
   @Post('support/issues')
@@ -329,7 +349,9 @@ export class PlatformController {
     @Param('proofId') proofId: string,
     @Body() body: UpdatePlatformPaymentProofDto,
   ) {
-    return ok(this.platformService.updatePaymentProof(currentUser, proofId, body));
+    return ok(
+      this.platformService.updatePaymentProof(currentUser, proofId, body),
+    );
   }
 
   @Get('settings')
