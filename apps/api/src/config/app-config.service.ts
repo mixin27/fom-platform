@@ -342,6 +342,9 @@ export class AppConfigService {
       'https://graph.facebook.com';
     const graphApiVersion =
       readOptionalEnv('META_GRAPH_API_VERSION') || 'v25.0';
+    const oauthDialogUrl =
+      readOptionalEnv('META_OAUTH_DIALOG_URL') ||
+      'https://www.facebook.com/dialog/oauth';
     const appId = readOptionalEnv('META_APP_ID');
     const appSecret = readOptionalEnv('META_APP_SECRET');
     const loginConfigId = readOptionalEnv('META_LOGIN_CONFIG_ID');
@@ -358,10 +361,7 @@ export class AppConfigService {
       appId,
       appSecret,
       loginConfigId,
-      oauthDialogUrl: `https://www.facebook.com/${graphApiVersion.replace(
-        /^\/+/,
-        '',
-      )}/dialog/oauth`,
+      oauthDialogUrl: oauthDialogUrl.replace(/\/+$/, ''),
       webhookVerifyToken,
       webhookUrl: `${this.getPublicApiBaseUrl()}/api/v1/messenger/webhooks/meta`,
       tokenEncryptionSecret,

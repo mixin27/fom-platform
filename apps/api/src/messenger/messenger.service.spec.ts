@@ -41,6 +41,7 @@ function createService() {
     getMetaMessengerConfig: jest.fn(() => ({
       graphApiBaseUrl: 'https://graph.facebook.com',
       graphApiVersion: 'v25.0',
+      oauthDialogUrl: 'https://www.facebook.com/dialog/oauth',
       appId: 'meta-app-id',
       appSecret: 'meta-app-secret',
       loginConfigId: 'meta-login-config-id',
@@ -60,6 +61,39 @@ function createService() {
 }
 
 describe('MessengerService', () => {
+  it('builds a Facebook business login URL with code flow override enabled', async () => {
+    const { service } = createService();
+
+    const result = await service.beginOauthConnect(
+      {
+        id: 'user-1',
+        name: 'Owner',
+      } as any,
+      'shop-1',
+      {
+        redirect_uri:
+          'https://getfom.com/dashboard/inbox/connect-meta/callback',
+      },
+    );
+
+    const authorizationUrl = new URL(result.authorization_url);
+    expect(`${authorizationUrl.origin}${authorizationUrl.pathname}`).toBe(
+      'https://www.facebook.com/dialog/oauth',
+    );
+    expect(authorizationUrl.searchParams.get('client_id')).toBe('meta-app-id');
+    expect(authorizationUrl.searchParams.get('config_id')).toBe(
+      'meta-login-config-id',
+    );
+    expect(authorizationUrl.searchParams.get('response_type')).toBe('code');
+    expect(
+      authorizationUrl.searchParams.get('override_default_response_type'),
+    ).toBe('true');
+    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe(
+      'https://getfom.com/dashboard/inbox/connect-meta/callback',
+    );
+    expect(authorizationUrl.searchParams.get('state')).toBeTruthy();
+  });
+
   it('hides disconnected connections in overview while preserving shop stats', async () => {
     const { prisma, service } = createService();
 

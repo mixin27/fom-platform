@@ -293,6 +293,7 @@ export class MessengerService {
       String(messengerConfig.loginConfigId),
     );
     authorizationUrl.searchParams.set('response_type', 'code');
+    authorizationUrl.searchParams.set('override_default_response_type', 'true');
     authorizationUrl.searchParams.set('state', state);
 
     return {
