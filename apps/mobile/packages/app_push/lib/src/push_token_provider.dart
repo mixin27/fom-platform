@@ -23,12 +23,19 @@ abstract class PushTokenProvider {
   Future<PushTokenResolution> resolveToken();
 }
 
+typedef FirebaseInitializationCallback = Future<void> Function();
+
 class FirebaseMessagingPushTokenProvider extends PushTokenProvider
     with LoggerMixin {
-  FirebaseMessagingPushTokenProvider({AppLogger? logger})
-    : _logger = logger ?? AppLogger(enabled: false);
+  FirebaseMessagingPushTokenProvider({
+    AppLogger? logger,
+    FirebaseInitializationCallback? ensureFirebaseInitialized,
+  }) : _logger = logger ?? AppLogger(enabled: false),
+       _ensureFirebaseInitialized =
+           ensureFirebaseInitialized ?? ensureFirebaseMessagingInitialized;
 
   final AppLogger _logger;
+  final FirebaseInitializationCallback _ensureFirebaseInitialized;
   Future<void>? _initialization;
 
   @override
@@ -91,6 +98,6 @@ class FirebaseMessagingPushTokenProvider extends PushTokenProvider
   }
 
   Future<void> _initializeFirebase() async {
-    await ensureFirebaseMessagingInitialized();
+    await _ensureFirebaseInitialized();
   }
 }

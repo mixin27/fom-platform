@@ -2,6 +2,16 @@
 
 This app now uses Firebase Cloud Messaging for remote delivery and `flutter_local_notifications` for foreground presentation.
 
+## FlutterFire CLI
+
+Generate one options file per app environment and keep the filenames aligned with the Flutter wrapper in this repo:
+
+- `apps/mobile/lib/firebase_options_dev.dart`
+- `apps/mobile/lib/firebase_options_stg.dart`
+- `apps/mobile/lib/firebase_options_prod.dart`
+
+The mobile app now selects one of those files from `AppEnvironment` before calling `Firebase.initializeApp(...)`.
+
 ## Backend
 
 - Set `PUSH_PROVIDER=fcm` in `apps/api`.
@@ -32,3 +42,7 @@ This app now uses Firebase Cloud Messaging for remote delivery and `flutter_loca
 - App open: FCM is received and shown as a local alert banner.
 - App background or killed: the native FCM notification payload is shown by the OS.
 - Data-only fallback: a local notification is also supported for non-visible background messages.
+- Make sure the Flutter entrypoint matches the flavor:
+  - development: `lib/main_development.dart`
+  - staging: `lib/main_staging.dart`
+  - production: `lib/main_production.dart`

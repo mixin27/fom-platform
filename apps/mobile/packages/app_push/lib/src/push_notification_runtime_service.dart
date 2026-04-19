@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'push_support.dart';
+import 'push_token_provider.dart';
 
 const AndroidNotificationChannel _pushNotificationChannel =
     AndroidNotificationChannel(
@@ -31,12 +32,19 @@ class PushNotificationRuntimeService with LoggerMixin {
   PushNotificationRuntimeService({
     FlutterLocalNotificationsPlugin? localNotificationsPlugin,
     AppLogger? logger,
+    FirebaseInitializationCallback? ensureFirebaseInitialized,
+    BackgroundMessageHandler? backgroundMessageHandler,
   }) : _localNotificationsPlugin =
            localNotificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-       _logger = logger ?? AppLogger(enabled: false);
+       _logger = logger ?? AppLogger(enabled: false),
+       _ensureFirebaseInitialized =
+           ensureFirebaseInitialized ?? ensureFirebaseMessagingInitialized,
+       _backgroundMessageHandler = backgroundMessageHandler;
 
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin;
   final AppLogger _logger;
+  final FirebaseInitializationCallback _ensureFirebaseInitialized;
+  final BackgroundMessageHandler? _backgroundMessageHandler;
   final StreamController<PushNotificationTap> _tapController =
       StreamController<PushNotificationTap>.broadcast();
 
@@ -70,8 +78,10 @@ class PushNotificationRuntimeService with LoggerMixin {
     }
 
     try {
-      await ensureFirebaseMessagingInitialized();
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      await _ensureFirebaseInitialized();
+      if (_backgroundMessageHandler != null) {
+        FirebaseMessaging.onBackgroundMessage(_backgroundMessageHandler);
+      }
 
       await _configureLocalNotifications(
         _localNotificationsPlugin,
@@ -168,10 +178,7 @@ class PushNotificationRuntimeService with LoggerMixin {
   }
 }
 
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await ensureFirebaseMessagingInitialized();
-
+Future<void> handleBackgroundPushRemoteMessage(RemoteMessage message) async {
   if (message.notification != null) {
     return;
   }

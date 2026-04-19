@@ -9,6 +9,7 @@ import "package:get_it/get_it.dart";
 
 import "../../config/app_config.dart";
 import "../../config/app_locale_controller.dart";
+import "../../config/firebase/firebase_options_registry.dart";
 import "../../session/session_expiry_notifier.dart";
 import "dependency_module.dart";
 import "get_it_extensions.dart";
@@ -41,6 +42,12 @@ class AppCoreModule implements DependencyModule {
 
   @override
   void register(GetIt getIt) {
+    Future<void> ensureFirebaseInitialized() {
+      return ensureFirebaseInitializedForEnvironment(appConfig.environment);
+    }
+
+    final backgroundMessageHandler =
+        firebaseBackgroundMessageHandlerForEnvironment(appConfig.environment);
     final networkConfig = NetworkConfig(
       baseUrl: _normalizeApiBaseUrl(appConfig.apiBaseUrl),
     );
@@ -101,7 +108,10 @@ class AppCoreModule implements DependencyModule {
         ),
       )
       ..putLazySingletonIfAbsent<PushTokenProvider>(
-        () => FirebaseMessagingPushTokenProvider(logger: getIt<AppLogger>()),
+        () => FirebaseMessagingPushTokenProvider(
+          logger: getIt<AppLogger>(),
+          ensureFirebaseInitialized: ensureFirebaseInitialized,
+        ),
       )
       ..putLazySingletonIfAbsent<PushRegistrationService>(
         () => PushRegistrationService(
@@ -112,7 +122,11 @@ class AppCoreModule implements DependencyModule {
         ),
       )
       ..putLazySingletonIfAbsent<PushNotificationRuntimeService>(
-        () => PushNotificationRuntimeService(logger: getIt<AppLogger>()),
+        () => PushNotificationRuntimeService(
+          logger: getIt<AppLogger>(),
+          ensureFirebaseInitialized: ensureFirebaseInitialized,
+          backgroundMessageHandler: backgroundMessageHandler,
+        ),
       )
       ..putLazySingletonIfAbsent<AppDatabase>(() => AppDatabase());
   }
