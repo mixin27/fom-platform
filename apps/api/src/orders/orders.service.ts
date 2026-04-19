@@ -131,7 +131,7 @@ export class OrdersService {
     );
 
     const createdOrder = await this.prisma.$transaction(async (tx) => {
-      await this.acquireShopOrderNumberLock(tx, shopId);
+      await this.acquireGlobalOrderNumberLock(tx);
       const customer = await this.resolveCustomer(tx, shopId, body);
       const items = this.extractItems(body);
       const deliveryFee = body.delivery_fee ?? 0;
@@ -148,7 +148,7 @@ export class OrdersService {
         data: {
           shopId,
           customerId: customer.id,
-          orderNo: await this.nextOrderNumber(tx, shopId),
+          orderNo: await this.nextOrderNumber(tx),
           status,
           totalPrice: subtotal + deliveryFee,
           currency,
@@ -306,7 +306,7 @@ export class OrdersService {
     let importedOrderIds: string[];
     try {
       importedOrderIds = await this.prisma.$transaction(async (tx) => {
-        await this.acquireShopOrderNumberLock(tx, shopId);
+        await this.acquireGlobalOrderNumberLock(tx);
         await tx.orderImportBatch.create({
           data: {
             shopId,
@@ -320,7 +320,7 @@ export class OrdersService {
           },
         });
 
-        let nextOrderSequence = (await this.readMaxOrderSequence(tx, shopId)) + 1;
+        let nextOrderSequence = (await this.readGlobalMaxOrderSequence(tx)) + 1;
         const createdOrderIds: string[] = [];
 
         for (const order of parsedFile.orders) {
@@ -1109,35 +1109,35 @@ export class OrdersService {
   }
 
   /**
-   * Serializes order number allocation per shop within the current transaction.
-   * Without this, concurrent creates can read the same max sequence and collide on `orderNo`.
+   * `orderNo` is unique across all shops. Serialize allocation and read the max
+   * `ORD-####` sequence globally so different shops cannot assign the same number.
    */
-  private async acquireShopOrderNumberLock(db: DbClient, shopId: string) {
+  private async acquireGlobalOrderNumberLock(db: DbClient) {
     await db.$executeRaw(
-      Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${shopId}::text)::bigint)`,
+      Prisma.sql`SELECT pg_advisory_xact_lock(5849283726182736)`,
     );
   }
 
-  private async nextOrderNumber(db: DbClient, shopId: string): Promise<string> {
-    const maxOrderSequence = await this.readMaxOrderSequence(db, shopId);
+  private async nextOrderNumber(db: DbClient): Promise<string> {
+    const maxOrderSequence = await this.readGlobalMaxOrderSequence(db);
     return this.formatOrderNumber(maxOrderSequence + 1);
   }
 
-  private async readMaxOrderSequence(
-    db: DbClient,
-    shopId: string,
-  ): Promise<number> {
-    const orders = await db.order.findMany({
-      where: { shopId },
-      select: { orderNo: true },
-    });
-    return orders.reduce((max, order) => {
-      const match = order.orderNo.match(/ORD-(\d+)/);
-      if (!match) {
-        return max;
-      }
-      return Math.max(max, Number.parseInt(match[1] ?? '0', 10));
-    }, 240);
+  private async readGlobalMaxOrderSequence(db: DbClient): Promise<number> {
+    const rows = (await db.$queryRaw(
+      Prisma.sql`
+        SELECT COALESCE(
+          MAX(CAST(SUBSTRING("orderNo" FROM 5) AS INTEGER)),
+          240
+        ) AS max_seq
+        FROM "Order"
+        WHERE "orderNo" ~ ${'^ORD-[0-9]+$'}
+      `,
+    )) as Array<{ max_seq: unknown }>;
+    const raw = rows[0]?.max_seq;
+    const n =
+      typeof raw === 'bigint' ? Number(raw) : typeof raw === 'number' ? raw : NaN;
+    return Number.isFinite(n) ? n : 240;
   }
 
   private formatOrderNumber(sequence: number): string {
