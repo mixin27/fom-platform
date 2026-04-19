@@ -1,4 +1,4 @@
-.PHONY: help pub-get analyze test check format format-check format-changed codegen clean workspace-list install-hooks env-init env-check setup-dev secret-scan deps-outdated deps-upgrade deps-upgrade-major create-package create-feature create-feature-api
+.PHONY: help pub-get analyze test check format format-check format-changed codegen clean workspace-list install-hooks env-init env-check setup-dev secret-scan deps-outdated deps-upgrade deps-upgrade-major create-package create-feature create-feature-api prepare-firebase
 
 help:
 	@echo "Available targets:"
@@ -26,6 +26,8 @@ help:
 	@echo "  make create-package - Create a new workspace package (NAME required)"
 	@echo "  make create-feature - Create a feature scaffold (NAME required, supports ENTITY/PRINT_DI/PRINT_ROUTER/NO_TESTS)"
 	@echo "  make create-feature-api - Create a feature scaffold (NAME required, uses APIService + Bloc)"
+	@echo "  make prepare-firebase - Prepare Firebase config for a flavor (FLAVOR=development|staging|production required)"
+
 
 pub-get:
 	./scripts/pub_get_all.sh
@@ -92,3 +94,7 @@ create-feature:
 create-feature-api:
 	@test -n "$(NAME)" || (echo "Usage: make create-feature-api NAME=campaigns [ENTITY=Campaign] [PRINT_DI=1] [PRINT_ROUTER=1] [NO_TESTS=1]" && exit 1)
 	./scripts/create_feature_api_service.sh --name $(NAME) $(if $(ENTITY),--entity $(ENTITY),) $(if $(PRINT_DI),--print-di-snippet,) $(if $(PRINT_ROUTER),--print-router-snippet,) $(if $(NO_TESTS),--no-tests,)
+
+prepare-firebase:
+	@test -n "$(FLAVOR)" || (echo "Usage: make prepare-firebase FLAVOR=development|staging|production [PLATFORM=all|android|ios] [REQUIRED=1]" && exit 1)
+	./scripts/prepare_firebase.sh --flavor $(FLAVOR) $(if $(PLATFORM),--platform $(PLATFORM),) $(if $(REQUIRED),--required,)

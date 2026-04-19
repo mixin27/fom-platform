@@ -1,12 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
-Future<void> ensureFirebaseMessagingInitialized() async {
+Future<void> ensureFirebaseMessagingInitialized({
+  FirebaseOptions? options,
+}) async {
   if (Firebase.apps.isNotEmpty) {
     return;
   }
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: options);
 }
 
 String? resolveSupportedPushPlatform() {
