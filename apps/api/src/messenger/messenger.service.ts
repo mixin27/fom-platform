@@ -149,42 +149,67 @@ export class MessengerService {
       };
     }
 
-    // Acknowledge immediately so Meta does not wait on DB + Graph round-trips.
-    // Processing continues on the event loop (auto-reply, profile fetch, etc.).
-    setImmediate(() => {
-      void this.processWebhookMessagingEntries(input.body).catch((error) => {
-        this.logger.error(
-          `Messenger webhook async processing failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-          error instanceof Error ? error.stack : undefined,
-        );
-      });
-    });
-
-    return {
-      received: true,
-      processed_events: 0,
-      queued: true,
-    };
-  }
-
-  private async processWebhookMessagingEntries(body: Record<string, unknown>) {
-    const entries = Array.isArray(body.entry) ? body.entry : [];
+    const entries = Array.isArray(input.body.entry) ? input.body.entry : [];
+    let processedEvents = 0;
 
     for (const entry of entries) {
       const messagingEvents =
         entry &&
         typeof entry === 'object' &&
         Array.isArray((entry as Record<string, unknown>).messaging)
-          ? ((entry as Record<string, unknown>).messaging as MetaMessagingEvent[])
+          ? ((entry as Record<string, unknown>)
+              .messaging as MetaMessagingEvent[])
           : [];
 
       for (const event of messagingEvents) {
         await this.processMessagingEvent(event);
+        processedEvents += 1;
       }
     }
+
+    return {
+      received: true,
+      processed_events: processedEvents,
+    };
   }
+
+  //     // Acknowledge immediately so Meta does not wait on DB + Graph round-trips.
+  //     // Processing continues on the event loop (auto-reply, profile fetch, etc.).
+  //     setImmediate(() => {
+  //       void this.processWebhookMessagingEntries(input.body).catch((error) => {
+  //         this.logger.error(
+  //           `Messenger webhook async processing failed: ${
+  //             error instanceof Error ? error.message : String(error)
+  //           }`,
+  //           error instanceof Error ? error.stack : undefined,
+  //         );
+  //       });
+  //     });
+
+  //     return {
+  //       received: true,
+  //       processed_events: 0,
+  //       queued: true,
+  //     };
+  //   }
+
+  //   private async processWebhookMessagingEntries(body: Record<string, unknown>) {
+  //     const entries = Array.isArray(body.entry) ? body.entry : [];
+
+  //     for (const entry of entries) {
+  //       const messagingEvents =
+  //         entry &&
+  //         typeof entry === 'object' &&
+  //         Array.isArray((entry as Record<string, unknown>).messaging)
+  //           ? ((entry as Record<string, unknown>)
+  //               .messaging as MetaMessagingEvent[])
+  //           : [];
+
+  //       for (const event of messagingEvents) {
+  //         await this.processMessagingEvent(event);
+  //       }
+  //     }
+  //   }
 
   async getOverview(shopId: string) {
     const connection = await this.prisma.messengerConnection.findUnique({
@@ -254,7 +279,10 @@ export class MessengerService {
     });
 
     const authorizationUrl = new URL(messengerConfig.oauthDialogUrl);
-    authorizationUrl.searchParams.set('client_id', String(messengerConfig.appId));
+    authorizationUrl.searchParams.set(
+      'client_id',
+      String(messengerConfig.appId),
+    );
     authorizationUrl.searchParams.set('redirect_uri', redirectUri);
     authorizationUrl.searchParams.set(
       'config_id',
@@ -437,7 +465,9 @@ export class MessengerService {
         )
       : threads;
 
-    const serialized = filtered.map((thread) => this.serializeThreadSummary(thread));
+    const serialized = filtered.map((thread) =>
+      this.serializeThreadSummary(thread),
+    );
     const page = paginate(serialized, query.limit, query.cursor);
 
     return paged(page.items, page.pagination);
@@ -613,7 +643,9 @@ export class MessengerService {
       where: { id: existingRule.id },
       data: {
         ...(body.name !== undefined ? { name: body.name.trim() } : {}),
-        ...(body.match_type !== undefined ? { matchType: body.match_type } : {}),
+        ...(body.match_type !== undefined
+          ? { matchType: body.match_type }
+          : {}),
         ...(body.pattern !== undefined ? { pattern: body.pattern.trim() } : {}),
         ...(body.reply_text !== undefined
           ? { replyText: body.reply_text.trim() }
@@ -672,16 +704,18 @@ export class MessengerService {
       );
     }
 
-    const existingConnection = await this.prisma.messengerConnection.findUnique({
-      where: { shopId },
-      include: {
-        _count: {
-          select: {
-            threads: true,
+    const existingConnection = await this.prisma.messengerConnection.findUnique(
+      {
+        where: { shopId },
+        include: {
+          _count: {
+            select: {
+              threads: true,
+            },
           },
         },
       },
-    });
+    );
 
     if (
       existingConnection &&
@@ -809,7 +843,13 @@ export class MessengerService {
         ? (event.message as Record<string, unknown>)
         : null;
     if (messagePayload) {
-      await this.processMessagePayload(connection, senderId, recipientId, event, messagePayload);
+      await this.processMessagePayload(
+        connection,
+        senderId,
+        recipientId,
+        event,
+        messagePayload,
+      );
       return;
     }
 
@@ -844,7 +884,10 @@ export class MessengerService {
       return;
     }
 
-    const { thread, created } = await this.ensureThread(connection, customerPsid);
+    const { thread, created } = await this.ensureThread(
+      connection,
+      customerPsid,
+    );
     const providerMessageId =
       typeof messagePayload.mid === 'string' ? messagePayload.mid : null;
 
@@ -895,7 +938,12 @@ export class MessengerService {
     // Auto-reply before profile enrichment so the customer sees a response
     // without waiting on an extra Graph API call for PSID profile data.
     if (textBody) {
-      await this.runAutoReplyRules(connection, thread.id, customerPsid, textBody);
+      await this.runAutoReplyRules(
+        connection,
+        thread.id,
+        customerPsid,
+        textBody,
+      );
     }
 
     if (created) {
@@ -1010,7 +1058,9 @@ export class MessengerService {
   }
 
   private matchesRule(rule: DbRule, normalizedText: string) {
-    const pattern = String(rule.pattern ?? '').trim().toLowerCase();
+    const pattern = String(rule.pattern ?? '')
+      .trim()
+      .toLowerCase();
     if (!pattern) {
       return false;
     }
@@ -1046,8 +1096,14 @@ export class MessengerService {
       },
     };
 
-    const accessToken = this.decryptAccessToken(connection.pageAccessTokenEncrypted);
-    const response = await this.sendGraphMessage(connection.pageId, accessToken, payload);
+    const accessToken = this.decryptAccessToken(
+      connection.pageAccessTokenEncrypted,
+    );
+    const response = await this.sendGraphMessage(
+      connection.pageId,
+      accessToken,
+      payload,
+    );
     const sentAt = new Date();
 
     const message = await this.prisma.$transaction(async (tx) => {
@@ -1155,9 +1211,8 @@ export class MessengerService {
       );
     }
 
-    const payload = await this.readGraphJson<MessengerGraphTokenExchangeResponse>(
-      response,
-    );
+    const payload =
+      await this.readGraphJson<MessengerGraphTokenExchangeResponse>(response);
     if (!response.ok || !payload.access_token) {
       throw conflictError('Meta rejected the Messenger authorization code.', {
         status: response.status,
@@ -1179,9 +1234,7 @@ export class MessengerService {
     return pages
       .map((page) => ({
         id:
-          typeof page.id === 'string' && page.id.trim()
-            ? page.id.trim()
-            : null,
+          typeof page.id === 'string' && page.id.trim() ? page.id.trim() : null,
         name:
           typeof page.name === 'string' && page.name.trim()
             ? page.name.trim()
@@ -1217,12 +1270,9 @@ export class MessengerService {
     } catch (error) {
       if (
         error instanceof Error &&
-        [
-          'FORBIDDEN',
-          'CONFLICT',
-          'SERVICE_UNAVAILABLE',
-          'NOT_FOUND',
-        ].includes(error.name)
+        ['FORBIDDEN', 'CONFLICT', 'SERVICE_UNAVAILABLE', 'NOT_FOUND'].includes(
+          error.name,
+        )
       ) {
         return null;
       }
@@ -1283,7 +1333,11 @@ export class MessengerService {
     });
 
     for (const thread of threads) {
-      await this.enrichThreadProfile(connection, thread.id, thread.customerPsid);
+      await this.enrichThreadProfile(
+        connection,
+        thread.id,
+        thread.customerPsid,
+      );
     }
   }
 
@@ -1633,10 +1687,7 @@ export class MessengerService {
       .digest();
   }
 
-  private readNestedString(
-    input: unknown,
-    field: string,
-  ): string | null {
+  private readNestedString(input: unknown, field: string): string | null {
     return input &&
       typeof input === 'object' &&
       typeof (input as Record<string, unknown>)[field] === 'string'
